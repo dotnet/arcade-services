@@ -137,7 +137,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             excludedAssets,
             KeepConflicts: true,
             forceUpdate,
-            unsafeFlow);
+            unsafeFlow,
+            UseRecreationFallback: true);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -244,21 +245,35 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, codeflowOptions.CurrentFlow.GetBranchName(), codeflowOptions.HeadBranch);
         }
 
-        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
-            codeflowOptions,
-            lastFlows,
-            sourceRepo,
-            headBranchExisted,
-            workBranch,
-            async keepConflicts =>
-                await _vmrUpdater.UpdateRepository(
-                    codeflowOptions.Mapping,
-                    codeflowOptions.Build,
-                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                    resetToRemoteWhenCloningRepo: ShouldResetClones,
-                    keepConflicts: keepConflicts,
-                    cancellationToken: cancellationToken),
-            cancellationToken);
+        CodeFlowResult result;
+        if (codeflowOptions.UseRecreationFallback)
+        {
+            result = await ApplyChangesWithRecreationFallbackAsync(
+                codeflowOptions,
+                lastFlows,
+                sourceRepo,
+                headBranchExisted,
+                workBranch,
+                async keepConflicts =>
+                    await _vmrUpdater.UpdateRepository(
+                        codeflowOptions.Mapping,
+                        codeflowOptions.Build,
+                        additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                        resetToRemoteWhenCloningRepo: ShouldResetClones,
+                        keepConflicts: keepConflicts,
+                        cancellationToken: cancellationToken),
+                cancellationToken);
+        }
+        else
+        {
+            result = await _vmrUpdater.UpdateRepository(
+                codeflowOptions.Mapping,
+                codeflowOptions.Build,
+                additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                resetToRemoteWhenCloningRepo: ShouldResetClones,
+                keepConflicts: codeflowOptions.KeepConflicts,
+                cancellationToken: cancellationToken);
+        }
 
         if (workBranch != null)
         {
@@ -473,8 +488,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             previousFlow.VmrSha,
             resetToRemote: false,
             cancellationToken);
-
-        await sourceRepo.ForceCheckoutAsync(previousFlow.RepoSha);
 
         var previousFlowSha = await _localGitClient.BlameLineAsync(
             _vmrInfo.SourceManifestPath,
