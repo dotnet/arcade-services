@@ -31,6 +31,18 @@ else
     app.UseHsts();
 }
 
+// When using Application Gateway with TLS termination, we, the Client, talk to the Gateway over HTTPS,
+// the Gateway then transforms that package to HTTP, and the communication between the Gateway and
+// server is done over HTTP. Because of this, the Aspnet library that's handling the authentication is giving GitHub the
+// http uri, for the redirect_uri parameter.
+// The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
+// so it will set the redirect_uri to https too
+app.Use((context, next) =>
+{
+    context.Request.Scheme = "https";
+    return next(context);
+});
+
 app.UseHttpsRedirection();
 app.UseHttpLogging();
 app.UseCookiePolicy();
