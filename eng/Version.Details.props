@@ -6,10 +6,10 @@ This file should be imported by eng/Versions.props
 <Project>
   <PropertyGroup>
     <!-- dotnet-arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26168.1</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26168.1</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26168.1</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26168.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26169.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
