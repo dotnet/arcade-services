@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
     <ProjectReference Include="..\BuildInsights.AzureStorage.Cache\BuildInsights.AzureStorage.Cache.csproj" />
