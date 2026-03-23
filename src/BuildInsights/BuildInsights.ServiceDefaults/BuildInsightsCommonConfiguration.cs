@@ -50,8 +50,8 @@ public static class BuildInsightsCommonConfiguration
         public const string ConnectionStrings = "ConnectionStrings";
         public const string DatabaseConnectionString = $"{ConnectionStrings}:bi-mssql";
         public const string QueuesConnectionName = "bi-queues";
-        public const string RedisConnectionName = "bi-redis";
-        public const string RedisConnectionString = $"{ConnectionStrings}:{RedisConnectionName}";
+        public const string RedisConnectionString = $"{ConnectionStrings}:bi-redis";
+        public const string BlobEndpoint = $"{ConnectionStrings}:bi-blobs";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
@@ -78,7 +78,6 @@ public static class BuildInsightsCommonConfiguration
         // If we're using a user assigned managed identity, inject it into other configuration sections that might use it
         if (!string.IsNullOrEmpty(managedIdentityId))
         {
-            builder.Configuration[$"{ConfigurationKeys.BlobStorage}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
             builder.Configuration[$"{ConfigurationKeys.Kusto}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
         }
 
@@ -105,6 +104,12 @@ public static class BuildInsightsCommonConfiguration
             s.Bind(o);
             o.Token = builder.Configuration[ConfigurationKeys.HelixToken]
                 ?? throw new Exception("Helix API token is missing from configuration");
+        });
+        builder.Services.Configure<BlobStorageSettings>(ConfigurationKeys.BlobStorage, (o, s) =>
+        {
+            s.Bind(o);
+            o.ManagedIdentityId = managedIdentityId;
+            o.Endpoint ??= builder.Configuration[ConfigurationKeys.BlobEndpoint];
         });
 
         builder.AddServiceDefaults();
