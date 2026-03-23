@@ -1243,10 +1243,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     }
 
     [Test]
-    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    public async Task BackflowOppositeDirectionFlowRevertsFalsePositiveTest()
     {
-        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest);
-        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest) + "bf";
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
 
         var problematicFilePath = "badFile.txt";
 
@@ -1307,5 +1307,187 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // file should still say 1
         File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    {
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // open a backflow with some random file change, don't close yet
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(VmrPath, "random change in the VMR");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // merge the previously opened ff, backflow is still open
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // do a ff just for fluff
+        result = await ChangeRepoFileAndFlowIt("4", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // close the backflow
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // revert the problematic file back to the original state, forward flow
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // file should still say 1
+        File.ReadAllText(_productRepoVmrPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task RevertCommitHappensBetweenLastAndCrossingFlowTest1()
+    {
+        const string ffBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest1);
+        const string bfBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest1) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // open a backflow, don't merge
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(VmrPath, "random change in the VMR");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // now revert the prolematic file change
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+
+        // merge the previously opened backflow, ff is already merged
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // now backflow again, this should not cause any issues and the file should still be 1 in the VMR
+        result = await ChangeVmrFileAndFlowIt("3", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // file should still say 1
+        File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task RevertCommitHappensBetweenLastAndCrossingFlowTest2()
+    {
+        const string ffBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest2);
+        const string bfBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest2) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(VmrPath, "adding the file");
+        var result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // open a forwardflow, don't merge
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(ProductRepoPath, "random change in the VMR");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // now change the problematic file, open the bf
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(VmrPath, "change to the file");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now revert the problematic file change
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(VmrPath, "revert the problematic file");
+
+        // merge the previously opened forwardflow, bf is already merged
+        await GitOperations.MergePrBranch(VmrPath, bfBranchName);
+
+        // now forwardflow again, this should not cause any issues and the file should still be 1 in the repo
+        result = await ChangeRepoFileAndFlowIt("5", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(bfBranchName);
+
+        // file should still say 1
+        File.ReadAllText(_productRepoVmrPath / problematicFilePath).Should().Be("1");
     }
 }
