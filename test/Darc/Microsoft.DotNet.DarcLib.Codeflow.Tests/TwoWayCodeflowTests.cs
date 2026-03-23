@@ -1497,13 +1497,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        var fileDeletedInFFPR = "fileee-deleted-in-pr.txt";
-        var fileAddedBackInFFPR = "fileee-added-back-in-pr.txt";
-        var fileAddedBackInFFPRContent = "not important";
+        var fileDeletedInBFPR = "fileee-deleted-in-pr.txt";
+        var fileAddedBackInBFPR = "fileee-added-back-in-pr.txt";
+        var fileAddedBackInBFPRContent = "not important";
 
         // Add a file that we'll delete in the repo, but add back in the BF PR, flow it
         await GitOperations.Checkout(VmrPath, "main");
-        await File.WriteAllTextAsync(_productRepoVmrPath / fileAddedBackInFFPR, fileAddedBackInFFPRContent);
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
         await GitOperations.CommitAll(VmrPath, "Add fileee-added-back-in-pr.txt");
         var codeFlowResult = await ChangeVmrFileAndFlowIt("1", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
@@ -1512,14 +1512,14 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // Add a file that will later delete in the BF
         // and delete the file we added above
         await GitOperations.Checkout(VmrPath, "main");
-        await File.WriteAllTextAsync(_productRepoVmrPath / fileDeletedInFFPR, "text");
-        File.Delete(_productRepoVmrPath / fileAddedBackInFFPR);
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileDeletedInBFPR, "text");
+        File.Delete(_productRepoVmrPath / fileAddedBackInBFPR);
         await GitOperations.CommitAll(VmrPath, "Add and delete a file");
 
         // now open up a bf, but don't merge it yet
         codeFlowResult = await ChangeVmrFileAndFlowIt("2", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to ff branch");
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
 
         // add some file to the repo and ff, with merging
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -1531,9 +1531,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // now checkout the BF branch in the repo, delete and bring back a file and merge the PR
         await GitOperations.Checkout(ProductRepoPath, bfBranchName);
-        File.Delete(ProductRepoPath / fileDeletedInFFPR);
-        await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInFFPR, fileAddedBackInFFPRContent);
-        await GitOperations.CommitAll(ProductRepoPath, "Delete and bring back file in FF");
+        File.Delete(ProductRepoPath / fileDeletedInBFPR);
+        await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
+        await GitOperations.CommitAll(ProductRepoPath, "Delete and bring back file in BF");
         await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
 
         // now do a second BF, the file we deleted in the PR shouldn't be there, while the file we added back should be there
@@ -1541,9 +1541,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeBackFlow(bfBranchName);
 
-        // The FF brings back the file (bug), so this is true
-        File.Exists(ProductRepoPath / fileDeletedInFFPR).Should().BeFalse();
-        File.Exists(ProductRepoPath / fileAddedBackInFFPR).Should().BeTrue();
-        File.ReadAllText(ProductRepoPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
+        // The BF brings back the file (bug), so this is true
+        File.Exists(ProductRepoPath / fileDeletedInBFPR).Should().BeFalse();
+        File.Exists(ProductRepoPath / fileAddedBackInBFPR).Should().BeTrue();
+        File.ReadAllText(ProductRepoPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
     }
 }

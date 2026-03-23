@@ -397,7 +397,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
                 if (lastBackflowCommitContent == currentBackflowCommitContent)
                 {
-                    _fileSystem.DeleteFile(addedFile);
+                    _fileSystem.DeleteFile(targetRepo.Path / addedFile);
                     await targetRepo.StageAsync([addedFile], cancellationToken);
                 }
             }
