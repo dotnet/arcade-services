@@ -47,6 +47,11 @@ resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices
   parent: storageAccountBlobService
 }
 
+resource previousBuildResultsCacheContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: 'previousbuildresultscache'
+  parent: storageAccountBlobService
+}
+
 resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
   name: 'default'
   parent: storageAccount
