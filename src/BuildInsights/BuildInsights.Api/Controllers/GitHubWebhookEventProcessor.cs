@@ -327,22 +327,20 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
             "GitHub Hook, event: '{GitHubEvent}', target-installation: {GitHubTargetInstallation}, delivery: {GitHubDeliveryId}",
             eventName,
             targetInstallationId,
-            deliveryId
-        );
+            deliveryId);
     }
 
     private async Task PostBuildAnalysisDeprecatedMessage(string repository, string headSha)
     {
         await _checks.PostChecksResultAsync(
-            "Build Analysis",
-            ".NET Result Analysis",
+            BuildAnalysisConstants.GitHubCheckName,
+            BuildAnalysisConstants.GitHubCheckOutputName,
             "## :warning: Build Analysis has been removed from this application (.Net Helix). " +
             "Now available on Build Analysis App",
             repository,
             headSha,
             CheckResult.Passed,
-            CancellationToken.None
-        );
+            CancellationToken.None);
     }
 
     private bool IsBuildAnalysisEvent(WebhookHeaders headers)

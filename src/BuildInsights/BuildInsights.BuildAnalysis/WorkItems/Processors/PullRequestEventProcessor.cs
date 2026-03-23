@@ -139,8 +139,14 @@ public class PullRequestEventProcessor : WorkItemProcessor<PullRequestGitHubEven
             _logger.LogInformation("Disallowed organization detected: {gitHubOrg}", pullRequest.Organization);
             string markdown = ":x: This application is not intended for public use, uninstall from this organization or contact an admin for permission :x:";
 
-            await _gitHubChecksService.PostChecksResultAsync("Build Analysis", ".NET Result Analysis", markdown,
-                pullRequest.Repository, pullRequest.HeadSha, CheckResult.Failed, CancellationToken.None);
+            await _gitHubChecksService.PostChecksResultAsync(
+                BuildAnalysisConstants.GitHubCheckName,
+                BuildAnalysisConstants.GitHubCheckOutputName,
+                markdown,
+                pullRequest.Repository,
+                pullRequest.HeadSha,
+                CheckResult.Failed,
+                CancellationToken.None);
             return;
         }
 
@@ -160,8 +166,14 @@ public class PullRequestEventProcessor : WorkItemProcessor<PullRequestGitHubEven
             });
 
         _logger.LogInformation("Creating check run for repository {repository} for commit {commit}", repository, pullRequest.HeadSha);
-        long checkId = await _gitHubChecksService.PostChecksResultAsync("Build Analysis", ".NET Result Analysis",
-            preliminaryMarkdown, repository, pullRequest.HeadSha, CheckResult.InProgress, CancellationToken.None);
+        long checkId = await _gitHubChecksService.PostChecksResultAsync(
+            BuildAnalysisConstants.GitHubCheckName,
+            BuildAnalysisConstants.GitHubCheckOutputName,
+            preliminaryMarkdown,
+            repository,
+            pullRequest.HeadSha,
+            CheckResult.InProgress,
+            CancellationToken.None);
 
         _logger.LogInformation("New check run with id:{checkId} created for {organization} repository: {repository}, commit: {commit}, pr: {pr} ",
             checkId, pullRequest.Organization, pullRequest.Repository, pullRequest.HeadSha, pullRequest.Number.ToString());

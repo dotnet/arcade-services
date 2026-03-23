@@ -220,7 +220,6 @@ public class BuildAnalyzer : IBuildAnalyzer
             await using IDistributedLock blobLock = await _distributedLockService.AcquireAsync(storageContext, TimeSpan.FromMinutes(5), cancellationToken);
             _logger.LogInformation("Lock acquired for '{storageContext}'", storageContext);
 
-
             analysis = await _buildAnalysis.GetMergedAnalysisAsync(
                 buildReference,
                 build.IsComplete ? MergeBuildAnalysisAction.Include : MergeBuildAnalysisAction.Exclude,
