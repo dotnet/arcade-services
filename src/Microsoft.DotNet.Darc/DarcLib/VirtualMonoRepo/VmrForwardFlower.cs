@@ -64,6 +64,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
     private readonly ICommentCollector _commentCollector;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -97,6 +98,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _workBranchFactory = workBranchFactory;
         _processManager = processManager;
         _commentCollector = commentCollector;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -370,6 +372,34 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     commitMessage,
                     cancellationToken)
             };
+        }
+
+        var addedFiles = (await vmr.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"])).GetOutputLines();
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+        foreach (var addedFile in addedFiles)
+        {
+            var sourceRepoPath = addedFile.Substring(vmrSourcesPath.Length + 1);
+            var lastForwardFlownContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, lastFlows.LastForwardFlow.RepoSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, codeflowOptions.CurrentFlow.RepoSha);
+
+            if (lastForwardFlownContent == currentContent)
+            {
+                _fileSystem.DeleteFile(vmr.Path / addedFile);
+                await vmr.StageAsync([addedFile], cancellationToken);
+            }
+        }
+
+        var deletedFiles = (await vmr.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"])).GetOutputLines();
+        foreach (var deletedFile in deletedFiles)
+        {
+            var sourceRepoPath = deletedFile.Substring(vmrSourcesPath.Length + 1);
+            var lastForwardFlownContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, lastFlows.LastForwardFlow.RepoSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, codeflowOptions.CurrentFlow.RepoSha);
+
+            if (lastForwardFlownContent == currentContent)
+            {
+                await vmr.ExecuteGitCommand("checkout", Constants.HEAD, "--", deletedFile);
+            }
         }
 
         return result;

@@ -383,6 +383,40 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             commitMessage,
             cancellationToken);
 
+        if (lastFlows.LastBackFlow != null)
+        {
+            var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"])).GetOutputLines();
+            var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+            foreach (var addedFile in addedFiles)
+            {
+                var vmrFilePath = vmrSourcesPath / addedFile;
+                var lastBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, lastFlows.LastBackFlow.VmrSha);
+                var currentBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, codeflowOptions.CurrentFlow.VmrSha);
+
+                if (lastBackflowCommitContent == currentBackflowCommitContent)
+                {
+                    _fileSystem.DeleteFile(addedFile);
+                    await targetRepo.StageAsync([addedFile], cancellationToken);
+                }
+            }
+
+            var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"])).GetOutputLines();
+
+            foreach (var deletedFile in deletedFiles)
+            {
+                var vmrFilePath = vmrSourcesPath / deletedFile;
+                var lastBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, lastFlows.LastBackFlow.VmrSha);
+                var currentBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, codeflowOptions.CurrentFlow.VmrSha);
+
+                if (lastBackflowCommitContent == currentBackflowCommitContent)
+                {
+                    await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile]);
+                }
+            }
+        }
+
         return new CodeFlowResult(true, conflictedFiles, targetRepo.Path, []);
     }
 
