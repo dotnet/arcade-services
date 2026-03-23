@@ -151,8 +151,14 @@ public class QueueInsightsService : IQueueInsightsService
 
         string markdown = _queueInsightsMarkdownGenerator.GenerateMarkdown(view);
 
-        return await _gitHubChecksService.PostChecksResultAsync(CheckRunName, CheckRunResultsName, markdown, repo,
-            commitHash, CheckResult.Passed, cancellationToken);
+        return await _gitHubChecksService.PostChecksResultAsync(
+            CheckRunName,
+            CheckRunResultsName,
+            markdown,
+            repo,
+            commitHash,
+            CheckResult.Passed,
+            cancellationToken);
     }
 
     public static IEnumerable<PipelineOutputModel> GetPipelineOutputsByBranch(string targetBranch,

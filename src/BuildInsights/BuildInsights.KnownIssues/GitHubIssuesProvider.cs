@@ -61,7 +61,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
             }
             IReadOnlyList<Issue> issues = await client.Issue.GetAllForRepository(owner, name, criticalIssueFilter);
 
-            List<KnownIssue> knownIssues = new List<KnownIssue>();
+            List<KnownIssue> knownIssues = [];
             foreach (Issue issue in issues)
             {
                 try
@@ -79,7 +79,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         catch (Exception ex) when (ex is ArgumentException)
         {
             _logger.LogInformation($"Unable to process repository: {repository} to get known issues");
-            return ImmutableList<KnownIssue>.Empty;
+            return [];
         }
     }
 

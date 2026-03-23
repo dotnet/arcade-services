@@ -37,11 +37,11 @@ internal class GitHubInstallationIdResolver : IInstallationLookup
         var cachedValue = await cache.TryGetAsync();
         if (cachedValue is not null && long.TryParse(cachedValue, out var cachedInstallationId))
         {
-            _logger.LogDebug("Cache hit for installation ID for {owner}/{repo}", owner, repo);
+            _logger.LogDebug("Found cached installation ID for {owner}/{repo}", owner, repo);
             return cachedInstallationId;
         }
 
-        _logger.LogInformation("Cache miss - fetching installation ID for {owner}/{repo} from GitHub", owner, repo);
+        _logger.LogInformation("Fetching installation ID for {owner}/{repo} from GitHub", owner, repo);
 
         var token = _gitHubTokenProvider.GetAppToken();
         var client = new GitHubClient(new ProductHeaderValue(nameof(ProductConstructionService)))
@@ -49,7 +49,7 @@ internal class GitHubInstallationIdResolver : IInstallationLookup
             Credentials = new Credentials(token, AuthenticationType.Bearer)
         };
 
-        var installation = await client.GitHubApps.GetRepositoryInstallationForCurrent(owner, repo)
+        Installation installation = await client.GitHubApps.GetRepositoryInstallationForCurrent(owner, repo)
             ?? throw new Exception(string.Format("Failed to get installation id for {0}/{1}", owner, repo));
 
         await cache.SetAsync(installation.Id.ToString(), CacheExpiration);

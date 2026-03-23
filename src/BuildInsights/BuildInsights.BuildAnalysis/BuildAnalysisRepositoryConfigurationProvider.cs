@@ -36,7 +36,7 @@ public class BuildAnalysisRepositoryConfigurationProvider : IBuildAnalysisReposi
         string normalizedBranch = NormalizeString(branch);
 
         List<BuildAnalysisRepositoryConfiguration> repoConfigs = await _context.BuildAnalysisRepositoryConfigurations
-            .Where(c => c.Repository == normalizedRepository && (c.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) || c.Branch == BranchWildCard))
+            .Where(c => c.Repository == normalizedRepository && (c.Branch == normalizedBranch || c.Branch == BranchWildCard))
             .ToListAsync(cancellationToken);
 
         // We only expect a single entry per repo for a specific branch.
