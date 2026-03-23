@@ -374,33 +374,16 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             };
         }
 
-        var addedFiles = (await vmr.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"])).GetOutputLines();
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
-        foreach (var addedFile in addedFiles)
-        {
-            var sourceRepoPath = addedFile.Substring(vmrSourcesPath.Length + 1);
-            var lastForwardFlownContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, lastFlows.LastForwardFlow.RepoSha);
-            var currentContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, codeflowOptions.CurrentFlow.RepoSha);
 
-            if (lastForwardFlownContent == currentContent)
-            {
-                _fileSystem.DeleteFile(vmr.Path / addedFile);
-                await vmr.StageAsync([addedFile], cancellationToken);
-            }
-        }
-
-        var deletedFiles = (await vmr.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"])).GetOutputLines();
-        foreach (var deletedFile in deletedFiles)
-        {
-            var sourceRepoPath = deletedFile.Substring(vmrSourcesPath.Length + 1);
-            var lastForwardFlownContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, lastFlows.LastForwardFlow.RepoSha);
-            var currentContent = await sourceRepo.GetFileFromGitAsync(sourceRepoPath, codeflowOptions.CurrentFlow.RepoSha);
-
-            if (lastForwardFlownContent == currentContent)
-            {
-                await vmr.ExecuteGitCommand("checkout", Constants.HEAD, "--", deletedFile);
-            }
-        }
+        await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            lastFlows,
+            vmr,
+            sourceRepo,
+            file => file.Substring(vmrSourcesPath.Length + 1),
+            lastFlows.LastForwardFlow.RepoSha,
+            codeflowOptions.CurrentFlow.RepoSha,
+            cancellationToken);
 
         return result;
     }

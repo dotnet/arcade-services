@@ -1487,6 +1487,15 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / fileDeletedInFFPR).Should().BeFalse();
         File.Exists(_productRepoVmrPath / fileAddedBackInFFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
+
+        // now backflow again, this should make the files equivalent
+        codeFlowResult = await ChangeVmrFileAndFlowIt("4", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        File.Exists(ProductRepoPath / fileDeletedInFFPR).Should().BeFalse();
+        File.Exists(ProductRepoPath / fileAddedBackInFFPR).Should().BeTrue();
+        File.ReadAllText(ProductRepoPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
     }
 
     [Test]
@@ -1545,5 +1554,15 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(ProductRepoPath / fileDeletedInBFPR).Should().BeFalse();
         File.Exists(ProductRepoPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(ProductRepoPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
+
+        // forward flow to make sure the files stay the same as in the repo
+        codeFlowResult = await ChangeRepoFileAndFlowIt("4", ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // The BF brings back the file (bug), so this is true
+        File.Exists(_productRepoVmrFilePath / fileDeletedInBFPR).Should().BeFalse();
+        File.Exists(_productRepoVmrFilePath / fileAddedBackInBFPR).Should().BeTrue();
+        File.ReadAllText(_productRepoVmrFilePath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
     }
 }

@@ -385,36 +385,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (lastFlows.LastBackFlow != null)
         {
-            var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"])).GetOutputLines();
             var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-            foreach (var addedFile in addedFiles)
-            {
-                var vmrFilePath = vmrSourcesPath / addedFile;
-                var lastBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, lastFlows.LastBackFlow.VmrSha);
-                var currentBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, codeflowOptions.CurrentFlow.VmrSha);
-
-                if (lastBackflowCommitContent == currentBackflowCommitContent)
-                {
-                    _fileSystem.DeleteFile(targetRepo.Path / addedFile);
-                    await targetRepo.StageAsync([addedFile], cancellationToken);
-                }
-            }
-
-            var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"])).GetOutputLines();
-
-            foreach (var deletedFile in deletedFiles)
-            {
-                var vmrFilePath = vmrSourcesPath / deletedFile;
-                var lastBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, lastFlows.LastBackFlow.VmrSha);
-                var currentBackflowCommitContent = await vmr.GetFileFromGitAsync(vmrFilePath, codeflowOptions.CurrentFlow.VmrSha);
-
-                if (lastBackflowCommitContent == currentBackflowCommitContent)
-                {
-                    await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile]);
-                }
-            }
+            await RevertFalsePositiveAdditionsAndDeletionsAsync(
+                lastFlows,
+                targetRepo,
+                vmr,
+                file => vmrSourcesPath / file,
+                lastFlows.LastBackFlow.VmrSha,
+                codeflowOptions.CurrentFlow.VmrSha,
+                cancellationToken);
         }
 
         return new CodeFlowResult(true, conflictedFiles, targetRepo.Path, []);

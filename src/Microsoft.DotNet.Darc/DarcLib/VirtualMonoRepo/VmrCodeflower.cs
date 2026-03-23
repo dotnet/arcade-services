@@ -176,6 +176,55 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// If the last flow was adding or deleting a file, and this change was reverted in PR, the next opposite direction flow
+    /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they have,
+    /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
+    /// </summary>
+    protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        ILocalGitRepo sourceRepo,
+        Func<string, string> toSourcePath,
+        string lastSameDirectionSha,
+        string currentFlowSha,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow == null)
+        {
+            return;
+        }
+
+        var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"], cancellationToken)).GetOutputLines();
+
+        foreach (var addedFile in addedFiles)
+        {
+            var sourcePath = toSourcePath(addedFile);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                _fileSystem.DeleteFile(targetRepo.Path / addedFile);
+                await targetRepo.StageAsync([addedFile], cancellationToken);
+            }
+        }
+
+        var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"], cancellationToken)).GetOutputLines();
+
+        foreach (var deletedFile in deletedFiles)
+        {
+            var sourcePath = toSourcePath(deletedFile);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile]);
+            }
+        }
+    }
+
+    /// <summary>
     /// Tries to detect if given last flows (forward and backward) are crossing each other.
     /// In the following diagram, where we are creating the flow 7. the flows 3->6 and 1->5
     /// are crossing each other.
