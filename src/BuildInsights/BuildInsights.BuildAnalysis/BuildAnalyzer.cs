@@ -198,7 +198,7 @@ public class BuildAnalyzer : IBuildAnalyzer
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to create Queue Insights for repo: {repo} pr: {pr}", build.Repository,
+                _logger.LogError(e, "Failed to create Queue Insights for repo: {repo} pr: {pr}", build.Repository.Name,
                     build.PullRequest);
             }
         }
