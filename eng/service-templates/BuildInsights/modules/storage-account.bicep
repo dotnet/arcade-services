@@ -89,6 +89,17 @@ resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022
   }
 }
 
+// allow previous build results cache container access to the identity used for the service
+resource previousBuildResultsCacheBlobAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: previousBuildResultsCacheContainer
+  name: guid(subscription().id, resourceGroup().id, 'previous-build-results-cache-blob-contributor')
+  properties: {
+    roleDefinitionId: blobContributorRole
+    principalType: 'ServicePrincipal'
+    principalId: appIdentityPrincipalId
+  }
+}
+
 output storageAccountId string = storageAccount.id
 output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
 output storageAccountQueueEndpoint string = storageAccount.properties.primaryEndpoints.queue
