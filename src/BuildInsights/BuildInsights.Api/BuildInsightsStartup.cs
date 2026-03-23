@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.Api.Configuration;
+using BuildInsights.Api.Controllers;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.Data;
 using BuildInsights.Data.Seed;
@@ -9,6 +10,8 @@ using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using Maestro.Common.Telemetry;
 using Microsoft.EntityFrameworkCore;
+using Octokit.Webhooks;
+using Octokit.Webhooks.AspNetCore;
 
 internal static class BuildInsightsStartup
 {
@@ -54,8 +57,8 @@ internal static class BuildInsightsStartup
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault);
 
-        builder.Services.AddControllers()
-            .AddGitHubWebHooks();
+        builder.Services.AddControllers();
+        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
         builder.Services
             .AddRazorComponents()
             .AddInteractiveServerComponents();
@@ -93,20 +96,19 @@ internal static class BuildInsightsStartup
             {
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.WebAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
-            })
-            .AddCookieTempDataProvider(
-                options =>
-                {
-                    // Cookie Policy will not send this cookie unless we mark it as Essential
-                    // The application will not function without this cookie.
-                    options.Cookie.IsEssential = true;
-                });
+            });
         */
     }
 
-    public static void ConfigureApi(this IEndpointRouteBuilder app, string apiPath, bool allowAnonymous)
+    public static void ConfigureApi(this IEndpointRouteBuilder app, string apiPath, bool allowAnonymous, IConfiguration configuration)
     {
-        var controllers = app.MapGroup(apiPath).MapControllers();
+        app.MapGitHubWebhooks(
+            path: apiPath + "/github/webhooks",
+            secret: configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubWebHookSecret]);
+
+        var controllers = app.MapGroup(apiPath)
+            .MapControllers();
+
         if (allowAnonymous)
         {
             controllers.AllowAnonymous();

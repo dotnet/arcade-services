@@ -39,7 +39,7 @@ app.UseRouting();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.ConfigureSecurityHeaders();
-app.ConfigureApi("/api", isDevelopment);
+app.ConfigureApi("/api", isDevelopment, app.Configuration);
 app.MapDefaultEndpoints();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

@@ -13,10 +13,9 @@
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Internal.Logging" />
+    <PackageReference Include="Octokit.Webhooks.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
