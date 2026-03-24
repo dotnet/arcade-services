@@ -64,7 +64,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
     private readonly ICommentCollector _commentCollector;
-    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -98,7 +97,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _workBranchFactory = workBranchFactory;
         _processManager = processManager;
         _commentCollector = commentCollector;
-        _fileSystem = fileSystem;
         _logger = logger;
     }
 

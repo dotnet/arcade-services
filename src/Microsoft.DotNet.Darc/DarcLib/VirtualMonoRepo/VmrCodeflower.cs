@@ -177,7 +177,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
     /// <summary>
     /// If the last flow was adding or deleting a file, and this change was reverted in PR, the next opposite direction flow
-    /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they have,
+    /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they haven't,
     /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
     /// </summary>
     protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
@@ -206,6 +206,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             {
                 _fileSystem.DeleteFile(targetRepo.Path / addedFile);
                 await targetRepo.StageAsync([addedFile], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be added in the last flow, but got removed in the PR, removing it from this flow", addedFile);
             }
         }
 
@@ -219,7 +220,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             if (lastContent == currentContent)
             {
-                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile]);
+                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be deleted in the last flow, but got added back in the PR, adding it back in this flow", deletedFile);
             }
         }
     }

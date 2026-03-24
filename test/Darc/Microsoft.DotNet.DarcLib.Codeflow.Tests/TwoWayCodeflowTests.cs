@@ -1483,7 +1483,6 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeForwardFlow(ffBranchName);
 
-        // The FF brings back the file (bug), so this is true
         File.Exists(_productRepoVmrPath / fileDeletedInFFPR).Should().BeFalse();
         File.Exists(_productRepoVmrPath / fileAddedBackInFFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
@@ -1550,7 +1549,6 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeBackFlow(bfBranchName);
 
-        // The BF brings back the file (bug), so this is true
         File.Exists(ProductRepoPath / fileDeletedInBFPR).Should().BeFalse();
         File.Exists(ProductRepoPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(ProductRepoPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
@@ -1560,7 +1558,6 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeForwardFlow(ffBranchName);
 
-        // The BF brings back the file (bug), so this is true
         File.Exists(_productRepoVmrPath / fileDeletedInBFPR).Should().BeFalse();
         File.Exists(_productRepoVmrPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
