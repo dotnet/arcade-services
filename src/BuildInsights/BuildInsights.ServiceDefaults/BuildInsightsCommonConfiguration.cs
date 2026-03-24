@@ -75,12 +75,6 @@ public static class BuildInsightsCommonConfiguration
 
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
 
-        // If we're using a user assigned managed identity, inject it into other configuration sections that might use it
-        if (!string.IsNullOrEmpty(managedIdentityId))
-        {
-            builder.Configuration[$"{ConfigurationKeys.Kusto}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
-        }
-
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = isDevelopment
             ? new DefaultAzureCredential()
@@ -136,7 +130,11 @@ public static class BuildInsightsCommonConfiguration
         builder.AddSqlDatabase<BuildInsightsContext>(databaseConnectionString, managedIdentityId);
 
         // Set up Kusto client provider
-        builder.Services.AddKustoClientProvider(ConfigurationKeys.Kusto);
+        builder.Services.AddKustoClientProvider(options =>
+        {
+            builder.Configuration.GetSection(ConfigurationKeys.Kusto)?.Bind(options);
+            options.ManagedIdentityId = managedIdentityId;
+        });
         builder.Services.AddTransient<IKustoIngestClientFactory, KustoIngestClientFactory>();
 
         // Set up Helix API
