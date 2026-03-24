@@ -38,7 +38,7 @@ internal class WorkItemConsumer(
         await Task.Yield();
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_queueName);
-        _logger.LogInformation("Consumer {consumerId} starting to process PCS queue {queueName}", _consumerId, _queueName);
+        _logger.LogInformation("Consumer {consumerId} starting to process queue {queueName}", _consumerId, _queueName);
 
         while (!cancellationToken.IsCancellationRequested)
         {

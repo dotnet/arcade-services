@@ -91,7 +91,12 @@ public static class Extensions
         {
             builder.Services
                 .AddOpenTelemetry()
-                .UseAzureMonitor();
+                .UseAzureMonitor(options =>
+                {
+                    // Disable trace-based log sampling to ensure all logs (including Information/Debug) are sent
+                    // This was changed in Azure.Monitor.OpenTelemetry.Exporter 1.5.0 which filters logs by default
+                    options.EnableTraceBasedLogsSampler = false;
+                });
         }
 
         return builder;
