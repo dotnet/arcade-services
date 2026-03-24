@@ -21,9 +21,10 @@ public class LoggingHandler : AzureDevOpsDelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Beginning azure devops call: {AzureDevOpsUrl}", request.RequestUri?.AbsoluteUri);
+        _logger.LogDebug("Beginning azure devops call: {AzureDevOpsUrl}", request.RequestUri?.AbsoluteUri);
         var val = await base.SendAsync(request, cancellationToken);
-        _logger.LogInformation(
+        _logger.Log(
+            val.StatusCode == System.Net.HttpStatusCode.OK ? LogLevel.Debug : LogLevel.Information,
             "Completed azure devops call: Status {StatusCode}, Size:{ContentSize} url: {AzureDevOpsUrl}",
             val.StatusCode,
             val.Content?.Headers?.ContentLength ?? 0,
