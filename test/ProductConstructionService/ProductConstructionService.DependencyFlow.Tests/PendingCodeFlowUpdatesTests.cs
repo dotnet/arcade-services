@@ -103,6 +103,27 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
     }
 
     [Test]
+    public async Task PendingUpdatesUpdatablePrNoCodeFlowUpdates()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(new SubscriptionPolicy());
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        WithForwardFlowerReturningNoUpdates();
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
+
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(oldBuild);
+        }
+    }
+
+    [Test]
     public async Task ForcedPendingUpdatesUpdatableBlockedPr()
     {
         GivenATestChannel();

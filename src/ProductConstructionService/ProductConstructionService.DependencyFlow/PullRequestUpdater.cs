@@ -1251,7 +1251,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        if (pr == null && codeFlowRes.HadUpdates)
+        if (!codeFlowRes.HadUpdates)
+        {
+            return;
+        }
+
+        if (pr == null)
         {
             await CreateCodeFlowPullRequestAsync(
                 update,
