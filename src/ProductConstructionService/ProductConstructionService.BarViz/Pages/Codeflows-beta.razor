@@ -132,7 +132,7 @@
                     {
                         <FluentLabel>
                             <span class="status-dot @GetPrStatusClass(context.ForwardFlow.ActivePullRequest)"></span>
-                            <FluentAnchor Href="@context.ForwardFlow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">Active PR (@GetPrAge(context.ForwardFlow.ActivePullRequest))</FluentAnchor>
+                            <FluentAnchor Href="@context.ForwardFlow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">PR (@GetPrAge(context.ForwardFlow.ActivePullRequest))</FluentAnchor>
                         </FluentLabel>
                     }
                     else
@@ -174,7 +174,7 @@
                     {
                         <FluentLabel>
                             <span class="status-dot @GetPrStatusClass(context.Backflow.ActivePullRequest)"></span>
-                            <FluentAnchor Href="@context.Backflow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">Active PR (@GetPrAge(context.Backflow.ActivePullRequest))</FluentAnchor>
+                            <FluentAnchor Href="@context.Backflow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">PR (@GetPrAge(context.Backflow.ActivePullRequest))</FluentAnchor>
                         </FluentLabel>
                     }
                     else
