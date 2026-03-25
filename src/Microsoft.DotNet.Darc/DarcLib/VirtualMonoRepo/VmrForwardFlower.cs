@@ -372,6 +372,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             };
         }
 
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+
+        await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            lastFlows,
+            vmr,
+            sourceRepo,
+            file => file.Substring(vmrSourcesPath.Length + 1),
+            lastFlows.LastForwardFlow.RepoSha,
+            codeflowOptions.CurrentFlow.RepoSha,
+            cancellationToken);
+
         return result;
     }
 

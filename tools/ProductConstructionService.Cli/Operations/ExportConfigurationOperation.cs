@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -6,6 +6,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -115,7 +116,7 @@ internal class ExportConfigurationOperation : IOperation
         {
             var filePath = group.Key;
             var configurationObjects = group.OrderBy(x => x, comparer).ToList();
-            
+
             var rawYaml = _yamlSerializer.Serialize(configurationObjects);
             _fileSystem.WriteToFile(exportPath / filePath, FormatYaml(rawYaml));
         }

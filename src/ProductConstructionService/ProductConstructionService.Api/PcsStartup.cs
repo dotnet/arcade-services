@@ -69,6 +69,7 @@ internal static class PcsStartup
         public const string ManagedIdentityId = "ManagedIdentityClientId";
         public const string RedisConnectionString = "ConnectionStrings:redis";
         public const string Kusto = "Kusto";
+        public const string QueuesConnectionString = "queues";
 
         public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
         public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
@@ -153,6 +154,7 @@ internal static class PcsStartup
                 { builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName), (1, CodeFlowWorkItemType) }
             });
         builder.AddWorkItemProducerFactory(
+            ConfigurationKeys.QueuesConnectionString,
             azureCredential,
             builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName),
             builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName));
@@ -171,7 +173,6 @@ internal static class PcsStartup
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
         builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
-        builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching

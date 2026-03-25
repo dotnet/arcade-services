@@ -113,11 +113,12 @@ public static class WorkItemConfiguration
 
     public static void AddWorkItemProducerFactory(
         this IHostApplicationBuilder builder,
+        string connectionName,
         TokenCredential credential,
         string defaulQueueName,
         string specialQueueName)
     {
-        builder.AddAzureQueueServiceClient("queues", settings => settings.Credential = credential);
+        builder.AddAzureQueueServiceClient(connectionName, settings => settings.Credential = credential);
         builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
             ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaulQueueName, specialQueueName));
     }

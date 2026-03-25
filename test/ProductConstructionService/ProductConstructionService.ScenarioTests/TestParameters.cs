@@ -104,9 +104,6 @@ public class TestParameters : IDisposable
         services.AddSingleton<IConfigurationRepositoryParser, ConfigurationRepositoryParser>();
         ServiceProvider = services.BuildServiceProvider();
         ConfigRepoParser = ServiceProvider.GetRequiredService<IConfigurationRepositoryParser>();
-
-        // TODO https://github.com/dotnet/arcade-services/issues/5693 remove this line
-        Environment.SetEnvironmentVariable("DARC_USE_CONFIGURATION_REPOSITORY", "true");
     }
 
     [OneTimeSetUp]

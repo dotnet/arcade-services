@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.IO.Compression;
@@ -10,12 +10,13 @@ using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
+using Tools.Cli.Common.Options;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Cli.Operations;
+namespace Tools.Cli.Common.Operations;
 
-internal class DeploymentOperation : IOperation
+public class DeploymentOperation : IOperation
 {
     private readonly DeploymentOptions _options;
     private readonly ResourceGroupResource _resourceGroup;

@@ -4,6 +4,7 @@
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 
@@ -50,7 +51,7 @@ internal class FeatureFlagListByFlagOperation : IOperation
                 var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(flag.SubscriptionId);
                 _logger.LogInformation("  {SubscriptionDescription}", subscriptionDescription);
                 _logger.LogInformation("    Value: {Value}", flag.Value);
-                
+
                 if (flag.CreatedAt.HasValue)
                 {
                     _logger.LogInformation("    Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);

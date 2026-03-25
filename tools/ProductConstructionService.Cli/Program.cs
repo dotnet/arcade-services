@@ -4,6 +4,8 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
+using Tools.Cli.Common.Options;
 
 return Parser.Default.ParseArguments(args, GetOptions())
     .MapResult((Options options) =>

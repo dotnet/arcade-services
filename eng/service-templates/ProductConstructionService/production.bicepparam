@@ -1,8 +1,6 @@
-using './recreate.bicep'
+using 'provision.bicep'
 
 param location = 'westus2'
-
-param nsgName = 'product-construction-service-nsg-prod'
 
 param containerRegistryName = 'productconstructionprod'
 
@@ -10,17 +8,23 @@ param containerCpuCoreCount = '4.0'
 
 param containerMemory = '8Gi'
 
-param replicaNumber = 2
+param replicaCount = 2
 
 param aspnetcoreEnvironment = 'Production'
 
 param applicationInsightsName = 'product-construction-service-ai-prod'
+
+param keyVaultName = 'ProductConstructionProd'
+
+param azureCacheRedisName = 'product-construction-service-redis-prod'
 
 param logAnalyticsName = 'product-construction-service-workspace-prod'
 
 param containerEnvironmentName = 'product-construction-service-env-prod'
 
 param productConstructionServiceName = 'product-construction-prod'
+
+param storageAccountName = 'productconstructionprod'
 
 param pcsIdentityName = 'ProductConstructionServiceProd'
 
@@ -48,4 +52,21 @@ param feedCleanerJobName = 'feed-cleaner-prod'
 
 param feedCleanerIdentityName = 'FeedCleanerProd'
 
+param networkSecurityGroupName = 'product-construction-service-nsg-prod'
+
 param infrastructureResourceGroupName = 'product-construction-service-ip-prod'
+
+param publicIpAddressName = 'product-construction-service-public-ip-prod'
+
+param publicIpAddressServiceTag = 'DotNetProductConstructionServicesProd'
+
+param appGwName = 'product-construction-service-agw-prod'
+
+param appGwIdentityName = 'AppGwIdentityProd'
+
+param certificateName = 'maestro-prod-ag'
+
+// Certificate Secret identifier, without the last part (the version)
+param certificateSecretIdShort = 'https://productconstructionprod.vault.azure.net/secrets/maestro-prod-ag-westus2-cloudapp-azure-com'
+
+param hostName = 'maestro.dot.net'

@@ -27,6 +27,10 @@ param applicationInsightsName string
 @description('Key Vault name')
 param keyVaultName string
 
+@description('Key Vault create mode. Use recover to restore a soft-deleted vault.')
+@allowed(['default', 'recover'])
+param keyVaultCreateMode string = 'default'
+
 @description('Dev Key Vault name')
 param devKeyVaultName string = ''
 
@@ -91,13 +95,34 @@ param networkSecurityGroupName string
 param infrastructureResourceGroupName string
 
 @description('Number of replicas for the container app')
-param replicaNumber int
+param replicaCount int
 
 @description('Public IP address name')
 param publicIpAddressName string
 
 @description('Public IP address service tag')
 param publicIpAddressServiceTag string
+
+@description('Application Gateway name')
+param appGwName string
+
+@description('Application Gateway managed identity name')
+param appGwIdentityName string
+
+@description('SSL certificate name in Key Vault')
+param certificateName string
+
+@description('Certificate Secret identifier, without the last part (the version)')
+param certificateSecretIdShort string
+
+@description('Application Gateway subnet name')
+param appGwVirtualNetworkSubnetName string = 'AppGateway'
+
+@description('Application Gateway host name')
+param hostName string
+
+@description('Application Gateway capacity (instance count)')
+param appGwCapacity int = 2
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -191,7 +216,7 @@ module containerAppModule 'container-app.bicep' = {
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
         pcsIdentityId: managedIdentitiesModule.outputs.pcsIdentityId
-        replicaNumber: replicaNumber
+        replicaCount: replicaCount
     }
     dependsOn: [
         containerRegistryModule
@@ -334,6 +359,7 @@ module keyVaultsModule 'key-vaults.bicep' = {
         kvSecretUserRole: kvSecretUserRole
         kvCryptoUserRole: kvCryptoUserRole
         pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        createMode: keyVaultCreateMode
     }
 }
 
@@ -366,4 +392,43 @@ module ipAddressModule 'public-ip-address.bicep' = {
         publicIpAddressName: publicIpAddressName
         publicIpAddressServiceTag: publicIpAddressServiceTag
     }
+}
+
+module applicationGatewayModule 'application-gateway.bicep' = {
+    name: 'applicationGatewayModule'
+    params: {
+        appGwName: appGwName
+        location: location
+        kvName: keyVaultName
+        appGwIdentityName: appGwIdentityName
+        certificateName: certificateName
+        certificateSecretIdShort: certificateSecretIdShort
+        virtualNetworkName: virtualNetworkName
+        appGwVirtualNetworkSubnetName: appGwVirtualNetworkSubnetName
+        nsgName: networkSecurityGroupName
+        publicIpAddressName: publicIpAddressName
+        frontendIpName: 'frontendIp'
+        httpPortName: 'httpPort'
+        httpsPortName: 'httpsPort'
+        pcsPool: 'pcs'
+        containerAppName: productConstructionServiceName
+        backendHttpSettingName: 'backendHttpSetting'
+        backendHttpsSettingName: 'backendHttpsSetting'
+        pcs80listener: 'pcs-listener-80'
+        pcs443listener: 'pcs-listener-443'
+        pcsRedirection: 'pcs-redirection'
+        pcs80rule: 'pcs-rule-80'
+        pcs443rule: 'pcs-rule-443'
+        containerEnvironmentName: containerEnvironmentName
+        hostName: hostName
+        appGwCapacity: appGwCapacity
+    }
+    dependsOn: [
+        containerAppModule
+        keyVaultsModule
+        virtualNetworkModule
+        networkSecurityGroupModule
+        ipAddressModule
+        containerEnvironmentModule
+    ]
 }
