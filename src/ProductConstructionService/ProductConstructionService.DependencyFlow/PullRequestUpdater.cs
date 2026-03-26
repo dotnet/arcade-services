@@ -1214,6 +1214,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
+        if (!codeFlowRes.HadUpdates)
+        {
+            return;
+        }
+
         if (isForwardFlow)
         {
             SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
@@ -1248,11 +1253,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 codeFlowRes,
                 upstreamRepoDiffs);
 
-            return;
-        }
-
-        if (!codeFlowRes.HadUpdates)
-        {
             return;
         }
 
