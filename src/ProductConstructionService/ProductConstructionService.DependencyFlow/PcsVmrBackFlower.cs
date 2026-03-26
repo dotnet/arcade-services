@@ -89,7 +89,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         result = result with
         {
-            // For backflow, we want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
+            // We want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
             HadUpdates = result.HadUpdates || headBranchExisted,
         };
 
