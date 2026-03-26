@@ -296,6 +296,34 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    public async Task<string?> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUri);
+
+        var request = new Octokit.PullRequestRequest
+        {
+            Head = $"{owner}:{headBranch}",
+            Base = targetBranch,
+            State = Octokit.ItemStateFilter.Open,
+        };
+
+        IReadOnlyList<Octokit.PullRequest> prs = await GetClient(owner, repo).PullRequest.GetAllForRepository(owner, repo, request);
+
+        if (prs.Count == 0)
+        {
+            return null;
+        }
+
+        return prs[0].HtmlUrl;
+    }
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
