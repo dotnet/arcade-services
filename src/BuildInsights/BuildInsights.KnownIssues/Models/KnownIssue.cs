@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using BuildInsights.GitHub.Models;
 
+#nullable disable
 namespace BuildInsights.KnownIssues.Models;
 
 public class KnownIssue
@@ -20,6 +21,10 @@ public class KnownIssue
     public KnownIssueBuildErrorsType BuildErrorsType { get; }
 
     private readonly List<Regex> _matchingRegexes = [];
+
+    public KnownIssue()
+    {
+    }
 
     public KnownIssue(GitHubIssue githubIssue, List<string> buildErrors, KnownIssueType issueType, KnownIssueOptions options)
     {
