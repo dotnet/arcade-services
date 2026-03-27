@@ -414,6 +414,7 @@ public class ConfigurationIngestorTests
             [
                 new AssetFilter { Filter = "Microsoft.NET.Sdk" },
                 new AssetFilter { Filter = "Microsoft.AspNetCore.*" },
+                new AssetFilter { Filter = "System.Text.Json" },
             ]);
 
         await _context.Subscriptions.AddAsync(existingSubscription);
@@ -1162,6 +1163,67 @@ public class ConfigurationIngestorTests
 
         // Assert
         result.RepositoryBranches.Updates.Should().HaveCount(1);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_ReplaceSubscriptionBatchability_DeletesAndRecreates()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        var existingSubscription = CreateSubscription(
+            Guid.NewGuid(),
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.Channels.AddAsync(channel);
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var newSubscriptionId = Guid.NewGuid();
+        var newSubscriptionYaml = new SubscriptionYaml
+        {
+            Id = newSubscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            Batchable = true,
+            UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
+        };
+
+        var configData = new ConfigurationData(
+            [newSubscriptionYaml],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Subscriptions.Removals.Should().HaveCount(1);
+        result.Subscriptions.Creations.Should().HaveCount(1);
+        result.Subscriptions.Updates.Should().BeEmpty();
+
+        var remainingSubscriptions = await _context.Subscriptions
+            .Where(s => s.Namespace!.Name == _testNamespace)
+            .ToListAsync();
+
+        remainingSubscriptions.Should().ContainSingle();
+
+        var newSubscription = remainingSubscriptions.First();
+        newSubscription.Id.Should().Be(newSubscriptionId);
+        newSubscription.SourceRepository.Should().Be("https://github.com/dotnet/runtime");
+        newSubscription.TargetRepository.Should().Be("https://github.com/dotnet/aspnetcore");
+        newSubscription.TargetBranch.Should().Be("main");
+        newSubscription.Enabled.Should().BeTrue();
+        newSubscription.PolicyObject.Batchable.Should().BeTrue();
     }
 
     [Test]
