@@ -87,6 +87,12 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
+        result = result with
+        {
+            // We want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
+            HadUpdates = result.HadUpdates || headBranchExisted,
+        };
+
         if (result.HadUpdates && !result.HadConflicts)
         {
             var stagedFiles = await targetRepo.GetStagedFilesAsync();
@@ -103,11 +109,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             }
         }
 
-        return result with
-        {
-            // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
-            HadUpdates = result.HadUpdates || headBranchExisted,
-        };
+        return result;
     }
 
     protected override bool ShouldResetClones => true;
