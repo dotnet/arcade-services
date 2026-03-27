@@ -113,7 +113,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
 
         WithForwardFlowerReturningNoUpdates();
 
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
