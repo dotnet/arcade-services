@@ -9,6 +9,7 @@ using BuildInsights.ServiceDefaults.Configuration.Models;
 using BuildInsights.Utilities.AzureDevOps;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -67,10 +68,12 @@ public class ScenarioTestConfiguration
         });
 
         var assembly = Assembly.GetExecutingAssembly();
+        var assemblyDir = Path.GetDirectoryName(assembly.Location)!;
 
         var configurationManager = new ConfigurationManager();
-        configurationManager.AddSharedConfiguration(Path.GetDirectoryName(assembly.Location)!, EnvironmentName);
-
+        configurationManager.AddSharedConfiguration(assemblyDir, EnvironmentName);
+        configurationManager.AddJsonFile(Path.Combine(assemblyDir, "appsettings.json"), optional: true);
+        configurationManager.AddJsonFile(Path.Combine(assemblyDir, $"appsettings.{EnvironmentName}.json"), optional: true);
         IServiceCollection services = new ServiceCollection();
 
         services.AddSingleton<IConfiguration>(configurationManager);
@@ -87,7 +90,11 @@ public class ScenarioTestConfiguration
         services.AddLogging();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton<ILogger, NUnitLogger>();
-        services.AddVssConnection();
+        services.AddTransient<ISystemClock, SystemClock>();
+        services.AddSingleton<ExponentialRetry>();
+        services.AddSingleton<TelemetryClient>();
+        services.Configure<ExponentialRetryOptions>(_ => { });
+        services.AddMemoryCache();
         ServiceProvider = services.BuildServiceProvider().CreateScope().ServiceProvider;
         GitHubApi = new Octokit.GitHubClient(
             new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),

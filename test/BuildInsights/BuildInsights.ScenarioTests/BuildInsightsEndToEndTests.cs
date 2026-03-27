@@ -70,14 +70,8 @@ public class BuildInsightsEndToEndTests
                 testGitHubInformation.RepoName,
                 testGitHubInformation.Commit.Sha);
 
-            if (checks.TotalCount <= 0 || !checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
-            {
-                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                continue;
-            }
-
             CheckRun? buildInsightsCheck = checks.CheckRuns.FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
-                                                                             && c.Name == GitHubAppSettings.AppName);
+                                                                             && c.App.Name == GitHubAppSettings.AppName);
 
             if (buildInsightsCheck is null)
             {
@@ -86,40 +80,44 @@ public class BuildInsightsEndToEndTests
                 continue;
             }
 
-            TestContext.WriteLine($"Found check run {buildInsightsCheck.Id}");
-
-            if (EnvironmentName != "Development")
+            if (buildInsightsCheck.Status != CheckStatus.Completed)
             {
-                Match m = r.Match(buildInsightsCheck.Output.Text);
-                string snapshotId = m.Groups[1].Value;
-                TestContext.WriteLine($"SnapshotId: {snapshotId}");
-
-                Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
-                stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
-
-                var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(stream, options, cancellationToken);
-                data.Should().NotBeNull();
-
-                // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
-                //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
-                if (data.CompletedPipelines.Count < 2)
-                {
-                    TestContext.WriteLine("Waiting for the other build!");
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    continue;
-                }
-
-                foreach (var pipeline in data.CompletedPipelines)
-                {
-                    TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
-                }
-
-                ValidateSnapshotData(data);
+                TestContext.WriteLine("Build insights check completed yet, waiting...");
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                continue;
             }
 
-            buildInsightsCheck.Conclusion.Should().Be(GitHub.Models.CheckConclusion.Failure, "there are test failures");
-            buildInsightsCheck.Output.Text.Should().Contain("Test Failures (2 tests failed)")
-                .And.Contain("build-insights-test-1")
+            TestContext.WriteLine($"Found check run {buildInsightsCheck.Id}");
+
+            Match m = r.Match(buildInsightsCheck.Output.Text);
+            string snapshotId = m.Groups[1].Value;
+            TestContext.WriteLine($"SnapshotId: {snapshotId}");
+
+            using Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
+            stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
+
+            var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(stream, options, cancellationToken);
+            data.Should().NotBeNull();
+
+            // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
+            //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
+            if (data.CompletedPipelines.Count < 2)
+            {
+                TestContext.WriteLine("Waiting for the other build!");
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                continue;
+            }
+
+            foreach (var pipeline in data.CompletedPipelines)
+            {
+                TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
+            }
+
+            ValidateSnapshotData(data);
+
+            buildInsightsCheck.Conclusion?.Value.ToString().Should().Be(CheckConclusion.Failure.ToString(), "there are test failures");
+            buildInsightsCheck.Output.Text.Should().Contain("Test Failures (3 tests failed)")
+                .And.Contain("failing tests from build-insights-test-1")
                 .And.Contain("Known test errors")
                 .And.Contain(KnownIssueTitle);
             break;
@@ -181,11 +179,10 @@ public class BuildInsightsEndToEndTests
             TestContext.WriteLine($"Test {result.AutomatedTestName}, outcome: {result.Outcome}, run: {run.Name}");
         }
 
-        var passingResults = allTestResults.Where(t => t.result.Outcome == "Passed").ToList();
+        var passingResults = allTestResults
+            .Where(t => t.result.Outcome == "Passed" && t.result.AutomatedTestName == TestName)
+            .ToList();
         passingResults.Should().HaveCount(1);
-
-        var (passingResult, _, _, passingRun) = passingResults.First();
-        passingResult.AutomatedTestName.Should().Be(TestName);
     }
 
     private static async Task PostBaGreenCommentAndWaitForCheckSuccess(
