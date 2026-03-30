@@ -279,8 +279,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
     {
-        //todo this is a temporary solution to update existing PRs, it can be removed after all existing PRs get a creation date
-        if (pr.CreationDate == creationDate)
+        // (https://github.com/dotnet/arcade-services/issues/6146) todo this is a temporary solution to update existing PRs
+        if (pr.CreationDate != creationDate)
         {
             pr.CreationDate = creationDate;
             await _pullRequestState.SetAsync(pr);
