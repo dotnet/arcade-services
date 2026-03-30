@@ -20,10 +20,10 @@ public class DependencyRegistrationTests
             addKeyVault: false,
             addSwagger: true);
 
-        builder.Services.AddTransient<NonBatchedPullRequestUpdater>();
-        builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid()));
-        builder.Services.AddTransient<BatchedPullRequestUpdater>();
-        builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch"));
+        builder.Services.AddTransient<NonBatchedDependencyPullRequestUpdater>();
+        builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid(), isCodeFlow: false));
+        builder.Services.AddTransient<BatchedDependencyPullRequestUpdater>();
+        builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch", isCodeFlow: false));
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

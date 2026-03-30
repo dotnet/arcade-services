@@ -141,7 +141,7 @@ public class PullRequestCommentBuilderTests
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", isCodeFlow: false).Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
@@ -166,7 +166,7 @@ public class PullRequestCommentBuilderTests
 
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", isCodeFlow: false).Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",

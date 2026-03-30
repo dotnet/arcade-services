@@ -7,19 +7,17 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class BatchedPullRequestUpdater : PullRequestUpdater
+internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
-    private readonly BuildAssetRegistryContext _context;
 
-    public BatchedPullRequestUpdater(
+    public BatchedDependencyPullRequestUpdater(
         BatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
@@ -30,36 +28,13 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<BatchedPullRequestUpdater> logger,
+        ILogger<BatchedDependencyPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter)
-        : base(
-            id,
-            mergePolicyEvaluator,
-            context,
-            remoteFactory,
-            updaterFactory,
-            coherencyUpdateResolver,
-            pullRequestBuilder,
-            cacheFactory,
-            reminderManagerFactory,
-            sqlClient,
-            gitClient,
-            vmrInfo,
-            vmrForwardFlower,
-            vmrBackFlower,
-            telemetryRecorder,
-            logger,
-            commentCollector,
-            pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
     {
         _id = id;
-        _context = context;
     }
 
     protected override Task<(string repository, string branch)> GetTargetAsync()
@@ -72,4 +47,6 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         RepositoryBranch? repositoryBranch = await _context.RepositoryBranches.FindAsync(_id.Repository, _id.Branch);
         return repositoryBranch?.PolicyObject?.MergePolicies ?? [];
     }
+
+    protected override Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr) => Task.CompletedTask;
 }
