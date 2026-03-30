@@ -198,3 +198,62 @@ internal partial class ConfigurationIngestor
                 p => JToken.FromObject(p.Value)), // todo: this seems fragile. Can we change MergePolicyYaml to be <string, JToken> like the DAO & DTO?
         };
 }
+
+public class CaseInsensitiveTupleComparer<T> : IEqualityComparer<T>
+{
+    private readonly Func<T, string[]> _getParts;
+
+    public CaseInsensitiveTupleComparer(Func<T, string[]> getParts)
+    {
+        _getParts = getParts;
+    }
+
+    public bool Equals(T? x, T? y)
+    {
+        if (x == null && y == null)
+        {
+            return true;
+        }
+
+        if (x == null || y == null)
+        {
+            return false;
+        }
+
+        var a = _getParts(x);
+        var b = _getParts(y);
+
+        if (a.Length != b.Length)
+            return false;
+
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (!StringComparer.OrdinalIgnoreCase.Equals(a[i], b[i]))
+                return false;
+        }
+
+        return true;
+    }
+
+    public int GetHashCode(T obj)
+    {
+        var parts = _getParts(obj);
+
+        var hash = new HashCode();
+        foreach (var part in parts)
+        {
+            hash.Add(part, StringComparer.OrdinalIgnoreCase);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+public static class CaseInsensitiveTupleComparer
+{
+    public static IEqualityComparer<(string, string)> Pair() =>
+        new CaseInsensitiveTupleComparer<(string, string)>(t => [t.Item1, t.Item2]);
+
+    public static IEqualityComparer<(string, string, string)> Triple() =>
+        new CaseInsensitiveTupleComparer<(string, string, string)>(t => [t.Item1, t.Item2, t.Item3]);
+}
