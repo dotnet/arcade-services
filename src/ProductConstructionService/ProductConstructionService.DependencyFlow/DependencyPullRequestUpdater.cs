@@ -364,7 +364,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
-            ?? throw new($"Subscription with ID {update.SubscriptionId} not found in the DB.");
+            ?? throw new InvalidOperationException($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
         var excludedAssetsMatcher = new NameBasedAssetMatcher(subscription.ExcludedAssets);
 

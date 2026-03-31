@@ -42,10 +42,6 @@ public abstract class PullRequestUpdaterId
         IsCodeFlow = isCodeFlow;
     }
 
-    /// <summary>
-    ///     Parses an <see cref="UpdaterId" /> created by <see cref="Create(string, string)" /> into the (repository, branch)
-    ///     pair that created it.
-    /// </summary>
     public static PullRequestUpdaterId Parse(string id, bool isCodeFlow)
     {
         if (Guid.TryParse(id, out var guid))

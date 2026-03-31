@@ -36,7 +36,7 @@ public class SubscriptionUpdateProcessor(
             return false;
         }
 
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, subscription.SourceEnabled));
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, workItem.SubscriptionType == SubscriptionType.DependenciesAndSources));
         await updater.ProcessPendingUpdatesAsync(workItem, applyNewestOnly: true, forceUpdate: false, build);
         return true;
     }

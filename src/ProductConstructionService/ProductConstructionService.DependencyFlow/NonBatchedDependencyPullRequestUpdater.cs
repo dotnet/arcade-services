@@ -54,14 +54,12 @@ internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpd
         if (subscription == null)
         {
             _logger.LogInformation(
-                $"Failed to find a subscription {SubscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
+                "Failed to find a subscription {SubscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
+                SubscriptionId);
 
-            // We don't know if the subscription was a code flow one, so just unset both
             await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
             return null;
         }

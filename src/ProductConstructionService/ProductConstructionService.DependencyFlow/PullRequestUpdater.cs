@@ -488,7 +488,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    // TODO this name isn't good
     protected async Task AddDependencyFlowEventsAsync(
         IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
         DependencyFlowEventType flowEvent,
