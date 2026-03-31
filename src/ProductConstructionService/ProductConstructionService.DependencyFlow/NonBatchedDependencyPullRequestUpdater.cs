@@ -2,28 +2,27 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
-using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class NonBatchedPullRequestUpdater : PullRequestUpdater
+internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
-    private readonly Lazy<Task<Subscription?>> _lazySubscription;
+    private readonly IPullRequestCommentBuilder _commentBuilder;
+    private readonly ICommentCollector _commentCollector;
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
-    private readonly ILogger<NonBatchedPullRequestUpdater> _logger;
-    private readonly ICommentCollector _commentCollector;
-    private readonly IPullRequestCommentBuilder _commentBuilder;
+    private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
-    public NonBatchedPullRequestUpdater(
+    private readonly Lazy<Task<Subscription?>> _subscription;
+
+    public NonBatchedDependencyPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
@@ -34,40 +33,17 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<NonBatchedPullRequestUpdater> logger,
+        ILogger<DependencyPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestCommentBuilder commentBuilder)
-        : base(
-            id,
-            mergePolicyEvaluator,
-            context,
-            remoteFactory,
-            updaterFactory,
-            coherencyUpdateResolver,
-            pullRequestBuilder,
-            cacheFactory,
-            reminderManagerFactory,
-            sqlClient,
-            gitClient,
-            vmrInfo,
-            vmrForwardFlower,
-            vmrBackFlower,
-            telemetryRecorder,
-            logger,
-            commentCollector,
-            pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
-        _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;
         _context = context;
         _logger = logger;
         _commentCollector = commentCollector;
+        _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _commentBuilder = commentBuilder;
     }
 
@@ -82,14 +58,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         if (subscription == null)
         {
             _logger.LogInformation(
-                $"Failed to find a subscription {SubscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
+                "Failed to find a subscription {SubscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
+                SubscriptionId);
 
-            // We don't know if the subscription was a code flow one, so just unset both
             await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
             return null;
         }
@@ -99,7 +73,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 
     private Task<Subscription?> GetSubscription()
     {
-        return _lazySubscription.Value;
+        return _subscription.Value;
     }
 
     protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)

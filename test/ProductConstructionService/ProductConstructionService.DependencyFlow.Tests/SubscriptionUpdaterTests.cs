@@ -15,7 +15,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture, NonParallelizable]
 internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
 {
-    protected Dictionary<UpdaterId, Mock<IPullRequestUpdater>> PullRequestUpdaters { get; private set; } = [];
+    protected Dictionary<PullRequestUpdaterId, Mock<IPullRequestUpdater>> PullRequestUpdaters { get; private set; } = [];
 
     [SetUp]
     public void SubscriptionUpdaterTests_SetUp()
@@ -53,7 +53,7 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
             });
     }
 
-    private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(UpdaterId forUpdater, Build withBuild)
+    private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(PullRequestUpdaterId forUpdater, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
         PullRequestUpdaters.Should().ContainKey(forUpdater)
@@ -80,7 +80,7 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
         ThenUpdateAssetsAsyncShouldHaveBeenCalled(
-            new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch),
+            new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch, isCodeflow: false),
             b);
     }
 
@@ -97,6 +97,6 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
         Build b = GivenANewBuild(true);
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
-        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestUpdaterId(Subscription.Id), b);
+        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestUpdaterId(Subscription.Id, isCodeflow: false), b);
     }
 }

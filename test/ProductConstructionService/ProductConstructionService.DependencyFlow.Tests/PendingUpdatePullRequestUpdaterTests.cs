@@ -35,7 +35,7 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
                         .ReturnsAsync([new GitFile("path", "content")]);
                 }
                 BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
-                IPullRequestUpdater updater = CreatePullRequestActor(context);
+                IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeFlow);
                 await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), applyNewestOnly, forceUpdate, buildDTO);
             });
     }
