@@ -3,7 +3,6 @@
 
 using Maestro.Data.Models;
 using NUnit.Framework;
-using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -17,7 +16,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = true,
+                Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build build = GivenANewBuild(true);
@@ -38,7 +37,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = true,
+                Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build build = GivenANewBuild(true);
@@ -59,7 +58,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = true,
+                Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build oldBuild = GivenANewBuild(true);
@@ -86,7 +85,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = true,
+                Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build oldBuild = GivenANewBuild(true);
@@ -130,7 +129,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = true,
+                Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build oldBuild = GivenANewBuild(true);

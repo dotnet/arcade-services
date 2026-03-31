@@ -10,8 +10,8 @@ public class NonBatchedPullRequestUpdaterId : PullRequestUpdaterId
 {
     public Guid SubscriptionId { get; }
 
-    public NonBatchedPullRequestUpdaterId(Guid subscriptionId, bool isCodeFlow)
-        : base(subscriptionId.ToString(), isCodeFlow)
+    public NonBatchedPullRequestUpdaterId(Guid subscriptionId, bool isCodeflow)
+        : base(subscriptionId.ToString(), isCodeflow)
     {
         SubscriptionId = subscriptionId;
     }
@@ -22,8 +22,8 @@ public class BatchedPullRequestUpdaterId : PullRequestUpdaterId
     public string Repository { get; }
     public string Branch { get; }
 
-    public BatchedPullRequestUpdaterId(string repository, string branch, bool isCodeFlow)
-        : base(Encode(repository) + ":" + Encode(branch), isCodeFlow)
+    public BatchedPullRequestUpdaterId(string repository, string branch, bool isCodeflow)
+        : base(Encode(repository) + ":" + Encode(branch), isCodeflow)
     {
         Repository = repository;
         Branch = branch;

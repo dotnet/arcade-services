@@ -80,7 +80,7 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
         ThenUpdateAssetsAsyncShouldHaveBeenCalled(
-            new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch, isCodeFlow: false),
+            new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch, isCodeflow: false),
             b);
     }
 
@@ -97,6 +97,6 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
         Build b = GivenANewBuild(true);
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
-        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestUpdaterId(Subscription.Id, isCodeFlow: false), b);
+        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestUpdaterId(Subscription.Id, isCodeflow: false), b);
     }
 }
