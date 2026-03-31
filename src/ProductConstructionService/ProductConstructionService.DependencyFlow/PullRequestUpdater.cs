@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Telemetry;
-using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -11,7 +9,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -25,6 +22,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestChecker _pullRequestChecker;
     private readonly ISubscriptionConfiguration _subscriptionConfiguration;
     private readonly ISqlBarClient _sqlClient;
+    private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdaterId Id => (PullRequestUpdaterId)_subscriptionConfiguration;
@@ -32,22 +30,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public PullRequestUpdater(
         ISubscriptionConfiguration subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ILogger<PullRequestUpdater> logger,
-        IPullRequestCommenter pullRequestCommenter)
+        IPullRequestCommenter pullRequestCommenter,
+        IPullRequestStateManager stateManager,
+        ILogger<PullRequestUpdater> logger)
     {
         _subscriptionConfiguration = subscriptionConfiguration;
         _pullRequestChecker = pullRequestChecker;
         _sqlClient = sqlClient;
         _logger = logger;
-
-        var cacheKey = Id.ToString();
-        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
-        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
         _pullRequestCommenter = pullRequestCommenter;
+        _stateManager = stateManager;
     }
 
     protected abstract Task ProcessSubscriptionUpdateAsync(

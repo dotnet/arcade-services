@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -23,26 +22,27 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISqlBarClient _sqlClient;
+    private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
         ISubscriptionConfiguration subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
         IPullRequestStateManager stateManager,
-        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         ISqlBarClient sqlClient,
         ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter)
-        : base(subscriptionConfiguration, pullRequestChecker, stateManager, context, remoteFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
     {
         _subscriptionConfiguration = subscriptionConfiguration;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
         _sqlClient = sqlClient;
+        _stateManager = stateManager;
         _logger = logger;
     }
 

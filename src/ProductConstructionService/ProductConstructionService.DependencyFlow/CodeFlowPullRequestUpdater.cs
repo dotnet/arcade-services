@@ -30,6 +30,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISqlBarClient _sqlClient;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ICommentCollector _commentCollector;
+    private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
@@ -45,8 +46,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
+        IPullRequestStateManager stateManager,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(subscriptionConfiguration, pullRequestChecker, stateManager, context, remoteFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -58,6 +60,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _telemetryRecorder = telemetryRecorder;
         _commentCollector = commentCollector;
         _logger = logger;
+        _stateManager = stateManager;
     }
 
     protected async override Task ProcessSubscriptionUpdateAsync(
