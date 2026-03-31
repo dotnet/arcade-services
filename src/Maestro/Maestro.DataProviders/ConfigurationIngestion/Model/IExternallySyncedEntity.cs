@@ -3,6 +3,8 @@
 
 #nullable enable
 
+using System.Collections.Generic;
+
 namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 public abstract class IExternallySyncedEntity
@@ -25,4 +27,9 @@ public abstract class IExternallySyncedEntity<TId> : IExternallySyncedEntity
     /// Gets the unique identifier for the entity.
     /// </summary>
     public abstract TId UniqueId { get; }
+
+    /// <summary>
+    /// Gets the comparer used to determine equality of the unique identifier.
+    /// </summary>
+    public abstract IEqualityComparer<TId> UniqueKeyComparer { get; }
 }

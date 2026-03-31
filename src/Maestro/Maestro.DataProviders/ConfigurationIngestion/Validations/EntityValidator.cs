@@ -18,9 +18,11 @@ internal class EntityValidator
             return;
         }
 
+        var keyComparer = entities.First().UniqueKeyComparer;
+
         // Find duplicates by grouping entities by their unique ID
         var duplicates = entities
-            .GroupBy(e => e.UniqueId)
+            .GroupBy(e => e.UniqueId, keyComparer)
             .Where(g => g.Count() > 1)
             .Select(g => g.First())
             .ToList();

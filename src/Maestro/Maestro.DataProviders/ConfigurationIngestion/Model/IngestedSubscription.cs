@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable
@@ -12,6 +13,9 @@ internal class IngestedSubscription : IExternallySyncedEntity<Guid>
     public IngestedSubscription(SubscriptionYaml values) => Values = values;
 
     public override Guid UniqueId => Values.Id;
+
+    public override IEqualityComparer<Guid> UniqueKeyComparer =>
+        EqualityComparer<Guid>.Default;
 
     public SubscriptionYaml Values { init; get; }
 

@@ -199,61 +199,45 @@ internal partial class ConfigurationIngestor
         };
 }
 
-public class CaseInsensitiveTupleComparer<T> : IEqualityComparer<T>
+public class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>
 {
-    private readonly Func<T, string[]> _getParts;
-
-    public CaseInsensitiveTupleComparer(Func<T, string[]> getParts)
+    public bool Equals((string, string) x, (string, string) y)
     {
-        _getParts = getParts;
+        return StringComparer.OrdinalIgnoreCase.Equals(x.Item1, y.Item1)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item2, y.Item2);
     }
 
-    public bool Equals(T? x, T? y)
+    public int GetHashCode((string, string) obj)
     {
-        if (x == null && y == null)
-        {
-            return true;
-        }
+        return HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item2));
+    }
+}
 
-        if (x == null || y == null)
-        {
-            return false;
-        }
-
-        var a = _getParts(x);
-        var b = _getParts(y);
-
-        if (a.Length != b.Length)
-            return false;
-
-        for (int i = 0; i < a.Length; i++)
-        {
-            if (!StringComparer.OrdinalIgnoreCase.Equals(a[i], b[i]))
-                return false;
-        }
-
-        return true;
+public class CaseInsensitiveTripleComparer : IEqualityComparer<(string, string, string)>
+{
+    public bool Equals((string, string, string) x, (string, string, string) y)
+    {
+        return StringComparer.OrdinalIgnoreCase.Equals(x.Item1, y.Item1)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item2, y.Item2)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item3, y.Item3);
     }
 
-    public int GetHashCode(T obj)
+    public int GetHashCode((string, string, string) obj)
     {
-        var parts = _getParts(obj);
-
-        var hash = new HashCode();
-        foreach (var part in parts)
-        {
-            hash.Add(part, StringComparer.OrdinalIgnoreCase);
-        }
-
-        return hash.ToHashCode();
+        return HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item2),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item3));
     }
 }
 
 public static class CaseInsensitiveTupleComparer
 {
     public static IEqualityComparer<(string, string)> Pair() =>
-        new CaseInsensitiveTupleComparer<(string, string)>(t => [t.Item1, t.Item2]);
+        new CaseInsensitivePairComparer();
 
     public static IEqualityComparer<(string, string, string)> Triple() =>
-        new CaseInsensitiveTupleComparer<(string, string, string)>(t => [t.Item1, t.Item2, t.Item3]);
+        new CaseInsensitiveTripleComparer();
 }
