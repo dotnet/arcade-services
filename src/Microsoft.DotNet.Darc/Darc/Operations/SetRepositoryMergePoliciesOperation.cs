@@ -166,7 +166,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying branch existence for {repo}@{branch}", repository, branch);
+            _logger.LogError(ex, "Error verifying branch existence for {repo}@{branch} using the configured credentials or authentication token", repository, branch);
             return Constants.ErrorCode;
         }
 
