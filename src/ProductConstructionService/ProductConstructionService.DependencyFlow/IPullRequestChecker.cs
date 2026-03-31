@@ -22,21 +22,6 @@ internal interface IPullRequestChecker
         bool isCodeFlow,
         bool tryingToUpdate);
 
-    Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate);
-
-    Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates);
-
-    Task SetPullRequestCheckReminder(
-        InProgressPullRequest prState,
-        PullRequest prInfo,
-        bool isCodeFlow,
-        TimeSpan reminderDelay);
-
-    Task SetPullRequestCheckReminder(
-        InProgressPullRequest prState,
-        PullRequest prInfo,
-        bool isCodeFlow);
-
     Task AddDependencyFlowEventsAsync(
         IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
         DependencyFlowEventType flowEvent,
@@ -55,6 +40,4 @@ internal interface IPullRequestChecker
         InProgressPullRequest pr,
         PullRequest prInfo,
         IRemote remote);
-
-    Task ClearMergePolicyEvaluationStateAsync();
 }

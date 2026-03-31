@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -14,7 +13,6 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
@@ -39,8 +37,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestChecker pullRequestChecker,
         IRemoteFactory remoteFactory,
         IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
         ILocalLibGit2Client gitClient,
         IVmrInfo vmrInfo,
@@ -50,7 +46,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(subscriptionConfiguration, pullRequestChecker, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, stateManager, context, remoteFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -78,8 +74,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 update.SubscriptionId,
                 update.SourceSha);
 
-            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return;
         }
 
@@ -88,8 +84,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return;
         }
 
@@ -97,7 +93,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (subscription == null)
         {
             _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
-            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             return;
         }
 
@@ -379,7 +375,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             // Since we changed the PR state in cache but no commit was pushed,
             // we need to delete non-transient check results so that they can be re-evaluated
-            await ClearMergePolicyEvaluationStateAsync();
+            await _stateManager.ClearMergePolicyEvaluationStateAsync();
         }
 
         _commentCollector.AddComment(
@@ -478,8 +474,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
-            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
@@ -565,8 +561,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
             pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
-            await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
         }
     }
 
@@ -575,7 +571,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
-        await _pullRequestState.SetAsync(pr);
+        await _stateManager.SetInProgressPullRequestAsync(pr);
     }
 }
 

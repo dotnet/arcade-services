@@ -10,7 +10,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
@@ -29,15 +28,15 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     public DependencyPullRequestUpdater(
         ISubscriptionConfiguration subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
+        IPullRequestStateManager stateManager,
+        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
         ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter)
-        : base(subscriptionConfiguration, pullRequestChecker, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, stateManager, context, remoteFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
     {
         _subscriptionConfiguration = subscriptionConfiguration;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -57,7 +56,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         if (pr != null && prInfo != null)
         {
             await UpdatePullRequestAsync(update, pr, prInfo, build);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return;
         }
 
@@ -72,7 +71,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
         }
 
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+        await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
     }
 
     private async Task UpdatePullRequestAsync(
@@ -170,7 +169,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         await darcRemote.UpdatePullRequestAsync(pr.Url, prInfo);
         pr.LastUpdate = DateTime.UtcNow;
         pr.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
+        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
     }
@@ -249,7 +248,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
             };
 
-            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+            await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
             return pr;
         }
 
@@ -313,7 +312,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
                     MergePolicyCheckResult.PendingPolicies,
                     pr.Url);
 
-                await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+                await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
                 return pr;
             }
 

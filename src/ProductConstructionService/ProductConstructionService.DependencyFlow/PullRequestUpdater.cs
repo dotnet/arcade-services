@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -12,7 +11,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
@@ -28,10 +26,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly ISubscriptionConfiguration _subscriptionConfiguration;
     private readonly ISqlBarClient _sqlClient;
     private readonly ILogger<PullRequestUpdater> _logger;
-
-    protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
-    protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
-    protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
 
     public PullRequestUpdaterId Id => (PullRequestUpdaterId)_subscriptionConfiguration;
 
@@ -113,7 +107,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
-        InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+        InProgressPullRequest? pr = await _stateManager.GetInProgressPullRequestAsync();
         PullRequest? prInfo;
 
         if (pr == null)
@@ -137,7 +131,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             (var status, prInfo) = await _pullRequestChecker.GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
 
-            await _pullRequestChecker.UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
+            await _stateManager.UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
 
             switch (status)
             {
@@ -165,7 +159,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
 
-        pr = await _pullRequestState.TryGetStateAsync();
+        pr = await _stateManager.GetInProgressPullRequestAsync();
         if (pr != null)
         {
             await _pullRequestCommenter.PostCollectedCommentsAsync(
@@ -209,46 +203,34 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     protected static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
 
-    protected Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow, TimeSpan reminderDelay)
-        => _pullRequestChecker.SetPullRequestCheckReminder(prState, prInfo, isCodeFlow, reminderDelay);
-
-    protected Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow)
-        => _pullRequestChecker.SetPullRequestCheckReminder(prState, prInfo, isCodeFlow);
-
-    protected Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
-        => _pullRequestChecker.ClearAllStateAsync(isCodeFlow, clearPendingUpdates);
-
     protected Task AddDependencyFlowEventsAsync(
         IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
         DependencyFlowEventType flowEvent,
         DependencyFlowEventReason reason,
         MergePolicyCheckResult policy,
-        string? prUrl)
-        => _pullRequestChecker.AddDependencyFlowEventsAsync(subscriptionPullRequestUpdates, flowEvent, reason, policy, prUrl);
+        string? prUrl) =>
+        _pullRequestChecker.AddDependencyFlowEventsAsync(subscriptionPullRequestUpdates, flowEvent, reason, policy, prUrl);
 
     protected Task RegisterSubscriptionUpdateAction(
         SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId)
-        => _pullRequestChecker.RegisterSubscriptionUpdateAction(subscriptionUpdateAction, subscriptionId);
+        Guid subscriptionId) =>
+        _pullRequestChecker.RegisterSubscriptionUpdateAction(subscriptionUpdateAction, subscriptionId);
 
-    protected Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
-        => _pullRequestChecker.UpdateSubscriptionsForMergedPRAsync(subscriptionPullRequestUpdates);
+    protected Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates) =>
+        _pullRequestChecker.UpdateSubscriptionsForMergedPRAsync(subscriptionPullRequestUpdates);
 
     protected Task<(IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult)> RunMergePolicyEvaluation(
         InProgressPullRequest pr,
         PullRequest prInfo,
-        IRemote remote)
-        => _pullRequestChecker.RunMergePolicyEvaluation(pr, prInfo, remote);
-
-    protected Task ClearMergePolicyEvaluationStateAsync()
-        => _pullRequestChecker.ClearMergePolicyEvaluationStateAsync();
+        IRemote remote) =>
+        _pullRequestChecker.RunMergePolicyEvaluation(pr, prInfo, remote);
 
     private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
     {
         _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
-        await _pullRequestUpdateReminders.SetReminderAsync(update, DependencyFlowConstants.DefaultReminderDelay, isCodeFlow);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        await _stateManager.SetUpdateReminderAsync(update, DependencyFlowConstants.DefaultReminderDelay, isCodeFlow);
+        await _stateManager.UnsetCheckReminderAsync(isCodeFlow);
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
-        await _pullRequestState.SetAsync(pr);
+        await _stateManager.SetInProgressPullRequestAsync(pr);
     }
 }

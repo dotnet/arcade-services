@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Common.Cache;
-using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -14,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -23,8 +20,8 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class PullRequestChecker : IPullRequestChecker
 {
-    private readonly PullRequestUpdaterId _id;
     private readonly ISubscriptionConfiguration _subscriptionConfiguration;
+    private readonly IPullRequestStateManager _stateManager;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
@@ -32,54 +29,42 @@ internal class PullRequestChecker : IPullRequestChecker
     private readonly ISqlBarClient _sqlClient;
     private readonly ILogger<PullRequestChecker> _logger;
 
-    private readonly IRedisCache<InProgressPullRequest> _pullRequestState;
-    private readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
-    private readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
-    private readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
-
     public PullRequestChecker(
         ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
         ILogger<PullRequestChecker> logger)
     {
-        _id = (PullRequestUpdaterId)subscriptionConfiguration;
         _subscriptionConfiguration = subscriptionConfiguration;
+        _stateManager = stateManager;
         _mergePolicyEvaluator = mergePolicyEvaluator;
         _context = context;
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _sqlClient = sqlClient;
         _logger = logger;
-
-        var cacheKey = _id.ToString();
-        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
-        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
-        _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
     }
 
     public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
     {
-        var inProgressPr = await _pullRequestState.TryGetStateAsync();
+        var inProgressPr = await _stateManager.GetInProgressPullRequestAsync();
 
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
-            await ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
             return false;
         }
 
         if (!await _subscriptionConfiguration.IsAvailableAsync())
         {
-            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
-            await ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
             // Return true for test PRs to avoid reporting failure for deleted subscriptions during E2E tests
             return inProgressPr.Url?.Contains("maestro-auth-test") ?? false;
         }
@@ -91,18 +76,8 @@ internal class PullRequestChecker : IPullRequestChecker
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pr.Url);
         (var status, var prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: false);
-        await UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
+        await _stateManager.UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
         return status != PullRequestStatus.Invalid;
-    }
-
-    public async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
-    {
-        //todo this is a temporary solution to update existing PRs, it can be removed after all existing PRs get a creation date
-        if (pr.CreationDate == creationDate)
-        {
-            pr.CreationDate = creationDate;
-            await _pullRequestState.SetAsync(pr);
-        }
     }
 
     public async Task<(PullRequestStatus Status, PullRequest PrInfo)> GetPullRequestStatusAsync(InProgressPullRequest pr, bool isCodeFlow, bool tryingToUpdate)
@@ -153,7 +128,7 @@ internal class PullRequestChecker : IPullRequestChecker
                             pr.Url);
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
-                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: true);
+                        await _stateManager.ClearAllStateAsync(isCodeFlow, clearPendingUpdates: true);
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -163,18 +138,18 @@ internal class PullRequestChecker : IPullRequestChecker
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
                         _logger.LogInformation("Pull request {url} can be updated", pr.Url);
-                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
+                        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
 
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
 
                     case MergePolicyCheckResult.PendingPolicies:
                         _logger.LogInformation("Pull request {url} still active (not updatable at the moment) - keeping tracking it", pr.Url);
-                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
+                        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
 
                         return (PullRequestStatus.InProgressCannotUpdate, prInfo);
 
                     default:
-                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
+                        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
@@ -199,7 +174,7 @@ internal class PullRequestChecker : IPullRequestChecker
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
-                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: true);
+                await _stateManager.ClearAllStateAsync(isCodeFlow, clearPendingUpdates: true);
 
                 // Also try to clean up the PR branch.
                 try
@@ -290,7 +265,7 @@ internal class PullRequestChecker : IPullRequestChecker
         (var targetRepository, _) = await _subscriptionConfiguration.GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await _subscriptionConfiguration.GetMergePolicyDefinitionsAsync();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
-        MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
+        MergePolicyEvaluationResults? cachedResults = await _stateManager.GetMergePolicyEvaluationResultsAsync();
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(
             prSummary,
@@ -303,7 +278,7 @@ internal class PullRequestChecker : IPullRequestChecker
             updatedMergePolicyResults.ToImmutableList(),
             prInfo.HeadBranchSha);
 
-        await _mergePolicyEvaluationState.SetAsync(updatedResult);
+        await _stateManager.SetMergePolicyEvaluationResultsAsync(updatedResult);
 
         await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
         return (policyDefinitions, updatedResult);
@@ -312,10 +287,8 @@ internal class PullRequestChecker : IPullRequestChecker
     /// <summary>
     ///     Create new checks or update the status of existing checks for a PR.
     /// </summary>
-    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
-    {
-        return remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
-    }
+    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations) =>
+        remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
 
     public async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
     {
@@ -364,49 +337,12 @@ internal class PullRequestChecker : IPullRequestChecker
         }
     }
 
-    public async Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow, TimeSpan reminderDelay)
-    {
-        var reminder = new PullRequestCheck()
-        {
-            UpdaterId = _id.ToString(),
-            Url = prState.Url,
-            IsCodeFlow = isCodeFlow
-        };
-
-        prState.LastCheck = DateTime.UtcNow;
-        prState.NextCheck = prState.LastCheck + reminderDelay;
-        prState.HeadBranchSha = prInfo.HeadBranchSha;
-
-        await _pullRequestCheckReminders.SetReminderAsync(reminder, reminderDelay, isCodeFlow);
-        await _pullRequestState.SetAsync(prState);
-    }
-
-    public async Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow) =>
-        await SetPullRequestCheckReminder(prState, prInfo, isCodeFlow, DependencyFlowConstants.DefaultReminderDelay);
-
-    public async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
-    {
-        await _pullRequestState.TryDeleteAsync();
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        // If the pull request we deleted from the cache had a conflict, we shouldn't unset the update reminder
-        // as there was an update that was previously blocked
-        if (!clearPendingUpdates)
-        {
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
-        }
-    }
-
     public async Task RegisterSubscriptionUpdateAction(
         SubscriptionUpdateAction subscriptionUpdateAction,
         Guid subscriptionId)
     {
         string updateMessage = subscriptionUpdateAction.ToString();
         await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
-    }
-
-    public async Task ClearMergePolicyEvaluationStateAsync()
-    {
-        await _mergePolicyEvaluationState.TryDeleteAsync();
     }
 
     internal static TimeSpan GetReminderDelay(DateTimeOffset updatedAt)
@@ -424,9 +360,8 @@ internal class PullRequestChecker : IPullRequestChecker
 
     private static PullRequestUpdateSummary CreatePrSummaryFromInProgressPr(
         InProgressPullRequest pr,
-        string targetRepo)
-    {
-        return new PullRequestUpdateSummary(
+        string targetRepo) =>
+        new(
             pr.Url,
             pr.CoherencyCheckSuccessful,
             pr.CoherencyErrors,
@@ -441,7 +376,6 @@ internal class PullRequestChecker : IPullRequestChecker
             pr.HeadBranch,
             targetRepo,
             pr.CodeFlowDirection);
-    }
 
     private async Task<int> GetLastCodeflownBuild(Subscription subscription)
     {
