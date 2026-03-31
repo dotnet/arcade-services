@@ -1433,6 +1433,261 @@ public class ConfigurationIngestorTests
 
     #endregion
 
+    #region Case-Insensitivity Tests
+
+    [Test]
+    public async Task IngestConfigurationAsync_ChannelNameWithDifferentCasing_MatchesExistingChannel()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var existingChannel = CreateChannel("My Release Channel", "dev", namespaceEntity);
+        await _context.Channels.AddAsync(existingChannel);
+        await _context.SaveChangesAsync();
+
+        var updatedChannelYaml = new ChannelYaml
+        {
+            Name = "MY RELEASE CHANNEL",
+            Classification = "production",
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [updatedChannelYaml],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert - should be treated as an update, not a create + delete
+        result.Channels.Updates.Should().HaveCount(1);
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
+
+        var updatedChannel = await _context.Channels
+            .FirstOrDefaultAsync(c => c.Name == "My Release Channel");
+        updatedChannel.Should().NotBeNull();
+        updatedChannel.Classification.Should().Be("production");
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_SubscriptionReferencingChannelWithDifferentCasing_ResolvesChannel()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8 Release", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionYaml = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".net 8 release", // lowercase version of the channel name
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+        };
+
+        var channelYaml = new ChannelYaml
+        {
+            Name = ".NET 8 RELEASE", // uppercase version of the channel name
+            Classification = "release",
+        };
+
+        var configData = new ConfigurationData(
+            [subscriptionYaml],
+            [channelYaml],
+            [],
+            []);
+
+        // Act - should not throw; the subscription should resolve the channel case-insensitively
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Subscriptions.Creations.Should().HaveCount(1);
+
+        var createdSubscription = await _context.Subscriptions
+            .Include(s => s.Channel)
+            .FirstOrDefaultAsync(s => s.Namespace!.Name == _testNamespace);
+
+        createdSubscription.Should().NotBeNull();
+        createdSubscription.Channel.Name.Should().Be(".NET 8 Release");
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_DefaultChannelWithDifferentCasing_MatchesExisting()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var defaultChannel = CreateDefaultChannel(
+            channel,
+            "https://github.com/dotnet/runtime",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.DefaultChannels.AddAsync(defaultChannel);
+        await _context.SaveChangesAsync();
+
+        // Use different casing for repository, branch, and channel name
+        var updatedDefaultChannel = new DefaultChannelYaml
+        {
+            Repository = "HTTPS://GITHUB.COM/DOTNET/RUNTIME",
+            Branch = "MAIN",
+            Channel = ".NET 8",
+            Enabled = false,
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [new ChannelYaml { Name = ".net 8", Classification = "release" }],
+            [updatedDefaultChannel],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert - should be recognized as an update, not create + delete
+        result.DefaultChannels.Updates.Should().HaveCount(1);
+        result.DefaultChannels.Creations.Should().BeEmpty();
+        result.DefaultChannels.Removals.Should().BeEmpty();
+
+        var updated = await _context.DefaultChannels
+            .FirstOrDefaultAsync(dc => dc.Namespace!.Name == _testNamespace);
+
+        updated.Should().NotBeNull();
+        updated.Enabled.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_RepositoryBranchWithDifferentCasing_MatchesExisting()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+
+        var existingBranch = await CreateRepositoryBranch(
+            "https://github.com/dotnet/runtime",
+            "main",
+            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            namespaceEntity);
+
+        await _context.RepositoryBranches.AddAsync(existingBranch);
+        await _context.SaveChangesAsync();
+
+        // Use different casing for repository and branch
+        var updatedBranchYaml = new BranchMergePoliciesYaml
+        {
+            Repository = "HTTPS://GITHUB.COM/DOTNET/RUNTIME",
+            Branch = "MAIN",
+            MergePolicies =
+            [
+                new MergePolicyYaml { Name = "AllChecksSuccessful" },
+                new MergePolicyYaml { Name = "RequireReviews" },
+            ],
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [],
+            [],
+            [updatedBranchYaml]);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert - should be recognized as an update, not create + delete
+        result.RepositoryBranches.Updates.Should().HaveCount(1);
+        result.RepositoryBranches.Creations.Should().BeEmpty();
+        result.RepositoryBranches.Removals.Should().BeEmpty();
+
+        var updated = await _context.RepositoryBranches
+            .FirstOrDefaultAsync(rb => rb.Namespace!.Name == _testNamespace);
+
+        updated.Should().NotBeNull();
+        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_DefaultChannelWithDifferentChannelNameCasing_MatchesExisting()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel("My Channel", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var defaultChannel = CreateDefaultChannel(
+            channel,
+            "https://github.com/dotnet/runtime",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.DefaultChannels.AddAsync(defaultChannel);
+        await _context.SaveChangesAsync();
+
+        // Reference the channel with all uppercase in the default channel YAML
+        var updatedDefaultChannel = new DefaultChannelYaml
+        {
+            Repository = "https://github.com/dotnet/runtime",
+            Branch = "main",
+            Channel = "MY CHANNEL",
+            Enabled = false,
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [new ChannelYaml { Name = "my channel", Classification = "release" }],
+            [updatedDefaultChannel],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.DefaultChannels.Updates.Should().HaveCount(1);
+        result.DefaultChannels.Creations.Should().BeEmpty();
+        result.DefaultChannels.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_ChannelWithDifferentCasingNoChanges_NotReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var existingChannel = CreateChannel("Test Channel", "dev", namespaceEntity);
+        await _context.Channels.AddAsync(existingChannel);
+        await _context.SaveChangesAsync();
+
+        // Same classification, just different casing in the name
+        var unchangedChannelYaml = new ChannelYaml
+        {
+            Name = "TEST CHANNEL",
+            Classification = "dev",
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [unchangedChannelYaml],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert - no changes detected even though casing differs
+        result.Channels.Updates.Should().BeEmpty();
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private async Task<Namespace> CreateNamespace()

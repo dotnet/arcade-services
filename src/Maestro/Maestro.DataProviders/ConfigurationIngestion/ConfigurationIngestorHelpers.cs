@@ -85,17 +85,30 @@ internal partial class ConfigurationIngestor
         where T : IExternallySyncedEntity<TId>
         where TId : notnull
     {
-        var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();
-        var externalIds = externalEntities.Select(e => e.UniqueId).ToHashSet();
+        if (dbEntities.Count == 0 && externalEntities.Count == 0)
+        {
+            return new EntityChanges<T>([], [], []);
+        }
+
+        var uniqueKeyComparer = dbEntities.FirstOrDefault()?.UniqueKeyComparer
+            ?? externalEntities.FirstOrDefault()?.UniqueKeyComparer;
+
+        var dbKeys = dbEntities
+            .Select(e => e.UniqueId)
+            .ToHashSet(uniqueKeyComparer);
+
+        var externalKeys = externalEntities
+            .Select(e => e.UniqueId)
+            .ToHashSet(uniqueKeyComparer);
 
         IReadOnlyCollection<T> creations = [.. externalEntities
-            .Where(e => !dbIds.Contains(e.UniqueId))];
+            .Where(e => !dbKeys.Contains(e.UniqueId))];
 
         IReadOnlyCollection<T> removals = [.. dbEntities
-            .Where(e => !externalIds.Contains(e.UniqueId))];
+            .Where(e => !externalKeys.Contains(e.UniqueId))];
 
         IReadOnlyCollection<T> updates = [.. externalEntities
-            .Where(e => dbIds.Contains(e.UniqueId))];
+            .Where(e => dbKeys.Contains(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }
@@ -199,7 +212,7 @@ internal partial class ConfigurationIngestor
         };
 }
 
-public class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>
+internal class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>
 {
     public bool Equals((string, string) x, (string, string) y)
     {
@@ -215,7 +228,7 @@ public class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>
     }
 }
 
-public class CaseInsensitiveTripleComparer : IEqualityComparer<(string, string, string)>
+internal class CaseInsensitiveTripleComparer : IEqualityComparer<(string, string, string)>
 {
     public bool Equals((string, string, string) x, (string, string, string) y)
     {
@@ -233,11 +246,11 @@ public class CaseInsensitiveTripleComparer : IEqualityComparer<(string, string, 
     }
 }
 
-public static class CaseInsensitiveTupleComparer
+internal static class CaseInsensitiveTupleComparer
 {
-    public static IEqualityComparer<(string, string)> Pair() =>
+    internal static IEqualityComparer<(string, string)> Pair() =>
         new CaseInsensitivePairComparer();
 
-    public static IEqualityComparer<(string, string, string)> Triple() =>
+    internal static IEqualityComparer<(string, string, string)> Triple() =>
         new CaseInsensitiveTripleComparer();
 }
