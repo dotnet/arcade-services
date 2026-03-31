@@ -158,7 +158,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         bool branchExistsOnRepo;
         try
         {
-            branchExistsOnRepo = !await UxHelpers.VerifyAndConfirmBranchExistsAsync(
+            branchExistsOnRepo = await UxHelpers.VerifyAndConfirmBranchExistsAsync(
                 verifyRemote,
                 repository,
                 branch,
