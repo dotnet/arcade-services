@@ -31,6 +31,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
+    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
@@ -47,6 +48,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
+        ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(subscriptionConfiguration, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
     {
@@ -61,6 +63,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector = commentCollector;
         _logger = logger;
         _stateManager = stateManager;
+        _subscriptionEventRecorder = subscriptionEventRecorder;
     }
 
     protected async override Task ProcessSubscriptionUpdateAsync(
@@ -269,7 +272,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
         prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
     }
@@ -469,7 +472,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
             };
 
-            await AddDependencyFlowEventsAsync(
+            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                 inProgressPr.ContainedSubscriptions,
                 DependencyFlowEventType.Created,
                 DependencyFlowEventReason.New,

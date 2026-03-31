@@ -21,20 +21,6 @@ public interface IPullRequestChecker
         bool isCodeFlow,
         bool tryingToUpdate);
 
-    Task AddDependencyFlowEventsAsync(
-        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
-        DependencyFlowEventType flowEvent,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult policy,
-        string? prUrl);
-
-    Task RegisterSubscriptionUpdateAction(
-        SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId);
-
-    Task UpdateSubscriptionsForMergedPRAsync(
-        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates);
-
     Task<(IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult)> RunMergePolicyEvaluation(
         InProgressPullRequest pr,
         PullRequest prInfo,

@@ -27,6 +27,7 @@ internal class PullRequestChecker : IPullRequestChecker
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ISqlBarClient _sqlClient;
+    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ILogger<PullRequestChecker> _logger;
 
     public PullRequestChecker(
@@ -37,6 +38,7 @@ internal class PullRequestChecker : IPullRequestChecker
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
         ISqlBarClient sqlClient,
+        ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<PullRequestChecker> logger)
     {
         _subscriptionConfiguration = subscriptionConfiguration;
@@ -46,6 +48,7 @@ internal class PullRequestChecker : IPullRequestChecker
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _sqlClient = sqlClient;
+        _subscriptionEventRecorder = subscriptionEventRecorder;
         _logger = logger;
     }
 
@@ -119,8 +122,8 @@ internal class PullRequestChecker : IPullRequestChecker
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-                        await AddDependencyFlowEventsAsync(
+                        await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                             pr.ContainedSubscriptions,
                             DependencyFlowEventType.Completed,
                             DependencyFlowEventReason.AutomaticallyMerged,
@@ -158,14 +161,14 @@ internal class PullRequestChecker : IPullRequestChecker
                 // If the PR has been merged, update the subscription information
                 if (prInfo.Status == PrStatus.Merged)
                 {
-                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                 }
 
                 DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
                     ? DependencyFlowEventReason.ManuallyMerged
                     : DependencyFlowEventReason.ManuallyClosed;
 
-                await AddDependencyFlowEventsAsync(
+                await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                     pr.ContainedSubscriptions,
                     DependencyFlowEventType.Completed,
                     reason,
@@ -238,7 +241,7 @@ internal class PullRequestChecker : IPullRequestChecker
 
             foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
             {
-                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
+                await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
             }
 
             var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
@@ -290,61 +293,6 @@ internal class PullRequestChecker : IPullRequestChecker
     private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations) =>
         remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
 
-    public async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
-    {
-        _logger.LogInformation("Updating subscriptions for merged PR");
-        foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
-        {
-            await UpdateForMergedPullRequestAsync(update);
-        }
-    }
-
-    private async Task UpdateForMergedPullRequestAsync(SubscriptionPullRequestUpdate update)
-    {
-        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", update.SubscriptionId, update.BuildId);
-        Subscription? subscription = await _context.Subscriptions.FindAsync(update.SubscriptionId);
-
-        if (subscription != null)
-        {
-            subscription.LastAppliedBuildId = subscription.SourceEnabled
-                // We must check if the build really got applied or if someone merged an earlier build without resolving conflicts
-                ? await GetLastCodeflownBuild(subscription)
-                : update.BuildId;
-            _context.Subscriptions.Update(subscription);
-            await _context.SaveChangesAsync();
-        }
-        else
-        {
-            // This happens for deleted subscriptions (such as scenario tests)
-            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", update.SubscriptionId);
-        }
-    }
-
-    public async Task AddDependencyFlowEventsAsync(
-        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
-        DependencyFlowEventType flowEvent,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult policy,
-        string? prUrl)
-    {
-        foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
-        {
-            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
-            if (!await triggerer.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
-            {
-                _logger.LogInformation("Failed to add dependency flow event for {subscriptionId}", update.SubscriptionId);
-            }
-        }
-    }
-
-    public async Task RegisterSubscriptionUpdateAction(
-        SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId)
-    {
-        string updateMessage = subscriptionUpdateAction.ToString();
-        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
-    }
-
     internal static TimeSpan GetReminderDelay(DateTimeOffset updatedAt)
     {
         TimeSpan difference = DateTimeOffset.UtcNow - updatedAt;
@@ -377,26 +325,4 @@ internal class PullRequestChecker : IPullRequestChecker
             targetRepo,
             pr.CodeFlowDirection);
 
-    private async Task<int> GetLastCodeflownBuild(Subscription subscription)
-    {
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
-        {
-            // Backflow
-            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
-
-            return sourceTag?.BarId
-                ?? throw new DarcException($"Failed to determine last flown VMR build " +
-                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
-        }
-        else
-        {
-            // Forward flow
-            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
-
-            return sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId
-                ?? throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} " +
-                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
-        }
-    }
 }

@@ -196,22 +196,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     protected static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
 
-    protected Task AddDependencyFlowEventsAsync(
-        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
-        DependencyFlowEventType flowEvent,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult policy,
-        string? prUrl) =>
-        _pullRequestChecker.AddDependencyFlowEventsAsync(subscriptionPullRequestUpdates, flowEvent, reason, policy, prUrl);
-
-    protected Task RegisterSubscriptionUpdateAction(
-        SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId) =>
-        _pullRequestChecker.RegisterSubscriptionUpdateAction(subscriptionUpdateAction, subscriptionId);
-
-    protected Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates) =>
-        _pullRequestChecker.UpdateSubscriptionsForMergedPRAsync(subscriptionPullRequestUpdates);
-
     protected Task<(IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult)> RunMergePolicyEvaluation(
         InProgressPullRequest pr,
         PullRequest prInfo,
