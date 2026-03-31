@@ -6,10 +6,10 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-internal class PullRequestCheckProcessor(PullRequestUpdaterFactory updaterFactory)
+public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory)
     : DependencyFlowUpdateProcessor<PullRequestCheck>
 {
-    private readonly PullRequestUpdaterFactory _updaterFactory = updaterFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory = updaterFactory;
 
     public override async Task<bool> ProcessWorkItemAsync(
         PullRequestCheck workItem,

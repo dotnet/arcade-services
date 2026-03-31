@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
-using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.DependencyFlow.Model;
@@ -13,7 +12,7 @@ namespace ProductConstructionService.DependencyFlow;
 /// <summary>
 ///     Handles PR status checking, merge policy evaluation, and PR lifecycle management.
 /// </summary>
-internal interface IPullRequestChecker
+public interface IPullRequestChecker
 {
     Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck);
 

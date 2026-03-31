@@ -10,6 +10,8 @@ public interface IPullRequestUpdaterFactory
 {
     IPullRequestUpdater CreatePullRequestUpdater(PullRequestUpdaterId updaterId);
 
+    IPullRequestChecker CreatePullRequestChecker(PullRequestUpdaterId updaterId);
+
     ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId);
 }
 
