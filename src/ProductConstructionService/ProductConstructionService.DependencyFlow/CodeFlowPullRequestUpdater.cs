@@ -99,7 +99,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (subscription == null)
         {
             _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
-            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true);
             return;
         }
 

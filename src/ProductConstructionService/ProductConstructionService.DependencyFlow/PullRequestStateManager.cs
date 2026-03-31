@@ -43,7 +43,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
     {
         // TODO (https://github.com/dotnet/arcade-services/issues/6146): Temporary solution to update existing PRs; can be removed after all existing PRs get a creation date
-        if (pr.CreationDate == creationDate)
+        if (pr.CreationDate != creationDate)
         {
             pr.CreationDate = creationDate;
             await _pullRequestState.SetAsync(pr);
@@ -88,15 +88,10 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public Task UnsetUpdateReminderAsync(bool isCodeFlow) =>
         _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
 
-    public async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
+    public async Task ClearAllStateAsync(bool isCodeFlow)
     {
         await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        // If the pull request we deleted from the cache had a conflict, we shouldn't unset the update reminder
-        // as there was an update that was previously blocked
-        if (!clearPendingUpdates)
-        {
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
-        }
+        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
     }
 }

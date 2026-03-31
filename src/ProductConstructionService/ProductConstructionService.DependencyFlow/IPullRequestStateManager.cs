@@ -51,8 +51,7 @@ internal interface IPullRequestStateManager
     // --- Bulk cleanup ---
 
     /// <summary>
-    ///     Clears the in-progress PR state and check reminder.
-    ///     When <paramref name="clearPendingUpdates"/> is false, also unsets the update reminder.
+    ///     Clears the in-progress PR state, check reminder and queued update
     /// </summary>
-    Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates);
+    Task ClearAllStateAsync(bool isCodeFlow);
 }
