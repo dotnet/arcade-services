@@ -34,13 +34,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IPullRequestCommenter _pullRequestCommenter;
-
-    protected readonly BuildAssetRegistryContext _context;
-    protected readonly IRemoteFactory _remoteFactory;
-    protected readonly ICommentCollector _commentCollector;
-    protected readonly ISqlBarClient _sqlClient;
-    protected readonly ITelemetryRecorder _telemetryRecorder;
-    protected readonly ILogger<PullRequestUpdater> _logger;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ISqlBarClient _sqlClient;
+    private readonly ILogger<PullRequestUpdater> _logger;
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
@@ -58,9 +55,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ITelemetryRecorder telemetryRecorder,
         ILogger<PullRequestUpdater> logger,
-        ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter)
     {
         Id = id;
@@ -69,7 +64,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _sqlClient = sqlClient;
-        _telemetryRecorder = telemetryRecorder;
         _logger = logger;
 
         var cacheKey = id.ToString();
@@ -77,7 +71,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
-        _commentCollector = commentCollector;
         _pullRequestCommenter = pullRequestCommenter;
     }
 

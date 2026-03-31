@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
-using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -23,6 +22,9 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 {
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ISqlBarClient _sqlClient;
+    private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
         PullRequestUpdaterId id,
@@ -35,14 +37,15 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ITelemetryRecorder telemetryRecorder,
         ILogger<DependencyPullRequestUpdater> logger,
-        ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
+        _remoteFactory = remoteFactory;
+        _sqlClient = sqlClient;
+        _logger = logger;
     }
 
     protected override async Task ProcessSubscriptionUpdateAsync(

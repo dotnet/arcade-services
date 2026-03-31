@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
-using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -16,6 +15,7 @@ namespace ProductConstructionService.DependencyFlow;
 internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
+    private readonly BuildAssetRegistryContext _context;
 
     public BatchedDependencyPullRequestUpdater(
         BatchedPullRequestUpdaterId id,
@@ -28,13 +28,12 @@ internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdate
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ITelemetryRecorder telemetryRecorder,
         ILogger<BatchedDependencyPullRequestUpdater> logger,
-        ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
         _id = id;
+        _context = context;
     }
 
     protected override Task<(string repository, string branch)> GetTargetAsync()
@@ -48,5 +47,6 @@ internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdate
         return repositoryBranch?.PolicyObject?.MergePolicies ?? [];
     }
 
+    // For batced subscriptions we don't know which source repo to tag
     protected override Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr) => Task.CompletedTask;
 }

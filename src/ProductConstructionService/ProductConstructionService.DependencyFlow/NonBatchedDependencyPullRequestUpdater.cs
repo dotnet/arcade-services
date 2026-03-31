@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
-using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -16,7 +15,10 @@ namespace ProductConstructionService.DependencyFlow;
 internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly IPullRequestCommentBuilder _commentBuilder;
+    private readonly ICommentCollector _commentCollector;
     private readonly NonBatchedPullRequestUpdaterId _id;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     private readonly Lazy<Task<Subscription?>> _subscription;
 
@@ -31,14 +33,16 @@ internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpd
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ITelemetryRecorder telemetryRecorder,
         ILogger<DependencyPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestCommentBuilder commentBuilder)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, coherencyUpdateResolver, pullRequestBuilder, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
         _id = id;
+        _context = context;
+        _logger = logger;
+        _commentCollector = commentCollector;
         _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _commentBuilder = commentBuilder;
     }

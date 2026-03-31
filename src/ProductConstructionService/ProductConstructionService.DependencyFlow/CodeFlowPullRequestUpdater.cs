@@ -32,8 +32,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IPullRequestCommentBuilder _commentBuilder;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ISqlBarClient _sqlClient;
+    private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly ICommentCollector _commentCollector;
+    private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
-    private readonly Lazy<Task<Maestro.Data.Models.Subscription?>> _subscription;
+    private readonly Lazy<Task<Subscription?>> _subscription;
 
     public CodeFlowPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
@@ -54,9 +60,15 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestCommentBuilder commentBuilder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, telemetryRecorder, logger, commentCollector, pullRequestCommenter)
+        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
         _id = id;
+        _context = context;
+        _remoteFactory = remoteFactory;
+        _sqlClient = sqlClient;
+        _telemetryRecorder = telemetryRecorder;
+        _commentCollector = commentCollector;
+        _logger = logger;
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
         _vmrBackFlower = vmrBackFlower;
