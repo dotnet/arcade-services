@@ -26,15 +26,41 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
     {
         BatchedPullRequestUpdaterId batchedId => updaterId.IsCodeFlow
             ? throw new InvalidOperationException("Batched code flow pull request updaters are not supported.")
-            : ActivatorUtilities.CreateInstance<BatchedDependencyPullRequestUpdater>(_serviceProvider, batchedId),
+            : CreateDependencyUpdater(ActivatorUtilities.CreateInstance<BatchedSubscriptionConfiguration>(_serviceProvider, batchedId)),
         NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
-            ? ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, nonBatchedId)
-            : ActivatorUtilities.CreateInstance<NonBatchedDependencyPullRequestUpdater>(_serviceProvider, nonBatchedId),
+            ? CreateCodeFlowUpdater(nonBatchedId)
+            : CreateDependencyUpdater(CreateNonBatchedConfiguration(nonBatchedId)),
+        _ => throw new NotImplementedException()
+    };
+
+    internal IPullRequestChecker CreatePullRequestChecker(PullRequestUpdaterId updaterId) => updaterId switch
+    {
+        BatchedPullRequestUpdaterId batchedId => CreateChecker(
+            ActivatorUtilities.CreateInstance<BatchedSubscriptionConfiguration>(_serviceProvider, batchedId)),
+        NonBatchedPullRequestUpdaterId nonBatchedId => CreateChecker(
+            CreateNonBatchedConfiguration(nonBatchedId)),
         _ => throw new NotImplementedException()
     };
 
     public ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId)
+        => ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
+
+    private IPullRequestChecker CreateChecker(ISubscriptionConfiguration configuration)
+        => ActivatorUtilities.CreateInstance<PullRequestChecker>(_serviceProvider, configuration);
+
+    private DependencyPullRequestUpdater CreateDependencyUpdater(ISubscriptionConfiguration configuration)
     {
-        return ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
+        var checker = CreateChecker(configuration);
+        return ActivatorUtilities.CreateInstance<DependencyPullRequestUpdater>(_serviceProvider, configuration, checker);
     }
+
+    private CodeFlowPullRequestUpdater CreateCodeFlowUpdater(NonBatchedPullRequestUpdaterId id)
+    {
+        var configuration = CreateNonBatchedConfiguration(id);
+        var checker = CreateChecker(configuration);
+        return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, configuration, checker);
+    }
+
+    private NonBatchedSubscriptionConfiguration CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
+        => ActivatorUtilities.CreateInstance<NonBatchedSubscriptionConfiguration>(_serviceProvider, id);
 }

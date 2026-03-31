@@ -1,8 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
-using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -18,8 +17,9 @@ using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
+internal class DependencyPullRequestUpdater : PullRequestUpdater
 {
+    private readonly ISubscriptionConfiguration _subscriptionConfiguration;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IRemoteFactory _remoteFactory;
@@ -27,11 +27,9 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
-        PullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
+        ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestChecker pullRequestChecker,
         IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
@@ -39,8 +37,9 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         ISqlBarClient sqlClient,
         ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
+        _subscriptionConfiguration = subscriptionConfiguration;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
@@ -82,7 +81,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         PullRequest prInfo,
         BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _subscriptionConfiguration.GetTargetAsync();
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
@@ -182,7 +181,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
     private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _subscriptionConfiguration.GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);

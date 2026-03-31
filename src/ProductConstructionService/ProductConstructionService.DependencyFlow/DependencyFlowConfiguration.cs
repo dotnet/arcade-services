@@ -19,7 +19,8 @@ public static class DependencyFlowConfiguration
 
     public static void AddDependencyFlowProcessors(this IServiceCollection services)
     {
-        services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
+        services.TryAddTransient<PullRequestUpdaterFactory>();
+        services.TryAddTransient<IPullRequestUpdaterFactory>(sp => sp.GetRequiredService<PullRequestUpdaterFactory>());
         services.TryAddTransient<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestCommenter, PullRequestCommenter>();

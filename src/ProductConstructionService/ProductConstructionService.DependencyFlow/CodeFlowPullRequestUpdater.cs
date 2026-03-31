@@ -1,10 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
-using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -29,24 +27,17 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ILocalLibGit2Client _gitClient;
-    private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IPullRequestCommentBuilder _commentBuilder;
-    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISqlBarClient _sqlClient;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ICommentCollector _commentCollector;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
-    private readonly Lazy<Task<Subscription?>> _subscription;
-
     public CodeFlowPullRequestUpdater(
-        NonBatchedPullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
+        ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestChecker pullRequestChecker,
         IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
@@ -58,59 +49,19 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
-        IPullRequestCommentBuilder commentBuilder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        : base(subscriptionConfiguration, pullRequestChecker, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
     {
-        _id = id;
-        _context = context;
+        _vmrInfo = vmrInfo;
+        _vmrForwardFlower = vmrForwardFlower;
+        _vmrBackFlower = vmrBackFlower;
+        _gitClient = gitClient;
+        _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
         _sqlClient = sqlClient;
         _telemetryRecorder = telemetryRecorder;
         _commentCollector = commentCollector;
         _logger = logger;
-        _vmrInfo = vmrInfo;
-        _vmrForwardFlower = vmrForwardFlower;
-        _vmrBackFlower = vmrBackFlower;
-        _gitClient = gitClient;
-        _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
-        _pullRequestBuilder = pullRequestBuilder;
-        _commentBuilder = commentBuilder;
-    }
-
-    protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
-    {
-        Subscription? subscription = await _subscription.Value;
-        return subscription?.PolicyObject?.MergePolicies ?? [];
-    }
-
-    private async Task<Subscription?> RetrieveSubscription()
-    {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
-
-        // This can mainly happen during E2E tests where we delete a subscription
-        // while some PRs have just been closed and there's a reminder on those still
-        if (subscription == null)
-        {
-            _logger.LogInformation(
-                "Failed to find a subscription {subscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
-                _id.SubscriptionId);
-
-            await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            return null;
-        }
-
-        return subscription;
-    }
-
-    protected override async Task<(string repository, string branch)> GetTargetAsync()
-    {
-        Maestro.Data.Models.Subscription subscription = await _subscription.Value
-            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
-        return (subscription.TargetRepository, subscription.TargetBranch);
     }
 
     protected async override Task ProcessSubscriptionUpdateAsync(
@@ -428,7 +379,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             // Since we changed the PR state in cache but no commit was pushed,
             // we need to delete non-transient check results so that they can be re-evaluated
-            await _mergePolicyEvaluationState.TryDeleteAsync();
+            await ClearMergePolicyEvaluationStateAsync();
         }
 
         _commentCollector.AddComment(
@@ -625,15 +576,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _pullRequestState.SetAsync(pr);
-    }
-
-    protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
-    {
-        var comment = await _commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
-        if (!string.IsNullOrEmpty(comment))
-        {
-            _commentCollector.AddComment(comment, CommentType.Warning);
-        }
     }
 }
 

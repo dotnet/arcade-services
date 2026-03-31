@@ -6,17 +6,17 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory)
+internal class PullRequestCheckProcessor(PullRequestUpdaterFactory updaterFactory)
     : DependencyFlowUpdateProcessor<PullRequestCheck>
 {
-    private readonly IPullRequestUpdaterFactory _updaterFactory = updaterFactory;
+    private readonly PullRequestUpdaterFactory _updaterFactory = updaterFactory;
 
     public override async Task<bool> ProcessWorkItemAsync(
         PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, workItem.IsCodeFlow));
-        return await updater.CheckPullRequestAsync(workItem);
+        var checker = _updaterFactory.CreatePullRequestChecker(PullRequestUpdaterId.Parse(workItem.UpdaterId, workItem.IsCodeFlow));
+        return await checker.CheckPullRequestAsync(workItem);
     }
 
     protected override Dictionary<string, object> GetLoggingContextData(PullRequestCheck workItem)

@@ -1,0 +1,60 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Maestro.Data.Models;
+using Maestro.MergePolicies;
+using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib;
+using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.WorkItems;
+
+namespace ProductConstructionService.DependencyFlow;
+
+/// <summary>
+///     Handles PR status checking, merge policy evaluation, and PR lifecycle management.
+/// </summary>
+internal interface IPullRequestChecker
+{
+    Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck);
+
+    Task<(PullRequestStatus Status, PullRequest PrInfo)> GetPullRequestStatusAsync(
+        InProgressPullRequest pr,
+        bool isCodeFlow,
+        bool tryingToUpdate);
+
+    Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate);
+
+    Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates);
+
+    Task SetPullRequestCheckReminder(
+        InProgressPullRequest prState,
+        PullRequest prInfo,
+        bool isCodeFlow,
+        TimeSpan reminderDelay);
+
+    Task SetPullRequestCheckReminder(
+        InProgressPullRequest prState,
+        PullRequest prInfo,
+        bool isCodeFlow);
+
+    Task AddDependencyFlowEventsAsync(
+        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
+        DependencyFlowEventType flowEvent,
+        DependencyFlowEventReason reason,
+        MergePolicyCheckResult policy,
+        string? prUrl);
+
+    Task RegisterSubscriptionUpdateAction(
+        SubscriptionUpdateAction subscriptionUpdateAction,
+        Guid subscriptionId);
+
+    Task UpdateSubscriptionsForMergedPRAsync(
+        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates);
+
+    Task<(IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult)> RunMergePolicyEvaluation(
+        InProgressPullRequest pr,
+        PullRequest prInfo,
+        IRemote remote);
+
+    Task ClearMergePolicyEvaluationStateAsync();
+}
