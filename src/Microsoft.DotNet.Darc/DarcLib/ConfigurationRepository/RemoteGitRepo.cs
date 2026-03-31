@@ -73,6 +73,9 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
                 .Select(f => new MaestroConfiguration.Client.GitFile(f.FilePath, f.Content))
                 .ToList();
 
+    public async Task<string?> GetPullRequestAsync(string repositoryUri, string headBranch, string baseBranch) =>
+        await _remote.GetPullRequestUrlAsync(repositoryUri, headBranch, baseBranch);
+
     public async Task<List<string>> ListBlobsAsync(string repositoryUri, string branch, string path)
         => await _remote.ListFilesAtCommitAsync(repositoryUri, await _remote.GetLatestCommitAsync(repositoryUri, branch), path);
 

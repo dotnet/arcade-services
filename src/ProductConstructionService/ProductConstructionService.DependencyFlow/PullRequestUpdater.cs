@@ -277,10 +277,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return status != PullRequestStatus.Invalid;
     }
 
+    // TODO (https://github.com/dotnet/arcade-services/issues/6146) todo this is a temporary solution to update existing PRs
     private async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
     {
-        //todo this is a temporary solution to update existing PRs, it can be removed after all existing PRs get a creation date
-        if (pr.CreationDate == creationDate)
+        if (pr.CreationDate != creationDate)
         {
             pr.CreationDate = creationDate;
             await _pullRequestState.SetAsync(pr);
@@ -1214,6 +1214,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
+        if (!codeFlowRes.HadUpdates)
+        {
+            return;
+        }
+
         if (isForwardFlow)
         {
             SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
@@ -1251,7 +1256,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        if (pr == null && codeFlowRes.HadUpdates)
+        if (pr == null)
         {
             await CreateCodeFlowPullRequestAsync(
                 update,

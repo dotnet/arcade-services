@@ -347,6 +347,11 @@ public sealed class Remote : IRemote
         return _remoteGitClient.GetPullRequestAsync(pullRequestUri);
     }
 
+    public Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        return _remoteGitClient.GetPullRequestUrlAsync(repoUri, headBranch, targetBranch);
+    }
+
     public Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         return _remoteGitClient.CreatePullRequestAsync(repoUri, pullRequest, enablePrAutoComplete: enablePrAutoComplete);

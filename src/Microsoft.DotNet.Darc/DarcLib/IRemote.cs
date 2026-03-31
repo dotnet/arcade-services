@@ -51,6 +51,15 @@ public interface IRemote
     Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of the repository</param>
+    /// <param name="headBranch">Head (source) branch for the PR</param>
+    /// <param name="targetBranch">Target branch for the PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch);
+
+    /// <summary>
     ///     Retrieve information about a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>
