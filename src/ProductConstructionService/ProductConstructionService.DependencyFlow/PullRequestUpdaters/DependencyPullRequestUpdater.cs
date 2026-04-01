@@ -13,7 +13,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal class DependencyPullRequestUpdater : PullRequestUpdater
 {

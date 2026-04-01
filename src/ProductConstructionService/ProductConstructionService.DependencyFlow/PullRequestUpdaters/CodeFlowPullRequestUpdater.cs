@@ -17,7 +17,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 {

@@ -13,13 +13,19 @@ using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 /// <summary>
 ///     A class responsible for creating, updating, and checking pull requests for dependency updates.
 /// </summary>
 internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
+#if DEBUG
+    internal static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(1);
+#else
+    internal static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(5);
+#endif
+
     private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly IPullRequestTarget _target;
     private readonly ISqlBarClient _sqlClient;
@@ -112,7 +118,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // If we're about to update the PR, we should set the default reminder delay,
         // otherwise we should use the time since the last update to determine when to check again
         var delay = tryingToUpdate
-            ? DependencyFlowConstants.DefaultReminderDelay
+            ? DefaultReminderDelay
             : GetReminderDelay(prInfo.UpdatedAt);
 
         switch (prInfo.Status)
@@ -308,7 +314,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             >= 21 => TimeSpan.FromHours(1),
             >= 14 => TimeSpan.FromMinutes(30),
             >= 2 => TimeSpan.FromMinutes(15),
-            _ => DependencyFlowConstants.DefaultReminderDelay,
+            _ => DefaultReminderDelay,
         };
     }
 
@@ -486,7 +492,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
     {
         _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
-        await _stateManager.SetUpdateReminderAsync(update, DependencyFlowConstants.DefaultReminderDelay, isCodeFlow);
+        await _stateManager.SetUpdateReminderAsync(update, DefaultReminderDelay, isCodeFlow);
         await _stateManager.UnsetCheckReminderAsync(isCodeFlow);
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _stateManager.SetInProgressPullRequestAsync(pr);

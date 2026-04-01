@@ -3,6 +3,7 @@
 
 using Maestro.Data.Models;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 

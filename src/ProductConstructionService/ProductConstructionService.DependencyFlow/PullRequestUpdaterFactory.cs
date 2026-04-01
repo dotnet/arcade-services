@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 

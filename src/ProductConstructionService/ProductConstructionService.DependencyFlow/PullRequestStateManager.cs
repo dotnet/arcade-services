@@ -5,6 +5,7 @@ using Maestro.Common.Cache;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
@@ -77,7 +78,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     }
 
     public Task SetCheckReminderAsync(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow) =>
-        SetCheckReminderAsync(prState, prInfo, isCodeFlow, DependencyFlowConstants.DefaultReminderDelay);
+        SetCheckReminderAsync(prState, prInfo, isCodeFlow, PullRequestUpdater.DefaultReminderDelay);
 
     public Task UnsetCheckReminderAsync(bool isCodeFlow) =>
         _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
