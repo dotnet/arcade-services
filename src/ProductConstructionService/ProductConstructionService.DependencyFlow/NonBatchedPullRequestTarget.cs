@@ -14,8 +14,9 @@ namespace ProductConstructionService.DependencyFlow;
 ///     All information is loaded lazily from the <see cref="Subscription"/> entity.
 ///     Handles the case where a subscription has been deleted while a PR is still being tracked.
 /// </summary>
-internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPullRequestTarget
+internal class NonBatchedPullRequestTarget : IPullRequestTarget
 {
+    private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
@@ -23,7 +24,7 @@ internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPu
 
     private readonly Lazy<Task<Subscription?>> _subscription;
 
-    public string UpdaterId => Id;
+    public string UpdaterId => _id.Id;
 
     public NonBatchedPullRequestTarget(
         NonBatchedPullRequestUpdaterId id,
@@ -31,8 +32,8 @@ internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPu
         ICommentCollector commentCollector,
         IPullRequestCommentBuilder commentBuilder,
         ILogger<NonBatchedPullRequestTarget> logger)
-        : base(id.SubscriptionId, id.IsCodeFlow)
     {
+        _id = id;
         _context = context;
         _commentCollector = commentCollector;
         _commentBuilder = commentBuilder;
@@ -42,14 +43,14 @@ internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPu
 
     public async Task<(string Repository, string Branch)> GetTargetAsync()
     {
-        Subscription subscription = await GetSubscriptionAsync()
-            ?? throw new SubscriptionException($"Subscription '{SubscriptionId}' was not found...");
+        Subscription subscription = await _subscription.Value
+            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
         return (subscription.TargetRepository, subscription.TargetBranch);
     }
 
     public async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitionsAsync()
     {
-        Subscription? subscription = await GetSubscriptionAsync();
+        Subscription? subscription = await _subscription.Value;
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
@@ -62,26 +63,18 @@ internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPu
         }
     }
 
-    public async Task<bool> ShouldContinueProcessingAsync()
-    {
-        return await GetSubscriptionAsync() != null;
-    }
-
-    private Task<Subscription?> GetSubscriptionAsync()
-    {
-        return _subscription.Value;
-    }
+    public async Task<bool> ShouldContinueProcessingAsync() => await _subscription.Value != null;
 
     private async Task<Subscription?> RetrieveSubscriptionAsync()
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
 
         if (subscription == null)
         {
             _logger.LogInformation(
                 "Failed to find subscription {subscriptionId}. " +
                 "Possibly it was deleted while an existing PR is still tracked",
-                SubscriptionId);
+                _id.SubscriptionId);
         }
 
         return subscription;
