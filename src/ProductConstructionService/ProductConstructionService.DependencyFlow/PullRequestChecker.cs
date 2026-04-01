@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
@@ -20,34 +18,25 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class PullRequestChecker : IPullRequestChecker
 {
-    private readonly IPullRequestTarget _subscriptionConfiguration;
+    private readonly IPullRequestTarget _target;
     private readonly IPullRequestStateManager _stateManager;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
-    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IPullRequestUpdaterFactory _updaterFactory;
-    private readonly ISqlBarClient _sqlClient;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ILogger<PullRequestChecker> _logger;
 
     public PullRequestChecker(
-        IPullRequestTarget subscriptionConfiguration,
+        IPullRequestTarget target,
         IPullRequestStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
-        ISqlBarClient sqlClient,
         ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<PullRequestChecker> logger)
     {
-        _subscriptionConfiguration = subscriptionConfiguration;
+        _target = target;
         _stateManager = stateManager;
         _mergePolicyEvaluator = mergePolicyEvaluator;
-        _context = context;
         _remoteFactory = remoteFactory;
-        _updaterFactory = updaterFactory;
-        _sqlClient = sqlClient;
         _subscriptionEventRecorder = subscriptionEventRecorder;
         _logger = logger;
     }
@@ -64,7 +53,7 @@ internal class PullRequestChecker : IPullRequestChecker
             return false;
         }
 
-        if (!await _subscriptionConfiguration.IsAvailableAsync())
+        if (!await _target.ShouldContinueProcessingAsync())
         {
             await _stateManager.ClearAllStateAsync(isCodeFlow: true);
             await _stateManager.ClearAllStateAsync(isCodeFlow: false);
@@ -87,7 +76,7 @@ internal class PullRequestChecker : IPullRequestChecker
     {
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
-        (var targetRepository, _) = await _subscriptionConfiguration.GetTargetAsync();
+        (var targetRepository, _) = await _target.GetTargetAsync();
         var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         PullRequest prInfo;
@@ -135,7 +124,7 @@ internal class PullRequestChecker : IPullRequestChecker
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
-                        await _subscriptionConfiguration.TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
+                        await _target.TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
                         goto case MergePolicyCheckResult.FailedToMerge;
 
                     case MergePolicyCheckResult.NoPolicies:
@@ -265,8 +254,8 @@ internal class PullRequestChecker : IPullRequestChecker
         PullRequest prInfo,
         IRemote remote)
     {
-        (var targetRepository, _) = await _subscriptionConfiguration.GetTargetAsync();
-        IReadOnlyList<MergePolicyDefinition> policyDefinitions = await _subscriptionConfiguration.GetMergePolicyDefinitionsAsync();
+        (var targetRepository, _) = await _target.GetTargetAsync();
+        IReadOnlyList<MergePolicyDefinition> policyDefinitions = await _target.GetMergePolicyDefinitionsAsync();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _stateManager.GetMergePolicyEvaluationResultsAsync();
 

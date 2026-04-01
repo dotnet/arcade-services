@@ -32,11 +32,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
-    private readonly IPullRequestTarget _configuration;
+    private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
-        IPullRequestTarget configuration,
+        IPullRequestTarget target,
         IPullRequestChecker pullRequestChecker,
         IRemoteFactory remoteFactory,
         IPullRequestBuilder pullRequestBuilder,
@@ -51,7 +51,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(configuration, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
+        : base(target, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -65,7 +65,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
-        _configuration = configuration;
+        _target = target;
     }
 
     protected async override Task ProcessSubscriptionUpdateAsync(
@@ -452,7 +452,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             InProgressPullRequest inProgressPr = new()
             {
-                UpdaterId = _configuration.UpdaterId,
+                UpdaterId = _target.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = prBranch,
                 HeadBranchSha = pr.HeadBranchSha,

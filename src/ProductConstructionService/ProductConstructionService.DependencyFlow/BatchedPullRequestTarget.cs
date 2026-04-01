@@ -43,7 +43,7 @@ internal class BatchedPullRequestTarget : BatchedPullRequestUpdaterId, IPullRequ
         return Task.CompletedTask;
     }
 
-    public Task<bool> IsAvailableAsync()
+    public Task<bool> ShouldContinueProcessingAsync()
     {
         return Task.FromResult(true);
     }

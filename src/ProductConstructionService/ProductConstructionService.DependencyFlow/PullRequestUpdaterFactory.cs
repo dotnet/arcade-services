@@ -31,49 +31,49 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
             : CreateDependencyUpdater(ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId)),
         NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
             ? CreateCodeFlowUpdater(nonBatchedId)
-            : CreateDependencyUpdater(CreateNonBatchedConfiguration(nonBatchedId)),
+            : CreateDependencyUpdater(CreateNonBatchedTarget(nonBatchedId)),
         _ => throw new NotImplementedException()
     };
 
     public IPullRequestChecker CreatePullRequestChecker(PullRequestUpdaterId updaterId)
     {
-        IPullRequestTarget configuration = updaterId switch
+        IPullRequestTarget target = updaterId switch
         {
             BatchedPullRequestUpdaterId batchedId =>
                 ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId),
             NonBatchedPullRequestUpdaterId nonBatchedId =>
-                CreateNonBatchedConfiguration(nonBatchedId),
+                CreateNonBatchedTarget(nonBatchedId),
             _ => throw new NotImplementedException()
         };
 
-        var stateManager = CreateStateManager(configuration);
-        return CreateChecker(configuration, stateManager);
+        var stateManager = CreateStateManager(target);
+        return CreateChecker(target, stateManager);
     }
 
     public ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId) =>
         ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
 
-    private IPullRequestStateManager CreateStateManager(IPullRequestTarget configuration) =>
-        ActivatorUtilities.CreateInstance<PullRequestStateManager>(_serviceProvider, configuration);
+    private IPullRequestStateManager CreateStateManager(IPullRequestTarget target) =>
+        ActivatorUtilities.CreateInstance<PullRequestStateManager>(_serviceProvider, target);
 
-    private IPullRequestChecker CreateChecker(IPullRequestTarget configuration, IPullRequestStateManager stateManager) =>
-        ActivatorUtilities.CreateInstance<PullRequestChecker>(_serviceProvider, configuration, stateManager);
+    private IPullRequestChecker CreateChecker(IPullRequestTarget target, IPullRequestStateManager stateManager) =>
+        ActivatorUtilities.CreateInstance<PullRequestChecker>(_serviceProvider, target, stateManager);
 
-    private DependencyPullRequestUpdater CreateDependencyUpdater(IPullRequestTarget configuration)
+    private DependencyPullRequestUpdater CreateDependencyUpdater(IPullRequestTarget target)
     {
-        var stateManager = CreateStateManager(configuration);
-        var checker = CreateChecker(configuration, stateManager);
-        return ActivatorUtilities.CreateInstance<DependencyPullRequestUpdater>(_serviceProvider, configuration, checker, stateManager);
+        var stateManager = CreateStateManager(target);
+        var checker = CreateChecker(target, stateManager);
+        return ActivatorUtilities.CreateInstance<DependencyPullRequestUpdater>(_serviceProvider, target, checker, stateManager);
     }
 
     private CodeFlowPullRequestUpdater CreateCodeFlowUpdater(NonBatchedPullRequestUpdaterId id)
     {
-        var configuration = CreateNonBatchedConfiguration(id);
-        var stateManager = CreateStateManager(configuration);
-        var checker = CreateChecker(configuration, stateManager);
-        return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, configuration, checker, stateManager);
+        var target = CreateNonBatchedTarget(id);
+        var stateManager = CreateStateManager(target);
+        var checker = CreateChecker(target, stateManager);
+        return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, target, checker, stateManager);
     }
 
-    private IPullRequestTarget CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
+    private IPullRequestTarget CreateNonBatchedTarget(NonBatchedPullRequestUpdaterId id)
         => ActivatorUtilities.CreateInstance<NonBatchedPullRequestTarget>(_serviceProvider, id);
 }

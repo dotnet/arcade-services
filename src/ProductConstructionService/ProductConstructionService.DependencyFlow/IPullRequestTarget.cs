@@ -32,7 +32,7 @@ internal interface IPullRequestTarget
     ///     Checks whether the underlying target (e.g. subscription) still exists.
     ///     Returns false when the subscription has been deleted, signalling the caller to clean up state.
     /// </summary>
-    Task<bool> IsAvailableAsync();
+    Task<bool> ShouldContinueProcessingAsync();
 
     string UpdaterId { get; }
 }

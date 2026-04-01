@@ -20,20 +20,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
     private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly IPullRequestChecker _pullRequestChecker;
-    private readonly IPullRequestTarget _subscriptionConfiguration;
+    private readonly IPullRequestTarget _target;
     private readonly ISqlBarClient _sqlClient;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdater(
-        IPullRequestTarget subscriptionConfiguration,
+        IPullRequestTarget target,
         IPullRequestChecker pullRequestChecker,
         ISqlBarClient sqlClient,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ILogger<PullRequestUpdater> logger)
     {
-        _subscriptionConfiguration = subscriptionConfiguration;
+        _target = target;
         _pullRequestChecker = pullRequestChecker;
         _sqlClient = sqlClient;
         _logger = logger;
@@ -76,7 +76,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await ProcessPendingUpdatesAsync(
             new()
             {
-                UpdaterId = _subscriptionConfiguration.UpdaterId,
+                UpdaterId = _target.UpdaterId,
                 SubscriptionId = subscriptionId,
                 SubscriptionType = type,
                 BuildId = buildId,
@@ -155,7 +155,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await _pullRequestCommenter.PostCollectedCommentsAsync(
                 pr.Url,
-                (await _subscriptionConfiguration.GetTargetAsync()).Repository,
+                (await _target.GetTargetAsync()).Repository,
                 [("<subscriptionId>", update.SubscriptionId.ToString())]);
         }
     }

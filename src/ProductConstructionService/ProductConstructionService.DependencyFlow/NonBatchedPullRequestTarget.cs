@@ -62,7 +62,7 @@ internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPu
         }
     }
 
-    public async Task<bool> IsAvailableAsync()
+    public async Task<bool> ShouldContinueProcessingAsync()
     {
         return await GetSubscriptionAsync() != null;
     }
