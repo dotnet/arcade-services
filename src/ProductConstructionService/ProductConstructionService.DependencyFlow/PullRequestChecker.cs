@@ -48,15 +48,15 @@ internal class PullRequestChecker : IPullRequestChecker
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await _stateManager.ClearAllStateAsync(isCodeFlow: true);
-            await _stateManager.ClearAllStateAsync(isCodeFlow: false);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: false);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: false);
             return false;
         }
 
         if (!await _target.ShouldContinueProcessingAsync())
         {
-            await _stateManager.ClearAllStateAsync(isCodeFlow: true);
-            await _stateManager.ClearAllStateAsync(isCodeFlow: false);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
             // Return true for test PRs to avoid reporting failure for deleted subscriptions during E2E tests
             return inProgressPr.Url?.Contains("maestro-auth-test") ?? false;
         }
@@ -120,7 +120,7 @@ internal class PullRequestChecker : IPullRequestChecker
                             pr.Url);
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
-                        await _stateManager.ClearAllStateAsync(isCodeFlow);
+                        await _stateManager.ClearAllStateAsync(isCodeFlow, false);
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -166,7 +166,7 @@ internal class PullRequestChecker : IPullRequestChecker
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
-                await _stateManager.ClearAllStateAsync(isCodeFlow);
+                await _stateManager.ClearAllStateAsync(isCodeFlow, clearPendingUpdates: false);
 
                 // Also try to clean up the PR branch.
                 try

@@ -44,7 +44,7 @@ internal class BatchedPullRequestTarget : IPullRequestTarget
         return Task.CompletedTask;
     }
 
-    // For bathed subscriptions we don't know which subscriptions are actually a part of the PR,
+    // For batched subscriptions we don't know which subscriptions are actually a part of the PR,
     // so we can't tell if all of them have been deleted
     public Task<bool> ShouldContinueProcessingAsync()
     {

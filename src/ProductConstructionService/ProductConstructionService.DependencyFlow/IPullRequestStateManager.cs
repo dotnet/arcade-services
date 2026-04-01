@@ -61,7 +61,7 @@ internal interface IPullRequestStateManager
     /// <summary>
     ///     Clears the in-progress PR state, check reminder and queued update
     /// </summary>
-    Task ClearAllStateAsync(bool isCodeFlow);
+    Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates);
 
     #endregion
 }

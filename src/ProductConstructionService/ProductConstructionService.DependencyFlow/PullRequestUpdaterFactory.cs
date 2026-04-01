@@ -40,7 +40,9 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
         IPullRequestTarget target = updaterId switch
         {
             BatchedPullRequestUpdaterId batchedId =>
-                ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId),
+                updaterId.IsCodeFlow
+                ? throw new InvalidOperationException("Batched code flow pull request checkers are not supported.")
+                : ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId),
             NonBatchedPullRequestUpdaterId nonBatchedId =>
                 CreateNonBatchedTarget(nonBatchedId),
             _ => throw new NotImplementedException()

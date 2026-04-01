@@ -88,10 +88,13 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public Task UnsetUpdateReminderAsync(bool isCodeFlow) =>
         _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
 
-    public async Task ClearAllStateAsync(bool isCodeFlow)
+    public async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
     {
         await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
+        if (clearPendingUpdates)
+        {
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow); 
+        }
     }
 }

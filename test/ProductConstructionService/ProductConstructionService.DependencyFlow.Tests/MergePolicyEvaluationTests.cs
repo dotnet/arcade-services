@@ -59,20 +59,12 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         await Execute(
             async context =>
             {
-                try
-                {
-                    IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeflow: true);
-                    await updater.UpdateAssetsAsync(
-                    Subscription.Id,
-                    Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
-                    forBuild.Id,
-                    applyNewestOnly: false);
-                }
-                catch (Exception e)
-                {
-                    Console.Write(e);
-                    throw;
-                }
+                IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeflow: true);
+                await updater.UpdateAssetsAsync(
+                Subscription.Id,
+                Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
+                forBuild.Id,
+                applyNewestOnly: false);
             });
     }
 
