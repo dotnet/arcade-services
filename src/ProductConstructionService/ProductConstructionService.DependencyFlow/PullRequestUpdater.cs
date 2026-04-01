@@ -20,13 +20,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
     private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly IPullRequestChecker _pullRequestChecker;
-    private readonly ISubscriptionConfiguration _subscriptionConfiguration;
+    private readonly IPullRequestTarget _subscriptionConfiguration;
     private readonly ISqlBarClient _sqlClient;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdater(
-        ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestTarget subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
         ISqlBarClient sqlClient,
         IPullRequestCommenter pullRequestCommenter,

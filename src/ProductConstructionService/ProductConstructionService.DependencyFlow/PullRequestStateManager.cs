@@ -15,14 +15,14 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class PullRequestStateManager : IPullRequestStateManager
 {
-    private readonly ISubscriptionConfiguration _configuration;
+    private readonly IPullRequestTarget _configuration;
     private readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     private readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
     private readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     private readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
 
     public PullRequestStateManager(
-        ISubscriptionConfiguration configuration,
+        IPullRequestTarget configuration,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory)
     {

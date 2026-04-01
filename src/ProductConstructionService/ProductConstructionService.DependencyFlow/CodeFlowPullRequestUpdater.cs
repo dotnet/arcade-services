@@ -32,11 +32,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
-    private readonly ISubscriptionConfiguration _configuration;
+    private readonly IPullRequestTarget _configuration;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
-        ISubscriptionConfiguration configuration,
+        IPullRequestTarget configuration,
         IPullRequestChecker pullRequestChecker,
         IRemoteFactory remoteFactory,
         IPullRequestBuilder pullRequestBuilder,

@@ -8,17 +8,17 @@ using ProductConstructionService.DependencyFlow.Model;
 namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
-///     Subscription configuration for batched pull request updaters.
+///     Pull request target for batched updaters.
 ///     Target repository and branch come from the <see cref="BatchedPullRequestUpdaterId"/>;
 ///     merge policies come from the <see cref="RepositoryBranch"/> entity in the database.
 /// </summary>
-internal class BatchedSubscriptionConfiguration : BatchedPullRequestUpdaterId, ISubscriptionConfiguration
+internal class BatchedPullRequestTarget : BatchedPullRequestUpdaterId, IPullRequestTarget
 {
     private readonly BuildAssetRegistryContext _context;
 
     public string UpdaterId => Id;
 
-    public BatchedSubscriptionConfiguration(
+    public BatchedPullRequestTarget(
         BatchedPullRequestUpdaterId id,
         BuildAssetRegistryContext context)
         : base(id.Repository, id.Branch, id.IsCodeFlow)

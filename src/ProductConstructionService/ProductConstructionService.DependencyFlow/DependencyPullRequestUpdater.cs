@@ -17,7 +17,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal class DependencyPullRequestUpdater : PullRequestUpdater
 {
-    private readonly ISubscriptionConfiguration _configuration;
+    private readonly IPullRequestTarget _configuration;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IRemoteFactory _remoteFactory;
@@ -27,7 +27,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
-        ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestTarget subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
         IPullRequestStateManager stateManager,
         IRemoteFactory remoteFactory,

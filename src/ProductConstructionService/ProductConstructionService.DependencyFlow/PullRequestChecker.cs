@@ -20,7 +20,7 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class PullRequestChecker : IPullRequestChecker
 {
-    private readonly ISubscriptionConfiguration _subscriptionConfiguration;
+    private readonly IPullRequestTarget _subscriptionConfiguration;
     private readonly IPullRequestStateManager _stateManager;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly BuildAssetRegistryContext _context;
@@ -31,7 +31,7 @@ internal class PullRequestChecker : IPullRequestChecker
     private readonly ILogger<PullRequestChecker> _logger;
 
     public PullRequestChecker(
-        ISubscriptionConfiguration subscriptionConfiguration,
+        IPullRequestTarget subscriptionConfiguration,
         IPullRequestStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,

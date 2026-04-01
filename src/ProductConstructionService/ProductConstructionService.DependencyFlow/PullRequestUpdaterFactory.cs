@@ -28,7 +28,7 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
     {
         BatchedPullRequestUpdaterId batchedId => updaterId.IsCodeFlow
             ? throw new InvalidOperationException("Batched code flow pull request updaters are not supported.")
-            : CreateDependencyUpdater(ActivatorUtilities.CreateInstance<BatchedSubscriptionConfiguration>(_serviceProvider, batchedId)),
+            : CreateDependencyUpdater(ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId)),
         NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
             ? CreateCodeFlowUpdater(nonBatchedId)
             : CreateDependencyUpdater(CreateNonBatchedConfiguration(nonBatchedId)),
@@ -37,10 +37,10 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
 
     public IPullRequestChecker CreatePullRequestChecker(PullRequestUpdaterId updaterId)
     {
-        ISubscriptionConfiguration configuration = updaterId switch
+        IPullRequestTarget configuration = updaterId switch
         {
             BatchedPullRequestUpdaterId batchedId =>
-                ActivatorUtilities.CreateInstance<BatchedSubscriptionConfiguration>(_serviceProvider, batchedId),
+                ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId),
             NonBatchedPullRequestUpdaterId nonBatchedId =>
                 CreateNonBatchedConfiguration(nonBatchedId),
             _ => throw new NotImplementedException()
@@ -53,13 +53,13 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
     public ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId) =>
         ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
 
-    private IPullRequestStateManager CreateStateManager(ISubscriptionConfiguration configuration) =>
+    private IPullRequestStateManager CreateStateManager(IPullRequestTarget configuration) =>
         ActivatorUtilities.CreateInstance<PullRequestStateManager>(_serviceProvider, configuration);
 
-    private IPullRequestChecker CreateChecker(ISubscriptionConfiguration configuration, IPullRequestStateManager stateManager) =>
+    private IPullRequestChecker CreateChecker(IPullRequestTarget configuration, IPullRequestStateManager stateManager) =>
         ActivatorUtilities.CreateInstance<PullRequestChecker>(_serviceProvider, configuration, stateManager);
 
-    private DependencyPullRequestUpdater CreateDependencyUpdater(ISubscriptionConfiguration configuration)
+    private DependencyPullRequestUpdater CreateDependencyUpdater(IPullRequestTarget configuration)
     {
         var stateManager = CreateStateManager(configuration);
         var checker = CreateChecker(configuration, stateManager);
@@ -74,6 +74,6 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
         return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, configuration, checker, stateManager);
     }
 
-    private ISubscriptionConfiguration CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
-        => ActivatorUtilities.CreateInstance<NonBatchedSubscriptionConfiguration>(_serviceProvider, id);
+    private IPullRequestTarget CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
+        => ActivatorUtilities.CreateInstance<NonBatchedPullRequestTarget>(_serviceProvider, id);
 }

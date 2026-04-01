@@ -10,27 +10,27 @@ using ProductConstructionService.DependencyFlow.Model;
 namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
-///     Subscription configuration for non-batched (subscription-based) pull request updaters.
+///     Pull request target for non-batched (subscription-based) updaters.
 ///     All information is loaded lazily from the <see cref="Subscription"/> entity.
 ///     Handles the case where a subscription has been deleted while a PR is still being tracked.
 /// </summary>
-internal class NonBatchedSubscriptionConfiguration : NonBatchedPullRequestUpdaterId, ISubscriptionConfiguration
+internal class NonBatchedPullRequestTarget : NonBatchedPullRequestUpdaterId, IPullRequestTarget
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
-    private readonly ILogger<NonBatchedSubscriptionConfiguration> _logger;
+    private readonly ILogger<NonBatchedPullRequestTarget> _logger;
 
     private readonly Lazy<Task<Subscription?>> _subscription;
 
     public string UpdaterId => Id;
 
-    public NonBatchedSubscriptionConfiguration(
+    public NonBatchedPullRequestTarget(
         NonBatchedPullRequestUpdaterId id,
         BuildAssetRegistryContext context,
         ICommentCollector commentCollector,
         IPullRequestCommentBuilder commentBuilder,
-        ILogger<NonBatchedSubscriptionConfiguration> logger)
+        ILogger<NonBatchedPullRequestTarget> logger)
         : base(id.SubscriptionId, id.IsCodeFlow)
     {
         _context = context;
