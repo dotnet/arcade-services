@@ -434,7 +434,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         // Continue with the update despite the status
                         break;
                     }
-                    await ScheduleUpdateForLater(pr, update, isCodeFlow);
+                    _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
+                    await _stateManager.ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return;
                 default:
                     throw new NotImplementedException($"Unknown PR status {status}");
@@ -488,13 +489,4 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     }
 
     protected static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
-
-    private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
-    {
-        _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
-        await _stateManager.SetUpdateReminderAsync(update, DefaultReminderDelay, isCodeFlow);
-        await _stateManager.UnsetCheckReminderAsync(isCodeFlow);
-        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
-        await _stateManager.SetInProgressPullRequestAsync(pr);
-    }
 }

@@ -54,6 +54,8 @@ internal interface IPullRequestStateManager
 
     Task UnsetUpdateReminderAsync(bool isCodeFlow);
 
+    Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
+
     #endregion
 
     #region Bulk cleanup

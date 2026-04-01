@@ -98,4 +98,12 @@ internal class PullRequestStateManager : IPullRequestStateManager
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow); 
         }
     }
+
+    private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
+    {
+        await SetUpdateReminderAsync(update, PullRequestUpdater.DefaultReminderDelay, isCodeFlow);
+        await UnsetCheckReminderAsync(isCodeFlow);
+        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        await SetInProgressPullRequestAsync(pr);
+    }
 }
