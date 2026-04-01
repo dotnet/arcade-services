@@ -8,7 +8,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
 ///     Resolves target repository, branch, merge policies, and other subscription/target-specific
-///     information needed by <see cref="PullRequestUpdater"/> and <see cref="PullRequestChecker"/>.
+///     information needed by <see cref="PullRequestUpdater"/>.
 ///     Different implementations handle batched (repository-level) vs subscription-level targets.
 /// </summary>
 internal interface IPullRequestTarget

@@ -28,8 +28,8 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
     public DependencyPullRequestUpdater(
         IPullRequestTarget target,
-        IPullRequestChecker pullRequestChecker,
         IPullRequestStateManager stateManager,
+        IMergePolicyEvaluator mergePolicyEvaluator,
         IRemoteFactory remoteFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
@@ -37,7 +37,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter,
         ISubscriptionEventRecorder subscriptionEventRecorder)
-        : base(target, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
     {
         _target = target;
         _coherencyUpdateResolver = coherencyUpdateResolver;

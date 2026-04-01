@@ -37,7 +37,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
     public CodeFlowPullRequestUpdater(
         IPullRequestTarget target,
-        IPullRequestChecker pullRequestChecker,
+        IMergePolicyEvaluator mergePolicyEvaluator,
         IRemoteFactory remoteFactory,
         IPullRequestBuilder pullRequestBuilder,
         ISqlBarClient sqlClient,
@@ -51,7 +51,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(target, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
