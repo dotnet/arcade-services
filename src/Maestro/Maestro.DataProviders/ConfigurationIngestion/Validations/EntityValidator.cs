@@ -11,21 +11,23 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 internal class EntityValidator
 {
-    internal static void ValidateEntityUniqueness<T>(IEnumerable<IExternallySyncedEntity<T>> entities) where T : notnull
+    internal static void ValidateEntityUniqueness<T>(IReadOnlyCollection<IExternallySyncedEntity<T>> entities) where T : notnull
     {
-        if (!entities.Any())
+        if (entities.Count == 0)
         {
             return;
         }
 
+        var keyComparer = entities.First().UniqueKeyComparer;
+
         // Find duplicates by grouping entities by their unique ID
         var duplicates = entities
-            .GroupBy(e => e.UniqueId)
+            .GroupBy(e => e.UniqueId, keyComparer)
             .Where(g => g.Count() > 1)
             .Select(g => g.First())
             .ToList();
 
-        if (duplicates.Any())
+        if (duplicates.Count != 0)
         {
             var duplicateInfo = string.Join(", ", duplicates.Select(e => e.ToString()));
             var entityTypeName = entities.First().GetType().Name;
