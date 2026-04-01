@@ -16,6 +16,8 @@ internal class BatchedSubscriptionConfiguration : BatchedPullRequestUpdaterId, I
 {
     private readonly BuildAssetRegistryContext _context;
 
+    public string UpdaterId => Id;
+
     public BatchedSubscriptionConfiguration(
         BatchedPullRequestUpdaterId id,
         BuildAssetRegistryContext context)

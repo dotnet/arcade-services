@@ -17,7 +17,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal class DependencyPullRequestUpdater : PullRequestUpdater
 {
-    private readonly ISubscriptionConfiguration _subscriptionConfiguration;
+    private readonly ISubscriptionConfiguration _configuration;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IRemoteFactory _remoteFactory;
@@ -39,7 +39,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         ISubscriptionEventRecorder subscriptionEventRecorder)
         : base(subscriptionConfiguration, pullRequestChecker, sqlClient, pullRequestCommenter, stateManager, logger)
     {
-        _subscriptionConfiguration = subscriptionConfiguration;
+        _configuration = subscriptionConfiguration;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
@@ -83,7 +83,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         PullRequest prInfo,
         BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await _subscriptionConfiguration.GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _configuration.GetTargetAsync();
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
@@ -183,7 +183,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
     private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await _subscriptionConfiguration.GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _configuration.GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
@@ -238,7 +238,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             InProgressPullRequest inProgressPr = new()
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _configuration.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,
@@ -285,7 +285,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             var inProgressPr = new InProgressPullRequest
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _configuration.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,

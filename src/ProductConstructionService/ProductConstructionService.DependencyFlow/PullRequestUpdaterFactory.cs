@@ -74,6 +74,6 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
         return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, configuration, checker, stateManager);
     }
 
-    private NonBatchedSubscriptionConfiguration CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
+    private ISubscriptionConfiguration CreateNonBatchedConfiguration(NonBatchedPullRequestUpdaterId id)
         => ActivatorUtilities.CreateInstance<NonBatchedSubscriptionConfiguration>(_serviceProvider, id);
 }

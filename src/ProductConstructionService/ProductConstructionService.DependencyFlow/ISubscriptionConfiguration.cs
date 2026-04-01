@@ -33,4 +33,6 @@ internal interface ISubscriptionConfiguration
     ///     Returns false when the subscription has been deleted, signalling the caller to clean up state.
     /// </summary>
     Task<bool> IsAvailableAsync();
+
+    string UpdaterId { get; }
 }

@@ -25,8 +25,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestStateManager _stateManager;
     private readonly ILogger<PullRequestUpdater> _logger;
 
-    public PullRequestUpdaterId Id => (PullRequestUpdaterId)_subscriptionConfiguration;
-
     public PullRequestUpdater(
         ISubscriptionConfiguration subscriptionConfiguration,
         IPullRequestChecker pullRequestChecker,
@@ -78,7 +76,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await ProcessPendingUpdatesAsync(
             new()
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _subscriptionConfiguration.UpdaterId,
                 SubscriptionId = subscriptionId,
                 SubscriptionType = type,
                 BuildId = buildId,

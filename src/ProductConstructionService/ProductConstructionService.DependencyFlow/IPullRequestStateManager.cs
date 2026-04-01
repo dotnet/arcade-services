@@ -14,7 +14,7 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal interface IPullRequestStateManager
 {
-    // --- In-progress PR state ---
+    #region In-progress PR state
 
     Task<InProgressPullRequest?> GetInProgressPullRequestAsync();
 
@@ -26,7 +26,9 @@ internal interface IPullRequestStateManager
     /// </summary>
     Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate);
 
-    // --- Merge policy evaluation cache ---
+    #endregion
+
+    #region Merge policy evaluation cache
 
     Task<MergePolicyEvaluationResults?> GetMergePolicyEvaluationResultsAsync();
 
@@ -34,7 +36,9 @@ internal interface IPullRequestStateManager
 
     Task ClearMergePolicyEvaluationStateAsync();
 
-    // --- Check reminders ---
+    #endregion
+
+    #region Check reminders
 
     Task SetCheckReminderAsync(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow, TimeSpan reminderDelay);
 
@@ -42,16 +46,22 @@ internal interface IPullRequestStateManager
 
     Task UnsetCheckReminderAsync(bool isCodeFlow);
 
-    // --- Update reminders ---
+    #endregion
+
+    #region Update reminders
 
     Task SetUpdateReminderAsync(SubscriptionUpdateWorkItem update, TimeSpan delay, bool isCodeFlow);
 
     Task UnsetUpdateReminderAsync(bool isCodeFlow);
 
-    // --- Bulk cleanup ---
+    #endregion
+
+    #region Bulk cleanup
 
     /// <summary>
     ///     Clears the in-progress PR state, check reminder and queued update
     /// </summary>
     Task ClearAllStateAsync(bool isCodeFlow);
+
+    #endregion
 }

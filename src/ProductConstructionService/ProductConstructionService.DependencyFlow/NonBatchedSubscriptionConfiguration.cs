@@ -23,6 +23,8 @@ internal class NonBatchedSubscriptionConfiguration : NonBatchedPullRequestUpdate
 
     private readonly Lazy<Task<Subscription?>> _subscription;
 
+    public string UpdaterId => Id;
+
     public NonBatchedSubscriptionConfiguration(
         NonBatchedPullRequestUpdaterId id,
         BuildAssetRegistryContext context,

@@ -15,7 +15,7 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class PullRequestStateManager : IPullRequestStateManager
 {
-    private readonly PullRequestUpdaterId _id;
+    private readonly ISubscriptionConfiguration _configuration;
     private readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     private readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
     private readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
@@ -26,8 +26,8 @@ internal class PullRequestStateManager : IPullRequestStateManager
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory)
     {
-        _id = (PullRequestUpdaterId)configuration;
-        var cacheKey = _id.ToString();
+        _configuration = configuration;
+        var cacheKey = _configuration.UpdaterId;
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
@@ -63,7 +63,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     {
         var reminder = new PullRequestCheck()
         {
-            UpdaterId = _id.ToString(),
+            UpdaterId = _configuration.UpdaterId,
             Url = prState.Url,
             IsCodeFlow = isCodeFlow
         };

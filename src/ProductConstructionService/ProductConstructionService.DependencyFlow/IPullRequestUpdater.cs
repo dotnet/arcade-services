@@ -21,6 +21,4 @@ public interface IPullRequestUpdater
         int buildId,
         bool applyNewestOnly,
         bool forceUpdate = false);
-
-    PullRequestUpdaterId Id { get; }
 }
