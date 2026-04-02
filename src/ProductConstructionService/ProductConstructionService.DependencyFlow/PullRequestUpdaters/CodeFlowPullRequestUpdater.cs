@@ -113,7 +113,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var (codeFlowRes, unsafeFlown) = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlown, updatedPrHeadBranch) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
@@ -130,6 +130,17 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (!codeFlowRes.HadUpdates)
         {
             return;
+        }
+
+        if (unsafeFlown)
+        {
+            // if we had an existing PR and we had to unsafe flow, we closed the PR and had to create a different head branch
+            if (pr != null)
+            {
+                prHeadBranch = updatedPrHeadBranch;
+            }
+            pr = null;
+            prInfo = null;
         }
 
         if (isForwardFlow)
@@ -192,7 +203,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task<(CodeFlowResult? codeflowRes, bool unsafeFlown)> ExecuteCodeFlowAsync(
+    private async Task<(CodeFlowResult? codeflowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -234,25 +245,33 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         catch (BlockingCodeflowException) when (pr != null)
         {
             await HandleBlockingCodeflowException(pr);
-            return (null, false);
+            return (null, false, prHeadBranch);
         }
         catch (TargetBranchNotFoundException)
         {
             _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
                 subscription.TargetBranch,
                 subscription.Id);
-            return (null, false);
+            return (null, false, prHeadBranch);
         }
         catch (NonLinearCodeflowException e)
         {
             if (e.FlowingOldBuild)
             {
                 _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
-                return (null, false);
+                return (null, false, prHeadBranch);
             }
 
             unsafeFlown = true;
-            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate);
+            if (pr != null)
+            {
+                prHeadBranch = GetNewBranchName(subscription.TargetBranch);
+                IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+                await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
+                await remote.ClosePullRequestAsync(pr.Url);
+                await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            }
+            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(pr, subscription, build, prHeadBranch, forceUpdate);
         }
         catch (Exception)
         {
@@ -265,13 +284,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (codeFlowRes.HadConflicts)
         {
             _logger.LogInformation("Detected conflicts while rebasing new changes");
-            return (codeFlowRes, unsafeFlown);
+            return (codeFlowRes, unsafeFlown, prHeadBranch);
         }
 
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            return (codeFlowRes, unsafeFlown);
+            return (codeFlowRes, unsafeFlown, prHeadBranch);
         }
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
@@ -290,26 +309,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
-        return (codeFlowRes, unsafeFlown);
+        return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
     private async Task<CodeFlowResult> ExecuteUnsafeCodeFlowAsync(
         InProgressPullRequest? pr,
-        PullRequest? prInfo,
-        SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         BuildDTO build,
         string prHeadBranch,
         bool forceUpdate)
     {
-        if (pr != null)
-        {
-            IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-            await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
-            await remote.ClosePullRequestAsync(pr.Url);
-            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
-        }
-
         _logger.LogInformation(
             "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
             subscription.IsForwardFlow() ? "Forward" : "Back",
