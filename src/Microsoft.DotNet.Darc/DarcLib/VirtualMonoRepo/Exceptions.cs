@@ -92,6 +92,12 @@ public class NonLinearCodeflowException(string currentSha, string previousSha, b
     public bool FlowingOldBuild { get; } = flowingOldBuild;
 }
 
+public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrSha, string lastFFRepoSha, string currentRepoSha)
+    : DarcException($"Cannot unsafe backflow commit {currentVmrSha} as the repo contents we're trying to backflow {lastFFRepoSha} are not the descendant of {currentRepoSha}."
+        + "Doing so would attempt to 'reset' the repo branch to a different branch")
+{
+}
+
 /// <summary>
 /// This exception is used when the current codeflow cannot be applied, and if a codeflow PR already exists, then it
 /// is blocked from receiving new flows.
