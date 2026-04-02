@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -26,15 +27,32 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
     {
         BatchedPullRequestUpdaterId batchedId => updaterId.IsCodeFlow
             ? throw new InvalidOperationException("Batched code flow pull request updaters are not supported.")
-            : ActivatorUtilities.CreateInstance<BatchedDependencyPullRequestUpdater>(_serviceProvider, batchedId),
+            : CreateDependencyUpdater(ActivatorUtilities.CreateInstance<BatchedPullRequestTarget>(_serviceProvider, batchedId)),
         NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
-            ? ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, nonBatchedId)
-            : ActivatorUtilities.CreateInstance<NonBatchedDependencyPullRequestUpdater>(_serviceProvider, nonBatchedId),
+            ? CreateCodeFlowUpdater(nonBatchedId)
+            : CreateDependencyUpdater(CreateNonBatchedTarget(nonBatchedId)),
         _ => throw new NotImplementedException()
     };
 
-    public ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId)
+    public ISubscriptionTriggerer CreateSubscriptionTrigerrer(Guid subscriptionId) =>
+        ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
+
+    private IPullRequestStateManager CreateStateManager(IPullRequestTarget target) =>
+        ActivatorUtilities.CreateInstance<PullRequestStateManager>(_serviceProvider, target);
+
+    private DependencyPullRequestUpdater CreateDependencyUpdater(IPullRequestTarget target)
     {
-        return ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_serviceProvider, subscriptionId);
+        var stateManager = CreateStateManager(target);
+        return ActivatorUtilities.CreateInstance<DependencyPullRequestUpdater>(_serviceProvider, target, stateManager);
     }
+
+    private CodeFlowPullRequestUpdater CreateCodeFlowUpdater(NonBatchedPullRequestUpdaterId id)
+    {
+        var target = CreateNonBatchedTarget(id);
+        var stateManager = CreateStateManager(target);
+        return ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, target, stateManager);
+    }
+
+    private IPullRequestTarget CreateNonBatchedTarget(NonBatchedPullRequestUpdaterId id)
+        => ActivatorUtilities.CreateInstance<NonBatchedPullRequestTarget>(_serviceProvider, id);
 }

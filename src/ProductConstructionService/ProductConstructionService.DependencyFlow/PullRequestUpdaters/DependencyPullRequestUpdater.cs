@@ -1,8 +1,6 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
-using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -11,41 +9,44 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
+internal class DependencyPullRequestUpdater : PullRequestUpdater
 {
+    private readonly IPullRequestTarget _target;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISqlBarClient _sqlClient;
+    private readonly IPullRequestStateManager _stateManager;
+    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
-        PullRequestUpdaterId id,
+        IPullRequestTarget target,
+        IPullRequestStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
         ILogger<DependencyPullRequestUpdater> logger,
-        IPullRequestCommenter pullRequestCommenter)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        IPullRequestCommenter pullRequestCommenter,
+        ISubscriptionEventRecorder subscriptionEventRecorder)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
     {
+        _target = target;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
         _sqlClient = sqlClient;
+        _stateManager = stateManager;
         _logger = logger;
+        _subscriptionEventRecorder = subscriptionEventRecorder;
     }
 
     protected override async Task ProcessSubscriptionUpdateAsync(
@@ -58,7 +59,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         if (pr != null && prInfo != null)
         {
             await UpdatePullRequestAsync(update, pr, prInfo, build);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return;
         }
 
@@ -73,7 +74,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
         }
 
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+        await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
     }
 
     private async Task UpdatePullRequestAsync(
@@ -82,7 +83,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         PullRequest prInfo,
         BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _target.GetTargetAsync();
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
@@ -116,7 +117,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
         List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
@@ -134,7 +135,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         // marked as update as they are new. Any dependency not being updated should not be marked as failed.
         // At this point, pr.ContainedSubscriptions only contains the subscriptions that were not updated,
         // so everything that is in the previous list but not in the current list were updated.
-        await AddDependencyFlowEventsAsync(
+        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
             previousSubscriptions.Except(pr.ContainedSubscriptions),
             DependencyFlowEventType.Updated,
             DependencyFlowEventReason.FailedUpdate,
@@ -150,7 +151,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
         // but were not in the previous list of subscriptions are new
-        await AddDependencyFlowEventsAsync(
+        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
             pr.ContainedSubscriptions.Except(previousSubscriptions),
             DependencyFlowEventType.Created,
             DependencyFlowEventReason.New,
@@ -171,7 +172,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
         await darcRemote.UpdatePullRequestAsync(pr.Url, prInfo);
         pr.LastUpdate = DateTime.UtcNow;
         pr.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
+        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
     }
@@ -182,7 +183,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
     private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
-        (var targetRepository, var targetBranch) = await GetTargetAsync();
+        (var targetRepository, var targetBranch) = await _target.GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
@@ -210,7 +211,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
             return null;
         }
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -237,7 +238,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 
             InProgressPullRequest inProgressPr = new()
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _target.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,
@@ -250,7 +251,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
             };
 
-            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+            await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
             return pr;
         }
 
@@ -284,7 +285,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 
             var inProgressPr = new InProgressPullRequest
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _target.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,
@@ -307,19 +308,19 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 
             if (!string.IsNullOrEmpty(pr?.Url))
             {
-                await AddDependencyFlowEventsAsync(
+                await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                     inProgressPr.ContainedSubscriptions,
                     DependencyFlowEventType.Created,
                     DependencyFlowEventReason.New,
                     MergePolicyCheckResult.PendingPolicies,
                     pr.Url);
 
-                await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+                await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
                 return pr;
             }
 
             // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
-            await AddDependencyFlowEventsAsync(
+            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                 inProgressPr.ContainedSubscriptions,
                 DependencyFlowEventType.Completed,
                 DependencyFlowEventReason.NothingToDo,
@@ -423,7 +424,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
             if (dependenciesToUpdate.Count < 1)
             {
                 // No dependencies need to be updated.
-                await UpdateSubscriptionsForMergedPRAsync(
+                await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(
                     new List<SubscriptionPullRequestUpdate>
                     {
                     new()
