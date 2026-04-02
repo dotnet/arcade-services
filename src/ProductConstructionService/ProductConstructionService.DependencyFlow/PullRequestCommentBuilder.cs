@@ -42,7 +42,8 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
         string prHeadBranch,
-        bool prIsEmpty)
+        bool prIsEmpty,
+        bool unsafeFlown)
     {
         var comment = new StringBuilder()
             .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
@@ -101,7 +102,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 ```
             3. Run from repo's git clone and follow the instructions provided by the command to stage the conflict locally
                 ```bash
-                darc vmr resolve-conflict --subscription {subscription.Id}
+                darc vmr resolve-conflict --subscription {subscription.Id} {(unsafeFlown ? "--unsafe" : "")}
                 ```
                 This should apply the build `{update.BuildId}` with sources from [`{Microsoft.DotNet.DarcLib.Commit.GetShortSha(update.SourceSha)}`]({GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)})
             4. Resolve the conflicts, commit & push the changes
@@ -111,6 +112,9 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         return comment.ToString();
     }
+
+    private static string BuildAlternativeVmrResetMessage(int buildId) =>
+        $"Alternatively, if you don't care about losing any Vmr side changes, you can use `darc vmr reset --build {buildId} from the local vmr clone`";
 
     public static string BuildOppositeCodeflowMergedNotification() =>
         """

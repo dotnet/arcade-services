@@ -175,7 +175,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowRes,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                unsafeFlown);
 
             return;
         }
@@ -401,7 +402,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         SubscriptionDTO subscription,
         string prHeadBranch,
         CodeFlowResult codeFlowResult,
-        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
+        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
+        bool unsafeFlown)
     {
         PullRequest prInfo;
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -469,7 +471,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 codeFlowResult.ConflictedFiles,
                 prHeadBranch,
-                prIsEmpty),
+                prIsEmpty,
+                unsafeFlown),
             CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
