@@ -667,10 +667,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
     }
 
-    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
+    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context, bool isCodeflow = false)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId(isCodeflow));
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)

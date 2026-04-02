@@ -3255,9 +3255,13 @@ darc vmr reset invalid-format
 Diffs the VMR and the product repositories. Outputs the diff to stdout or saves it to a patch file (or multiple if patch > 1 GB), if --output-path is provided.
 If input repos are not local, they'll be cloned locally and cleaned up afterwards, so the command might not be instant.
 
+Use `--path` to limit the diff to specific paths within the repository. This option can be specified multiple times.
+
 **Sample**
 ```
 darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries --path src/coreclr
 ```
 
 <!-- Begin Generated Content: Doc Feedback -->
