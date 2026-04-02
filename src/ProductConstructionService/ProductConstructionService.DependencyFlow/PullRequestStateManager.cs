@@ -99,7 +99,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
         }
     }
 
-    private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
+    public async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
     {
         await SetUpdateReminderAsync(update, PullRequestUpdater.DefaultReminderDelay, isCodeFlow);
         await UnsetCheckReminderAsync(isCodeFlow);
