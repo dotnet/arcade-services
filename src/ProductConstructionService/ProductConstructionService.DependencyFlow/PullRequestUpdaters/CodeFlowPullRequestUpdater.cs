@@ -113,7 +113,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var codeFlowRes = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlown) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
@@ -192,7 +192,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task<CodeFlowResult?> ExecuteCodeFlowAsync(
+    private async Task<(CodeFlowResult? codeflowRes, bool unsafeFlown)> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -212,6 +212,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             prHeadBranch);
 
         CodeFlowResult codeFlowRes;
+        bool unsafeFlown = false;
         try
         {
             codeFlowRes = subscription.IsForwardFlow()
@@ -220,35 +221,38 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     build,
                     prHeadBranch,
                     forceUpdate,
+                    unsafeFlow: false,
                     cancellationToken: default)
                 : await _vmrBackFlower.FlowBackAsync(
                     subscription,
                     build,
                     prHeadBranch,
                     forceUpdate,
+                    unsafeFlow: false,
                     cancellationToken: default);
         }
         catch (BlockingCodeflowException) when (pr != null)
         {
             await HandleBlockingCodeflowException(pr);
-            return null;
+            return (null, false);
         }
         catch (TargetBranchNotFoundException)
         {
             _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
                 subscription.TargetBranch,
                 subscription.Id);
-            return null;
+            return (null, false);
         }
         catch (NonLinearCodeflowException e)
         {
             if (e.FlowingOldBuild)
             {
                 _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
-                return null;
+                return (null, false);
             }
 
-            return await ExecuteUnsafeCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate);
+            unsafeFlown = true;
+            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate);
         }
         catch (Exception)
         {
@@ -261,13 +265,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (codeFlowRes.HadConflicts)
         {
             _logger.LogInformation("Detected conflicts while rebasing new changes");
-            return codeFlowRes;
+            return (codeFlowRes, unsafeFlown);
         }
 
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            return codeFlowRes;
+            return (codeFlowRes, unsafeFlown);
         }
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
@@ -286,10 +290,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
-        return codeFlowRes;
+        return (codeFlowRes, unsafeFlown);
     }
 
-    private async Task<CodeFlowResult?> ExecuteUnsafeCodeFlowAsync(
+    private async Task<CodeFlowResult> ExecuteUnsafeCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -301,13 +305,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (pr != null)
         {
             IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-            await remote.CommentPullRequestAsync(pr.Url, PullRequestCommentBuilder.BuildSourceBranchChangedNotification());
+            await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
             await remote.ClosePullRequestAsync(pr.Url);
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
         }
 
         _logger.LogInformation(
-            "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
+            "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
             subscription.IsForwardFlow() ? "Forward" : "Back",
             build.Id,
             subscription.SourceRepository,
@@ -315,6 +319,32 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             subscription.TargetRepository,
             subscription.TargetBranch,
             prHeadBranch);
+
+        try
+        {
+            return subscription.IsForwardFlow()
+                ? await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    forceUpdate,
+                    unsafeFlow: true,
+                    cancellationToken: default)
+                : await _vmrBackFlower.FlowBackAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    forceUpdate,
+                    unsafeFlow: true,
+                    cancellationToken: default);
+        }
+        catch (Exception)
+        {
+            _logger.LogError("Failed to unsafe flow source changes for build {buildId} in subscription {subscriptionId}",
+                build.Id,
+                subscription.Id);
+            throw;
+        }
     }
 
     // <summary>

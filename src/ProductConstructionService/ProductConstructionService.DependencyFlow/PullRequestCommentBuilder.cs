@@ -133,9 +133,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
            ```
         """;
 
-    public static string BuildSourceBranchChangedNotification() =>
-        "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.";
-
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
     {
         // We'll try to notify the source repo if the subscription provided a list of aliases to tag.
