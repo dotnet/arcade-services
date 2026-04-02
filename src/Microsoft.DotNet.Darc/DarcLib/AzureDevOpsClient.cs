@@ -463,6 +463,23 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             id);
     }
 
+    public async Task ClosePullRequestAsync(string pullRequestUri)
+    {
+        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
+
+        using VssConnection connection = CreateVssConnection(accountName);
+        using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+        await client.UpdatePullRequestAsync(
+            new GitPullRequest
+            {
+                Status = PullRequestStatus.Abandoned
+            },
+            projectName,
+            repoName,
+            id);
+    }
+
     /// <summary>
     /// Gets all the commits related to the pull request
     /// </summary>

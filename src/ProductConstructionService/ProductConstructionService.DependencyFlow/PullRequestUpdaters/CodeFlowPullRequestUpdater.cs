@@ -300,7 +300,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     {
         if (pr != null)
         {
-
+            IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+            await remote.CommentPullRequestAsync(pr.Url, PullRequestCommentBuilder.BuildSourceBranchChangedNotification());
+            await remote.ClosePullRequestAsync(pr.Url);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
         }
 
         _logger.LogInformation(

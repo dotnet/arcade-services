@@ -105,6 +105,9 @@ public sealed class Remote : IRemote
         return _remoteGitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
     }
 
+    public Task ClosePullRequestAsync(string pullRequestUri) =>
+        _remoteGitClient.ClosePullRequestAsync(pullRequestUri);
+
     /// <summary>
     ///     Delete a Pull Request branch
     /// </summary>
