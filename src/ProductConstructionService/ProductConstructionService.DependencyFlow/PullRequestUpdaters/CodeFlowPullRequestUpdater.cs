@@ -240,6 +240,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription.Id);
             return null;
         }
+        catch (NonLinearCodeflowException e)
+        {
+            if (e.FlowingOldBuild)
+            {
+                _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
+                return null;
+            }
+
+            return await ExecuteUnsafeCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate);
+        }
         catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
@@ -277,6 +287,31 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
+    }
+
+    private async Task<CodeFlowResult?> ExecuteUnsafeCodeFlowAsync(
+        InProgressPullRequest? pr,
+        PullRequest? prInfo,
+        SubscriptionUpdateWorkItem update,
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        string prHeadBranch,
+        bool forceUpdate)
+    {
+        if (pr != null)
+        {
+
+        }
+
+        _logger.LogInformation(
+            "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
+            subscription.IsForwardFlow() ? "Forward" : "Back",
+            build.Id,
+            subscription.SourceRepository,
+            subscription.Id,
+            subscription.TargetRepository,
+            subscription.TargetBranch,
+            prHeadBranch);
     }
 
     // <summary>

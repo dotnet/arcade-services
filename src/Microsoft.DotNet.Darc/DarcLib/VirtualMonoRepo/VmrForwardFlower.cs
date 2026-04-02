@@ -555,7 +555,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (!await repo.IsAncestorCommit(lastFlowRepoSha, currentFlow.RepoSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.RepoSha, lastFlowRepoSha);
+            throw new NonLinearCodeflowException(currentFlow.RepoSha, lastFlowRepoSha, await repo.IsAncestorCommit(currentFlow.RepoSha, lastFlowRepoSha));
         }
     }
 
