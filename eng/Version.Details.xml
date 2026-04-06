@@ -75,13 +75,13 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>048a8c0ba5b72234301a3605c424ee9f9ff99772</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26176.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26201.2">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>ccb98f08f700e29ad1dca55697c1e1472cb6cb17</Sha>
+      <Sha>b3251c7824454aedcabfd2c27c4938bb2dad0d2b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26176.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26201.2">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>ccb98f08f700e29ad1dca55697c1e1472cb6cb17</Sha>
+      <Sha>b3251c7824454aedcabfd2c27c4938bb2dad0d2b</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26180.1">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
