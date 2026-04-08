@@ -11,7 +11,7 @@ public class CheckRunConclusionUpdateEvent : WorkItem
 {
     public string Repository { get; set; }
 
-    public int IssueNumber { get; set; }
+    public int PullRequestNumber { get; set; }
 
     public string HeadSha { get; set; }
 

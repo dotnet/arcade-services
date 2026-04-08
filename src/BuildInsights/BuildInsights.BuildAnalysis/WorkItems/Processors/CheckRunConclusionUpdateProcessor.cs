@@ -58,7 +58,7 @@ public class CheckRunConclusionUpdateProcessor : WorkItemProcessor<CheckRunConcl
         if (string.IsNullOrWhiteSpace(workItem.Justification))
         {
             string justificationMissingMessage = $"Unable to override the build analysis check run because no reason was provided. Please provide a reason. Post a request in the following format: {BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} <*reason*>";
-            await _gitHubIssuesService.AddCommentToIssueAsync(workItem.Repository, workItem.IssueNumber, justificationMissingMessage);
+            await _gitHubIssuesService.AddCommentToIssueAsync(workItem.Repository, workItem.PullRequestNumber, justificationMissingMessage);
             return false;
         }
 

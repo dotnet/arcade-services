@@ -17,6 +17,7 @@ using Octokit.Webhooks.Events.CheckRun;
 using Octokit.Webhooks.Events.IssueComment;
 using Octokit.Webhooks.Events.Issues;
 using Octokit.Webhooks.Events.PullRequest;
+using Octokit.Webhooks.Events.PullRequestReviewComment;
 using ProductConstructionService.WorkItems;
 
 #nullable disable
@@ -240,29 +241,24 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         }
     }
 
-    protected override async Task ProcessIssueCommentWebhookAsync(
+    protected override async Task ProcessPullRequestReviewCommentWebhookAsync(
         WebhookHeaders headers,
-        IssueCommentEvent issueCommentEvent,
-        IssueCommentAction action)
+        PullRequestReviewCommentEvent commentEvent,
+        PullRequestReviewCommentAction action)
     {
-        _logger.LogInformation($"Processing issue comment webhook: {issueCommentEvent.Comment.Body}");
+        _logger.LogInformation($"Processing issue comment webhook: {commentEvent.Comment.Body}");
 
         if (!IsBuildAnalysisEvent(headers))
         {
             return;
         }
 
-        if (issueCommentEvent.Action != IssueCommentActionValue.Created)
+        if (commentEvent.Action != IssueCommentActionValue.Created)
         {
             return;
         }
 
-        if (issueCommentEvent.Issue.PullRequest == null)
-        {
-            return;
-        }
-
-        string comment = issueCommentEvent.Comment.Body.Trim();
+        string comment = commentEvent.Comment.Body.Trim();
 
         if (!comment.StartsWith(BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand, StringComparison.InvariantCultureIgnoreCase))
         {
@@ -271,23 +267,23 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
 
         using Operation scope = CreateGitHubHookLoggingScope(headers, "issue_comment");
 
-        string repository = issueCommentEvent.Repository.FullName;
-        int issueNumber = (int)issueCommentEvent.Issue.Number;
+        string repository = commentEvent.Repository.FullName;
+        int prNumber = (int)commentEvent.PullRequest.Number;
 
         _logger.LogInformation("Received a change-to-green command event for PR {repository}/pulls/{prNumber}",
             repository,
-            issueNumber);
+            prNumber);
 
         string justification = comment.Substring(BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand.Length).Trim();
 
-        Octokit.PullRequest pullRequest = await _prService.GetPullRequest(repository, issueNumber);
+        Octokit.PullRequest pullRequest = await _prService.GetPullRequest(repository, prNumber);
         string currentHeadSha = pullRequest.Head?.Sha;
 
         var producer = _workItemProducerFactory.CreateProducer<CheckRunConclusionUpdateEvent>();
         await producer.ProduceWorkItemAsync(new CheckRunConclusionUpdateEvent
         {
             Repository = repository,
-            IssueNumber = issueNumber,
+            PullRequestNumber = prNumber,
             HeadSha = currentHeadSha,
             Justification = justification,
             CheckResultString = Octokit.CheckConclusion.Success.ToString(),
