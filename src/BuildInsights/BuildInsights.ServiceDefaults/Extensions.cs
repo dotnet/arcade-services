@@ -87,7 +87,7 @@ public static class Extensions
             builder.Services.AddOpenTelemetry()/*.UseOtlpExporter()*/;
         }
 
-        if (!builder.Environment.IsDevelopment() && !string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+        if (!builder.Environment.IsDevelopment())
         {
             builder.Services
                 .AddOpenTelemetry()
