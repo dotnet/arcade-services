@@ -245,6 +245,8 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         IssueCommentEvent issueCommentEvent,
         IssueCommentAction action)
     {
+        _logger.LogInformation($"Processing issue comment webhook: {issueCommentEvent.Comment.Body}");
+
         if (!IsBuildAnalysisEvent(headers))
         {
             return;
