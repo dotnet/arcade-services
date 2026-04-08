@@ -85,7 +85,7 @@ stages:
         displayName: Build/publish docker images
         pool:
           name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals build.ubuntu.2204.amd64
+          demands: ImageOverride -equals build.azurelinux.3.amd64
           os: linux
         steps:
 
