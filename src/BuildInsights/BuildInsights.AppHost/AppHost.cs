@@ -1,10 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+if (WebhookTunnelCommand.ShouldRun(args))
+{
+    await WebhookTunnelCommand.RunAsync(args[1..]);
+    return;
+}
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 const int BuildInsightsApiHttpsPort = 53180;
-var webhookTunnelWorkingDirectory = Path.Combine("..", "eng");
+var appHostAssemblyPath = Path.Combine(AppContext.BaseDirectory, "BuildInsights.AppHost.dll");
 
 var password = builder.AddParameter("sql-pass", "DevPass1@", secret: true);
 
@@ -43,15 +49,11 @@ var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsi
 
 builder.AddExecutable(
         "buildInsightsWebhookTunnel",
-        "pwsh",
-        webhookTunnelWorkingDirectory,
-        "-NoLogo",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "start-dev-tunnel.ps1",
-        "-Port",
+        "dotnet",
+        AppContext.BaseDirectory,
+        appHostAssemblyPath,
+        "webhook-tunnel",
+        "--port",
         BuildInsightsApiHttpsPort.ToString())
     .WithEnvironment("BUILD_INSIGHTS_API_PORT", BuildInsightsApiHttpsPort.ToString())
     .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + BuildInsightsApiHttpsPort)

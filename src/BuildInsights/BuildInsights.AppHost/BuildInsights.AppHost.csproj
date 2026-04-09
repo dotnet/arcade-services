@@ -14,12 +14,14 @@
     <PackageReference Include="Aspire.Azure.Storage.Queues" />
     <PackageReference Include="Aspire.Hosting.Redis" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BuildInsights.DummyApp\BuildInsights.DummyApp.csproj" />
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssuesMonitor\BuildInsights.KnownIssuesMonitor.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
 </Project>
