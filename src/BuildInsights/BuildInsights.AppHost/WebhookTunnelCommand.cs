@@ -204,7 +204,7 @@ internal static class WebhookTunnelCommand
                 "azdo-service-hook-secret",
                 cancellationToken);
 
-            using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync(cancellationToken);
+            using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
             var projectId = await GetAzureDevOpsProjectIdAsync(azureDevOpsHttpClient, cancellationToken);
             Console.WriteLine($"Resolved Azure DevOps project '{_options.AzDoProject}' to {projectId}");
 
@@ -255,7 +255,7 @@ internal static class WebhookTunnelCommand
             {
                 try
                 {
-                    using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync(CancellationToken.None);
+                    using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
                     foreach (var subscriptionId in _azDoSubscriptionIds.AsEnumerable().Reverse())
                     {
                         Console.WriteLine($"Removing Azure DevOps subscription {subscriptionId}...");
@@ -291,7 +291,7 @@ internal static class WebhookTunnelCommand
             TryStopDevTunnelProcess();
         }
 
-        private async Task EnsureDevTunnelLoggedInAsync(CancellationToken cancellationToken)
+        private static async Task EnsureDevTunnelLoggedInAsync(CancellationToken cancellationToken)
         {
             var result = await RunProcessForOutputAsync("devtunnel", ["user", "show"], cancellationToken);
             var combinedOutput = $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
@@ -348,20 +348,11 @@ internal static class WebhookTunnelCommand
 
                 Console.WriteLine(eventArgs.Data);
 
-                if (tunnelUrl is null)
-                {
-                    tunnelUrl = ParseOutputValue(eventArgs.Data, @"Hosting port \d+ at (?<value>https://[^\s,]+)");
-                }
+                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Hosting port \d+ at (?<value>https://[^\s,]+)");
 
-                if (inspectUrl is null)
-                {
-                    inspectUrl = ParseOutputValue(eventArgs.Data, @"inspect it at (?<value>https://[^\s,]+)");
-                }
+                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"inspect it at (?<value>https://[^\s,]+)");
 
-                if (tunnelId is null)
-                {
-                    tunnelId = ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
-                }
+                tunnelId ??= ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
 
                 if (tunnelUrl is not null)
                 {
@@ -474,7 +465,7 @@ internal static class WebhookTunnelCommand
             }
         }
 
-        private async Task<HttpClient> CreateAzureDevOpsHttpClientAsync(CancellationToken cancellationToken)
+        private async Task<HttpClient> CreateAzureDevOpsHttpClientAsync()
         {
             var tokenProviderOptions = new AzureDevOpsTokenProviderOptions
             {
@@ -614,8 +605,8 @@ internal static class WebhookTunnelCommand
                 throw new InvalidOperationException($"Failed to start '{fileName}'.");
             }
 
-            var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-            var standardErrorTask = process.StandardError.ReadToEndAsync();
+            var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
             await process.WaitForExitAsync(cancellationToken);
 
