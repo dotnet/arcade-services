@@ -153,7 +153,7 @@ public class BuildInsightsEndToEndTests
             {
                 List<TestRun> testRuns = await testClient.QueryTestRunsAsync(
                     "public",
-                    _start.DateTime,
+                    _start.DateTime - TimeSpan.FromDays(1),
                     end.DateTime,
                     buildIds: [buildId],
                     cancellationToken: cancellationToken);
@@ -205,7 +205,7 @@ public class BuildInsightsEndToEndTests
             {
                 var buildResultAnalysisCheck = checks.CheckRuns
                     .FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
-                                      && c.Name == GitHubAppSettings.AppName);
+                                      && c.App.Name == GitHubAppSettings.AppName);
 
                 if (buildResultAnalysisCheck?.Conclusion == CheckConclusion.Success)
                 {
@@ -213,7 +213,7 @@ public class BuildInsightsEndToEndTests
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
 
