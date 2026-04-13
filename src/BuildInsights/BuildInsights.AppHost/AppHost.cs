@@ -39,7 +39,7 @@ var queues = storage.AddQueues("bi-queues");
 var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
     .WithHttpsEndpoint(port: BuildInsightsApiHttpsPort, name: "buildInsightsApiHttps")
     .WithExternalHttpEndpoints()
-    .WithHttpHealthCheck("/health")
+    .WithHttpHealthCheck("/health", endpointName: "buildInsightsApiHttps")
     .WithReference(database)
     .WithReference(blobs)
     .WithReference(queues)

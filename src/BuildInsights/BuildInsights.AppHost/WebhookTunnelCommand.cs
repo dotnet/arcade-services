@@ -132,30 +132,17 @@ internal static class WebhookTunnelCommand
                 await WaitForHealthyUrlAsync($"{_tunnelUrl}/health", cancellationToken);
                 Console.WriteLine("Public tunnel health check succeeded.");
 
-                if (!_options.SkipGitHub)
-                {
-                    await ConfigureGitHubWebhookAsync(cancellationToken);
-                }
-                else
-                {
-                    Console.WriteLine("Skipping GitHub webhook configuration.");
-                }
+                await ConfigureGitHubWebhookAsync(cancellationToken);
 
-                if (!_options.SkipAzDo)
-                {
-                    await ConfigureAzureDevOpsHooksAsync(cancellationToken);
-                }
-                else
-                {
-                    Console.WriteLine("Skipping Azure DevOps service hook configuration.");
-                }
+                /*
+                await ConfigureAzureDevOpsHooksAsync(cancellationToken);
 
                 WriteSection("Ready");
                 Console.WriteLine($"GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
                 foreach (var hookDefinition in HookDefinitions)
                 {
                     Console.WriteLine($"Azure DevOps endpoint: {_tunnelUrl}{hookDefinition.RelativePath}");
-                }
+                }*/
 
                 Console.WriteLine();
                 Console.WriteLine("Press Ctrl+C or stop the Aspire dashboard resource to restore the shared webhook configuration.");
@@ -348,9 +335,9 @@ internal static class WebhookTunnelCommand
 
                 Console.WriteLine(eventArgs.Data);
 
-                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Hosting port \d+ at (?<value>https://[^\s,]+)");
+                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Connect via browser: (?<value>https://[^\s,]+)");
 
-                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"inspect it at (?<value>https://[^\s,]+)");
+                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"Inspect network activity: (?<value>https://[^\s,]+)");
 
                 tunnelId ??= ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
 
@@ -655,9 +642,7 @@ internal static class WebhookTunnelCommand
         string AzDoOrganization,
         string AzDoProject,
         string KeyVaultName,
-        int GitHubAppId,
-        bool SkipGitHub,
-        bool SkipAzDo)
+        int GitHubAppId)
     {
         public static TunnelCommandOptions Parse(string[] args)
         {
@@ -666,8 +651,6 @@ internal static class WebhookTunnelCommand
             var azDoProject = "public";
             var keyVaultName = "build-insights-dev";
             var gitHubAppId = 2892253;
-            var skipGitHub = false;
-            var skipAzDo = false;
 
             for (var i = 0; i < args.Length; i++)
             {
@@ -688,16 +671,10 @@ internal static class WebhookTunnelCommand
                     case "--github-app-id":
                         gitHubAppId = int.Parse(args[++i]);
                         break;
-                    case "--skip-github":
-                        skipGitHub = true;
-                        break;
-                    case "--skip-azdo":
-                        skipAzDo = true;
-                        break;
                 }
             }
 
-            return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName, gitHubAppId, skipGitHub, skipAzDo);
+            return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName, gitHubAppId);
         }
     }
 
