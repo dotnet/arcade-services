@@ -10,7 +10,10 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+using BuildInsights.ServiceDefaults;
 using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 internal static class WebhookTunnelCommand
 {
@@ -56,9 +59,12 @@ internal static class WebhookTunnelCommand
     public static bool ShouldRun(string[] args)
         => args.Length > 0 && string.Equals(args[0], CommandName, StringComparison.OrdinalIgnoreCase);
 
-    public static async Task RunAsync(string[] args)
+    public static async Task RunAsync()
     {
-        var options = TunnelCommandOptions.Parse(args);
+        var hostBuilder = Host.CreateApplicationBuilder();
+        hostBuilder.AddSharedConfiguration();
+
+        var options = TunnelCommandOptions.FromConfiguration(hostBuilder.Configuration);
         using var cancellationTokenSource = new CancellationTokenSource();
 
         Console.CancelKeyPress += (_, e) =>
@@ -212,7 +218,8 @@ internal static class WebhookTunnelCommand
                     },
                 };
 
-                using var response = await azureDevOpsHttpClient.PostAsJsonAsync(
+                using var response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(
+                    azureDevOpsHttpClient,
                     $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
                     payload,
                     cancellationToken);
@@ -644,35 +651,18 @@ internal static class WebhookTunnelCommand
         string KeyVaultName,
         int GitHubAppId)
     {
-        public static TunnelCommandOptions Parse(string[] args)
+        public static TunnelCommandOptions FromConfiguration(IConfiguration configuration)
         {
-            var port = 53180;
-            var azDoOrganization = "dnceng-public";
-            var azDoProject = "public";
-            var keyVaultName = "build-insights-dev";
-            var gitHubAppId = 2892253;
-
-            for (var i = 0; i < args.Length; i++)
-            {
-                switch (args[i])
-                {
-                    case "--port":
-                        port = int.Parse(args[++i]);
-                        break;
-                    case "--organization":
-                        azDoOrganization = args[++i];
-                        break;
-                    case "--project":
-                        azDoProject = args[++i];
-                        break;
-                    case "--keyvault-name":
-                        keyVaultName = args[++i];
-                        break;
-                    case "--github-app-id":
-                        gitHubAppId = int.Parse(args[++i]);
-                        break;
-                }
-            }
+            var port = configuration.GetValue<int?>("BuildInsightsApiHttpsPort")
+                ?? throw new InvalidOperationException("BuildInsightsApiHttpsPort is not configured.");
+            var keyVaultName = configuration.GetValue<string>(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName)
+                ?? throw new InvalidOperationException($"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName} is not configured.");
+            var gitHubAppId = configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
+                ?? throw new InvalidOperationException($"{BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp}:AppId is not configured.");
+            var azDoOrganization = configuration.GetValue<string>("WebhookTunnel:AzDoOrganization")
+                ?? throw new InvalidOperationException("WebhookTunnel:AzDoOrganization is not configured.");
+            var azDoProject = configuration.GetValue<string>("WebhookTunnel:AzDoProject")
+                ?? throw new InvalidOperationException("WebhookTunnel:AzDoProject is not configured.");
 
             return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName, gitHubAppId);
         }

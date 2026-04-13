@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 if (WebhookTunnelCommand.ShouldRun(args))
 {
-    await WebhookTunnelCommand.RunAsync(args[1..]);
+    await WebhookTunnelCommand.RunAsync();
     return;
 }
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-const int BuildInsightsApiHttpsPort = 53180;
+var buildInsightsApiHttpsPort = builder.Configuration.GetValue<int>("BuildInsightsApiHttpsPort");
 
 var password = builder.AddParameter("sql-pass", "DevPass1@", secret: true);
 
@@ -37,7 +38,7 @@ var blobs = storage.AddBlobs("bi-blobs");
 var queues = storage.AddQueues("bi-queues");
 
 var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
-    .WithHttpsEndpoint(port: BuildInsightsApiHttpsPort, name: "buildInsightsApiHttps")
+    .WithHttpsEndpoint(port: buildInsightsApiHttpsPort, name: "buildInsightsApiHttps")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health", endpointName: "buildInsightsApiHttps")
     .WithReference(database)
@@ -53,11 +54,9 @@ builder.AddExecutable(
         "dotnet",
         AppContext.BaseDirectory,
         Assembly.GetExecutingAssembly().Location,
-        "webhook-tunnel",
-        "--port",
-        BuildInsightsApiHttpsPort.ToString())
-    .WithEnvironment("BUILD_INSIGHTS_API_PORT", BuildInsightsApiHttpsPort.ToString())
-    .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + BuildInsightsApiHttpsPort)
+        "webhook-tunnel")
+    .WithEnvironment("BUILD_INSIGHTS_API_PORT", buildInsightsApiHttpsPort.ToString())
+    .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
     .WaitFor(buildInsightsApi)
     .WithExplicitStart();
 

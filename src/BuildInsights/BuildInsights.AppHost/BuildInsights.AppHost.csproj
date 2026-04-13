@@ -1,5 +1,7 @@
 <Project Sdk="Aspire.AppHost.Sdk/13.1.0">
 
+  <Import Project="..\BuildInsights.ServiceDefaults\SharedConfiguration.targets" />
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -22,6 +24,14 @@
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssuesMonitor\BuildInsights.KnownIssuesMonitor.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
