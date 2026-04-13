@@ -5,15 +5,20 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using BuildInsights.ServiceDefaults;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Internal;
+using ProductConstructionService.Common;
 
 internal static class WebhookTunnelCommand
 {
@@ -64,6 +69,33 @@ internal static class WebhookTunnelCommand
         var hostBuilder = Host.CreateApplicationBuilder();
         hostBuilder.AddSharedConfiguration();
 
+        // Load secrets from KeyVault into configuration
+        var keyVaultName = hostBuilder.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName);
+        var credential = new DefaultAzureCredential();
+        hostBuilder.Configuration.AddAzureKeyVault(
+            new Uri($"https://{keyVaultName}.vault.azure.net/"),
+            credential,
+            new KeyVaultSecretsWithPrefix(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix));
+
+        // Register the GitHub App token provider
+        var gitHubAppId = hostBuilder.Configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
+            ?? throw new InvalidOperationException("GitHubApp:AppId is not configured.");
+        var gitHubAppPrivateKey = hostBuilder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubAppPrivateKey];
+
+        hostBuilder.Services.AddTransient<ISystemClock, SystemClock>();
+        hostBuilder.Services.AddTransient<IInstallationLookup, InMemoryCacheInstallationLookup>();
+        hostBuilder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        hostBuilder.Services.AddSingleton<ExponentialRetry>();
+        hostBuilder.Services.Configure<GitHubTokenProviderOptions>(o =>
+        {
+            o.GitHubAppId = gitHubAppId;
+            o.PrivateKey = gitHubAppPrivateKey;
+        });
+        hostBuilder.Services.AddGitHubTokenProvider();
+
+        using var host = hostBuilder.Build();
+        var gitHubAppTokenProvider = host.Services.GetRequiredService<IGitHubAppTokenProvider>();
+
         var options = TunnelCommandOptions.FromConfiguration(hostBuilder.Configuration);
         using var cancellationTokenSource = new CancellationTokenSource();
 
@@ -73,13 +105,14 @@ internal static class WebhookTunnelCommand
             cancellationTokenSource.Cancel();
         };
 
-        await using var runner = new WebhookTunnelRunner(options);
+        await using var runner = new WebhookTunnelRunner(options, gitHubAppTokenProvider);
         await runner.RunAsync(cancellationTokenSource.Token);
     }
 
     private sealed class WebhookTunnelRunner : IAsyncDisposable
     {
         private readonly TunnelCommandOptions _options;
+        private readonly IGitHubAppTokenProvider _gitHubAppTokenProvider;
         private readonly SecretClient _secretClient;
         private readonly HttpClient _healthCheckClient;
         private readonly StringBuilder _devTunnelLog = new();
@@ -87,13 +120,13 @@ internal static class WebhookTunnelCommand
 
         private Process? _devTunnelProcess;
         private GitHubWebhookConfig? _originalGitHubWebhookConfig;
-        private string? _gitHubPrivateKeyPem;
         private string? _tunnelUrl;
         private bool _cleanedUp;
 
-        public WebhookTunnelRunner(TunnelCommandOptions options)
+        public WebhookTunnelRunner(TunnelCommandOptions options, IGitHubAppTokenProvider gitHubAppTokenProvider)
         {
             _options = options;
+            _gitHubAppTokenProvider = gitHubAppTokenProvider;
 
             var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
             {
@@ -170,11 +203,6 @@ internal static class WebhookTunnelCommand
         private async Task ConfigureGitHubWebhookAsync(CancellationToken cancellationToken)
         {
             WriteSection("Updating the GitHub App webhook");
-
-            _gitHubPrivateKeyPem = await GetSecretValueAsync(
-                "BUILD_INSIGHTS_GITHUB_APP_PRIVATE_KEY",
-                "github-app-private-key",
-                cancellationToken);
 
             _originalGitHubWebhookConfig = await GetGitHubWebhookConfigAsync(cancellationToken);
             Console.WriteLine($"Current GitHub webhook URL: {_originalGitHubWebhookConfig.Url}");
@@ -269,7 +297,7 @@ internal static class WebhookTunnelCommand
                 }
             }
 
-            if (_originalGitHubWebhookConfig is not null && !string.IsNullOrWhiteSpace(_gitHubPrivateKeyPem))
+            if (_originalGitHubWebhookConfig is not null)
             {
                 try
                 {
@@ -526,45 +554,16 @@ internal static class WebhookTunnelCommand
 
         private HttpClient CreateGitHubHttpClient()
         {
-            if (string.IsNullOrWhiteSpace(_gitHubPrivateKeyPem))
-            {
-                throw new InvalidOperationException("The GitHub App private key has not been loaded.");
-            }
-
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                 "Bearer",
-                CreateGitHubAppJwt(_options.GitHubAppId, _gitHubPrivateKeyPem));
+                _gitHubAppTokenProvider.GetAppToken());
             httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
             httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BuildInsights", "dev-tunnel"));
 
             return httpClient;
         }
-
-        private static string CreateGitHubAppJwt(int gitHubAppId, string privateKeyPem)
-        {
-            var now = DateTimeOffset.UtcNow;
-            var header = Base64UrlEncode("{\"alg\":\"RS256\",\"typ\":\"JWT\"}");
-            var payload = Base64UrlEncode($"{{\"iat\":{now.AddMinutes(-1).ToUnixTimeSeconds()},\"exp\":{now.AddMinutes(9).ToUnixTimeSeconds()},\"iss\":{gitHubAppId}}}");
-            var unsignedToken = $"{header}.{payload}";
-
-            using var rsa = RSA.Create();
-            rsa.ImportFromPem(privateKeyPem);
-
-            var signatureBytes = rsa.SignData(
-                Encoding.UTF8.GetBytes(unsignedToken),
-                HashAlgorithmName.SHA256,
-                RSASignaturePadding.Pkcs1);
-
-            return $"{unsignedToken}.{Base64UrlEncode(signatureBytes)}";
-        }
-
-        private static string Base64UrlEncode(string value)
-            => Base64UrlEncode(Encoding.UTF8.GetBytes(value));
-
-        private static string Base64UrlEncode(byte[] value)
-            => Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
         private static string? ParseOutputValue(string input, string pattern)
         {
@@ -622,13 +621,7 @@ internal static class WebhookTunnelCommand
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     Arguments = "--version",
-                });
-
-                if (process is null)
-                {
-                    throw new InvalidOperationException();
-                }
-
+                }) ?? throw new InvalidOperationException();
                 process.WaitForExit(5000);
             }
             catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
@@ -648,8 +641,7 @@ internal static class WebhookTunnelCommand
         int Port,
         string AzDoOrganization,
         string AzDoProject,
-        string KeyVaultName,
-        int GitHubAppId)
+        string KeyVaultName)
     {
         public static TunnelCommandOptions FromConfiguration(IConfiguration configuration)
         {
@@ -657,14 +649,12 @@ internal static class WebhookTunnelCommand
                 ?? throw new InvalidOperationException("BuildInsightsApiHttpsPort is not configured.");
             var keyVaultName = configuration.GetValue<string>(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName)
                 ?? throw new InvalidOperationException($"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName} is not configured.");
-            var gitHubAppId = configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
-                ?? throw new InvalidOperationException($"{BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp}:AppId is not configured.");
             var azDoOrganization = configuration.GetValue<string>("WebhookTunnel:AzDoOrganization")
                 ?? throw new InvalidOperationException("WebhookTunnel:AzDoOrganization is not configured.");
             var azDoProject = configuration.GetValue<string>("WebhookTunnel:AzDoProject")
                 ?? throw new InvalidOperationException("WebhookTunnel:AzDoProject is not configured.");
 
-            return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName, gitHubAppId);
+            return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName);
         }
     }
 
