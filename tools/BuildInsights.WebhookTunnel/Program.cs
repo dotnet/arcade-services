@@ -32,6 +32,7 @@ await WebhookTunnelCommand.RunAsync();
 internal static class WebhookTunnelCommand
 {
     private const string GitHubWebhookPath = "/api/github/webhooks";
+    private const string EnabledSubscriptionStatus = "enabled";
 
     public static async Task RunAsync()
     {
@@ -61,7 +62,6 @@ internal static class WebhookTunnelCommand
         hostBuilder.Services.AddGitHubTokenProvider();
 
         using var host = hostBuilder.Build();
-        var gitHubAppTokenProvider = host.Services.GetRequiredService<IGitHubAppTokenProvider>();
 
         var options = TunnelCommandOptions.FromConfiguration(hostBuilder.Configuration);
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -72,7 +72,7 @@ internal static class WebhookTunnelCommand
             cancellationTokenSource.Cancel();
         };
 
-        await using var runner = new WebhookTunnelRunner(options, gitHubAppTokenProvider);
+        await using var runner = ActivatorUtilities.CreateInstance<WebhookTunnelRunner>(host.Services, options);
         await runner.RunAsync(cancellationTokenSource.Token);
     }
 
@@ -203,8 +203,10 @@ internal static class WebhookTunnelCommand
                 var subscriptionId = subscription!["id"]!.GetValue<string>();
                 var originalUri = new Uri(url);
                 var newUrl = $"{_tunnelUrl}{originalUri.PathAndQuery}";
+                var previousStatus = subscription["status"]?.GetValue<string>();
 
                 subscription["consumerInputs"]!["url"] = newUrl;
+                subscription["status"] = EnabledSubscriptionStatus;
 
                 using var putResponse = await HttpClientJsonExtensions.PutAsJsonAsync(
                     azureDevOpsHttpClient,
@@ -219,7 +221,6 @@ internal static class WebhookTunnelCommand
                     continue;
                 }
 
-                Console.WriteLine($"Updated service hook {subscriptionId}: {url} -> {newUrl}");
                 updated++;
             }
 
