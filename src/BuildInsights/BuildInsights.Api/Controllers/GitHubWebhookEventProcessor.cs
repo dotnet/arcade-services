@@ -18,6 +18,7 @@ using Octokit.Webhooks.Events.IssueComment;
 using Octokit.Webhooks.Events.Issues;
 using Octokit.Webhooks.Events.PullRequest;
 using Octokit.Webhooks.Events.PullRequestReviewComment;
+using Octokit.Webhooks.Models;
 using ProductConstructionService.WorkItems;
 
 #nullable disable
@@ -162,7 +163,6 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         string issueNodeId = issuesEvent.Issue.NodeId;
         List<string> labels = [..issuesEvent.Issue.Labels.Select(l => l.Name)];
         string addedLabel = issuesEvent is IssuesLabeledEvent labeled ? labeled.Label?.Name : null;
-        string senderType = issuesEvent.Sender?.Type?.ToString();
         var allowedActions = new[] { "opened", "reopened", "labeled", "edited" };
 
         _logger.LogInformation(
@@ -170,7 +170,7 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
             issuesEvent.Action, organization, repository, issueNumber);
 
         if (IsBuildAnalysisEvent(headers)
-            && senderType != Octokit.AccountType.Bot.ToString()
+            && issuesEvent.Sender?.Type.Value != UserType.Bot
             && _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Intersect(labels).Any()
             && allowedActions.Contains(issuesEvent.Action)
             && (issuesEvent.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(addedLabel)))
