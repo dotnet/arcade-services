@@ -6,7 +6,7 @@ namespace BuildInsights.BuildAnalysis.Models;
 
 public class KnownIssuesProcessorOptions
 {
-    public List<AzureDevOpsProject> AzureDevOpsProjects { get; set; }
+    public List<AzureDevOpsProject> AzureDevOpsProjects { get; set; } = [];
     public string KnownIssuesRepo { get; set; }
     public bool RepositoryIssuesOnly { get; set; }
 }

@@ -2,7 +2,6 @@
   "profiles": {
     "BI (local)": {
       "commandName": "Project",
-      "commandLineArgs": "webhook-tunnel",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",

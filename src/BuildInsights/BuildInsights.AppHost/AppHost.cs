@@ -1,14 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Reflection;
 using Microsoft.Extensions.Configuration;
-
-if (WebhookTunnelCommand.ShouldRun(args))
-{
-    await WebhookTunnelCommand.RunAsync();
-    return;
-}
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -49,12 +42,7 @@ var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsi
     .WaitFor(redisCache)
     .WaitFor(queues);
 
-builder.AddExecutable(
-        "buildInsightsWebhookTunnel",
-        "dotnet",
-        AppContext.BaseDirectory,
-        Assembly.GetExecutingAssembly().Location,
-        "webhook-tunnel")
+builder.AddProject<Projects.BuildInsights_WebhookTunnel>("buildInsightsWebhookTunnel")
     .WithEnvironment("BUILD_INSIGHTS_API_PORT", buildInsightsApiHttpsPort.ToString())
     .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
     .WaitFor(buildInsightsApi)

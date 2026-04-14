@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel;
@@ -22,20 +22,22 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProductConstructionService.Common;
 
+await WebhookTunnelCommand.RunAsync();
+
+/// <summary>
+/// Starts a dev tunnel to the local Build Insights API and reconfigures the shared GitHub App
+/// and Azure DevOps service hooks to point to the tunnel while it's running.
+/// The devtunnel can be started from the Aspire dashboard or just manually by running this project.
+/// </summary>
 internal static class WebhookTunnelCommand
 {
-    private const string CommandName = "webhook-tunnel";
     private const string GitHubWebhookPath = "/api/github/webhooks";
-
-    public static bool ShouldRun(string[] args)
-        => args.Length > 0 && string.Equals(args[0], CommandName, StringComparison.OrdinalIgnoreCase);
 
     public static async Task RunAsync()
     {
         var hostBuilder = Host.CreateApplicationBuilder();
         hostBuilder.AddSharedConfiguration();
 
-        // Load secrets from KeyVault into configuration
         var keyVaultName = hostBuilder.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName);
         var credential = new DefaultAzureCredential();
         hostBuilder.Configuration.AddAzureKeyVault(
@@ -43,7 +45,6 @@ internal static class WebhookTunnelCommand
             credential,
             new KeyVaultSecretsWithPrefix(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix));
 
-        // Register the GitHub App token provider
         var gitHubAppId = hostBuilder.Configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
             ?? throw new InvalidOperationException("GitHubApp:AppId is not configured.");
         var gitHubAppPrivateKey = hostBuilder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubAppPrivateKey];
@@ -114,8 +115,8 @@ internal static class WebhookTunnelCommand
                 await EnsureDevTunnelLoggedInAsync(cancellationToken);
 
                 WriteSection("Checking local service health");
-                await WaitForHealthyUrlAsync($"https://localhost:{_options.Port}/health", cancellationToken);
-                Console.WriteLine($"Local API is healthy at https://localhost:{_options.Port}/health");
+                await WaitForHealthyUrlAsync($"{_options.LocalBaseUrl}/health", cancellationToken);
+                Console.WriteLine($"Local API is healthy at {_options.LocalBaseUrl}/health");
 
                 WriteSection("Starting the dev tunnel");
                 var tunnelInfo = await StartDevTunnelAsync(cancellationToken);
@@ -131,11 +132,9 @@ internal static class WebhookTunnelCommand
                 Console.WriteLine("Public tunnel health check succeeded.");
 
                 await ConfigureGitHubWebhookAsync(cancellationToken);
-
                 await ConfigureAzureDevOpsHooksAsync(cancellationToken);
 
-                Console.WriteLine($"Tunnel and webhooks are ready");
-
+                Console.WriteLine("Tunnel and webhooks are ready");
                 Console.WriteLine($"GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
 
                 Console.WriteLine();
@@ -186,10 +185,10 @@ internal static class WebhookTunnelCommand
             listResponse.EnsureSuccessStatusCode();
 
             var json = await listResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken)
-                ?? throw new InvalidOperationException("Azure DevOps did not return a subscription list.");
+                ?? throw new InvalidOperationException("Azure DevOps did not return a service hook list.");
 
             var subscriptions = json["value"]?.AsArray()
-                ?? throw new InvalidOperationException("Azure DevOps subscription list is missing the 'value' property.");
+                ?? throw new InvalidOperationException("Azure DevOps service hook list is missing the 'value' property.");
 
             var updated = 0;
 
@@ -216,114 +215,37 @@ internal static class WebhookTunnelCommand
                 if (!putResponse.IsSuccessStatusCode)
                 {
                     var body = await putResponse.Content.ReadAsStringAsync(cancellationToken);
-                    Console.WriteLine($"  Warning: Failed to update subscription {subscriptionId}: {(int)putResponse.StatusCode} {body}");
+                    Console.WriteLine($"  Warning: Failed to update service hook {subscriptionId}: {(int)putResponse.StatusCode} {body}");
                     continue;
                 }
 
-                Console.WriteLine($"Updated subscription {subscriptionId}: {url} -> {newUrl}");
+                Console.WriteLine($"Updated service hook {subscriptionId}: {url} -> {newUrl}");
                 updated++;
             }
 
             if (updated == 0)
             {
-                Console.WriteLine("Warning: No existing dev tunnel subscriptions found to update.");
+                Console.WriteLine("Warning: No existing dev tunnel service hooks found to update.");
             }
             else
             {
-                Console.WriteLine($"Updated {updated} dev tunnel subscription(s).");
+                Console.WriteLine($"Updated {updated} dev tunnel service hook(s).");
             }
         }
 
-        /// <summary>
-        /// One-time helper that copies all service hooks targeting the staging host
-        /// and creates duplicates pointing at a specific dev tunnel URL.
-        /// Call once to bootstrap dev tunnel subscriptions; subsequent runs will update them in place.
-        /// </summary>
-        //private async Task CreateDevTunnelServiceHookCopiesAsync(CancellationToken cancellationToken)
-        //{
-        //    const string productionHost = "https://build-insights.int-dot.net";
-        //    const string devTunnelHost = "https://x47wnb0w-53180.euw.devtunnels.ms";
-
-        //    WriteSection("Creating dev tunnel copies of production service hooks");
-
-        //    using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
-
-        //    using var listResponse = await azureDevOpsHttpClient.GetAsync(
-        //        $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
-        //        cancellationToken);
-
-        //    listResponse.EnsureSuccessStatusCode();
-
-        //    var json = await listResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken)
-        //        ?? throw new InvalidOperationException("Azure DevOps did not return a subscription list.");
-
-        //    var subscriptions = json["value"]?.AsArray()
-        //        ?? throw new InvalidOperationException("Azure DevOps subscription list is missing the 'value' property.");
-
-        //    var created = 0;
-
-        //    foreach (var subscription in subscriptions)
-        //    {
-        //        var url = subscription?["consumerInputs"]?["url"]?.GetValue<string>();
-        //        if (url is null || !url.StartsWith(productionHost, StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            continue;
-        //        }
-
-        //        // Build a new subscription payload from the existing one
-        //        var copy = subscription!.DeepClone();
-
-        //        // Remove server-assigned fields so AzDo treats this as a new subscription
-        //        copy.AsObject().Remove("id");
-        //        copy.AsObject().Remove("status");
-        //        copy.AsObject().Remove("createdBy");
-        //        copy.AsObject().Remove("createdDate");
-        //        copy.AsObject().Remove("modifiedBy");
-        //        copy.AsObject().Remove("modifiedDate");
-        //        copy.AsObject().Remove("actionDescription");
-        //        copy.AsObject().Remove("probationRetries");
-        //        copy.AsObject().Remove("lastProbationRetryDate");
-
-        //        var originalUri = new Uri(url);
-        //        var newUrl = $"{devTunnelHost}{originalUri.PathAndQuery}";
-        //        copy["consumerInputs"]!["url"] = newUrl;
-
-        //        using var postResponse = await HttpClientJsonExtensions.PostAsJsonAsync(
-        //            azureDevOpsHttpClient,
-        //            $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
-        //            copy,
-        //            cancellationToken);
-
-        //        if (!postResponse.IsSuccessStatusCode)
-        //        {
-        //            var body = await postResponse.Content.ReadAsStringAsync(cancellationToken);
-        //            Console.WriteLine($"  Warning: Failed to create copy for {url}: {(int)postResponse.StatusCode} {body}");
-        //            continue;
-        //        }
-
-        //        var result = await postResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken);
-        //        var newId = result?["id"]?.GetValue<string>() ?? "unknown";
-        //        Console.WriteLine($"Created subscription {newId}: {url} -> {newUrl}");
-        //        created++;
-        //    }
-
-        //    Console.WriteLine(created > 0
-        //        ? $"Created {created} dev tunnel subscription(s)."
-        //        : "Warning: No production subscriptions found to copy.");
-        //}
-
-        private async Task CleanupAsync()
+        private Task CleanupAsync()
         {
             if (_cleanedUp)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             _cleanedUp = true;
 
             WriteSection("Cleaning up");
-
             TryStopDevTunnelProcess();
+
+            return Task.CompletedTask;
         }
 
         private async Task EnsureDevTunnelLoggedInAsync(CancellationToken cancellationToken)
@@ -384,9 +306,7 @@ internal static class WebhookTunnelCommand
                 Console.WriteLine(eventArgs.Data);
 
                 tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Connect via browser: (?<value>https://[^\s,]+)");
-
                 inspectUrl ??= ParseOutputValue(eventArgs.Data, @"Inspect network activity: (?<value>https://[^\s,]+)");
-
                 tunnelId ??= ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
 
                 if (tunnelUrl is not null)
@@ -579,14 +499,18 @@ internal static class WebhookTunnelCommand
 
     private sealed record TunnelCommandOptions(
         int Port,
+        string LocalBaseUrl,
         string AzDoOrganization,
         string AzDoProject,
         string KeyVaultName)
     {
         public static TunnelCommandOptions FromConfiguration(IConfiguration configuration)
         {
-            var port = configuration.GetValue<int?>("BuildInsightsApiHttpsPort")
-                ?? throw new InvalidOperationException("BuildInsightsApiHttpsPort is not configured.");
+            var port = configuration.GetValue<int?>("BUILD_INSIGHTS_API_PORT")
+                ?? configuration.GetValue<int?>("BuildInsightsApiHttpsPort")
+                ?? throw new InvalidOperationException("BUILD_INSIGHTS_API_PORT or BuildInsightsApiHttpsPort is not configured.");
+            var localBaseUrl = configuration.GetValue<string>("BUILD_INSIGHTS_API_BASE_URL")
+                ?? $"https://localhost:{port}";
             var keyVaultName = configuration.GetValue<string>(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName)
                 ?? throw new InvalidOperationException($"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName} is not configured.");
             var azDoOrganization = configuration.GetValue<string>("WebhookTunnel:AzDoOrganization")
@@ -594,7 +518,7 @@ internal static class WebhookTunnelCommand
             var azDoProject = configuration.GetValue<string>("WebhookTunnel:AzDoProject")
                 ?? throw new InvalidOperationException("WebhookTunnel:AzDoProject is not configured.");
 
-            return new TunnelCommandOptions(port, azDoOrganization, azDoProject, keyVaultName);
+            return new TunnelCommandOptions(port, localBaseUrl.TrimEnd('/'), azDoOrganization, azDoProject, keyVaultName);
         }
     }
 

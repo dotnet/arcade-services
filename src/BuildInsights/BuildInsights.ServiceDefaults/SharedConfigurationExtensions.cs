@@ -28,11 +28,6 @@ public static class SharedConfigurationExtensions
     {
         string sharedConfigDirectory = ResolveSharedConfigDirectory(builder.Environment.ContentRootPath);
 
-        if (!Directory.Exists(sharedConfigDirectory))
-        {
-            throw new Exception($"Failed to find shared configuration directory: {sharedConfigDirectory}");
-        }
-
         AddSharedConfiguration(
             builder.Configuration,
             sharedConfigDirectory,
@@ -77,18 +72,40 @@ public static class SharedConfigurationExtensions
 
     /// <summary>
     /// Resolves the directory containing shared configuration files.
-    /// Checks the content root first (for published apps), then the parent directory (for development).
+    /// Supports both projects under <c>src/BuildInsights</c> and companion tools under <c>tools/</c>.
     /// </summary>
     private static string ResolveSharedConfigDirectory(string contentRoot)
     {
-        // For published apps, the shared files are copied next to the project-specific ones
-        string sharedFileInContentRoot = Path.Combine(contentRoot, $"{SharedSettingsPrefix}.json");
-        if (File.Exists(sharedFileInContentRoot))
+        foreach (string candidate in GetSharedConfigCandidates(contentRoot))
         {
-            return contentRoot;
+            if (File.Exists(Path.Combine(candidate, $"{SharedSettingsPrefix}.json")))
+            {
+                return candidate;
+            }
         }
 
-        // During development, shared files live in the parent directory (src/BuildInsights/)
-        return Path.GetFullPath(Path.Combine(contentRoot, ".."));
+        throw new InvalidOperationException($"Failed to find shared configuration directory for content root '{contentRoot}'.");
+    }
+
+    private static IEnumerable<string> GetSharedConfigCandidates(string contentRoot)
+    {
+        var visitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var currentDirectory = new DirectoryInfo(contentRoot);
+
+        while (currentDirectory is not null)
+        {
+            if (visitedDirectories.Add(currentDirectory.FullName))
+            {
+                yield return currentDirectory.FullName;
+            }
+
+            string buildInsightsDirectory = Path.Combine(currentDirectory.FullName, "src", "BuildInsights");
+            if (visitedDirectories.Add(buildInsightsDirectory))
+            {
+                yield return buildInsightsDirectory;
+            }
+
+            currentDirectory = currentDirectory.Parent;
+        }
     }
 }
