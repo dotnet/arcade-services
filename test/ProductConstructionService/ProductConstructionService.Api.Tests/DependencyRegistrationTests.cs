@@ -5,8 +5,6 @@ using AwesomeAssertions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Tests;
 

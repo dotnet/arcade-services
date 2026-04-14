@@ -5,7 +5,7 @@ using Medallion.Threading.Redis;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace Maestro.Common.Cache;
+namespace ProductConstructionService.Common.Cache;
 
 public interface IRedisCacheFactory
 {

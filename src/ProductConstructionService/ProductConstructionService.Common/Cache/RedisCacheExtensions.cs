@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Azure.StackExchangeRedis;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 
-namespace Maestro.Common.Cache;
+namespace ProductConstructionService.Common.Cache;
 
 public static class RedisCacheExtensions
 {
@@ -30,6 +31,7 @@ public static class RedisCacheExtensions
         builder.Services.AddSingleton(redisConfig);
         builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
         builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
+        builder.Services.AddSingleton<ICache, RedisCacheClient>();
         builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     }
 }

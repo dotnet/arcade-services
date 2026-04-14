@@ -7,7 +7,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Maestro.Common.Cache;
+using ProductConstructionService.Common.Cache;
 using Maestro.Common.Telemetry;
 
 namespace ProductConstructionService.WorkItems;

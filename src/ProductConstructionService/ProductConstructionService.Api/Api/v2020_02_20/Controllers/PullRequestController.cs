@@ -4,7 +4,6 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Common;
-using Maestro.Common.Cache;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -13,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;

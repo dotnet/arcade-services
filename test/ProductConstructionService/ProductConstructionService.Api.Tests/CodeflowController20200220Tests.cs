@@ -3,7 +3,6 @@
 
 using System.Net;
 using AwesomeAssertions;
-using Maestro.Common.Cache;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
@@ -16,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Tests;
