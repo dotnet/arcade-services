@@ -104,8 +104,8 @@ internal static class WebhookTunnelCommand
             try
             {
                 WriteSection("Build Insights local webhook tunnel");
-                Console.WriteLine("This workflow re-points the shared Build Insights dev webhook targets.");
-                Console.WriteLine("Only one developer should run it at a time.");
+                Console.WriteLine("ℹ️ This workflow re-points the shared Build Insights dev webhook targets.");
+                Console.WriteLine("👤 Only one developer should run it at a time.");
 
                 await EnsureCommandAvailableAsync(
                     "devtunnel",
@@ -116,29 +116,29 @@ internal static class WebhookTunnelCommand
 
                 WriteSection("Checking local service health");
                 await WaitForHealthyUrlAsync($"{_options.LocalBaseUrl}/health", cancellationToken);
-                Console.WriteLine($"Local API is healthy at {_options.LocalBaseUrl}/health");
+                Console.WriteLine($"✅ Local API is healthy at {_options.LocalBaseUrl}/health");
 
                 WriteSection("Starting the dev tunnel");
                 var tunnelInfo = await StartDevTunnelAsync(cancellationToken);
                 _tunnelUrl = tunnelInfo.TunnelUrl;
 
-                Console.WriteLine($"Tunnel URL: {_tunnelUrl}");
+                Console.WriteLine($"🌐 Tunnel URL: {_tunnelUrl}");
                 if (!string.IsNullOrWhiteSpace(tunnelInfo.InspectUrl))
                 {
-                    Console.WriteLine($"Inspect URL: {tunnelInfo.InspectUrl}");
+                    Console.WriteLine($"🔎 Inspect URL: {tunnelInfo.InspectUrl}");
                 }
 
                 await WaitForHealthyUrlAsync($"{_tunnelUrl}/health", cancellationToken);
-                Console.WriteLine("Public tunnel health check succeeded.");
+                Console.WriteLine("✅ Public tunnel health check succeeded.");
 
                 await ConfigureGitHubWebhookAsync(cancellationToken);
                 await ConfigureAzureDevOpsHooksAsync(cancellationToken);
 
-                Console.WriteLine("Tunnel and webhooks are ready");
-                Console.WriteLine($"GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
+                Console.WriteLine("✅ Tunnel and webhooks are ready");
+                Console.WriteLine($"🐙 GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
 
                 Console.WriteLine();
-                Console.WriteLine("Press Ctrl+C or stop the Aspire dashboard resource to restore the shared webhook configuration.");
+                Console.WriteLine("🛑 Press Ctrl+C or stop the Aspire dashboard resource to restore the shared webhook configuration.");
 
                 await WaitForShutdownAsync(cancellationToken);
             }
@@ -176,7 +176,7 @@ internal static class WebhookTunnelCommand
 
             using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
 
-            Console.WriteLine("Searching for existing dev tunnel service hook subscriptions...");
+            Console.WriteLine("🔎 Searching for existing dev tunnel service hook subscriptions...");
 
             using var listResponse = await azureDevOpsHttpClient.GetAsync(
                 $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
@@ -217,7 +217,7 @@ internal static class WebhookTunnelCommand
                 if (!putResponse.IsSuccessStatusCode)
                 {
                     var body = await putResponse.Content.ReadAsStringAsync(cancellationToken);
-                    Console.WriteLine($"  Warning: Failed to update service hook {subscriptionId}: {(int)putResponse.StatusCode} {body}");
+                    Console.WriteLine($"  ⚠️ Failed to update service hook {subscriptionId}: {(int)putResponse.StatusCode} {body}");
                     continue;
                 }
 
@@ -226,11 +226,11 @@ internal static class WebhookTunnelCommand
 
             if (updated == 0)
             {
-                Console.WriteLine("Warning: No existing dev tunnel service hooks found to update.");
+                Console.WriteLine("⚠️ No existing dev tunnel service hooks found to update.");
             }
             else
             {
-                Console.WriteLine($"Updated {updated} dev tunnel service hook(s).");
+                Console.WriteLine($"✅ Updated {updated} dev tunnel service hook(s).");
             }
         }
 
@@ -411,12 +411,12 @@ internal static class WebhookTunnelCommand
             {
                 try
                 {
-                    Console.WriteLine("Stopping the dev tunnel host process...");
+                    Console.WriteLine("🛑 Stopping the dev tunnel host process...");
                     _devTunnelProcess.Kill(entireProcessTree: true);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to stop the dev tunnel host process: {ex.Message}");
+                    Console.WriteLine($"⚠️ Failed to stop the dev tunnel host process: {ex.Message}");
                 }
             }
         }
@@ -494,8 +494,19 @@ internal static class WebhookTunnelCommand
         private static void WriteSection(string message)
         {
             Console.WriteLine();
-            Console.WriteLine($"=== {message} ===");
+            Console.WriteLine($"{GetSectionEmoji(message)} {message}");
         }
+
+        private static string GetSectionEmoji(string message) => message switch
+        {
+            "Build Insights local webhook tunnel" => "🚇",
+            "Checking local service health" => "🩺",
+            "Starting the dev tunnel" => "🚀",
+            "Configuring the GitHub App webhook" => "🐙",
+            "Configuring Azure DevOps service hooks" => "🛠️",
+            "Cleaning up" => "🧹",
+            _ => "📌",
+        };
     }
 
     private sealed record TunnelCommandOptions(
