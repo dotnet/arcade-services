@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -31,34 +31,41 @@ public class NoopCache : ICache
     }
 }
 
-public class MemoryCache : ICache
+public class MemoryCache : ICache, IDisposable
 {
-    private readonly ConcurrentDictionary<string, (object Value, DateTime? Expiration)> _cache = new();
+    private readonly Extensions.Caching.Memory.MemoryCache _cache = new(new MemoryCacheOptions());
+
     public Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class
     {
-        var expirationTime = expiration.HasValue ? DateTime.UtcNow.Add(expiration.Value) : (DateTime?)null;
-        _cache[key] = (value, expirationTime);
+        var options = new MemoryCacheEntryOptions();
+        if (expiration.HasValue)
+        {
+            options.AbsoluteExpirationRelativeToNow = expiration.Value;
+        }
+
+        _cache.Set(key, value, options);
         return Task.FromResult(true);
     }
 
     public Task<T?> TryGetAsync<T>(string key) where T : class
     {
-        if (_cache.TryGetValue(key, out var entry))
-        {
-            if (!entry.Expiration.HasValue || entry.Expiration > DateTime.UtcNow)
-            {
-                return Task.FromResult((T?)entry.Value);
-            }
-            else
-            {
-                _cache.TryRemove(key, out _);
-            }
-        }
-        return Task.FromResult<T?>(null);
+        _cache.TryGetValue(key, out T? value);
+        return Task.FromResult(value);
     }
 
     public Task<bool> DeleteAsync(string key)
     {
-        return Task.FromResult(_cache.TryRemove(key, out _));
+        bool exists = _cache.TryGetValue(key, out _);
+        if (exists)
+        {
+            _cache.Remove(key);
+        }
+
+        return Task.FromResult(exists);
+    }
+
+    public void Dispose()
+    {
+        _cache.Dispose();
     }
 }
