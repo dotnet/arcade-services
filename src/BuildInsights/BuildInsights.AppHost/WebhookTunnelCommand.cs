@@ -6,9 +6,9 @@ using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
 using BuildInsights.ServiceDefaults;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -116,10 +116,8 @@ internal static class WebhookTunnelCommand
         private readonly TunnelCommandOptions _options;
         private readonly IGitHubAppTokenProvider _gitHubAppTokenProvider;
         private readonly IProcessManager _processManager;
-        private readonly SecretClient _secretClient;
         private readonly HttpClient _healthCheckClient;
         private readonly StringBuilder _devTunnelLog = new();
-        private readonly List<string> _azDoSubscriptionIds = [];
 
         private Process? _devTunnelProcess;
         private string? _tunnelUrl;
@@ -130,13 +128,6 @@ internal static class WebhookTunnelCommand
             _options = options;
             _gitHubAppTokenProvider = gitHubAppTokenProvider;
             _processManager = new ProcessManager(NullLogger.Instance, gitExecutable: "git");
-
-            var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-            {
-                ExcludeInteractiveBrowserCredential = false,
-            });
-
-            _secretClient = new SecretClient(new Uri($"https://{options.KeyVaultName}.vault.azure.net/"), credential);
             _healthCheckClient = new HttpClient(new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
@@ -177,15 +168,15 @@ internal static class WebhookTunnelCommand
 
                 await ConfigureGitHubWebhookAsync(cancellationToken);
 
-                /*
                 await ConfigureAzureDevOpsHooksAsync(cancellationToken);
 
-                WriteSection("Ready");
+                Console.WriteLine($"Tunnel and webhooks are ready");
+
                 Console.WriteLine($"GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
                 foreach (var hookDefinition in HookDefinitions)
                 {
                     Console.WriteLine($"Azure DevOps endpoint: {_tunnelUrl}{hookDefinition.RelativePath}");
-                }*/
+                }
 
                 Console.WriteLine();
                 Console.WriteLine("Press Ctrl+C or stop the Aspire dashboard resource to restore the shared webhook configuration.");
@@ -206,7 +197,7 @@ internal static class WebhookTunnelCommand
 
         private async Task ConfigureGitHubWebhookAsync(CancellationToken cancellationToken)
         {
-            WriteSection("Updating the GitHub App webhook");
+            WriteSection("Configuring the GitHub App webhook");
 
             var originalWebhook = await GetGitHubWebhookConfigAsync(cancellationToken);
             Console.WriteLine($"Current GitHub webhook URL: {originalWebhook.Url}");
@@ -222,47 +213,64 @@ internal static class WebhookTunnelCommand
 
         private async Task ConfigureAzureDevOpsHooksAsync(CancellationToken cancellationToken)
         {
-            WriteSection("Creating Azure DevOps service hook subscriptions");
-
-            var azDoSecretHeaderValue = await GetSecretValueAsync(
-                "BUILD_INSIGHTS_AZDO_SERVICE_HOOK_SECRET",
-                "azdo-service-hook-secret",
-                cancellationToken);
+            WriteSection("Configuring Azure DevOps service hooks");
 
             using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
-            var projectId = await GetAzureDevOpsProjectIdAsync(azureDevOpsHttpClient, cancellationToken);
-            Console.WriteLine($"Resolved Azure DevOps project '{_options.AzDoProject}' to {projectId}");
 
-            foreach (var hookDefinition in HookDefinitions)
+            Console.WriteLine("Searching for existing dev tunnel service hook subscriptions...");
+
+            using var listResponse = await azureDevOpsHttpClient.GetAsync(
+                $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
+                cancellationToken);
+
+            listResponse.EnsureSuccessStatusCode();
+
+            var json = await listResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken)
+                ?? throw new InvalidOperationException("Azure DevOps did not return a subscription list.");
+
+            var subscriptions = json["value"]?.AsArray()
+                ?? throw new InvalidOperationException("Azure DevOps subscription list is missing the 'value' property.");
+
+            var updated = 0;
+
+            foreach (var subscription in subscriptions)
             {
-                var payload = new
+                var url = subscription?["consumerInputs"]?["url"]?.GetValue<string>();
+                if (url is null || !url.Contains(".devtunnels.ms", StringComparison.OrdinalIgnoreCase))
                 {
-                    publisherId = hookDefinition.PublisherId,
-                    eventType = hookDefinition.EventType,
-                    resourceVersion = hookDefinition.ResourceVersion,
-                    consumerId = "webHooks",
-                    consumerActionId = "httpRequest",
-                    publisherInputs = hookDefinition.CreatePublisherInputs(projectId),
-                    consumerInputs = new
-                    {
-                        url = $"{_tunnelUrl}{hookDefinition.RelativePath}",
-                        httpHeaders = $"X-BuildAnalysis-Secret:{azDoSecretHeaderValue}",
-                    },
-                };
+                    continue;
+                }
 
-                using var response = await System.Net.Http.Json.HttpClientJsonExtensions.PostAsJsonAsync(
+                var subscriptionId = subscription!["id"]!.GetValue<string>();
+                var originalUri = new Uri(url);
+                var newUrl = $"{_tunnelUrl}{originalUri.PathAndQuery}";
+
+                subscription["consumerInputs"]!["url"] = newUrl;
+
+                using var putResponse = await HttpClientJsonExtensions.PutAsJsonAsync(
                     azureDevOpsHttpClient,
-                    $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
-                    payload,
+                    $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions/{subscriptionId}?api-version=7.1",
+                    subscription,
                     cancellationToken);
 
-                response.EnsureSuccessStatusCode();
+                if (!putResponse.IsSuccessStatusCode)
+                {
+                    var body = await putResponse.Content.ReadAsStringAsync(cancellationToken);
+                    Console.WriteLine($"  Warning: Failed to update subscription {subscriptionId}: {(int)putResponse.StatusCode} {body}");
+                    continue;
+                }
 
-                var subscription = await response.Content.ReadFromJsonAsync<AzureDevOpsSubscriptionResponse>(cancellationToken: cancellationToken)
-                    ?? throw new InvalidOperationException($"Azure DevOps did not return a subscription id for {hookDefinition.Name}.");
+                Console.WriteLine($"Updated subscription {subscriptionId}: {url} -> {newUrl}");
+                updated++;
+            }
 
-                _azDoSubscriptionIds.Add(subscription.Id);
-                Console.WriteLine($"Created {hookDefinition.Name} subscription: {subscription.Id}");
+            if (updated == 0)
+            {
+                Console.WriteLine("Warning: No existing dev tunnel subscriptions found to update.");
+            }
+            else
+            {
+                Console.WriteLine($"Updated {updated} dev tunnel subscription(s).");
             }
         }
 
@@ -276,30 +284,6 @@ internal static class WebhookTunnelCommand
             _cleanedUp = true;
 
             WriteSection("Cleaning up");
-
-            if (_azDoSubscriptionIds.Count > 0)
-            {
-                try
-                {
-                    using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
-                    foreach (var subscriptionId in _azDoSubscriptionIds.AsEnumerable().Reverse())
-                    {
-                        Console.WriteLine($"Removing Azure DevOps subscription {subscriptionId}...");
-                        using var response = await azureDevOpsHttpClient.DeleteAsync(
-                            $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions/{subscriptionId}?api-version=7.1",
-                            CancellationToken.None);
-
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            Console.WriteLine($"Azure DevOps delete returned {(int)response.StatusCode} for subscription {subscriptionId}.");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to remove one or more Azure DevOps subscriptions: {ex.Message}");
-                }
-            }
 
             TryStopDevTunnelProcess();
         }
@@ -496,32 +480,6 @@ internal static class WebhookTunnelCommand
             return client;
         }
 
-        private async Task<string> GetAzureDevOpsProjectIdAsync(HttpClient client, CancellationToken cancellationToken)
-        {
-            using var response = await client.GetAsync(
-                $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/projects/{Uri.EscapeDataString(_options.AzDoProject)}?api-version=7.1",
-                cancellationToken);
-
-            response.EnsureSuccessStatusCode();
-
-            var project = await response.Content.ReadFromJsonAsync<AzureDevOpsProjectResponse>(cancellationToken: cancellationToken)
-                ?? throw new InvalidOperationException($"Azure DevOps did not return the project '{_options.AzDoProject}'.");
-
-            return project.Id;
-        }
-
-        private async Task<string> GetSecretValueAsync(string environmentVariableName, string secretName, CancellationToken cancellationToken)
-        {
-            var environmentValue = Environment.GetEnvironmentVariable(environmentVariableName);
-            if (!string.IsNullOrWhiteSpace(environmentValue))
-            {
-                return environmentValue;
-            }
-
-            var secret = await _secretClient.GetSecretAsync(secretName, cancellationToken: cancellationToken);
-            return secret.Value.Value;
-        }
-
         private async Task<GitHubWebhookConfig> GetGitHubWebhookConfigAsync(CancellationToken cancellationToken)
         {
             using var httpClient = CreateGitHubHttpClient();
@@ -612,10 +570,6 @@ internal static class WebhookTunnelCommand
 
     private sealed record TunnelInfo(string TunnelUrl, string? InspectUrl, string? TunnelId);
 
-    private sealed record AzureDevOpsProjectResponse([property: JsonPropertyName("id")] string Id);
-
-    private sealed record AzureDevOpsSubscriptionResponse([property: JsonPropertyName("id")] string Id);
-
     private sealed record GitHubWebhookConfig(
         [property: JsonPropertyName("content_type")] string? ContentType,
         [property: JsonPropertyName("insecure_ssl")] string? InsecureSsl,
@@ -625,4 +579,5 @@ internal static class WebhookTunnelCommand
         [property: JsonPropertyName("content_type")] string ContentType,
         [property: JsonPropertyName("insecure_ssl")] string InsecureSsl,
         [property: JsonPropertyName("url")] string Url);
-}
+
+    }
