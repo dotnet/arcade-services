@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -61,19 +62,51 @@ internal static class WebhookTunnelCommand
         });
         hostBuilder.Services.AddGitHubTokenProvider();
 
+        using var cancellationTokenSource = new CancellationTokenSource();
         using var host = hostBuilder.Build();
+        await host.StartAsync(cancellationTokenSource.Token);
 
         var options = TunnelCommandOptions.FromConfiguration(hostBuilder.Configuration);
-        using var cancellationTokenSource = new CancellationTokenSource();
+        await using var runner = ActivatorUtilities.CreateInstance<WebhookTunnelRunner>(host.Services, options);
 
-        Console.CancelKeyPress += (_, e) =>
+        void RequestShutdown()
+        {
+            runner.RequestShutdown();
+
+            if (!cancellationTokenSource.IsCancellationRequested)
+            {
+                cancellationTokenSource.Cancel();
+            }
+        }
+
+        ConsoleCancelEventHandler consoleCancelHandler = (_, e) =>
         {
             e.Cancel = true;
-            cancellationTokenSource.Cancel();
+            RequestShutdown();
         };
+        EventHandler processExitHandler = (_, _) => RequestShutdown();
+        Action<AssemblyLoadContext> unloadingHandler = _ => RequestShutdown();
 
-        await using var runner = ActivatorUtilities.CreateInstance<WebhookTunnelRunner>(host.Services, options);
-        await runner.RunAsync(cancellationTokenSource.Token);
+        using var applicationStoppingRegistration = host.Services
+            .GetRequiredService<IHostApplicationLifetime>()
+            .ApplicationStopping
+            .Register(RequestShutdown);
+
+        Console.CancelKeyPress += consoleCancelHandler;
+        AppDomain.CurrentDomain.ProcessExit += processExitHandler;
+        AssemblyLoadContext.Default.Unloading += unloadingHandler;
+
+        try
+        {
+            await runner.RunAsync(cancellationTokenSource.Token);
+        }
+        finally
+        {
+            Console.CancelKeyPress -= consoleCancelHandler;
+            AppDomain.CurrentDomain.ProcessExit -= processExitHandler;
+            AssemblyLoadContext.Default.Unloading -= unloadingHandler;
+            await host.StopAsync(CancellationToken.None);
+        }
     }
 
     private sealed class WebhookTunnelRunner : IAsyncDisposable
@@ -97,6 +130,11 @@ internal static class WebhookTunnelCommand
             {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
             });
+        }
+
+        public void RequestShutdown()
+        {
+            TryStopDevTunnelProcess();
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)
@@ -245,6 +283,8 @@ internal static class WebhookTunnelCommand
 
             WriteSection("Cleaning up");
             TryStopDevTunnelProcess();
+            _devTunnelProcess?.Dispose();
+            _devTunnelProcess = null;
 
             return Task.CompletedTask;
         }
@@ -306,9 +346,9 @@ internal static class WebhookTunnelCommand
 
                 Console.WriteLine(eventArgs.Data);
 
-                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Connect via browser: (?<value>https://[^\s,]+)");
-                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"Inspect network activity: (?<value>https://[^\s,]+)");
-                tunnelId ??= ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
+                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"🌐 Connect via browser: (?<value>https://[^\s,]+)");
+                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"🌐 Inspect network activity: (?<value>https://[^\s,]+)");
+                tunnelId ??= ParseOutputValue(eventArgs.Data, @"🌐 Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
 
                 if (tunnelUrl is not null)
                 {
