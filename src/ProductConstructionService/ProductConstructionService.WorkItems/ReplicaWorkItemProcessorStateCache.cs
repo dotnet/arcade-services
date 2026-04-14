@@ -3,7 +3,7 @@
 
 using Azure.ResourceManager.AppContainers;
 using Microsoft.Extensions.Logging;
-using Maestro.Common.Cache;
+using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.WorkItems;
 
