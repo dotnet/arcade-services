@@ -62,7 +62,7 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
             }
             catch (RequestFailedException r) when (r.Status == 404 && r.ErrorCode == "ContainerNotFound")
             {
-                BlobContainerClient blobContainerClient = _blobClientFactory.CreateBlobContainerClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName);
+                BlobContainerClient blobContainerClient = CreateBlobContainerClient();
                 await blobContainerClient.CreateAsync(cancellationToken: cancellationToken);
                 continue;
             }
@@ -167,7 +167,7 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
 
     protected override async Task PutAsync(string root, string name, Stream data, CancellationToken cancellationToken)
     {
-        BlobContainerClient blobContainerClient = _blobClientFactory.CreateBlobContainerClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName);
+        BlobContainerClient blobContainerClient = CreateBlobContainerClient();
         await blobContainerClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
 
         BlobClient blobClient = GetBlobClient(root, name);
@@ -197,7 +197,16 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
 
     private BlobClient GetBlobClient(string lockName)
     {
-        return _blobClientFactory.CreateBlobClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName, lockName);
+        return !string.IsNullOrEmpty(_settings.CurrentValue.ConnectionString)
+            ? _blobClientFactory.CreateBlobClientFromConnectionString(_settings.CurrentValue.ConnectionString, _settings.CurrentValue.ContainerName, lockName)
+            : _blobClientFactory.CreateBlobClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName, lockName);
+    }
+
+    private BlobContainerClient CreateBlobContainerClient()
+    {
+        return !string.IsNullOrEmpty(_settings.CurrentValue.ConnectionString)
+            ? _blobClientFactory.CreateBlobContainerClientFromConnectionString(_settings.CurrentValue.ConnectionString, _settings.CurrentValue.ContainerName)
+            : _blobClientFactory.CreateBlobContainerClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName);
     }
 
     public void Dispose()

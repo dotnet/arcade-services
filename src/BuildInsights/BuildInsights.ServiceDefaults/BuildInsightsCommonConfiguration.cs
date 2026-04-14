@@ -103,7 +103,15 @@ public static class BuildInsightsCommonConfiguration
         {
             s.Bind(o);
             o.ManagedIdentityId = managedIdentityId;
-            o.Endpoint ??= builder.Configuration[ConfigurationKeys.BlobEndpoint];
+
+            if (!isDevelopment)
+            {
+                o.Endpoint ??= builder.Configuration[ConfigurationKeys.BlobEndpoint];
+            }
+            else
+            {
+                o.ConnectionString ??= builder.Configuration[ConfigurationKeys.BlobEndpoint];
+            }
         });
 
         builder.AddServiceDefaults();

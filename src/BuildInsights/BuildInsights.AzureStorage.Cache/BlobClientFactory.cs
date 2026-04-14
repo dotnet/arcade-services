@@ -16,9 +16,13 @@ public interface IBlobClientFactory
 
     BlobClient CreateBlobClient(string endpoint, string blobContainerName, string blobName);
 
+    BlobClient CreateBlobClientFromConnectionString(string connectionString, string blobContainerName, string blobName);
+
     BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string? leaseId = null);
 
     BlobContainerClient CreateBlobContainerClient(string endpoint, string blobContainerName);
+
+    BlobContainerClient CreateBlobContainerClientFromConnectionString(string connectionString, string blobContainerName);
 
 }
 
@@ -41,9 +45,19 @@ public class BlobClientFactory : IBlobClientFactory
         return new BlobClient(new Uri($"{endpoint}/{blobContainerName}/{blobName}"), _credential);
     }
 
+    public BlobClient CreateBlobClientFromConnectionString(string connectionString, string blobContainerName, string blobName)
+    {
+        return new BlobClient(connectionString, blobContainerName, blobName);
+    }
+
     public BlobContainerClient CreateBlobContainerClient(string endpoint, string blobContainerName)
     {
         return new BlobContainerClient(new Uri($"{endpoint}/{blobContainerName}"), _credential);
+    }
+
+    public BlobContainerClient CreateBlobContainerClientFromConnectionString(string connectionString, string blobContainerName)
+    {
+        return new BlobContainerClient(connectionString, blobContainerName);
     }
 
     public BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string? leaseId = null)

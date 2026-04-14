@@ -9,6 +9,8 @@ namespace BuildInsights.AzureStorage.Cache;
 
 public class BlobStorageSettings : CredentialResolverOptions
 {
+    public string ConnectionString { get; set; }
+
     public string Endpoint { get; set; }
 
     public string ContainerName { get; set; }
