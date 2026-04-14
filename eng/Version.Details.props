@@ -15,19 +15,19 @@ This file should be imported by eng/Versions.props
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26210.2</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26210.2</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
-    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26113.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
-    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26113.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
-    <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.26113.1</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
-    <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.26113.1</MicrosoftDncEngConfigurationExtensionsPackageVersion>
-    <MicrosoftDotNetGitHubAuthenticationPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetGitHubAuthenticationPackageVersion>
-    <MicrosoftDotNetInternalDependencyInjectionPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalDependencyInjectionPackageVersion>
-    <MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>
-    <MicrosoftDotNetInternalLoggingPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalLoggingPackageVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>
-    <MicrosoftDotNetInternalTestingUtilityPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetInternalTestingUtilityPackageVersion>
-    <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetKustoPackageVersion>
-    <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetServicesUtilityPackageVersion>
+    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26214.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
+    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26214.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
+    <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.26214.1</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
+    <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.26214.1</MicrosoftDncEngConfigurationExtensionsPackageVersion>
+    <MicrosoftDotNetGitHubAuthenticationPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetGitHubAuthenticationPackageVersion>
+    <MicrosoftDotNetInternalDependencyInjectionPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalDependencyInjectionPackageVersion>
+    <MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>
+    <MicrosoftDotNetInternalLoggingPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalLoggingPackageVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>
+    <MicrosoftDotNetInternalTestingUtilityPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetInternalTestingUtilityPackageVersion>
+    <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetKustoPackageVersion>
+    <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26214.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- maestro-configuration dependencies -->
     <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26180.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
