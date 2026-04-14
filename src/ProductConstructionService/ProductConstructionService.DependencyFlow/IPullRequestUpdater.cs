@@ -9,8 +9,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 public interface IPullRequestUpdater
 {
-    Task<bool> CheckPullRequestAsync(
-        PullRequestCheck pullRequestCheck);
+    Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck);
 
     Task ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update,
@@ -24,6 +23,4 @@ public interface IPullRequestUpdater
         int buildId,
         bool applyNewestOnly,
         bool forceUpdate = false);
-
-    PullRequestUpdaterId Id { get; }
 }

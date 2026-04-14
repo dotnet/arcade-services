@@ -61,10 +61,10 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             {
                 IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeflow: true);
                 await updater.UpdateAssetsAsync(
-                    Subscription.Id,
-                    Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
-                    forBuild.Id,
-                    applyNewestOnly: false);
+                Subscription.Id,
+                Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
+                forBuild.Id,
+                applyNewestOnly: false);
             });
     }
 

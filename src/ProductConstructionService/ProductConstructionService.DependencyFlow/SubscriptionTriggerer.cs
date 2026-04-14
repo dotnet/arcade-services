@@ -105,7 +105,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             subscription.TargetRepository,
             subscription.PolicyObject.Batchable);
 
-        var mutexKey = pullRequestUpdater.Id.ToString();
+        var mutexKey = pullRequestUpdaterId.Id;
 
         await _distributedLock.ExecuteWithLockAsync(mutexKey,
             async () =>

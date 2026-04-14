@@ -1,10 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
-using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -16,12 +13,11 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 {
@@ -29,27 +25,21 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ILocalLibGit2Client _gitClient;
-    private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IPullRequestCommentBuilder _commentBuilder;
-    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISqlBarClient _sqlClient;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ICommentCollector _commentCollector;
+    private readonly IPullRequestStateManager _stateManager;
+    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
-    private readonly Lazy<Task<Subscription?>> _subscription;
-
     public CodeFlowPullRequestUpdater(
-        NonBatchedPullRequestUpdaterId id,
+        IPullRequestTarget target,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
         IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
         ILocalLibGit2Client gitClient,
         IVmrInfo vmrInfo,
@@ -58,59 +48,24 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
-        IPullRequestCommentBuilder commentBuilder,
+        IPullRequestStateManager stateManager,
+        ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(id, mergePolicyEvaluator, context, remoteFactory, updaterFactory, cacheFactory, reminderManagerFactory, sqlClient, logger, pullRequestCommenter)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
     {
-        _id = id;
-        _context = context;
+        _vmrInfo = vmrInfo;
+        _vmrForwardFlower = vmrForwardFlower;
+        _vmrBackFlower = vmrBackFlower;
+        _gitClient = gitClient;
+        _pullRequestBuilder = pullRequestBuilder;
         _remoteFactory = remoteFactory;
         _sqlClient = sqlClient;
         _telemetryRecorder = telemetryRecorder;
         _commentCollector = commentCollector;
         _logger = logger;
-        _vmrInfo = vmrInfo;
-        _vmrForwardFlower = vmrForwardFlower;
-        _vmrBackFlower = vmrBackFlower;
-        _gitClient = gitClient;
-        _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
-        _pullRequestBuilder = pullRequestBuilder;
-        _commentBuilder = commentBuilder;
-    }
-
-    protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
-    {
-        Subscription? subscription = await _subscription.Value;
-        return subscription?.PolicyObject?.MergePolicies ?? [];
-    }
-
-    private async Task<Subscription?> RetrieveSubscription()
-    {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
-
-        // This can mainly happen during E2E tests where we delete a subscription
-        // while some PRs have just been closed and there's a reminder on those still
-        if (subscription == null)
-        {
-            _logger.LogInformation(
-                "Failed to find a subscription {subscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
-                _id.SubscriptionId);
-
-            await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            return null;
-        }
-
-        return subscription;
-    }
-
-    protected override async Task<(string repository, string branch)> GetTargetAsync()
-    {
-        Maestro.Data.Models.Subscription subscription = await _subscription.Value
-            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
-        return (subscription.TargetRepository, subscription.TargetBranch);
+        _stateManager = stateManager;
+        _subscriptionEventRecorder = subscriptionEventRecorder;
+        _target = target;
     }
 
     protected async override Task ProcessSubscriptionUpdateAsync(
@@ -127,8 +82,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 update.SubscriptionId,
                 update.SourceSha);
 
-            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return;
         }
 
@@ -137,8 +92,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return;
         }
 
@@ -146,7 +101,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (subscription == null)
         {
             _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
-            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             return;
         }
 
@@ -319,7 +274,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
         prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
     }
@@ -428,7 +383,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             // Since we changed the PR state in cache but no commit was pushed,
             // we need to delete non-transient check results so that they can be re-evaluated
-            await _mergePolicyEvaluationState.TryDeleteAsync();
+            await _stateManager.ClearMergePolicyEvaluationStateAsync();
         }
 
         _commentCollector.AddComment(
@@ -497,7 +452,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             InProgressPullRequest inProgressPr = new()
             {
-                UpdaterId = Id.ToString(),
+                UpdaterId = _target.UpdaterId,
                 Url = pr.Url,
                 HeadBranch = prBranch,
                 HeadBranchSha = pr.HeadBranchSha,
@@ -519,7 +474,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
             };
 
-            await AddDependencyFlowEventsAsync(
+            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
                 inProgressPr.ContainedSubscriptions,
                 DependencyFlowEventType.Created,
                 DependencyFlowEventReason.New,
@@ -527,8 +482,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
-            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
@@ -614,8 +569,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
             pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
-            await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
         }
     }
 
@@ -624,16 +579,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
-        await _pullRequestState.SetAsync(pr);
-    }
-
-    protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
-    {
-        var comment = await _commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
-        if (!string.IsNullOrEmpty(comment))
-        {
-            _commentCollector.AddComment(comment, CommentType.Warning);
-        }
+        await _stateManager.SetInProgressPullRequestAsync(pr);
     }
 }
 

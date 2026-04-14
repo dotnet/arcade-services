@@ -29,6 +29,7 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
+        services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
