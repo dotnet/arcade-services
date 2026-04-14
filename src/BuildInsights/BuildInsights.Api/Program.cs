@@ -44,7 +44,9 @@ app.Use((context, next) =>
 });
 
 app.UseHttpsRedirection();
-app.UseHttpLogging();
+app.UseWhen(
+    ctx => !ctx.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase),
+    branch => branch.UseHttpLogging());
 app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseRouting();
