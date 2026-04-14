@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel;
@@ -26,42 +26,6 @@ internal static class WebhookTunnelCommand
 {
     private const string CommandName = "webhook-tunnel";
     private const string GitHubWebhookPath = "/api/github/webhooks";
-
-    private static readonly HookDefinition[] HookDefinitions =
-    [
-        new(
-            "BuildCompleted",
-            "tfs",
-            "build.complete",
-            "2.0",
-            "/api/azdo/servicehooks/build.complete",
-            projectId => new Dictionary<string, string>
-            {
-                ["projectId"] = projectId,
-            }),
-        new(
-            "PipelineRunStateChanged",
-            "pipelines",
-            "ms.vss-pipelines.run-state-changed-event",
-            "5.1-preview.1",
-            "/api/azdo/servicehooks/ms.vss-pipelines.run-state-changed-event",
-            projectId => new Dictionary<string, string>
-            {
-                ["projectId"] = projectId,
-                ["runStateId"] = "Completed",
-            }),
-        new(
-            "PipelineStageStateChanged",
-            "pipelines",
-            "ms.vss-pipelines.stage-state-changed-event",
-            "5.1-preview.1",
-            "/api/azdo/servicehooks/ms.vss-pipelines.stage-state-changed-event",
-            projectId => new Dictionary<string, string>
-            {
-                ["projectId"] = projectId,
-                ["stageStateId"] = "Completed",
-            }),
-    ];
 
     public static bool ShouldRun(string[] args)
         => args.Length > 0 && string.Equals(args[0], CommandName, StringComparison.OrdinalIgnoreCase);
@@ -115,7 +79,7 @@ internal static class WebhookTunnelCommand
     {
         private readonly TunnelCommandOptions _options;
         private readonly IGitHubAppTokenProvider _gitHubAppTokenProvider;
-        private readonly IProcessManager _processManager;
+        private readonly ProcessManager _processManager;
         private readonly HttpClient _healthCheckClient;
         private readonly StringBuilder _devTunnelLog = new();
 
@@ -173,10 +137,6 @@ internal static class WebhookTunnelCommand
                 Console.WriteLine($"Tunnel and webhooks are ready");
 
                 Console.WriteLine($"GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
-                foreach (var hookDefinition in HookDefinitions)
-                {
-                    Console.WriteLine($"Azure DevOps endpoint: {_tunnelUrl}{hookDefinition.RelativePath}");
-                }
 
                 Console.WriteLine();
                 Console.WriteLine("Press Ctrl+C or stop the Aspire dashboard resource to restore the shared webhook configuration.");
@@ -273,6 +233,84 @@ internal static class WebhookTunnelCommand
                 Console.WriteLine($"Updated {updated} dev tunnel subscription(s).");
             }
         }
+
+        /// <summary>
+        /// One-time helper that copies all service hooks targeting the staging host
+        /// and creates duplicates pointing at a specific dev tunnel URL.
+        /// Call once to bootstrap dev tunnel subscriptions; subsequent runs will update them in place.
+        /// </summary>
+        //private async Task CreateDevTunnelServiceHookCopiesAsync(CancellationToken cancellationToken)
+        //{
+        //    const string productionHost = "https://build-insights.int-dot.net";
+        //    const string devTunnelHost = "https://x47wnb0w-53180.euw.devtunnels.ms";
+
+        //    WriteSection("Creating dev tunnel copies of production service hooks");
+
+        //    using var azureDevOpsHttpClient = await CreateAzureDevOpsHttpClientAsync();
+
+        //    using var listResponse = await azureDevOpsHttpClient.GetAsync(
+        //        $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
+        //        cancellationToken);
+
+        //    listResponse.EnsureSuccessStatusCode();
+
+        //    var json = await listResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken)
+        //        ?? throw new InvalidOperationException("Azure DevOps did not return a subscription list.");
+
+        //    var subscriptions = json["value"]?.AsArray()
+        //        ?? throw new InvalidOperationException("Azure DevOps subscription list is missing the 'value' property.");
+
+        //    var created = 0;
+
+        //    foreach (var subscription in subscriptions)
+        //    {
+        //        var url = subscription?["consumerInputs"]?["url"]?.GetValue<string>();
+        //        if (url is null || !url.StartsWith(productionHost, StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            continue;
+        //        }
+
+        //        // Build a new subscription payload from the existing one
+        //        var copy = subscription!.DeepClone();
+
+        //        // Remove server-assigned fields so AzDo treats this as a new subscription
+        //        copy.AsObject().Remove("id");
+        //        copy.AsObject().Remove("status");
+        //        copy.AsObject().Remove("createdBy");
+        //        copy.AsObject().Remove("createdDate");
+        //        copy.AsObject().Remove("modifiedBy");
+        //        copy.AsObject().Remove("modifiedDate");
+        //        copy.AsObject().Remove("actionDescription");
+        //        copy.AsObject().Remove("probationRetries");
+        //        copy.AsObject().Remove("lastProbationRetryDate");
+
+        //        var originalUri = new Uri(url);
+        //        var newUrl = $"{devTunnelHost}{originalUri.PathAndQuery}";
+        //        copy["consumerInputs"]!["url"] = newUrl;
+
+        //        using var postResponse = await HttpClientJsonExtensions.PostAsJsonAsync(
+        //            azureDevOpsHttpClient,
+        //            $"https://dev.azure.com/{_options.AzDoOrganization}/_apis/hooks/subscriptions?api-version=7.1",
+        //            copy,
+        //            cancellationToken);
+
+        //        if (!postResponse.IsSuccessStatusCode)
+        //        {
+        //            var body = await postResponse.Content.ReadAsStringAsync(cancellationToken);
+        //            Console.WriteLine($"  Warning: Failed to create copy for {url}: {(int)postResponse.StatusCode} {body}");
+        //            continue;
+        //        }
+
+        //        var result = await postResponse.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: cancellationToken);
+        //        var newId = result?["id"]?.GetValue<string>() ?? "unknown";
+        //        Console.WriteLine($"Created subscription {newId}: {url} -> {newUrl}");
+        //        created++;
+        //    }
+
+        //    Console.WriteLine(created > 0
+        //        ? $"Created {created} dev tunnel subscription(s)."
+        //        : "Warning: No production subscriptions found to copy.");
+        //}
 
         private async Task CleanupAsync()
         {
@@ -560,14 +598,6 @@ internal static class WebhookTunnelCommand
         }
     }
 
-    private sealed record HookDefinition(
-        string Name,
-        string PublisherId,
-        string EventType,
-        string ResourceVersion,
-        string RelativePath,
-        Func<string, Dictionary<string, string>> CreatePublisherInputs);
-
     private sealed record TunnelInfo(string TunnelUrl, string? InspectUrl, string? TunnelId);
 
     private sealed record GitHubWebhookConfig(
@@ -579,5 +609,4 @@ internal static class WebhookTunnelCommand
         [property: JsonPropertyName("content_type")] string ContentType,
         [property: JsonPropertyName("insecure_ssl")] string InsecureSsl,
         [property: JsonPropertyName("url")] string Url);
-
-    }
+}
