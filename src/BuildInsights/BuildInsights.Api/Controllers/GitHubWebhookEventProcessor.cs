@@ -160,9 +160,10 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         string repository = issuesEvent.Repository.Name;
         long issueNumber = issuesEvent.Issue.Number;
         string issueNodeId = issuesEvent.Issue.NodeId;
-        List<string> labels = issuesEvent.Issue.Labels.Select(l => l.Name).ToList();
+        List<string> labels = [..issuesEvent.Issue.Labels.Select(l => l.Name)];
         string addedLabel = issuesEvent is IssuesLabeledEvent labeled ? labeled.Label?.Name : null;
         string senderType = issuesEvent.Sender?.Type?.ToString();
+        var allowedActions = new[] { "opened", "reopened", "labeled", "edited" };
 
         _logger.LogInformation(
             "Processing event: 'issues', action: {action}, organization: {organization}, repository: {repository}, issue: {number}",
@@ -171,7 +172,7 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         if (IsBuildAnalysisEvent(headers)
             && senderType != Octokit.AccountType.Bot.ToString()
             && _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Intersect(labels).Any()
-            && new[] { "opened", "reopened", "labeled", "edited" }.Contains(issuesEvent.Action)
+            && allowedActions.Contains(issuesEvent.Action)
             && (issuesEvent.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(addedLabel)))
         {
             var queueProducer = _workItemProducerFactory.CreateProducer<KnownIssueAnalysisRequest>();

@@ -346,9 +346,9 @@ internal static class WebhookTunnelCommand
 
                 Console.WriteLine(eventArgs.Data);
 
-                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"🌐 Connect via browser: (?<value>https://[^\s,]+)");
-                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"🌐 Inspect network activity: (?<value>https://[^\s,]+)");
-                tunnelId ??= ParseOutputValue(eventArgs.Data, @"🌐 Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
+                tunnelUrl ??= ParseOutputValue(eventArgs.Data, @"Connect via browser: (?<value>https://[^\s,]+)");
+                inspectUrl ??= ParseOutputValue(eventArgs.Data, @"Inspect network activity: (?<value>https://[^\s,]+)");
+                tunnelId ??= ParseOutputValue(eventArgs.Data, @"Ready to accept connections for tunnel: (?<value>[a-z0-9\-]+)");
 
                 if (tunnelUrl is not null)
                 {

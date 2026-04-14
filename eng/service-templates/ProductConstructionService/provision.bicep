@@ -55,7 +55,7 @@ param pcsIdentityName string
 @description('Name of the identity used for the PCS deployment')
 param deploymentIdentityName string
 
-@description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
+@description('Bicep requires an image when creating a containerapp')
 param containerImageName string
 
 @description('Virtual network name')
