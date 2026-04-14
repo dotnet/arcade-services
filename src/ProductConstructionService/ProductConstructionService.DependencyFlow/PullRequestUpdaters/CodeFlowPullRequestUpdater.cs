@@ -493,7 +493,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
-            await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
+            try
+            {
+                await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to clean up branch");
+            }
             throw;
         }
     }
