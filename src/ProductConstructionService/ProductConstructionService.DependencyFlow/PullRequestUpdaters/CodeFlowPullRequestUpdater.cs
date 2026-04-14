@@ -499,12 +499,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
             catch (Exception e)
             {
-                _logger.LogError(
-                    e,
-                    "Failed to clean up branch {prBranch} in repository {targetRepository} for subscription {subscriptionId}",
-                    prBranch,
-                    subscription.TargetRepository,
-                    update.SubscriptionId);
+                _logger.LogInfo("Failed to delete the branch during cleanup");
             }
             throw;
         }
