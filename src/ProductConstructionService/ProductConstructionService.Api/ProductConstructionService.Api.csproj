@@ -19,6 +19,8 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Octokit.Webhooks.AspNetCore" />
@@ -31,10 +33,10 @@
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.Services.Common\Maestro.Services.Common.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj" />
     <ProjectReference Include="..\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
-    <ProjectReference Include="..\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj" />
     <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 

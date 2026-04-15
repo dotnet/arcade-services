@@ -38,7 +38,6 @@ using ProductConstructionService.Api.VirtualMonoRepo;
 using Maestro.Services.Common.Cache;
 using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
 using Maestro.Services.Common;
 
@@ -183,7 +182,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults();
+        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(

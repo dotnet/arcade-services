@@ -5,6 +5,7 @@ using BuildInsights.Api.Components;
 using BuildInsights.ServiceDefaults;
 using BuildInsights.ServiceDefaults.Configuration;
 using Maestro.Common;
+using Maestro.Services.Common;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);

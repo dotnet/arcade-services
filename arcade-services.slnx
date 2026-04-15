@@ -54,7 +54,6 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj" />
-    <Project Path="src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj" />
   </Folder>
