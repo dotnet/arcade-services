@@ -497,7 +497,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             {
                 await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
             }
-            catch (Exception e)
+            catch
             {
                 _logger.LogInfo("Failed to delete the branch during cleanup");
             }
