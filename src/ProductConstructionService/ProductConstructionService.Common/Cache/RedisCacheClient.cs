@@ -1,9 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
-namespace Maestro.Common.Cache;
+namespace ProductConstructionService.Common.Cache;
 
 public interface IRedisCacheClient
 {
@@ -16,7 +17,7 @@ public interface IRedisCacheClient
 /// This class acts as a delegate for RedisCache and RedisCacheFactory.
 /// It is needed because DarcLib does not depend on ProductConstructionService and can only access caching through a delegate.
 /// </summary>
-public class RedisCacheClient : IRedisCacheClient
+public class RedisCacheClient : IRedisCacheClient, ICache
 {
     private readonly IRedisCacheFactory _factory;
     private readonly ILogger<RedisCacheClient> _logger;

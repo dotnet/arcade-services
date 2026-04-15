@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
@@ -28,4 +29,9 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
         "Only list names of differing files and directories. " +
         "Listed differences are prefixed with +, - or * for addition, removal or differing content.")]
     public bool NameOnly { get; set; }
+
+    [Option("path", Required = false, HelpText =
+        "Paths to include in the diff. When specified, only differences in these paths will be shown. " +
+        "Can be specified multiple times to include multiple paths.")]
+    public IEnumerable<string> Paths { get; set; } = [];
 }

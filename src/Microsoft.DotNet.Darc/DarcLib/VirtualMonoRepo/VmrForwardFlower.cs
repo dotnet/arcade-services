@@ -122,6 +122,33 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             unsafeFlow,
             cancellationToken);
 
+        return await FlowForwardAsync(
+            mappingName,
+            sourceRepo,
+            build,
+            excludedAssets,
+            targetBranch,
+            headBranch,
+            lastFlows,
+            headBranchExisted,
+            forceUpdate,
+            unsafeFlow,
+            cancellationToken);
+    }
+
+    protected async Task<CodeFlowResult> FlowForwardAsync(
+        string mappingName,
+        ILocalGitRepo sourceRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        string headBranch,
+        LastFlows lastFlows,
+        bool headBranchExisted,
+        bool forceUpdate,
+        bool unsafeFlow,
+        CancellationToken cancellationToken)
+    {
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
 
@@ -179,7 +206,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// and creates the head branch at that point.
     /// </summary>
     /// <returns>True if the head branch already existed</returns>
-    private async Task<(bool, LastFlows)> PrepareHeadBranch(
+    protected async Task<(bool HeadBranchExisted, LastFlows LastFlows)> PrepareHeadBranch(
         string vmrUri,
         string mappingName,
         ILocalGitRepo sourceRepo,
@@ -371,6 +398,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     cancellationToken)
             };
         }
+
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+
+        await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            lastFlows,
+            vmr,
+            sourceRepo,
+            file => file.Substring(vmrSourcesPath.Length + 1),
+            lastFlows.LastForwardFlow.RepoSha,
+            codeflowOptions.CurrentFlow.RepoSha,
+            cancellationToken);
 
         return result;
     }

@@ -315,6 +315,40 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     }
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    public async Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        var query = $"searchCriteria.sourceRefName=refs/heads/{headBranch}"
+            + $"&searchCriteria.targetRefName=refs/heads/{targetBranch}"
+            + "&searchCriteria.status=active"
+            + "&$top=1";
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/pullrequests?{query}",
+            _logger);
+
+        var values = JArray.Parse(content["value"]!.ToString());
+
+        if (!values.Any())
+        {
+            return null;
+        }
+
+        int pullRequestId = values[0]["pullRequestId"]!.ToObject<int>();
+        return $"https://dev.azure.com/{accountName}/{projectName}/_git/{repoName}/pullrequest/{pullRequestId}";
+    }
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>

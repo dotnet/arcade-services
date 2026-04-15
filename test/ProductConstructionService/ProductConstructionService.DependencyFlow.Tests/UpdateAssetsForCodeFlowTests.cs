@@ -37,7 +37,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         GivenPendingUpdates(build);
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
+        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
         // with assets and other info just like we do in UpdatePullRequestAsync.
@@ -110,7 +110,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
-            await WhenUpdateAssetsAsyncIsCalled(build);
+            await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build);
@@ -136,7 +136,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             ExpectPrMetadataToBeUpdated();
 
-            await WhenUpdateAssetsAsyncIsCalled(newBuild);
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
@@ -164,7 +164,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             DarcRemotes[Subscription.TargetRepository],
             [new UnixPath($"src/{Subscription.TargetDirectory}/conflict.txt")]);
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
+        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
         // with assets and other info just like we do in UpdatePullRequestAsync.
@@ -242,7 +242,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             VmrPullRequestUrl = $"{VmrUri}/pulls/2";
             CreatePullRequestShouldReturnAValidValue();
 
-            await WhenUpdateAssetsAsyncIsCalled(build2);
+            await WhenUpdateAssetsAsyncIsCalled(build2, isCodeflow: true);
 
             var expectedState = new InProgressPullRequest()
             {
@@ -324,7 +324,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             VmrPullRequestUrl = $"{VmrUri}/pulls/2";
             CreatePullRequestShouldReturnAValidValue();
 
-            await WhenUpdateAssetsAsyncIsCalled(build2);
+            await WhenUpdateAssetsAsyncIsCalled(build2, isCodeflow: true);
 
             Subscription.LastAppliedBuild.Id.Should().Be(build1.Id);
 

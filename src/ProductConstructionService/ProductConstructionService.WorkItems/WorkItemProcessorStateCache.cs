@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Logging;
-using Maestro.Common.Cache;
+using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.WorkItems;
 public class WorkItemProcessorStateCache

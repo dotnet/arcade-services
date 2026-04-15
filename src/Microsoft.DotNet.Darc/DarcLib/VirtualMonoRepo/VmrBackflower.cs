@@ -383,6 +383,21 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             commitMessage,
             cancellationToken);
 
+        if (lastFlows.LastBackFlow != null)
+        {
+            var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+            await RevertFalsePositiveAdditionsAndDeletionsAsync(
+                lastFlows,
+                targetRepo,
+                vmr,
+                file => vmrSourcesPath / file,
+                lastFlows.LastBackFlow.VmrSha,
+                codeflowOptions.CurrentFlow.VmrSha,
+                cancellationToken);
+        }
+
         return new CodeFlowResult(true, conflictedFiles, targetRepo.Path, []);
     }
 

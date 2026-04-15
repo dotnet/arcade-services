@@ -3,19 +3,18 @@
 
 using System.Text.Json;
 using AwesomeAssertions;
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItem.Tests;
 
 public class WorkItemScopeTests
 {
-
     private ServiceCollection _services = new();
     private WorkItemProcessorState _state = null!;
     private WorkItemProcessorStateCache _stateCache = null!;

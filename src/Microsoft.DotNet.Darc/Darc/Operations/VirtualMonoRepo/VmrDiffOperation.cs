@@ -124,7 +124,10 @@ internal class VmrDiffOperation : Operation
             (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
 
             IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
-            return await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
+            IReadOnlyCollection<string> allFilters = _options.Paths.Any()
+                ? [.. _options.Paths.Select(p => p.Replace('\\', '/')), .. exclusionFilters]
+                : exclusionFilters;
+            return await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, allFilters);
         }
         finally
         {
@@ -770,6 +773,16 @@ internal class VmrDiffOperation : Operation
                 fromRepoDirection);
 
             ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
+        }
+
+        if (_options.Paths.Any())
+        {
+            var normalizedPaths = _options.Paths
+                .Select(p => "/" + p.TrimStart('/', '\\').Replace('\\', '/'))
+                .ToList();
+            fileDifferences = fileDifferences
+                .Where(kv => normalizedPaths.Any(p => kv.Key.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
         }
 
         foreach (var difference in fileDifferences.Values.OrderBy(v => v))

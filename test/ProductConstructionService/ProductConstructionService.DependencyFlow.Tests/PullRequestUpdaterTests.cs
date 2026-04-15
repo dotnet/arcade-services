@@ -198,6 +198,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     .Excluding(pr => pr.Description));
     }
 
+    protected void WithForwardFlowerReturningNoUpdates()
+    {
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CodeFlowResult(false, [], new NativePath(VmrPath), []));
+    }
+
     protected void ThenCodeShouldHaveBeenBackflown(Build build)
     {
         _backFlower
@@ -656,10 +667,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
     }
 
-    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
+    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context, bool isCodeflow = false)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId(isCodeflow));
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)

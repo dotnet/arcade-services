@@ -85,17 +85,30 @@ internal partial class ConfigurationIngestor
         where T : IExternallySyncedEntity<TId>
         where TId : notnull
     {
-        var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();
-        var externalIds = externalEntities.Select(e => e.UniqueId).ToHashSet();
+        if (dbEntities.Count == 0 && externalEntities.Count == 0)
+        {
+            return new EntityChanges<T>([], [], []);
+        }
+
+        var uniqueKeyComparer = dbEntities.FirstOrDefault()?.UniqueKeyComparer
+            ?? externalEntities.FirstOrDefault()?.UniqueKeyComparer;
+
+        var dbKeys = dbEntities
+            .Select(e => e.UniqueId)
+            .ToHashSet(uniqueKeyComparer);
+
+        var externalKeys = externalEntities
+            .Select(e => e.UniqueId)
+            .ToHashSet(uniqueKeyComparer);
 
         IReadOnlyCollection<T> creations = [.. externalEntities
-            .Where(e => !dbIds.Contains(e.UniqueId))];
+            .Where(e => !dbKeys.Contains(e.UniqueId))];
 
         IReadOnlyCollection<T> removals = [.. dbEntities
-            .Where(e => !externalIds.Contains(e.UniqueId))];
+            .Where(e => !externalKeys.Contains(e.UniqueId))];
 
         IReadOnlyCollection<T> updates = [.. externalEntities
-            .Where(e => dbIds.Contains(e.UniqueId))];
+            .Where(e => dbKeys.Contains(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }
@@ -197,4 +210,47 @@ internal partial class ConfigurationIngestor
                 p => p.Key,
                 p => JToken.FromObject(p.Value)), // todo: this seems fragile. Can we change MergePolicyYaml to be <string, JToken> like the DAO & DTO?
         };
+}
+
+internal class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>
+{
+    public bool Equals((string, string) x, (string, string) y)
+    {
+        return StringComparer.OrdinalIgnoreCase.Equals(x.Item1, y.Item1)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item2, y.Item2);
+    }
+
+    public int GetHashCode((string, string) obj)
+    {
+        return HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item2));
+    }
+}
+
+internal class CaseInsensitiveTripleComparer : IEqualityComparer<(string, string, string)>
+{
+    public bool Equals((string, string, string) x, (string, string, string) y)
+    {
+        return StringComparer.OrdinalIgnoreCase.Equals(x.Item1, y.Item1)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item2, y.Item2)
+            && StringComparer.OrdinalIgnoreCase.Equals(x.Item3, y.Item3);
+    }
+
+    public int GetHashCode((string, string, string) obj)
+    {
+        return HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item2),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item3));
+    }
+}
+
+internal static class CaseInsensitiveTupleComparer
+{
+    internal static IEqualityComparer<(string, string)> Pair() =>
+        new CaseInsensitivePairComparer();
+
+    internal static IEqualityComparer<(string, string, string)> Triple() =>
+        new CaseInsensitiveTripleComparer();
 }
