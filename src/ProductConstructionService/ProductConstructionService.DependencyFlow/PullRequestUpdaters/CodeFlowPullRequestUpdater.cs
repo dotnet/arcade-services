@@ -499,7 +499,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
             catch
             {
-                _logger.LogInfo("Failed to delete the branch during cleanup");
+                _logger.LogInformation("Failed to delete the branch during cleanup");
             }
             throw;
         }
