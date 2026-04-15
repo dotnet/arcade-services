@@ -65,7 +65,8 @@ internal interface IPullRequestBuilder
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription);
+        string? currentDescription,
+        bool unsafeFlow);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -247,14 +248,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription)
+        string? currentDescription,
+        bool unsafeFlow)
     {
         string description = await GenerateCodeFlowPRDescriptionInternal(
             subscription,
             build,
             previousSourceCommit,
             dependencyUpdates,
-            currentDescription);
+            currentDescription,
+            unsafeFlow);
 
         description = CompressRepeatedLinksInDescription(description);
 
@@ -266,17 +269,33 @@ internal class PullRequestBuilder : IPullRequestBuilder
         BuildDTO build,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription)
+        string? currentDescription,
+        bool unsafeFlow)
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the new subscription update section along with the PR header
-            return $"""
+            string fromBranch = subscription.LastAppliedBuild != null ? $"from {subscription.LastAppliedBuild.GetBranch()}" : string.Empty;
+            var prHeader = unsafeFlow
+                ? $"""
+
+                > [!WARNING]
+                > This is an unsafe codeflow update caused by changing the flown branch {fromBranch} to {build.GetBranch()}.
+                > Please review carefully as it may contain undesirable changes.
+                > It may contain both source code changes from
+                > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
+                > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
+                """
+                : $"""
                 
                 > [!NOTE]
                 > This is a codeflow update. It may contain both source code changes from
                 > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
                 > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
+                """;
+
+            return $"""
+                {prHeader}
 
                 This pull request brings the following source code changes
                 {await GenerateCodeFlowDescriptionForSubscription(subscription.Id, previousSourceCommit, build, dependencyUpdates)}

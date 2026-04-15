@@ -113,7 +113,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var (codeFlowRes, unsafeFlown, updatedPrHeadBranch) = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlow, updatedPrHeadBranch) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
@@ -132,7 +132,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        if (unsafeFlown)
+        if (unsafeFlow)
         {
             // if we had an existing PR and we had to unsafe flow, we closed the PR and had to create a different head branch
             if (pr != null)
@@ -176,7 +176,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
-                unsafeFlown);
+                unsafeFlow);
 
             return;
         }
@@ -189,7 +189,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                unsafeFlow);
         }
         else if (pr != null && prInfo != null)
         {
@@ -423,7 +424,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowResult.DependencyUpdates,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                unsafeFlown);
         }
         else
         {
@@ -503,7 +505,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
-        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
+        bool unsafeFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -518,7 +521,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 previousSourceSha,
                 requiredUpdates,
                 upstreamRepoDiffs,
-                currentDescription: null);
+                currentDescription: null,
+                unsafeFlow: unsafeFlow);
 
             PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 subscription.TargetRepository,
@@ -617,7 +621,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             previousSourceSha,
             pullRequest.RequiredUpdates,
             upstreamRepoDiffs,
-            prInfo?.Description);
+            prInfo?.Description,
+            unsafeFlow: false /* we never update PRs with unsafe flow */);
 
         try
         {

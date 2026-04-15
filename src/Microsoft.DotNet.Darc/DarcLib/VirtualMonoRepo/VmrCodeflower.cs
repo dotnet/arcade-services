@@ -338,6 +338,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // In such a case, we cannot compare commits 2. and 4.
         if (isBackwardOlder == isForwardOlder)
         {
+            ignoreNonLinearFlow = true;
             if (ignoreNonLinearFlow)
             {
                 _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
