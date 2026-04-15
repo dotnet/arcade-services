@@ -106,21 +106,25 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
 
         var isForwardFlow = subscription.IsForwardFlow();
-        string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
-
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var (codeFlowRes, unsafeFlow, updatedPrHeadBranch) = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlown, prHeadBranch) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
             subscription,
             build,
-            prHeadBranch,
             forceUpdate);
+
+        if (unsafeFlown && pr != null)
+        {
+            await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
+            pr = null;
+            prInfo = null;
+        }
 
         if (codeFlowRes == null)
         {
@@ -130,17 +134,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (!codeFlowRes.HadUpdates)
         {
             return;
-        }
-
-        if (unsafeFlow)
-        {
-            // if we had an existing PR and we had to unsafe flow, we closed the PR and had to create a different head branch
-            if (pr != null)
-            {
-                prHeadBranch = updatedPrHeadBranch;
-            }
-            pr = null;
-            prInfo = null;
         }
 
         if (isForwardFlow)
@@ -165,7 +158,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
         }
 
-        // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
         if (codeFlowRes.HadConflicts)
         {
             await RequestManualConflictResolutionAsync(
@@ -176,7 +168,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
-                unsafeFlow);
+                unsafeFlown);
 
             return;
         }
@@ -190,9 +182,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs,
-                unsafeFlow);
+                unsafeFlown);
         }
-        else if (pr != null && prInfo != null)
+        else if (prInfo != null)
         {
             await UpdateCodeFlowPullRequestAsync(
                 update,
@@ -205,15 +197,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task<(CodeFlowResult? codeflowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
+    private async Task<(CodeFlowResult? codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         BuildDTO build,
-        string prHeadBranch,
         bool forceUpdate)
     {
+        string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
+
         _logger.LogInformation(
             "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
             subscription.IsForwardFlow() ? "Forward" : "Back",
@@ -268,12 +261,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             if (pr != null)
             {
                 prHeadBranch = GetNewBranchName(subscription.TargetBranch);
-                IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-                await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
-                await remote.ClosePullRequestAsync(pr.Url);
-                await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             }
-            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(pr, subscription, build, prHeadBranch, forceUpdate);
+
+            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(subscription, build, prHeadBranch, forceUpdate);
         }
         catch (Exception)
         {
@@ -307,15 +297,25 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
 
         // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
+        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(
+            subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath,
+            prHeadBranch);
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
+    private async Task ClosePullRequestAfterUnsafeFlowAsync(InProgressPullRequest pr, SubscriptionDTO subscription)
+    {
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+
+        await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
+        await remote.ClosePullRequestAsync(pr.Url);
+        await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+    }
+
     private async Task<CodeFlowResult> ExecuteUnsafeCodeFlowAsync(
-        InProgressPullRequest? pr,
         SubscriptionDTO subscription,
         BuildDTO build,
         string prHeadBranch,
