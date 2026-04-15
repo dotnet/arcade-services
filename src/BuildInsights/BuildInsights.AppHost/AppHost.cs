@@ -43,6 +43,8 @@ var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsi
     .WaitFor(queues);
 
 builder.AddProject<Projects.BuildInsights_WebhookTunnel>("buildInsightsWebhookTunnel")
+    .WithHttpEndpoint(port: 55691, name: "webhookTunnelHealth")
+    .WithHttpHealthCheck("/health", endpointName: "webhookTunnelHealth")
     .WithEnvironment("BUILD_INSIGHTS_API_PORT", buildInsightsApiHttpsPort.ToString())
     .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
     .WaitFor(buildInsightsApi)

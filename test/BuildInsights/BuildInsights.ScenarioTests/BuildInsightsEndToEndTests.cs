@@ -31,6 +31,7 @@ public class BuildInsightsEndToEndTests
     [Test]
     public async Task ValidatePRWithBreakingTests()
     {
+        var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(450));
         CancellationToken cancellationToken = cts.Token;
 
@@ -45,7 +46,7 @@ public class BuildInsightsEndToEndTests
 
         DateTimeOffset _start = DateTimeOffset.UtcNow;
 
-        var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
+        //var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
         storage.SetContext($"{testGitHubInformation.Repository}/{testGitHubInformation.Commit.Sha}");
 
         await WaitForCompletedBuilds(testGitHubInformation, cancellationToken);

@@ -16,6 +16,8 @@ using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Services.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,34 +37,42 @@ internal static class WebhookTunnelCommand
 
     public static async Task RunAsync()
     {
-        var hostBuilder = Host.CreateApplicationBuilder();
-        hostBuilder.AddSharedConfiguration();
+        var builder = WebApplication.CreateBuilder();
+        builder.AddSharedConfiguration();
+        builder.Services.AddSingleton<TunnelReadinessState>();
 
-        var keyVaultName = hostBuilder.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName);
+        var keyVaultName = builder.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName);
         var credential = new DefaultAzureCredential();
-        hostBuilder.Configuration.AddAzureKeyVault(
+        builder.Configuration.AddAzureKeyVault(
             new Uri($"https://{keyVaultName}.vault.azure.net/"),
             credential,
             new KeyVaultSecretsWithPrefix(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix));
 
-        var gitHubAppId = hostBuilder.Configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
+        var gitHubAppId = builder.Configuration.GetValue<int?>(BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp + ":AppId")
             ?? throw new InvalidOperationException("GitHubApp:AppId is not configured.");
-        var gitHubAppPrivateKey = hostBuilder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubAppPrivateKey];
+        var gitHubAppPrivateKey = builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubAppPrivateKey];
 
-        hostBuilder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        hostBuilder.Services.Configure<GitHubTokenProviderOptions>(o =>
+        builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        builder.Services.Configure<GitHubTokenProviderOptions>(o =>
         {
             o.GitHubAppId = gitHubAppId;
             o.PrivateKey = gitHubAppPrivateKey;
         });
-        hostBuilder.Services.AddGitHubTokenProvider();
+        builder.Services.AddGitHubTokenProvider();
 
         using var cancellationTokenSource = new CancellationTokenSource();
-        using var host = hostBuilder.Build();
-        await host.StartAsync(cancellationTokenSource.Token);
+        await using var app = builder.Build();
+        app.MapGet("/health", (TunnelReadinessState readinessState) =>
+            readinessState.IsReady
+                ? Results.Ok(new { status = "Healthy", phase = readinessState.Phase })
+                : Results.Json(
+                    new { status = "Starting", phase = readinessState.Phase },
+                    statusCode: StatusCodes.Status503ServiceUnavailable));
 
-        var options = TunnelCommandOptions.FromConfiguration(hostBuilder.Configuration);
-        await using var runner = ActivatorUtilities.CreateInstance<WebhookTunnelRunner>(host.Services, options);
+        await app.StartAsync(cancellationTokenSource.Token);
+
+        var options = TunnelCommandOptions.FromConfiguration(builder.Configuration);
+        await using var runner = ActivatorUtilities.CreateInstance<WebhookTunnelRunner>(app.Services, options);
 
         void RequestShutdown()
         {
@@ -82,7 +92,7 @@ internal static class WebhookTunnelCommand
         void processExitHandler(object? _, EventArgs __) => RequestShutdown();
         void unloadingHandler(AssemblyLoadContext _) => RequestShutdown();
 
-        using var applicationStoppingRegistration = host.Services
+        using var applicationStoppingRegistration = app.Services
             .GetRequiredService<IHostApplicationLifetime>()
             .ApplicationStopping
             .Register(RequestShutdown);
@@ -100,7 +110,7 @@ internal static class WebhookTunnelCommand
             Console.CancelKeyPress -= consoleCancelHandler;
             AppDomain.CurrentDomain.ProcessExit -= processExitHandler;
             AssemblyLoadContext.Default.Unloading -= unloadingHandler;
-            await host.StopAsync(CancellationToken.None);
+            await app.StopAsync(CancellationToken.None);
         }
     }
 
@@ -108,6 +118,7 @@ internal static class WebhookTunnelCommand
     {
         private readonly TunnelCommandOptions _options;
         private readonly IGitHubAppTokenProvider _gitHubAppTokenProvider;
+        private readonly TunnelReadinessState _readinessState;
         private readonly ProcessManager _processManager;
         private readonly HttpClient _healthCheckClient;
         private readonly StringBuilder _devTunnelLog = new();
@@ -116,10 +127,14 @@ internal static class WebhookTunnelCommand
         private string? _tunnelUrl;
         private bool _cleanedUp;
 
-        public WebhookTunnelRunner(TunnelCommandOptions options, IGitHubAppTokenProvider gitHubAppTokenProvider)
+        public WebhookTunnelRunner(
+            TunnelCommandOptions options,
+            IGitHubAppTokenProvider gitHubAppTokenProvider,
+            TunnelReadinessState readinessState)
         {
             _options = options;
             _gitHubAppTokenProvider = gitHubAppTokenProvider;
+            _readinessState = readinessState;
             _processManager = new ProcessManager(NullLogger.Instance, gitExecutable: "git");
             _healthCheckClient = new HttpClient(new HttpClientHandler
             {
@@ -136,6 +151,8 @@ internal static class WebhookTunnelCommand
         {
             try
             {
+                _readinessState.ReportProgress("Starting up");
+
                 WriteSection("Build Insights local webhook tunnel");
                 Console.WriteLine("ℹ️ This workflow re-points the shared Build Insights dev webhook targets.");
                 Console.WriteLine("👤 Only one developer should run it at a time.");
@@ -147,10 +164,12 @@ internal static class WebhookTunnelCommand
 
                 await EnsureDevTunnelLoggedInAsync(cancellationToken);
 
+                _readinessState.ReportProgress("Checking local API health");
                 WriteSection("Checking local service health");
                 await WaitForHealthyUrlAsync($"{_options.LocalBaseUrl}/health", cancellationToken);
                 Console.WriteLine($"✅ Local API is healthy at {_options.LocalBaseUrl}/health");
 
+                _readinessState.ReportProgress("Creating the dev tunnel");
                 WriteSection("Starting the dev tunnel");
                 var tunnelInfo = await StartDevTunnelAsync(cancellationToken);
                 _tunnelUrl = tunnelInfo.TunnelUrl;
@@ -164,9 +183,12 @@ internal static class WebhookTunnelCommand
                 await WaitForHealthyUrlAsync($"{_tunnelUrl}/health", cancellationToken);
                 Console.WriteLine("✅ Public tunnel health check succeeded.");
 
+                _readinessState.ReportProgress("Configuring the GitHub webhook");
                 await ConfigureGitHubWebhookAsync(cancellationToken);
+                _readinessState.ReportProgress("Configuring Azure DevOps service hooks");
                 await ConfigureAzureDevOpsHooksAsync(cancellationToken);
 
+                _readinessState.ReportReady("Tunnel and webhooks are ready");
                 Console.WriteLine("✅ Tunnel and webhooks are ready");
                 Console.WriteLine($"🐙 GitHub endpoint: {_tunnelUrl}{GitHubWebhookPath}");
 
@@ -275,6 +297,7 @@ internal static class WebhookTunnelCommand
             }
 
             _cleanedUp = true;
+            _readinessState.ReportProgress("Cleaning up");
 
             WriteSection("Cleaning up");
             TryStopDevTunnelProcess();
@@ -542,6 +565,53 @@ internal static class WebhookTunnelCommand
             "Cleaning up" => "🧹",
             _ => "📌",
         };
+    }
+
+    private sealed class TunnelReadinessState
+    {
+        private readonly object _lock = new();
+        private string _phase = "Starting up";
+        private bool _isReady;
+
+        public string Phase
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _phase;
+                }
+            }
+        }
+
+        public bool IsReady
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _isReady;
+                }
+            }
+        }
+
+        public void ReportProgress(string phase)
+        {
+            lock (_lock)
+            {
+                _phase = phase;
+                _isReady = false;
+            }
+        }
+
+        public void ReportReady(string phase)
+        {
+            lock (_lock)
+            {
+                _phase = phase;
+                _isReady = true;
+            }
+        }
     }
 
     private sealed record TunnelCommandOptions(
