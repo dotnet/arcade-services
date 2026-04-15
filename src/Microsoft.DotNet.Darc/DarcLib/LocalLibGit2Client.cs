@@ -415,7 +415,11 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 {
                     Username = Constants.GitHubBotUserName,
                     Password = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
-                }
+                },
+            OnPushStatusError = error =>
+            {
+                throw new LibGit2SharpException($"Failed to push {error.Reference}: {error.Message}");
+            }
         };
 
         var refSpec = force
