@@ -1,12 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
+using System.Runtime.Caching;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Maestro.Common;
 
 public interface ICache
 {
@@ -33,14 +30,14 @@ public class NoopCache : ICache
 
 public class MemoryCache : ICache, IDisposable
 {
-    private readonly Extensions.Caching.Memory.MemoryCache _cache = new(new MemoryCacheOptions());
+    private readonly System.Runtime.Caching.MemoryCache _cache = new("Darc");
 
     public Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class
     {
-        var options = new MemoryCacheEntryOptions();
+        var options = new CacheItemPolicy();
         if (expiration.HasValue)
         {
-            options.AbsoluteExpirationRelativeToNow = expiration.Value;
+            options.AbsoluteExpiration = DateTimeOffset.Now.Add(expiration.Value);
         }
 
         _cache.Set(key, value, options);
@@ -49,13 +46,13 @@ public class MemoryCache : ICache, IDisposable
 
     public Task<T?> TryGetAsync<T>(string key) where T : class
     {
-        _cache.TryGetValue(key, out T? value);
+        var value = _cache.Get(key) as T;
         return Task.FromResult(value);
     }
 
     public Task<bool> DeleteAsync(string key)
     {
-        bool exists = _cache.TryGetValue(key, out _);
+        bool exists = _cache.Contains(key);
         if (exists)
         {
             _cache.Remove(key);

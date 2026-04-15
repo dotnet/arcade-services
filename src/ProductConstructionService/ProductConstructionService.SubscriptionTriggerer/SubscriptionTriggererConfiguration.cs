@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.DataProviders;
+using Maestro.Services.Common;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 using Maestro.Data;
 using Azure.Core;

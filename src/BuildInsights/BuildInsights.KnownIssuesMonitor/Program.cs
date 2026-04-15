@@ -3,10 +3,10 @@
 
 using BuildInsights.KnownIssuesMonitor;
 using BuildInsights.ServiceDefaults;
+using Maestro.Services.Common;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 
 var builder = await Host.CreateApplicationBuilder()
     .AddSharedConfiguration()

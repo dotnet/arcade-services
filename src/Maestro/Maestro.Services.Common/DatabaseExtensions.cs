@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Services.Common;
 
 public static class DatabaseExtensions
 {

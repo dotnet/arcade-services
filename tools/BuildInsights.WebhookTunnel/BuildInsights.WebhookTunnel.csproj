@@ -20,8 +20,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildInsights\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\src\Maestro\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\..\src\Maestro\Maestro.Services.Common\Maestro.Services.Common.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

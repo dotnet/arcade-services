@@ -3,12 +3,12 @@
 
 using System.Reflection;
 using Azure.Core;
+using Maestro.Services.Common;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Services.Common;
 
 public static class DataProtection
 {

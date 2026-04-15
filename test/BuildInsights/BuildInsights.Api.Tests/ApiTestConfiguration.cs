@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.ServiceDefaults;
+using Maestro.Services.Common;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 
 namespace BuildInsights.Api.Tests;
 

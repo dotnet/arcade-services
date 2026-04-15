@@ -13,15 +13,13 @@ using Azure.Identity;
 using BuildInsights.ServiceDefaults;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Services.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging.Abstractions;
-using ProductConstructionService.Common;
 
 await WebhookTunnelCommand.RunAsync();
 
@@ -51,10 +49,7 @@ internal static class WebhookTunnelCommand
             ?? throw new InvalidOperationException("GitHubApp:AppId is not configured.");
         var gitHubAppPrivateKey = hostBuilder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubAppPrivateKey];
 
-        hostBuilder.Services.AddTransient<ISystemClock, SystemClock>();
-        hostBuilder.Services.AddTransient<IInstallationLookup, InMemoryCacheInstallationLookup>();
         hostBuilder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        hostBuilder.Services.AddSingleton<ExponentialRetry>();
         hostBuilder.Services.Configure<GitHubTokenProviderOptions>(o =>
         {
             o.GitHubAppId = gitHubAppId;
@@ -79,13 +74,13 @@ internal static class WebhookTunnelCommand
             }
         }
 
-        ConsoleCancelEventHandler consoleCancelHandler = (_, e) =>
+        void consoleCancelHandler(object? _, ConsoleCancelEventArgs e)
         {
             e.Cancel = true;
             RequestShutdown();
-        };
-        EventHandler processExitHandler = (_, _) => RequestShutdown();
-        Action<AssemblyLoadContext> unloadingHandler = _ => RequestShutdown();
+        }
+        void processExitHandler(object? _, EventArgs __) => RequestShutdown();
+        void unloadingHandler(AssemblyLoadContext _) => RequestShutdown();
 
         using var applicationStoppingRegistration = host.Services
             .GetRequiredService<IHostApplicationLifetime>()

@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Services.Common.Cache;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common.Cache;
 using System.Text.Json;
 
-namespace ProductConstructionService.Common.FeatureFlags;
+namespace Maestro.Services.Common.FeatureFlags;
 
 /// <summary>
 /// Implementation of the feature flag service using Redis as the backing store.

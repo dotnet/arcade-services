@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using BuildInsights.ServiceDefaults;
+using Maestro.Services.Common;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using NUnit.Framework;
-using ProductConstructionService.Common;
 
 namespace BuildInsights.KnownIssuesMonitor.Tests;
 
