@@ -418,7 +418,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 },
             OnPushStatusError = error =>
             {
-                throw new LibGit2SharpException($"Failed to push {error.Reference}: {error.Message}");
+                throw new DarcException($"Failed to push {error.Reference}: {error.Message}");
             }
         };
 
