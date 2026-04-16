@@ -69,13 +69,7 @@ public class Local
         IBasicBarClient barClient,
         UnixPath relativeDependencyBasePath = null)
     {
-        // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
-        // Update the incoming dependencies with locations.
-        List<DependencyDetail> oldDependencies = await GetDependenciesAsync(relativeBasePath: relativeDependencyBasePath);
-
         var locationResolver = new AssetLocationResolver(barClient);
-        await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
-        await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
@@ -104,8 +98,8 @@ public class Local
             sourceDependency: null,
             _repoRootDir.Value,
             branch: null,
-            oldDependencies,
             targetDotNetVersion,
+            locationResolver,
             relativeBasePath: relativeDependencyBasePath);
         List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 

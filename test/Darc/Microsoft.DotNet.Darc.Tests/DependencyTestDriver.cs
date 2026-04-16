@@ -94,7 +94,6 @@ internal class DependencyTestDriver
             sourceDependency: null,
             TemporaryRepositoryPath,
             null,
-            null,
             dotNetVersion);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();
         await GitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
@@ -110,7 +109,6 @@ internal class DependencyTestDriver
             dependencies,
             sourceDependency: null,
             TemporaryRepositoryPath,
-            null,
             null,
             null);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();

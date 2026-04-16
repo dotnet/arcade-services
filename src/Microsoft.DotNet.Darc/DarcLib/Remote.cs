@@ -177,9 +177,6 @@ public sealed class Remote : IRemote
         List<DependencyDetail> itemsToUpdate,
         UnixPath targetDirectory)
     {
-        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(targetRepo, branch, relativeBasePath: targetDirectory)];
-        await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
-
         var arcadePackage = itemsToUpdate.GetArcadeUpdate();
 
         bool isRecursiveUpdateTargetingRootDirectory = targetRepo == itemsToUpdate.FirstOrDefault()?.RepoUri &&
@@ -195,7 +192,6 @@ public sealed class Remote : IRemote
                 sourceDependency: null,
                 targetRepo,
                 branch,
-                oldDependencies,
                 incomingDotNetSdkVersion: null,
                 relativeBasePath: targetDirectory);
 
@@ -206,7 +202,6 @@ public sealed class Remote : IRemote
             return await GetUpdatedDependencyAndArcadeFiles(
                 targetRepo,
                 branch,
-                oldDependencies,
                 itemsToUpdate,
                 arcadePackage,
                 targetDirectory);
@@ -216,7 +211,6 @@ public sealed class Remote : IRemote
     private async Task<List<GitFile>> GetUpdatedDependencyAndArcadeFiles(
         string targetRepo,
         string branch,
-        List<DependencyDetail> oldDependencies,
         List<DependencyDetail> itemsToUpdate,
         DependencyDetail arcadePackage,
         UnixPath targetDirectory)
@@ -228,7 +222,6 @@ public sealed class Remote : IRemote
             sourceDependency: null,
             targetRepo,
             branch,
-            oldDependencies,
             targetDotNetVersion,
             relativeBasePath: targetDirectory);
 

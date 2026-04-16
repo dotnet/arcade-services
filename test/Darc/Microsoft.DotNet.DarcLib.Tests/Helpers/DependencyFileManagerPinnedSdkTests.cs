@@ -105,7 +105,6 @@ public class DependencyFileManagerPinnedSdkTests
             null,
             "https://github.com/test/repo",
             "main",
-            new List<DependencyDetail>(),
             incomingVersion);
 
         // Assert
@@ -155,7 +154,6 @@ public class DependencyFileManagerPinnedSdkTests
             null,
             "https://github.com/test/repo",
             "main",
-            new List<DependencyDetail>(),
             incomingVersion);
 
         // Assert
@@ -206,7 +204,6 @@ public class DependencyFileManagerPinnedSdkTests
             null,
             "https://github.com/test/repo",
             "main",
-            new List<DependencyDetail>(),
             incomingVersion);
 
         // Assert

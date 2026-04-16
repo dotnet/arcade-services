@@ -470,23 +470,24 @@ public class BackflowConflictResolverTests
                 It.IsAny<SourceDependency>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
+                It.IsAny<IAssetLocationResolver>(),
                 It.IsAny<bool?>(),
                 It.IsAny<UnixPath>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,
                        string repo,
                        string? commit,
-                       IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
+                       IAssetLocationResolver? assetLocationResolver,
                        bool? _,
                        UnixPath __) =>
             {
                 // Update dependencies in-memory
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
+                var currentDependencies = _versionDetails[key].Dependencies;
                 _versionDetails[key] = new VersionDetails(
-                    oldDependencies
+                    currentDependencies
                         .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name.Equals(dep.Name, StringComparison.OrdinalIgnoreCase)) ?? dep)
                         .ToArray(),
                     new SourceDependency(build, MappingName));
