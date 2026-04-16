@@ -24,25 +24,68 @@ namespace BuildInsights.BuildAnalysis;
 public interface IBuildDataService
 {
     Task<Models.Build> GetBuildAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<Models.Build>> GetFailedBuildsAsync(string orgId, string projectId, string repository, CancellationToken cancellationToken);
+
     Task<List<Models.TestRunDetails>> GetFailingTestsForBuildAsync(
         Models.Build build,
         CancellationToken cancellationToken);
+
     Task<IReadOnlyList<Models.TestRunDetails>> GetAllFailingTestsForBuildAsync(
         Models.Build build,
         CancellationToken cancellationToken);
+
     Task<List<Models.TestHistoryByBranch>> GetTestHistoryAsync(
         string orgId,
         string projectId,
         string testName,
         DateTimeOffset maxCompleted,
         CancellationToken cancellationToken);
-    Task<Models.TestCaseResult> GetTestResultByIdAsync(string orgId, string projectId, int testRunId, int testCaseResultId, CancellationToken cancellationToken, Models.ResultDetails resultDetails = Models.ResultDetails.None);
-    Task<IReadOnlyList<Models.Build>> GetLatestBuildsForBranchAsync(string orgId, string projectId, int definitionId, Models.GitRef targetBranch, DateTimeOffset latestDate, CancellationToken cancellationToken);
-    Task<IReadOnlyList<Models.TimelineRecord>> GetLatestBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<Models.TimelineRecord>> GetBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, Guid timelineId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<Models.TimelineRecord>> GetTimelineRecordsFromAllAttempts(IReadOnlyCollection<Models.TimelineRecord> latestTimelineRecords, string orgId, string projectId, int buildId, CancellationToken cancellationToken);
-    Task<Models.BuildConfiguration> GetBuildConfiguration(string orgId, string projectId, int buildId, string artifactName, string fileName, CancellationToken cancellationToken);
+
+    Task<Models.TestCaseResult> GetTestResultByIdAsync(
+        string orgId,
+        string projectId,
+        int testRunId,
+        int testCaseResultId,
+        CancellationToken cancellationToken,
+        Models.ResultDetails resultDetails = Models.ResultDetails.None);
+
+    Task<IReadOnlyList<Models.Build>> GetLatestBuildsForBranchAsync(
+        string orgId,
+        string projectId,
+        int definitionId,
+        Models.GitRef targetBranch,
+        DateTimeOffset latestDate,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Models.TimelineRecord>> GetLatestBuildTimelineRecordsAsync(
+        string orgId,
+        string projectId,
+        int buildId,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Models.TimelineRecord>> GetBuildTimelineRecordsAsync(
+        string orgId,
+        string projectId,
+        int buildId,
+        Guid timelineId,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Models.TimelineRecord>> GetTimelineRecordsFromAllAttempts(
+        IReadOnlyCollection<Models.TimelineRecord> latestTimelineRecords,
+        string orgId,
+        string projectId,
+        int buildId,
+        CancellationToken cancellationToken);
+
+    Task<Models.BuildConfiguration> GetBuildConfiguration(
+        string orgId,
+        string projectId,
+        int buildId,
+        string artifactName,
+        string fileName,
+        CancellationToken cancellationToken);
+
     Task<string> GetProjectName(string orgId, string projectId);
 
     Task<ImmutableList<Models.TestRunDetails>> GetTestsForBuildAsync(
@@ -52,6 +95,7 @@ public interface IBuildDataService
     IAsyncEnumerable<Models.HelixMetadata> GetTestRunMetaDataAsync(
         ImmutableList<string> attachmentUrl,
         CancellationToken cancellationToken);
+
     Task<Stream> GetLogContent(string orgId, string project, int buildId, int logId);
 }
 
@@ -89,8 +133,7 @@ public sealed class BuildDataProvider : IBuildDataService
             azdoBuild = await buildClient.GetBuildAsync(
                 projectId,
                 buildId,
-                cancellationToken: cancellationToken
-            );
+                cancellationToken: cancellationToken);
         }
         catch (Microsoft.TeamFoundation.Build.WebApi.BuildNotFoundException e)
         {
@@ -183,9 +226,7 @@ public sealed class BuildDataProvider : IBuildDataService
                 new Models.TestRunDetails(
                     MapModel(run),
                     failedResults.Concat(passedOnRerunResults),
-                    run.CompletedDate
-                )
-            );
+                    run.CompletedDate));
         }
 
         return builder.ToImmutable();
@@ -205,8 +246,7 @@ public sealed class BuildDataProvider : IBuildDataService
                     stream,
                     content: null,
                     formatterLogger: null,
-                    cancellationToken: cancellationToken
-                );
+                    cancellationToken: cancellationToken);
             yield return MapModel(helixMetaDataJson);
         }
     }
@@ -232,8 +272,7 @@ public sealed class BuildDataProvider : IBuildDataService
             "Fetching test run information from Azure DevOps for build '{buildId}' in project '{projectName}' and org '{orgName}'.",
             build.Id,
             build.ProjectName,
-            build.OrganizationName
-        );
+            build.OrganizationName);
 
         List<TestRun> testRuns = await GetTestRuns(build, cancellationToken);
 
@@ -247,8 +286,7 @@ public sealed class BuildDataProvider : IBuildDataService
                     run.PipelineReference?.PhaseReference?.PhaseName,
                     run.PipelineReference?.StageReference?.StageName,
                     run.PipelineReference?.JobReference?.JobName
-                }
-            )
+                })
             .SelectMany(group => group.Where(testRun =>
                 testRun.PipelineReference.JobReference.Attempt == group.Max(t => t.PipelineReference.JobReference.Attempt)));
 
@@ -638,86 +676,72 @@ public sealed class BuildDataProvider : IBuildDataService
 
     public static string GetPullRequestUrl(Build build)
     {
-        if (build.Reason == BuildReason.PullRequest)
+        if (build.Reason != BuildReason.PullRequest)
         {
-            if (build.Parameters == null)
+            return null;
+        }
+
+        if (build.Parameters == null)
+        {
+            return null;
+        }
+
+        string pullRequestNumber = string.Empty;
+        string sourceRepositoryUri = string.Empty;
+        var props = JsonSerializer.Deserialize<JsonElement>(build.Parameters);
+        foreach (JsonProperty e in props.EnumerateObject())
+        {
+            if (e.Name.Equals("system.pullrequest.pullRequestNumber", StringComparison.OrdinalIgnoreCase))
             {
-                return null;
+                pullRequestNumber = e.Value.GetString();
             }
 
-            string pullRequestNumber = "";
-            string sourceRepositoryUri = "";
-            var props = JsonSerializer.Deserialize<JsonElement>(build.Parameters);
-            foreach (JsonProperty e in props.EnumerateObject())
+            if (e.Name.Equals("system.pullrequest.sourceRepositoryUri", StringComparison.OrdinalIgnoreCase))
             {
-                if (e.Name.Equals("system.pullrequest.pullRequestNumber", StringComparison.OrdinalIgnoreCase))
-                {
-                    pullRequestNumber = e.Value.GetString();
-                }
-
-                if (e.Name.Equals("system.pullrequest.sourceRepositoryUri", StringComparison.OrdinalIgnoreCase))
-                {
-                    sourceRepositoryUri = e.Value.GetString();
-                }
+                sourceRepositoryUri = e.Value.GetString();
             }
+        }
 
-            if (!string.IsNullOrEmpty(pullRequestNumber) && !string.IsNullOrEmpty(sourceRepositoryUri))
-            {
-                return $"{sourceRepositoryUri}/pull/{pullRequestNumber}";
-            }
-
+        if (!string.IsNullOrEmpty(pullRequestNumber) && !string.IsNullOrEmpty(sourceRepositoryUri))
+        {
+            return $"{sourceRepositoryUri}/pull/{pullRequestNumber}";
         }
 
         return null;
     }
 
     private static Models.BuildResult MapModel(BuildResult result)
-    {
-        return result switch
+        => result switch
         {
             BuildResult.None => Models.BuildResult.None,
             BuildResult.Succeeded => Models.BuildResult.Succeeded,
             BuildResult.PartiallySucceeded => Models.BuildResult.PartiallySucceeded,
             BuildResult.Failed => Models.BuildResult.Failed,
             BuildResult.Canceled => Models.BuildResult.Canceled,
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(result),
-                $"BuildResult.{result} does not map to known value"
-            )
+            _ => throw new ArgumentOutOfRangeException(nameof(result), $"BuildResult.{result} does not map to known value")
         };
-    }
 
     private static Models.ResultGroupType MapModel(ResultGroupType result)
-    {
-        return result switch
+        => result switch
         {
             ResultGroupType.None => Models.ResultGroupType.None,
             ResultGroupType.DataDriven => Models.ResultGroupType.DataDriven,
             ResultGroupType.Generic => Models.ResultGroupType.Generic,
             ResultGroupType.OrderedTest => Models.ResultGroupType.OrderedTest,
             ResultGroupType.Rerun => Models.ResultGroupType.Rerun,
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(result),
-                $"ResultGroupType.{result} does not map to known value"
-            )
+            _ => throw new ArgumentOutOfRangeException(nameof(result), $"ResultGroupType.{result} does not map to known value")
         };
-    }
 
     private static ResultDetails MapModel(Models.ResultDetails result)
-    {
-        return result switch
+        => result switch
         {
             Models.ResultDetails.None => ResultDetails.None,
             Models.ResultDetails.Iterations => ResultDetails.Iterations,
             Models.ResultDetails.WorkItems => ResultDetails.WorkItems,
             Models.ResultDetails.SubResults => ResultDetails.SubResults,
             Models.ResultDetails.Point => ResultDetails.Point,
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(result),
-                $"ResultDetails.{result} does not map to known value"
-            )
+            _ => throw new ArgumentOutOfRangeException(nameof(result), $"ResultDetails.{result} does not map to known value")
         };
-    }
 
     private static Models.TestCaseResult MapModel(TestCaseResult r, int? buildId = default, string projectName = default, int? runId = default)
     {
@@ -748,12 +772,11 @@ public sealed class BuildDataProvider : IBuildDataService
     private static Models.PreviousBuildRef MapModel(FailingSince f)
     {
         if (f == null)
+        {
             return null;
+        }
 
-        return new Models.PreviousBuildRef(
-            buildNumber: f.Build.Number,
-            date: f.Date
-        );
+        return new Models.PreviousBuildRef(buildNumber: f.Build.Number, date: f.Date);
     }
 
     private static Models.TestCaseResult MapModel(TestCaseResult root, TestSubResult r, int? buildId = default, string projectName = default, int? runId = default)
@@ -780,8 +803,7 @@ public sealed class BuildDataProvider : IBuildDataService
             MapModel(r.ResultGroupType),
             r.SubResults?.Select(s => MapModel(root, s, buildId, projectName, runId)).ToImmutableList(),
             r.SubResults?.Count(s => s.Outcome == "Failed") ?? 1,
-            r.SubResults?.Count ?? 1
-        );
+            r.SubResults?.Count ?? 1);
     }
 
     private static Models.TestRunSummary MapModel(TestRun r)
@@ -803,8 +825,7 @@ public sealed class BuildDataProvider : IBuildDataService
             logUrl: r.Log?.Url,
             previousAttempts: r.PreviousAttempts.Select(MapModel).ToImmutableList(),
             order: r.Order,
-            startDate: r.StartTime
-        );
+            startDate: r.StartTime);
     }
 
     private static Models.TimelineIssue MapModel(Issue r)
@@ -812,16 +833,14 @@ public sealed class BuildDataProvider : IBuildDataService
         return new Models.TimelineIssue(
             message: r.Message,
             MapModel(r.Type),
-            data: r.Data.ToImmutableDictionary()
-        );
+            data: r.Data.ToImmutableDictionary());
     }
 
     private static Models.TimelineAttempt MapModel(TimelineAttempt r)
     {
         return new Models.TimelineAttempt(
             attempt: r.Attempt,
-            timelineId: r.TimelineId
-        );
+            timelineId: r.TimelineId);
     }
 
     private static Models.RecordType MapModelRecordType(string recordType)
@@ -839,7 +858,10 @@ public sealed class BuildDataProvider : IBuildDataService
     private static Models.TaskResult MapModel(TaskResult? r)
     {
         if (!r.HasValue)
+        {
             return Models.TaskResult.None;
+        }
+
         return r.Value switch
         {
             TaskResult.Succeeded => Models.TaskResult.Succeeded,
@@ -938,8 +960,7 @@ public sealed class BuildDataProvider : IBuildDataService
             build.FinishTime,
             build.Status == BuildStatus.Completed,
             build.Reason.ToString(),
-            organization
-        );
+            organization);
     }
 
     private static Models.PipelineReference MapModel(PipelineReference p)
@@ -968,8 +989,7 @@ public sealed class BuildDataProvider : IBuildDataService
             ImmutableList<Models.TestCaseResult>.Empty,
             helixMetaDataJson.TestLists,
             helixMetaDataJson.Partitions,
-            helixMetaDataJson.ResultCounts
-        );
+            helixMetaDataJson.ResultCounts);
     }
 
     public async Task<Stream> GetLogContent(string orgId, string project, int buildId, int logId)
