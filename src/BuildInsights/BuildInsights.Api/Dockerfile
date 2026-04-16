@@ -11,10 +11,10 @@ COPY ["eng/Version.Details.props", "./eng/"]
 # Maestro dependency
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj", "./Maestro.Common/"]
+COPY ["src/Maestro/Maestro.Common/Maestro.Services.Common.csproj", "./Maestro.Services.Common/"]
 
 # ProductConstructionService dependencies
 WORKDIR /src/ProductConstructionService
-COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 
 # BuildInsights projects
