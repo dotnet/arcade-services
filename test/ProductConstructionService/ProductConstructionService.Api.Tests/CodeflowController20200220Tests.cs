@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using ProductConstructionService.Common.Cache;
+using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Tests;

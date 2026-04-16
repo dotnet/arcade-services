@@ -26,6 +26,7 @@
     <Project Path="src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj" />
     <Project Path="src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj" />
     <Project Path="src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj" />
+    <Project Path="src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj" />
     <Project Path="src/Maestro/Microsoft.DotNet.Maestro.Tasks/Microsoft.DotNet.Maestro.Tasks.csproj" />
   </Folder>
   <Folder Name="/src/ProductConstructionService/">
@@ -33,10 +34,8 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.AppHost/ProductConstructionService.AppHost.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
-    <Project Path="src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj" />
-    <Project Path="src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj" />
   </Folder>

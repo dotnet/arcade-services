@@ -5,7 +5,7 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Configuration;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Services.Common;
 
 public class KeyVaultSecretsWithPrefix(string prefix) : KeyVaultSecretManager
 {

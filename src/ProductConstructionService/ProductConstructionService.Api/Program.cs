@@ -2,12 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
+using Maestro.Services.Common;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.StaticFiles;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);

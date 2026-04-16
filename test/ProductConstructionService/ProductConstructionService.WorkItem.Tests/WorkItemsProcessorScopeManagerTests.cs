@@ -6,7 +6,7 @@ using Maestro.Common.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using ProductConstructionService.Common.Cache;
+using Maestro.Services.Common.Cache;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItem.Tests;
