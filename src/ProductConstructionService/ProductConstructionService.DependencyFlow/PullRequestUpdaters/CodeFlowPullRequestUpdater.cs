@@ -153,51 +153,32 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (codeFlowRes.HadConflicts)
         {
-            var manualResolutionBranch = prHeadBranch;
-
-            if (unsafeFlown && pr != null)
-            {
-                var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
-                var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localRepo);
-
-                if (shouldReuseExistingPr)
-                {
-                    // Unsafe flow generates a fresh branch name when a PR already exists, but
-                    // in the reusable empty-PR case that new branch was never pushed anywhere.
-                    manualResolutionBranch = pr.HeadBranch;
-                }
-                else
-                {
-                    await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
-                    pr = null;
-                }
-            }
-
-            await RequestManualConflictResolutionAsync(
+            await HandleConflictsAsync(
                 update,
                 pr,
                 previousSourceSha,
                 subscription,
-                manualResolutionBranch,
+                prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
                 unsafeFlown);
-
             return;
         }
 
         // TODO Figure out if we want to close
         // Unsafe flow PRs that when a new unsafe update comes in..
+        string? oldPrUrl = null;
         if (unsafeFlown && pr != null)
         {
-            await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
+            oldPrUrl = pr.Url;
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             pr = null;
             prInfo = null;
         }
 
         if (pr == null)
         {
-            await CreateCodeFlowPullRequestAsync(
+            var (newPr, _) = await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
                 subscription,
@@ -205,6 +186,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs,
                 unsafeFlown);
+
+            if (oldPrUrl != null)
+            {
+                await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPr.Url);
+            }
         }
         else if (prInfo != null)
         {
@@ -328,13 +314,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
-    private async Task ClosePullRequestAfterUnsafeFlowAsync(InProgressPullRequest pr, SubscriptionDTO subscription)
+    private async Task ClosePullRequestAfterUnsafeFlowAsync(string oldPrUrl, SubscriptionDTO subscription, string newPrUrl)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
-        await remote.CommentPullRequestAsync(pr.Url, "Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply.");
-        await remote.ClosePullRequestAsync(pr.Url);
-        await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+        await remote.CommentPullRequestAsync(oldPrUrl,
+            $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrUrl}");
+        await remote.ClosePullRequestAsync(oldPrUrl);
     }
 
     private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
@@ -437,7 +423,55 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return upstreamRepoDiffs;
     }
 
-    private async Task RequestManualConflictResolutionAsync(
+    private async Task HandleConflictsAsync(
+        SubscriptionUpdateWorkItem update,
+        InProgressPullRequest? pr,
+        string? previousSourceSha,
+        SubscriptionDTO subscription,
+        string prHeadBranch,
+        CodeFlowResult codeFlowRes,
+        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
+        bool unsafeFlown)
+    {
+        var manualResolutionBranch = prHeadBranch;
+        string? oldPrUrl = null;
+
+        if (unsafeFlown && pr != null)
+        {
+            var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+            var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localRepo);
+
+            if (shouldReuseExistingPr)
+            {
+                // Unsafe flow generates a fresh branch name when a PR already exists, but
+                // in the reusable empty-PR case that new branch was never pushed anywhere.
+                manualResolutionBranch = pr.HeadBranch;
+            }
+            else
+            {
+                oldPrUrl = pr.Url;
+                await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+                pr = null;
+            }
+        }
+
+        string newPrUrl = await RequestManualConflictResolutionAsync(
+            update,
+            pr,
+            previousSourceSha,
+            subscription,
+            manualResolutionBranch,
+            codeFlowRes,
+            upstreamRepoDiffs,
+            unsafeFlown);
+
+        if (oldPrUrl != null)
+        {
+            await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPrUrl);
+        }
+    }
+
+    private async Task<string> RequestManualConflictResolutionAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         string? previousSourceSha,
@@ -516,6 +550,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
+
+        return pr.Url;
     }
 
     private async Task<(bool prIsEmpty, string latestPrCommit, string latestTargetBranchCommit)> GetManualConflictResolutionPrStateAsync(
