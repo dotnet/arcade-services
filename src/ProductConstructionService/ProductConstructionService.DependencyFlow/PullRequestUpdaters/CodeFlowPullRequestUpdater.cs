@@ -111,7 +111,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var (codeFlowRes, unsafeFlown, prHeadBranch) = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlow, prHeadBranch) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
@@ -161,14 +161,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
-                unsafeFlown);
+                unsafeFlow);
             return;
         }
 
         // TODO Figure out if we want to close
         // Unsafe flow PRs that when a new unsafe update comes in..
         string? oldPrUrl = null;
-        if (unsafeFlown && pr != null)
+        if (unsafeFlow && pr != null)
         {
             oldPrUrl = pr.Url;
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
@@ -185,7 +185,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs,
-                unsafeFlown);
+                unsafeFlow);
 
             if (oldPrUrl != null)
             {
@@ -431,12 +431,12 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         string prHeadBranch,
         CodeFlowResult codeFlowRes,
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
-        bool unsafeFlown)
+        bool unsafeFlow)
     {
         var manualResolutionBranch = prHeadBranch;
         string? oldPrUrl = null;
 
-        if (unsafeFlown && pr != null)
+        if (unsafeFlow && pr != null)
         {
             var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
             var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localRepo);
@@ -463,7 +463,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             manualResolutionBranch,
             codeFlowRes,
             upstreamRepoDiffs,
-            unsafeFlown);
+            unsafeFlow);
 
         if (oldPrUrl != null)
         {
