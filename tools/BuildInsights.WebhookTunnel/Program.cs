@@ -541,7 +541,7 @@ internal static class WebhookTunnelCommand
         {
             try
             {
-                await _processManager.Execute(commandName, ["--version"], timeout: TimeSpan.FromSeconds(5), cancellationToken: cancellationToken);
+                await _processManager.Execute(commandName, ["--version"], timeout: TimeSpan.FromSeconds(15), cancellationToken: cancellationToken);
             }
             catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
             {
