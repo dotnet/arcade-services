@@ -27,7 +27,6 @@ COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductCons
 COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj", "./ProductConstructionService.BarViz/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj", "./ProductConstructionService.FeedCleaner/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 COPY ["src/ProductConstructionService/Microsoft.DotNet.ProductConstructionService.Client/Microsoft.DotNet.ProductConstructionService.Client.csproj", "./Microsoft.DotNet.ProductConstructionService.Client/"]
@@ -39,6 +38,7 @@ RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductCo
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
+COPY ["src/Maestro/Maestro.Services.Common",       "./Maestro.Services.Common"]
 COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]

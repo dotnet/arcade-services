@@ -37,10 +37,10 @@ RUN dotnet restore "./BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssues
 # Copy full source for Maestro dependency
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common", "./Maestro.Common"]
+COPY ["src/Maestro/Maestro.Services.Common", "./Maestro.Services.Common"]
 
 # Copy full source for ProductConstructionService dependencies
 WORKDIR /src/ProductConstructionService
-COPY ["src/ProductConstructionService/ProductConstructionService.Common", "./ProductConstructionService.Common"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems", "./ProductConstructionService.WorkItems"]
 
 # Copy full source for BuildInsights
