@@ -38,6 +38,7 @@ RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductCo
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
+COPY ["src/Maestro/Maestro.Services.Common",       "./Maestro.Services.Common"]
 COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]
