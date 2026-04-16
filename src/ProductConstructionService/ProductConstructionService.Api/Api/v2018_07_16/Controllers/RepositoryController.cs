@@ -1,16 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Maestro.Data;
-using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.WorkItems;
