@@ -338,7 +338,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // In such a case, we cannot compare commits 2. and 4.
         if (isBackwardOlder == isForwardOlder)
         {
-            ignoreNonLinearFlow = true;
             if (ignoreNonLinearFlow)
             {
                 _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
@@ -351,7 +350,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     CrossingFlow: null);
             }
 
-            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+            _logger.LogInformation("Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})", sourceRepo, backwardSha, forwardSha);
+            throw new NonLinearCodeflowException();
         }
 
         // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
