@@ -14,7 +14,7 @@ COPY ["eng/Version.Details.props", "./eng/"]
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
-COPY ["src/Maestro/Maestro.Common/Maestro.Services.Common.csproj",                      "./Maestro.Services.Common/"]
+COPY ["src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj",                      "./Maestro.Services.Common/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro.MergePolicyEvaluation/"]
@@ -38,11 +38,11 @@ RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductCo
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
-COPY ["src/Maestro/Maestro.Services.Common",       "./Maestro.Services.Common"]
 COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro.MergePolicyEvaluation"]
+COPY ["src/Maestro/Maestro.Services.Common",       "./Maestro.Services.Common"]
 
 WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
