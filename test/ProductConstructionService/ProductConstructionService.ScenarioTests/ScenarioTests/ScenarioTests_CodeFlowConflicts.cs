@@ -287,29 +287,20 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await AddBuildToChannelAsync(secondBuild.Id, channelName);
             await TriggerSubscriptionAsync(subscriptionId);
 
-            TestContext.WriteLine("Waiting for the existing PR to be closed and a new unsafe codeflow PR to show up");
-            PullRequest unsafePr = replacedPr;
-            for (var attempts = 0; attempts < 20; attempts++)
-            {
-                replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
-                var openPr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
-
-                if (replacedPr.State == ItemState.Closed && openPr.Number != replacedPr.Number)
-                {
-                    unsafePr = openPr;
-                    break;
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            }
+            TestContext.WriteLine("Waiting for the new unsafe codeflow PR to show up");
+            PullRequest unsafePr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName, [replacedPr.Number]);
 
             await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, unsafePr))
             {
-                unsafePr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, unsafePr.Number);
-                replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
-                replacedPr.State.Should().Be(ItemState.Closed);
-                unsafePr.Number.Should().NotBe(replacedPr.Number);
                 unsafePr.Body.Should().Contain("This is an unsafe codeflow update");
+
+                replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
+                replacedPr.State.Value.Should().Be(ItemState.Closed);
+
+                await CheckIfPullRequestCommentExists(
+                    TestRepository.VmrTestRepoName,
+                    replacedPr,
+                    ["Closing this PR", unsafePr.HtmlUrl]);
             }
         });
     }

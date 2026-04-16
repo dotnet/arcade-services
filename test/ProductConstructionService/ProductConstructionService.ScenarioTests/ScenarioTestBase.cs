@@ -75,7 +75,10 @@ internal abstract partial class ScenarioTestBase
         _temporaryDirectory.Dispose();
     }
 
-    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(
+        string targetRepo,
+        string targetBranch,
+        IReadOnlyCollection<int>? excludedPrNumbers = null)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
@@ -86,6 +89,11 @@ internal abstract partial class ScenarioTestBase
             {
                 Base = targetBranch,
             });
+
+            if (excludedPrNumbers != null)
+            {
+                prs = prs.Where(p => !excludedPrNumbers.Contains(p.Number)).ToList();
+            }
 
             if (prs.Count == 1)
             {
