@@ -119,13 +119,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             build,
             forceUpdate);
 
-        if (unsafeFlown && pr != null)
-        {
-            await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
-            pr = null;
-            prInfo = null;
-        }
-
         if (codeFlowRes == null)
         {
             return;
@@ -160,17 +153,46 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (codeFlowRes.HadConflicts)
         {
+            var manualResolutionBranch = prHeadBranch;
+
+            if (unsafeFlown && pr != null)
+            {
+                var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+                var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localRepo);
+
+                if (shouldReuseExistingPr)
+                {
+                    // Unsafe flow generates a fresh branch name when a PR already exists, but
+                    // in the reusable empty-PR case that new branch was never pushed anywhere.
+                    manualResolutionBranch = pr.HeadBranch;
+                }
+                else
+                {
+                    await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
+                    pr = null;
+                }
+            }
+
             await RequestManualConflictResolutionAsync(
                 update,
                 pr,
                 previousSourceSha,
                 subscription,
-                prHeadBranch,
+                manualResolutionBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
                 unsafeFlown);
 
             return;
+        }
+
+        // TODO Figure out if we want to close
+        // Unsafe flow PRs that when a new unsafe update comes in..
+        if (unsafeFlown && pr != null)
+        {
+            await ClosePullRequestAfterUnsafeFlowAsync(pr, subscription);
+            pr = null;
+            prInfo = null;
         }
 
         if (pr == null)
@@ -315,6 +337,25 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
     }
 
+    private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
+        InProgressPullRequest pr,
+        SubscriptionDTO subscription,
+        NativePath localRepo)
+    {
+        if (!pr.UnsafeFlow)
+        {
+            return false;
+        }
+
+        var (prIsEmpty, _, _) = await GetManualConflictResolutionPrStateAsync(
+            subscription,
+            localRepo,
+            pr.HeadBranch,
+            GetManualConflictResolutionInitialCommitMessage(subscription));
+
+        return prIsEmpty;
+    }
+
     private async Task<CodeFlowResult> ExecuteUnsafeCodeFlowAsync(
         SubscriptionDTO subscription,
         BuildDTO build,
@@ -410,7 +451,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         NativePath localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
         bool prIsEmpty;
-        string initialCommitMessage = $"Initial commit for subscription {subscription.Id}";
+        string initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
 
         if (pr == null)
         {
@@ -429,17 +470,12 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
         else
         {
-            // We get the latest SHAs of the PR branch and the target branch
-            var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
-                .First(r => r.Uri.Equals(subscription.TargetRepository))
-                .Name;
-            await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
-            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
-            var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
-
-            // We check if the PR branch still only contains the empty commit only
-            var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
-            prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
+            var (existingPrIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
+                subscription,
+                localRepo,
+                prHeadBranch,
+                initialCommitMessage);
+            prIsEmpty = existingPrIsEmpty;
 
             // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
             if (prIsEmpty && !await _gitClient.IsAncestorCommit(localRepo, latestTargetBranchCommit, latestPrCommit))
@@ -481,6 +517,30 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
     }
+
+    private async Task<(bool prIsEmpty, string latestPrCommit, string latestTargetBranchCommit)> GetManualConflictResolutionPrStateAsync(
+        SubscriptionDTO subscription,
+        NativePath localRepo,
+        string prHeadBranch,
+        string initialCommitMessage)
+    {
+        var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
+            .First(r => r.Uri.Equals(subscription.TargetRepository))
+            .Name;
+        await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
+
+        var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
+        var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
+        var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
+
+        return (
+            latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage),
+            latestPrCommit,
+            latestTargetBranchCommit);
+    }
+
+    private static string GetManualConflictResolutionInitialCommitMessage(SubscriptionDTO subscription)
+        => $"Initial commit for subscription {subscription.Id}";
 
     /// <summary>
     /// Creates and pushes a new branch.
@@ -556,6 +616,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,
                 CreationDate = DateTime.UtcNow,
+                UnsafeFlow = unsafeFlow
             };
 
             await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
