@@ -183,7 +183,140 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
     /*
     This test does the following
-    - Create an (empty) PR with awaiting conflict resolution
+    - Create two source branches in maestro-test1 from the same existing history
+    - Let them diverge with different commits
+    - Flow the first branch and merge the resulting PR
+    - Flow a build from the second diverged branch
+    - Verify the new PR is marked as an unsafe flow
+    */
+    [Test]
+    public async Task Vmr_UnsafeForwardFlowOnDivergedBranchesTest()
+    {
+        var channelName = GetTestChannelName();
+        var firstSourceBranchName = GetTestBranchName();
+        var secondSourceBranchName = GetTestBranchName();
+        var targetBranchName = GetTestBranchName();
+
+        await CreateTestChannelAsync(channelName);
+
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
+            channelName,
+            TestRepository.TestRepo1Name,
+            TestRepository.VmrTestRepoName,
+            targetBranchName,
+            UpdateFrequency.None.ToString(),
+            TestParameters.GitHubTestOrg,
+            targetDirectory: TestRepository.TestRepo1Name);
+
+        using TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
+        using TemporaryDirectory repoDirectory = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+
+        var vmrDir = new NativePath(vmrDirectory.Directory);
+        var repoDir = new NativePath(repoDirectory.Directory);
+        var firstFilePath = repoDir / TestFile1Name;
+        var secondFilePath = repoDir / TestFile2Name;
+
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDir, async () =>
+        {
+            using var _ = ChangeDirectory(repoDir);
+
+            await using var firstSourceBranch = await CheckoutBranchAsync(firstSourceBranchName);
+            await using var secondSourceBranch = await CheckoutBranchAsync(secondSourceBranchName);
+            await RunGitAsync("checkout", firstSourceBranchName);
+
+            await File.WriteAllTextAsync(firstFilePath, "content from the first diverged branch");
+            await GitAddAllAsync();
+            await GitCommitAsync("First divergent change");
+            await using var firstSourceRemoteBranch = await PushGitBranchAsync("origin", firstSourceBranchName);
+
+            Build firstBuild = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                firstSourceBranchName,
+                (await GitGetCurrentSha()).TrimEnd(),
+                "5",
+                []);
+
+            await AddBuildToChannelAsync(firstBuild.Id, channelName);
+            await TriggerSubscriptionAsync(subscriptionId);
+
+            TestContext.WriteLine("Waiting for the first codeflow PR and merging it");
+            PullRequest firstPr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+            await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, firstPr))
+            {
+                firstPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, firstPr.Number);
+                firstPr.Body.Should().NotContain("This is an unsafe codeflow update");
+                await MergePullRequestAsync(TestRepository.VmrTestRepoName, firstPr);
+            }
+
+            TestContext.WriteLine("Pushing another change to the first branch to open a new PR");
+            await RunGitAsync("checkout", firstSourceBranchName);
+            await File.WriteAllTextAsync(firstFilePath, "follow-up content from the first branch");
+            await GitAddAllAsync();
+            await GitCommitAsync("Follow-up change on first branch");
+            await RunGitAsync("push");
+
+            Build followUpBuild = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                firstSourceBranchName,
+                (await GitGetCurrentSha()).TrimEnd(),
+                "6",
+                []);
+
+            await AddBuildToChannelAsync(followUpBuild.Id, channelName);
+            await TriggerSubscriptionAsync(subscriptionId);
+
+            TestContext.WriteLine("Waiting for the second PR from the first branch to show up");
+            PullRequest replacedPr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+            await using var replacedPrCleanup = CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr);
+            replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
+            replacedPr.Body.Should().NotContain("This is an unsafe codeflow update");
+
+            await RunGitAsync("checkout", secondSourceBranchName);
+            await File.WriteAllTextAsync(secondFilePath, "content from the second diverged branch");
+            await GitAddAllAsync();
+            await GitCommitAsync("Second divergent change");
+            await using var secondSourceRemoteBranch = await PushGitBranchAsync("origin", secondSourceBranchName);
+
+            Build secondBuild = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                secondSourceBranchName,
+                (await GitGetCurrentSha()).TrimEnd(),
+                "7",
+                []);
+
+            await AddBuildToChannelAsync(secondBuild.Id, channelName);
+            await TriggerSubscriptionAsync(subscriptionId);
+
+            TestContext.WriteLine("Waiting for the existing PR to be closed and a new unsafe codeflow PR to show up");
+            PullRequest unsafePr = replacedPr;
+            for (var attempts = 0; attempts < 20; attempts++)
+            {
+                replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
+                var openPr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+
+                if (replacedPr.State == ItemState.Closed && openPr.Number != replacedPr.Number)
+                {
+                    unsafePr = openPr;
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+
+            await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, unsafePr))
+            {
+                unsafePr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, unsafePr.Number);
+                replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
+                replacedPr.State.Should().Be(ItemState.Closed);
+                unsafePr.Number.Should().NotBe(replacedPr.Number);
+                unsafePr.Body.Should().Contain("This is an unsafe codeflow update");
+            }
+        });
+    }
+
+    /*
+     This test does the following
+     - Create an (empty) PR with awaiting conflict resolution
     - Call `darc vmr resolve-conflicts`
     - Verify mergeability
     - Push a new update into the PR

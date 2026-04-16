@@ -275,12 +275,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the new subscription update section along with the PR header
-            string fromBranch = subscription.LastAppliedBuild != null ? $"from {subscription.LastAppliedBuild.GetBranch()}" : string.Empty;
+            string fromBranch = subscription.LastAppliedBuild != null ? $"from `{subscription.LastAppliedBuild.GetBranch()}`" : string.Empty;
             var prHeader = unsafeFlow
                 ? $"""
 
                 > [!WARNING]
-                > This is an unsafe codeflow update caused by changing the flown branch {fromBranch} to {build.GetBranch()}.
+                > This is an unsafe codeflow update caused by changing the flown branch {fromBranch} to `{build.GetBranch()}`.
                 > Please review carefully as it may contain undesirable changes.
                 > It may contain both source code changes from
                 > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
