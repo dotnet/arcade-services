@@ -13,7 +13,7 @@ COPY ["eng/Version.Details.props", "./eng/"]
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
-COPY ["src/Maestro/Maestro.Common/Maestro.Services.Common.csproj",                      "./Maestro.Services.Common/"]
+COPY ["src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj",             "./Maestro.Services.Common/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]

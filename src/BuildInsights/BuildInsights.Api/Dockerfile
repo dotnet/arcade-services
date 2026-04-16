@@ -10,8 +10,8 @@ COPY ["eng/Version.Details.props", "./eng/"]
 
 # Maestro dependency
 WORKDIR /src/Maestro
-COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj", "./Maestro.Common/"]
-COPY ["src/Maestro/Maestro.Common/Maestro.Services.Common.csproj", "./Maestro.Services.Common/"]
+COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                   "./Maestro.Common/"]
+COPY ["src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj", "./Maestro.Services.Common/"]
 
 # ProductConstructionService dependencies
 WORKDIR /src/ProductConstructionService
@@ -19,16 +19,16 @@ COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/Produ
 
 # BuildInsights projects
 WORKDIR /src/BuildInsights
-COPY ["src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj", "./BuildInsights.Api/"]
-COPY ["src/BuildInsights/BuildInsights.AzureStorage.Cache/BuildInsights.AzureStorage.Cache.csproj", "./BuildInsights.AzureStorage.Cache/"]
-COPY ["src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj", "./BuildInsights.BuildAnalysis/"]
-COPY ["src/BuildInsights/BuildInsights.Data/BuildInsights.Data.csproj", "./BuildInsights.Data/"]
-COPY ["src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj", "./BuildInsights.GitHub/"]
-COPY ["src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj", "./BuildInsights.GitHubGraphQL/"]
-COPY ["src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj", "./BuildInsights.KnownIssues/"]
-COPY ["src/BuildInsights/BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj", "./BuildInsights.KnownIssuesMonitor/"]
-COPY ["src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj", "./BuildInsights.QueueInsights/"]
-COPY ["src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj", "./BuildInsights.ServiceDefaults/"]
+COPY ["src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj",                                     "./BuildInsights.Api/"]
+COPY ["src/BuildInsights/BuildInsights.AzureStorage.Cache/BuildInsights.AzureStorage.Cache.csproj",       "./BuildInsights.AzureStorage.Cache/"]
+COPY ["src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj",                 "./BuildInsights.BuildAnalysis/"]
+COPY ["src/BuildInsights/BuildInsights.Data/BuildInsights.Data.csproj",                                   "./BuildInsights.Data/"]
+COPY ["src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj",                               "./BuildInsights.GitHub/"]
+COPY ["src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj",                 "./BuildInsights.GitHubGraphQL/"]
+COPY ["src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj",                     "./BuildInsights.KnownIssues/"]
+COPY ["src/BuildInsights/BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj",       "./BuildInsights.KnownIssuesMonitor/"]
+COPY ["src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj",                 "./BuildInsights.QueueInsights/"]
+COPY ["src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj",             "./BuildInsights.ServiceDefaults/"]
 COPY ["src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj", "./BuildInsights.Utilities.AzureDevOps/"]
 
 RUN dotnet restore "./BuildInsights.Api/BuildInsights.Api.csproj"
