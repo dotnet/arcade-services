@@ -17,6 +17,14 @@ public class CompletedBuildMessage : AzureDevOpsEventBase
     public BuildCompletedResourceContainers ResourceContainers { get; set; }
 }
 
+public class TestCompletedBuildMessage : CompletedBuildMessage
+{
+    public new const string MessageEventType = "test.build.complete";
+
+    [JsonPropertyName("prUrl")]
+    public string PrUrl { get; set; }
+}
+
 public class BuildCompletedResource
 {
     public BuildCompletedResource(int id)

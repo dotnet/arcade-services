@@ -73,6 +73,7 @@ public static class BuildAnalysisConfiguration
         services.Configure<BuildAnalysisFileSettings>(buildAnalysisFileConfig);
 
         services.AddWorkItemProcessor<BuildAnalysisRequestWorkItem, BuildAnalysisProcessor>();
+        services.AddWorkItemProcessor<TestBuildAnalysisRequestWorkItem, TestBuildAnalysisProcessor>();
         services.AddWorkItemProcessor<CheckRunConclusionUpdateEvent, CheckRunConclusionUpdateProcessor>();
         services.AddWorkItemProcessor<CheckRunRerunGitHubEvent, CheckRunRerunEventProcessor>();
         services.AddWorkItemProcessor<KnownIssueAnalysisRequest, KnownIssuesAnalysisRequestProcessor>();

@@ -15,12 +15,14 @@ using BuildInsights.KnownIssues.Models;
 using BuildInsights.QueueInsights;
 using Kusto.Data.Exceptions;
 using Microsoft.ApplicationInsights;
+using Microsoft.CodeAnalysis;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
+using Pipelines.Sockets.Unofficial.Arenas;
 
 #nullable disable
 namespace BuildInsights.BuildAnalysis;
@@ -31,6 +33,12 @@ public interface IBuildAnalyzer
         string orgId,
         string projectId,
         int buildId,
+        DateTimeOffset requestCreationTime,
+        CancellationToken cancellationToken);
+
+    Task AnalyzeBuild(
+        Build build,
+        NamedBuildReference buildReference,
         DateTimeOffset requestCreationTime,
         CancellationToken cancellationToken);
 }
@@ -44,7 +52,7 @@ public class BuildAnalyzer : IBuildAnalyzer
     private readonly IBuildAnalysisService _buildAnalysisService;
     private readonly IMarkdownGenerator _markdownGenerator;
     private readonly IGitHubChecksService _gitHubChecksService;
-    private readonly IBuildDataService _build;
+    private readonly IBuildDataService _buildService;
     private readonly ILogger<BuildAnalyzer> _logger;
     private readonly TelemetryClient _telemetry;
     private readonly IContextualStorage _contextualStorage;
@@ -66,7 +74,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         IBuildAnalysisService buildAnalysisService,
         IMarkdownGenerator markdownGenerator,
         IGitHubChecksService gitHubChecksService,
-        IBuildDataService build,
+        IBuildDataService buildService,
         TelemetryClient telemetry,
         IContextualStorage contextualStorage,
         IDistributedLockService distributedLockService,
@@ -89,7 +97,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         _buildAnalysisService = buildAnalysisService;
         _markdownGenerator = markdownGenerator;
         _gitHubChecksService = gitHubChecksService;
-        _build = build;
+        _buildService = buildService;
         _logger = logger;
         _relatedBuildService = relatedBuildService;
         _telemetry = telemetry;
@@ -115,15 +123,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         DateTimeOffset requestCreationTime,
         CancellationToken cancellationToken)
     {
-        using Operation operation = _operations.BeginLoggingScope(
-            "Build: {buildId}, Project: {projectId}, Org: {orgId}",
-            buildId,
-            projectId,
-            orgId);
-
-        _logger.LogInformation("HandleMessage for buildId: {buildId} and project: {projectId} and org: {orgId}", buildId, projectId, orgId);
-
-        Build build = await _build.GetBuildAsync(orgId, projectId, buildId, cancellationToken);
+        Build build = await _buildService.GetBuildAsync(orgId, projectId, buildId, cancellationToken);
 
         var buildReference = new NamedBuildReference(
             build.DefinitionName,
@@ -136,14 +136,33 @@ public class BuildAnalyzer : IBuildAnalyzer
             build.DefinitionName,
             build.Repository.Name,
             build.CommitHash,
-            build.TargetBranch?.BranchName
-        );
+            build.TargetBranch?.BranchName);
+
+        await AnalyzeBuild(build, buildReference, requestCreationTime, cancellationToken);
+    }
+
+    public async Task AnalyzeBuild(
+        Build build,
+        NamedBuildReference buildReference,
+        DateTimeOffset requestCreationTime,
+        CancellationToken cancellationToken)
+    {
+        using Operation operation = _operations.BeginLoggingScope(
+            "Build: {buildId}, Project: {projectId}, Org: {orgId}",
+            build.Id,
+            buildReference.Project,
+            buildReference.Org);
+
+        _logger.LogInformation("Analyzing build {buildId} from {orgId}/{projectId}",
+            build.Id,
+            buildReference.Project,
+            buildReference.Org);
 
         BuildAnalysisEvent lastAnalysisEvent = await _analysisHistory.GetLastBuildAnalysisRecord(build.Id, build.DefinitionName);
 
         if (lastAnalysisEvent != null
             && requestCreationTime < lastAnalysisEvent.AnalysisTimestamp
-            || await _processingStatusService.IsBuildBeingProcessed(_clock.UtcNow.AddDays(-1), buildReference.RepositoryId, buildId, cancellationToken))
+            || await _processingStatusService.IsBuildBeingProcessed(_clock.UtcNow.AddDays(-1), buildReference.RepositoryId, buildReference.BuildId, cancellationToken))
         {
             _logger.LogInformation("Skipping processing of build {buildId} as it was recently processed or is under processing and there are no new changes", build.Id);
             return;
@@ -178,7 +197,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         if (!await _pipelineRequestedService.IsBuildPipelineRequested(buildReference.RepositoryId, buildReference.TargetBranch, buildReference.DefinitionId, buildReference.BuildId))
         {
             _logger.LogInformation("Pipeline {pipeline} of repository {repositoryName} has been filtered by repository configuration", build.DefinitionName, buildReference.RepositoryId);
-            await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId, BuildProcessingStatus.Completed);
+            await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildReference.BuildId, BuildProcessingStatus.Completed);
             return;
         }
 
@@ -211,7 +230,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         {
             await _processingStatusService.SaveBuildAnalysisProcessingStatus(
                 buildReference.RepositoryId,
-                buildId,
+                buildReference.BuildId,
                 BuildProcessingStatus.InProcess);
 
             string storageContext = $"{buildReference.RepositoryId}/{buildReference.SourceSha}";
@@ -229,7 +248,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         }
         finally
         {
-            await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId, BuildProcessingStatus.Completed);
+            await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildReference.BuildId, BuildProcessingStatus.Completed);
         }
 
         Models.Repository repository = new(buildReference.RepositoryId,
@@ -297,7 +316,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         _logger.LogInformation(
             "Created check run {checkRunId} triggered by build {buildId} for commit {commitHash}",
             checkRunId,
-            buildId,
+            buildReference.BuildId,
             buildReference.SourceSha);
 
         _telemetry.TrackEvent(
@@ -305,7 +324,7 @@ public class BuildAnalyzer : IBuildAnalyzer
             new Dictionary<string, string>
             {
                 {"checkRunId", checkRunId.ToString()},
-                {"buildId", buildId.ToString()},
+                {"buildId", buildReference.BuildId.ToString()},
                 {"commitHash", buildReference.SourceSha},
                 {"snapshotId", snapshotId},
                 {"pullRequest", build.PullRequest}

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.BuildAnalysis.WorkItems.Models;
+using Microsoft.CodeAnalysis;
 using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;

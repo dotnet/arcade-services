@@ -47,6 +47,30 @@ public class AzDoServiceHookController : ControllerBase
         return Ok();
     }
 
+    [HttpPost(TestCompletedBuildMessage.MessageEventType)]
+    public async Task<IActionResult> BuildCompleted([FromBody] TestCompletedBuildMessage message)
+    {
+        if (!ValidateSecretHeader())
+        {
+            return Unauthorized();
+        }
+
+        if (!ValidateMessage(message, TestCompletedBuildMessage.MessageEventType))
+        {
+            return BadRequest();
+        }
+
+        await RequestBuildAnalysis(new TestBuildAnalysisRequestWorkItem
+        {
+            OrganizationId = message.Resource.OrgId,
+            ProjectId = message.ResourceContainers.Project.Id,
+            BuildId = message.Resource.Id,
+            TestPrUrl = message.PrUrl,
+        });
+
+        return Ok();
+    }
+
     [HttpPost(KnownIssueReprocessingMessage.MessageEventType)]
     public async Task<IActionResult> KnownIssueReprocessing([FromBody] KnownIssueReprocessingMessage message)
     {
@@ -100,9 +124,9 @@ public class AzDoServiceHookController : ControllerBase
         return Ok();
     }
 
-    private async Task RequestBuildAnalysis(BuildAnalysisRequestWorkItem request)
+    private async Task RequestBuildAnalysis<T>(T request) where T : WorkItem
     {
-        var producer = _workItemProducerFactory.CreateProducer<BuildAnalysisRequestWorkItem>();
+        var producer = _workItemProducerFactory.CreateProducer<T>();
         await producer.ProduceWorkItemAsync(request);
     }
 

@@ -1,12 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.ReproTool.Operations;
+using Azure.Identity;
 using BuildInsights.ReproTool.Options;
+using BuildInsights.ServiceDefaults;
 using CommandLine;
+using Maestro.Services.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 
 Type[] options =
@@ -18,22 +21,28 @@ Parser.Default.ParseArguments(args, options)
     .MapResult(
         (Options o) =>
         {
-            IConfiguration configuration = new ConfigurationBuilder()
-                .AddUserSecrets<ReproOperation>()
-                .AddEnvironmentVariables()
-                .Build();
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+            {
+                EnvironmentName = Environments.Development,
+            });
+            builder.AddSharedConfiguration();
 
-            o.GitHubToken ??= configuration["GITHUB_TOKEN"];
+            string keyVaultName = builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName]
+                ?? throw new InvalidOperationException("KeyVaultName is not configured.");
+
+            builder.Configuration.AddAzureKeyVault(
+                new Uri($"https://{keyVaultName}.vault.azure.net/"),
+                new DefaultAzureCredential(),
+                new KeyVaultSecretsWithPrefix(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix));
+
             o.GitHubToken ??= GetGitHubTokenFromGhCli();
+            o.GitHubToken ??= builder.Configuration["GITHUB_TOKEN"];
             ArgumentNullException.ThrowIfNull(o.GitHubToken, nameof(o.GitHubToken));
 
-            o.AzDoHookSecret ??= configuration["AZDO_SERVICE_HOOK_SECRET"];
-            o.AzDoHookSecret ??= configuration["BUILD_INSIGHTS_AZDO_SERVICE_HOOK_SECRET"];
-            o.AzDoHookSecret ??= configuration["KeyVaultSecrets:azdo-service-hook-secret"];
-            o.AzDoHookSecret ??= configuration["KeyVaultSecrets__azdo-service-hook-secret"];
+            o.AzDoHookSecret ??= builder.Configuration[$"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix}azdo-service-hook-secret"];
             ArgumentNullException.ThrowIfNull(o.AzDoHookSecret, nameof(o.AzDoHookSecret));
 
-            o.LocalBuildInsightsUrl ??= configuration["BUILD_INSIGHTS_API_BASE_URL"];
+            o.LocalBuildInsightsUrl ??= builder.Configuration["BUILD_INSIGHTS_API_BASE_URL"];
 
             var services = new ServiceCollection();
             o.RegisterServices(services);

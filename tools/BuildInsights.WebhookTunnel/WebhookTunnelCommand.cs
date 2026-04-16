@@ -37,7 +37,10 @@ internal static class WebhookTunnelCommand
 
     public static async Task RunAsync()
     {
-        var builder = WebApplication.CreateBuilder();
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = Environments.Development,
+        });
         builder.AddSharedConfiguration();
         builder.Services.AddSingleton<TunnelReadinessState>();
 

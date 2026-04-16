@@ -8,6 +8,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var buildInsightsApiHttpsPort = builder.Configuration.GetValue<int>("BuildInsightsApiHttpsPort");
 
 var password = builder.AddParameter("sql-pass", "DevPass1@", secret: true);
+var reproPullRequestUrl = builder.AddParameter("build-insights-repro-pr-url")
+    .WithDescription("GitHub pull request URL to replay into a local Build Insights repro PR.");
 
 var sqlServer = builder.AddSqlServer("mssql", password)
     .WithHostPort(11434)
@@ -58,6 +60,12 @@ builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonito
     .WaitFor(database)
     .WaitFor(redisCache)
     .WaitFor(queues)
+    .WithExplicitStart();
+
+builder.AddProject<Projects.BuildInsights_ReproTool>("buildInsightsReproTool")
+    .WithArgs("repro", "--pr", reproPullRequestUrl)
+    .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
+    .WaitFor(buildInsightsApi)
     .WithExplicitStart();
 
 builder.Build().Run();

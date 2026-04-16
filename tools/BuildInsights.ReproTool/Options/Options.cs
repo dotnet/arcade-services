@@ -4,7 +4,6 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using Octokit;
 using BuildInsights.ReproTool.Operations;
 using GitHubClient = Octokit.GitHubClient;
@@ -15,10 +14,8 @@ internal abstract class Options
 {
     internal const string DefaultBuildInsightsLocalUri = "https://localhost:53180";
 
-    [Option("github-token", HelpText = "GitHub token. If omitted, the tool tries GITHUB_TOKEN or gh auth token.", Required = false)]
     public string? GitHubToken { get; set; }
 
-    [Option("azdo-hook-secret", HelpText = "Shared secret used by the local Build Insights Azure DevOps service hook endpoint.", Required = false)]
     public string? AzDoHookSecret { get; set; }
 
     [Option("build-insights-url", HelpText = "Base URL of the locally running Build Insights API.", Required = false)]

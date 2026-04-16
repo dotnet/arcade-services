@@ -10,6 +10,7 @@ using Octokit;
 using BuildInsights.ReproTool.Options;
 using DarcGitHubClient = Microsoft.DotNet.DarcLib.GitHubClient;
 using GitHubClient = Octokit.GitHubClient;
+using BuildInsights.Api.Controllers.Models;
 
 namespace BuildInsights.ReproTool.Operations;
 
@@ -86,7 +87,7 @@ internal sealed class ReproOperation(
 
         foreach (ReplayBuildReference build in builds)
         {
-            await ReplayBuildCompletedEventAsync(build, cancellationToken);
+            await ReplayBuildCompletedEventAsync(reproPr.Value.HtmlUrl, build, cancellationToken);
         }
 
         CheckRun? completedCheck = await WaitForReplayCompletionAsync(reproPr.Value, originalPullRequest, cancellationToken);
@@ -250,28 +251,28 @@ internal sealed class ReproOperation(
         return null;
     }
 
-    private async Task ReplayBuildCompletedEventAsync(ReplayBuildReference build, CancellationToken cancellationToken)
+    private async Task ReplayBuildCompletedEventAsync(string testPrUrl, ReplayBuildReference build, CancellationToken cancellationToken)
     {
         Logger.LogInformation("Replaying build.completed for build {buildId} ({pipeline})", build.BuildId, build.PipelineName);
 
-        var message = new CompletedBuildMessageDto
+        var message = new TestCompletedBuildMessage
         {
-            EventType = "build.complete",
-            Resource = new CompletedBuildResourceDto
+            PrUrl = testPrUrl,
+            Resource = new(build.BuildId)
             {
                 Id = build.BuildId,
-                Url = $"https://dev.azure.com/{build.Organization}/{build.ProjectId}/_apis/build/Builds/{build.BuildId}"
+                Url = $"https://dev.azure.com/{build.Organization}/{build.ProjectId}/_apis/build/builds/{build.BuildId}"
             },
-            ResourceContainers = new CompletedBuildResourceContainersDto
+            ResourceContainers = new()
             {
-                Project = new CompletedBuildProjectDto
+                Project = new()
                 {
                     Id = build.ProjectId
                 }
             }
         };
 
-        using HttpResponseMessage response = await HttpClientJsonExtensions.PostAsJsonAsync(_httpClient, "azdo/servicehooks/build.complete", message, cancellationToken);
+        using HttpResponseMessage response = await HttpClientJsonExtensions.PostAsJsonAsync(_httpClient, "azdo/servicehooks/" + TestCompletedBuildMessage.MessageEventType, message, cancellationToken);
         string responseText = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
