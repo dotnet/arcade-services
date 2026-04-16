@@ -40,7 +40,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private static readonly Regex RepositoryUriPattern = new(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
     private static readonly Regex PullRequestUriPattern =
-        new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
+        new(@"^/(repos/)?(?<owner>[^/]+)/(?<repo>[^/]+)/pulls?/(?<id>\d+)$");
 
     private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
