@@ -144,8 +144,8 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         - Force a codeflow into this PR at your own risk if you want the new changes.
           User commits made to this PR might be reverted.
           ```
-           darc trigger-subscriptions --id <subscriptionId> --force
-           ```
+          darc trigger-subscriptions --id <subscriptionId> --force
+          ```
         """;
 
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
