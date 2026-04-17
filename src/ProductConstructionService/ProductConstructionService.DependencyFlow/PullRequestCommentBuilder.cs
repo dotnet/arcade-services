@@ -125,7 +125,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     }
 
     private static string BuildAlternativeVmrResetMessage(int buildId) =>
-        $"Alternatively, if you don't care about losing any Vmr side changes, you can use `darc vmr reset --build {buildId} from the local vmr clone`";
+        $"Alternatively, if you don't care about losing changes done in the VMR directly, you can use `darc vmr reset --build {buildId}` from a local VMR clone. This will level the contents of the VMR and the product repository.";
 
     public static string BuildOppositeCodeflowMergedNotification() =>
         """
