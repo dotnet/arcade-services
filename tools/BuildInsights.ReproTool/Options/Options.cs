@@ -16,6 +16,8 @@ internal abstract class Options
 
     public string? GitHubToken { get; set; }
 
+    public string? AzDoHookHeaderName { get; set; }
+
     public string? AzDoHookSecret { get; set; }
 
     [Option("build-insights-url", HelpText = "Base URL of the locally running Build Insights API.", Required = false)]
@@ -47,11 +49,11 @@ internal abstract class Options
 
             var client = new HttpClient(handler)
             {
-                BaseAddress = new Uri((LocalBuildInsightsUrl ?? DefaultBuildInsightsLocalUri).TrimEnd('/') + "/"),
+                BaseAddress = new Uri((LocalBuildInsightsUrl ?? DefaultBuildInsightsLocalUri).TrimEnd('/') + '/'),
                 Timeout = TimeSpan.FromMinutes(5)
             };
 
-            client.DefaultRequestHeaders.Add("X-BuildAnalysis-Secret", AzDoHookSecret);
+            client.DefaultRequestHeaders.Add(AzDoHookHeaderName!, AzDoHookSecret);
             return client;
         });
 

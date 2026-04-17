@@ -7,7 +7,7 @@ using Maestro.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
-public class TestBuildAnalysisProcessor : WorkItemProcessor<BuildAnalysisRequestWorkItem>
+public class TestBuildAnalysisProcessor : WorkItemProcessor<TestBuildAnalysisRequestWorkItem>
 {
     private readonly IBuildDataService _buildService;
     private readonly IBuildAnalyzer _buildAnalyzer;
@@ -21,7 +21,7 @@ public class TestBuildAnalysisProcessor : WorkItemProcessor<BuildAnalysisRequest
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
-        BuildAnalysisRequestWorkItem workItem,
+        TestBuildAnalysisRequestWorkItem workItem,
         CancellationToken cancellationToken)
     {
         Build build = await _buildService.GetBuildAsync(

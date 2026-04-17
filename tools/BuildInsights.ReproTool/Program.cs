@@ -27,19 +27,24 @@ Parser.Default.ParseArguments(args, options)
             });
             builder.AddSharedConfiguration();
 
+            var secretPrefix = BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix;
+
             string keyVaultName = builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultName]
                 ?? throw new InvalidOperationException("KeyVaultName is not configured.");
 
             builder.Configuration.AddAzureKeyVault(
                 new Uri($"https://{keyVaultName}.vault.azure.net/"),
                 new DefaultAzureCredential(),
-                new KeyVaultSecretsWithPrefix(BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix));
+                new KeyVaultSecretsWithPrefix(secretPrefix));
 
-            o.GitHubToken ??= GetGitHubTokenFromGhCli();
             o.GitHubToken ??= builder.Configuration["GITHUB_TOKEN"];
+            o.GitHubToken ??= GetGitHubTokenFromGhCli();
             ArgumentNullException.ThrowIfNull(o.GitHubToken, nameof(o.GitHubToken));
 
-            o.AzDoHookSecret ??= builder.Configuration[$"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix}azdo-service-hook-secret"];
+            o.AzDoHookHeaderName ??= builder.Configuration["AzDoServiceHook:SecretHttpHeaderName"];
+            o.AzDoHookSecret ??= builder.Configuration[$"{secretPrefix}azdo-service-hook-secret"];
+
+            ArgumentNullException.ThrowIfNull(o.AzDoHookHeaderName, nameof(o.AzDoHookHeaderName));
             ArgumentNullException.ThrowIfNull(o.AzDoHookSecret, nameof(o.AzDoHookSecret));
 
             o.LocalBuildInsightsUrl ??= builder.Configuration["BUILD_INSIGHTS_API_BASE_URL"];

@@ -6,5 +6,5 @@ namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
 public class TestBuildAnalysisRequestWorkItem : BuildAnalysisRequestWorkItem
 {
-    public string TestPrUrl { get; set; }
+    public string MockPrUrl { get; set; }
 }

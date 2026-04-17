@@ -47,15 +47,16 @@ public class AzDoServiceHookController : ControllerBase
         return Ok();
     }
 
-    [HttpPost(TestCompletedBuildMessage.MessageEventType)]
-    public async Task<IActionResult> BuildCompleted([FromBody] TestCompletedBuildMessage message)
+#if DEBUG
+    [HttpPost(MockCompletedBuildMessage.MessageEventType)]
+    public async Task<IActionResult> MockBuildCompleted([FromBody] MockCompletedBuildMessage message)
     {
         if (!ValidateSecretHeader())
         {
             return Unauthorized();
         }
 
-        if (!ValidateMessage(message, TestCompletedBuildMessage.MessageEventType))
+        if (!ValidateMessage(message, MockCompletedBuildMessage.MessageEventType))
         {
             return BadRequest();
         }
@@ -65,11 +66,12 @@ public class AzDoServiceHookController : ControllerBase
             OrganizationId = message.Resource.OrgId,
             ProjectId = message.ResourceContainers.Project.Id,
             BuildId = message.Resource.Id,
-            TestPrUrl = message.PrUrl,
+            MockPrUrl = message.PrUrl,
         });
 
         return Ok();
     }
+#endif
 
     [HttpPost(KnownIssueReprocessingMessage.MessageEventType)]
     public async Task<IActionResult> KnownIssueReprocessing([FromBody] KnownIssueReprocessingMessage message)

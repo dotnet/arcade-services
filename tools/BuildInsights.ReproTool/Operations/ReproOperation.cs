@@ -255,13 +255,13 @@ internal sealed class ReproOperation(
     {
         Logger.LogInformation("Replaying build.completed for build {buildId} ({pipeline})", build.BuildId, build.PipelineName);
 
-        var message = new TestCompletedBuildMessage
+        var message = new MockCompletedBuildMessage
         {
             PrUrl = testPrUrl,
             Resource = new(build.BuildId)
             {
                 Id = build.BuildId,
-                Url = $"https://dev.azure.com/{build.Organization}/{build.ProjectId}/_apis/build/builds/{build.BuildId}"
+                Url = $"https://dev.azure.com/{build.Organization}/{build.ProjectId}/_apis/build/Builds/{build.BuildId}"
             },
             ResourceContainers = new()
             {
@@ -272,7 +272,7 @@ internal sealed class ReproOperation(
             }
         };
 
-        using HttpResponseMessage response = await HttpClientJsonExtensions.PostAsJsonAsync(_httpClient, "azdo/servicehooks/" + TestCompletedBuildMessage.MessageEventType, message, cancellationToken);
+        using HttpResponseMessage response = await HttpClientJsonExtensions.PostAsJsonAsync(_httpClient, "azdo/servicehooks/" + MockCompletedBuildMessage.MessageEventType, message, cancellationToken);
         string responseText = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
