@@ -49,7 +49,7 @@ var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("BuildInsi
     .WaitFor(queues)
     .WaitFor(buildInsightsVpnCheck);
 
-builder.AddProject<Projects.BuildInsights_WebhookTunnel>("BuildInsights-WebhookTunnel")
+var webhookTunnel = builder.AddProject<Projects.BuildInsights_WebhookTunnel>("BuildInsights-WebhookTunnel")
     .WithHttpEndpoint(port: 55691, name: "webhookTunnelHealth")
     .WithHttpHealthCheck("/health", endpointName: "webhookTunnelHealth")
     .WithEnvironment("BUILD_INSIGHTS_API_PORT", buildInsightsApiHttpsPort.ToString())
@@ -71,6 +71,8 @@ builder.AddProject<Projects.BuildInsights_ReproTool>("BuildInsights-ReproTool")
     .WithArgs("repro", "--pr", reproPullRequestUrl)
     .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
     .WaitFor(buildInsightsApi)
+    .WaitFor(buildInsightsVpnCheck)
+    .WaitFor(webhookTunnel)
     .WithExplicitStart();
 
 builder.Build().Run();
