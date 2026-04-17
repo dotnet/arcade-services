@@ -32,7 +32,11 @@ var blobs = storage.AddBlobs("bi-blobs");
 
 var queues = storage.AddQueues("bi-queues");
 
-var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
+var buildInsightsVpnCheck = builder.AddProject<Projects.BuildInsights_VpnCheck>("VPN-Check")
+    .WithHttpEndpoint(port: 55692, name: "vpnCheckHealth")
+    .WithHttpHealthCheck("/health", endpointName: "vpnCheckHealth");
+
+var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("BuildInsights-API")
     .WithHttpsEndpoint(port: buildInsightsApiHttpsPort, name: "buildInsightsApiHttps")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health", endpointName: "buildInsightsApiHttps")
@@ -42,9 +46,10 @@ var buildInsightsApi = builder.AddProject<Projects.BuildInsights_Api>("buildInsi
     .WithReference(redisCache)
     .WaitFor(database)
     .WaitFor(redisCache)
-    .WaitFor(queues);
+    .WaitFor(queues)
+    .WaitFor(buildInsightsVpnCheck);
 
-builder.AddProject<Projects.BuildInsights_WebhookTunnel>("buildInsightsWebhookTunnel")
+builder.AddProject<Projects.BuildInsights_WebhookTunnel>("BuildInsights-WebhookTunnel")
     .WithHttpEndpoint(port: 55691, name: "webhookTunnelHealth")
     .WithHttpHealthCheck("/health", endpointName: "webhookTunnelHealth")
     .WithEnvironment("BUILD_INSIGHTS_API_PORT", buildInsightsApiHttpsPort.ToString())
@@ -52,7 +57,7 @@ builder.AddProject<Projects.BuildInsights_WebhookTunnel>("buildInsightsWebhookTu
     .WaitFor(buildInsightsApi)
     .WithExplicitStart();
 
-builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonitor")
+builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("BuildInsights-KnownIssuesMonitorJob")
     .WithReference(database)
     .WithReference(blobs)
     .WithReference(queues)
@@ -62,7 +67,7 @@ builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonito
     .WaitFor(queues)
     .WithExplicitStart();
 
-builder.AddProject<Projects.BuildInsights_ReproTool>("buildInsightsReproTool")
+builder.AddProject<Projects.BuildInsights_ReproTool>("BuildInsights-ReproTool")
     .WithArgs("repro", "--pr", reproPullRequestUrl)
     .WithEnvironment("BUILD_INSIGHTS_API_BASE_URL", "https://localhost:" + buildInsightsApiHttpsPort)
     .WaitFor(buildInsightsApi)

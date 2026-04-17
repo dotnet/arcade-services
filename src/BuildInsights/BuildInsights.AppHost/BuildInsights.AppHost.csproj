@@ -22,6 +22,7 @@
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssuesMonitor\BuildInsights.KnownIssuesMonitor.csproj" />
     <ProjectReference Include="..\..\..\tools\BuildInsights.ReproTool\BuildInsights.ReproTool.csproj" />
+    <ProjectReference Include="..\..\..\tools\BuildInsights.VpnCheck\BuildInsights.VpnCheck.csproj" />
     <ProjectReference Include="..\..\..\tools\BuildInsights.WebhookTunnel\BuildInsights.WebhookTunnel.csproj" />
   </ItemGroup>
 
