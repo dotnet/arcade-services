@@ -690,7 +690,7 @@ internal class BackflowTests : CodeFlowTests
 
         await GitOperations.Checkout(VmrPath, branch2Name);
         var act = () => CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
-        await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
+        await act.Should().ThrowAsync<BackflowNonContinuableNonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
     }
 
     // Test that the bug https://github.com/dotnet/arcade-services/issues/5331 doesn't happen

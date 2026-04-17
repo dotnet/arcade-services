@@ -584,7 +584,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
             // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
             // with a different branch
-            if (await vmr.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, currentFlow.RepoSha))
+            if (await repo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, currentFlow.RepoSha))
             {
                 throw new BackflowNonContinuableNonLinearCodeflowException(currentFlow.VmrSha, lastFlows.LastForwardFlow.RepoSha, currentFlow.RepoSha);
             }
