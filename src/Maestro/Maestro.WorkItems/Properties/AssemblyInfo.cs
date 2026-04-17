@@ -3,5 +3,5 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("ProductConstructionService.WorkItem.Tests")]
+[assembly: InternalsVisibleTo("Maestro.WorkItems.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

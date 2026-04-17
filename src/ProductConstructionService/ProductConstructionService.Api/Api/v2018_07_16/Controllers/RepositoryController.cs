@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2018_07_16.Models;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

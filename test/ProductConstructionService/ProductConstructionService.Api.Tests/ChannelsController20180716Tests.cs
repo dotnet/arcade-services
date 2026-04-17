@@ -28,7 +28,7 @@ using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 

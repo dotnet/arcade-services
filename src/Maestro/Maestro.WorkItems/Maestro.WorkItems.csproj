@@ -14,8 +14,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
-    <ProjectReference Include="..\..\Maestro\Maestro.Services.Common\Maestro.Services.Common.csproj" />
+    <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\Maestro.Services.Common\Maestro.Services.Common.csproj" />
   </ItemGroup>
 
 </Project>

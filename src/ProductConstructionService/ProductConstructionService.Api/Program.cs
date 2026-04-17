@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.StaticFiles;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 

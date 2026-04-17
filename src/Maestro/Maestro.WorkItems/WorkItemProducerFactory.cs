@@ -3,7 +3,7 @@
 
 using Azure.Storage.Queues;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public interface IWorkItemProducerFactory
 {

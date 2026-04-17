@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public static class WorkItemConfiguration
 {

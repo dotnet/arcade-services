@@ -5,7 +5,7 @@ using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public interface IWorkItemProducer<T>
 {

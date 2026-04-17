@@ -9,9 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Maestro.Services.Common.Cache;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
-namespace ProductConstructionService.WorkItem.Tests;
+namespace Maestro.WorkItem.Tests;
 
 public class WorkItemScopeTests
 {
