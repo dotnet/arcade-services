@@ -15,7 +15,7 @@ using Maestro.Services.Common.Cache;
 using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 using Maestro.Services.Common.Cache;
 using Maestro.Common.Telemetry;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public class WorkItemScope : IAsyncDisposable
 {

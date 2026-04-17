@@ -14,7 +14,7 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace BuildInsights.BuildAnalysis;
 

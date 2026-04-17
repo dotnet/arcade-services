@@ -4,7 +4,7 @@
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 

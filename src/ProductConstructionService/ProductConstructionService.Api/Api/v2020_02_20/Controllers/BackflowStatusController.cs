@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

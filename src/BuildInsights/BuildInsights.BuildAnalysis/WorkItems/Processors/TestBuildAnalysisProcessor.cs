@@ -3,7 +3,7 @@
 
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 

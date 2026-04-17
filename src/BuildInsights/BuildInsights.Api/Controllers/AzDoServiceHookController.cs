@@ -6,7 +6,7 @@ using BuildInsights.Api.Controllers.Models;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace BuildInsights.Api.Controllers;
 

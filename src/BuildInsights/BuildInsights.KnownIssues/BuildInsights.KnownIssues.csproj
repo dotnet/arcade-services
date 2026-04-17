@@ -18,7 +18,7 @@
     <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
-    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.WorkItems\Maestro.WorkItems.csproj" />
   </ItemGroup>
 
 </Project>

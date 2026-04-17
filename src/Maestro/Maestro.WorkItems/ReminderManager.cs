@@ -3,9 +3,9 @@
 
 using Azure;
 using Maestro.Services.Common.Cache;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {

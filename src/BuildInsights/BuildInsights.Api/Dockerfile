@@ -12,10 +12,7 @@ COPY ["eng/Version.Details.props", "./eng/"]
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                   "./Maestro.Common/"]
 COPY ["src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj", "./Maestro.Services.Common/"]
-
-# ProductConstructionService dependencies
-WORKDIR /src/ProductConstructionService
-COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
+COPY ["src/Maestro/Maestro.WorkItems/Maestro.WorkItems.csproj", "./Maestro.WorkItems/"]
 
 # BuildInsights projects
 WORKDIR /src/BuildInsights
@@ -38,10 +35,7 @@ RUN dotnet restore "./BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssues
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common", "./Maestro.Common"]
 COPY ["src/Maestro/Maestro.Services.Common", "./Maestro.Services.Common"]
-
-# Copy full source for ProductConstructionService dependencies
-WORKDIR /src/ProductConstructionService
-COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems", "./ProductConstructionService.WorkItems"]
+COPY ["src/Maestro/Maestro.WorkItems", "./Maestro.WorkItems"]
 
 # Copy full source for BuildInsights
 WORKDIR /src/BuildInsights

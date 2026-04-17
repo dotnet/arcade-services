@@ -29,7 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Services.Common\Maestro.Services.Common.csproj" />
-    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.WorkItems\Maestro.WorkItems.csproj" />
     <ProjectReference Include="..\BuildInsights.AzureStorage.Cache\BuildInsights.AzureStorage.Cache.csproj" />
     <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />

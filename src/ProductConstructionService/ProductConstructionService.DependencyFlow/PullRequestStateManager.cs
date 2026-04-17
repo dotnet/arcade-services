@@ -7,7 +7,7 @@ using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 

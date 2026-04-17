@@ -12,7 +12,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using Tools.Cli.Core;
 using Tools.Cli.Common.Options;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace Tools.Cli.Common.Operations;
 

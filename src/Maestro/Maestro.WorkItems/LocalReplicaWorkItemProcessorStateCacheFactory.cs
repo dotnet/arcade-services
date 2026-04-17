@@ -4,7 +4,7 @@
 using Microsoft.Extensions.Logging;
 using Maestro.Services.Common.Cache;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 public class LocalReplicaWorkItemProcessorStateCacheFactory(
     IRedisCacheFactory redisCacheFactory,
     ILogger<WorkItemProcessorStateCache> logger)

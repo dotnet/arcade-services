@@ -19,7 +19,7 @@ using Octokit.Webhooks.Events.Issues;
 using Octokit.Webhooks.Events.PullRequest;
 using Octokit.Webhooks.Events.PullRequestReviewComment;
 using Octokit.Webhooks.Models;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 #nullable disable
 namespace BuildInsights.Api.Controllers;

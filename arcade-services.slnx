@@ -45,6 +45,7 @@
     <Project Path="src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj" />
     <Project Path="src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj" />
     <Project Path="src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj" />
+    <Project Path="src/Maestro/Maestro.WorkItems/Maestro.WorkItems.csproj" />
     <Project Path="src/Maestro/Microsoft.DotNet.Maestro.Tasks/Microsoft.DotNet.Maestro.Tasks.csproj" />
   </Folder>
   <Folder Name="/src/ProductConstructionService/">
@@ -55,13 +56,13 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />
-    <Project Path="src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj" />
   </Folder>
   <Folder Name="/test/" />
   <Folder Name="/test/Maestro/">
     <Project Path="test/Maestro/Maestro.Data.Tests/Maestro.Data.Tests.csproj" />
     <Project Path="test/Maestro/Maestro.DataProviders.Tests/Maestro.DataProviders.Tests.csproj" />
     <Project Path="test/Maestro/Maestro.MergePolicies.Tests/Maestro.MergePolicies.Tests.csproj" />
+    <Project Path="test/Maestro/Maestro.WorkItems.Tests/Maestro.WorkItems.Tests.csproj" />
     <Project Path="test/Maestro/Microsoft.DotNet.Maestro.Tasks.Tests/Microsoft.DotNet.Maestro.Tasks.Tests.csproj" />
   </Folder>
   <Folder Name="/test/Darc/">
@@ -86,11 +87,11 @@
     <Project Path="test/ProductConstructionService/ProductConstructionService.FeedCleaner.Tests/ProductConstructionService.FeedCleaner.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer.Tests/ProductConstructionService.SubscriptionTriggerer.Tests.csproj" />
-    <Project Path="test/ProductConstructionService/ProductConstructionService.WorkItem.Tests/ProductConstructionService.WorkItem.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/BackflowStatusTool/BackflowStatusTool.csproj" />
     <Project Path="tools/BuildInsights.ReproTool/BuildInsights.ReproTool.csproj" />
+    <Project Path="tools/BuildInsights.VpnCheck/BuildInsights.VpnCheck.csproj" />
     <Project Path="tools/BuildInsights.WebhookTunnel/BuildInsights.WebhookTunnel.csproj" />
     <Project Path="tools/BuildInsightsCli/BuildInsightsCli.csproj" />
     <Project Path="tools/ProductConstructionService.Cli/ProductConstructionService.Cli.csproj" />

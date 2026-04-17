@@ -7,7 +7,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 using Maestro.Data;
 using Azure.Core;
 using Maestro.Common;

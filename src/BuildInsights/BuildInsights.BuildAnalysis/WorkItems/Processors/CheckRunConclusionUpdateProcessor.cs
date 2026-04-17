@@ -9,7 +9,7 @@ using BuildInsights.KnownIssues;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 

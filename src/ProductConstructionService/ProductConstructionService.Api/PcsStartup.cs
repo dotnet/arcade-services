@@ -38,7 +38,7 @@ using ProductConstructionService.Api.VirtualMonoRepo;
 using Maestro.Services.Common.Cache;
 using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 using Maestro.Services.Common;
 
 namespace ProductConstructionService.Api;

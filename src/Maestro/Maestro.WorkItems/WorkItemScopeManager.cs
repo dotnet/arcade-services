@@ -4,7 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public class WorkItemScopeManager
 {

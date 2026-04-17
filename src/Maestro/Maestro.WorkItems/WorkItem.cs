@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 public abstract class WorkItem
 {

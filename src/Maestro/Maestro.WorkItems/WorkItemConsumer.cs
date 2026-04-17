@@ -11,7 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ProductConstructionService.WorkItems;
+namespace Maestro.WorkItems;
 
 internal class WorkItemConsumer(
         string consumerId,

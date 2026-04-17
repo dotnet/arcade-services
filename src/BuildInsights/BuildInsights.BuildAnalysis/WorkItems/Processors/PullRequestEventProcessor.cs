@@ -9,7 +9,7 @@ using BuildInsights.GitHub.Models;
 using BuildInsights.QueueInsights.Models;
 using BuildInsights.GitHub;
 using BuildInsights.QueueInsights;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;

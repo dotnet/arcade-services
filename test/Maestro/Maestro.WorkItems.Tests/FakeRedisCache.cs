@@ -3,7 +3,7 @@
 
 using Maestro.Services.Common.Cache;
 
-namespace ProductConstructionService.WorkItem.Tests;
+namespace Maestro.WorkItem.Tests;
 
 internal class FakeRedisCache : IRedisCache
 {
