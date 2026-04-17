@@ -318,8 +318,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
+        var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
+        var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
+
         await remote.CommentPullRequestAsync(oldPrUrl,
-            $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrUrl}");
+            $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}");
         await remote.ClosePullRequestAsync(oldPrUrl);
     }
 
