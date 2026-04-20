@@ -124,9 +124,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
-    private static string BuildAlternativeVmrResetMessage(int buildId) =>
-        $"Alternatively, if you don't care about losing changes done in the VMR directly, you can use `darc vmr reset --build {buildId}` from a local VMR clone. This will level the contents of the VMR and the product repository.";
-
     public static string BuildOppositeCodeflowMergedNotification() =>
         """
         While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
