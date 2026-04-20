@@ -73,6 +73,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 {
     public const int GitHubComparisonShaLength = 10;
     public const string CodeFlowPrFaqUri = "https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md";
+    public const string UnsafeCodeflowPrFaqUri = CodeFlowPrFaqUri + "#unsafe-prs";
 
     // PR description markers
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
@@ -284,12 +285,19 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 > This PR is a self-corrective attempt caused most likely by a recent change in codeflow subscriptions which results in the currently flown branch `{build.GetBranch()}` being divergent from the previously flown `{fromBranch}`.
                 >
                 > It may contain both source code changes from [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
-                > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
+                > as well as dependency updates. Learn more [here]({UnsafeCodeflowPrFaqUri}).
                 > 
                 > If the changes in this PR look wrong, you also have the option to reset the VMR's contents to match the repository:
                 > ```bash
                 > darc vmr reset --build {build.Id} {subscription.TargetDirectory ?? subscription.SourceDirectory}
                 > ```
+                """
+                : $"""
+                
+                > [!NOTE]
+                > This is a codeflow update. It may contain both source code changes from
+                > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
+                > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
                 """;
 
             return $"""
