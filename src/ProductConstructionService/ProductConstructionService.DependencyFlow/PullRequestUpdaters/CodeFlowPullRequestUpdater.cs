@@ -165,8 +165,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        // TODO Figure out if we want to close
-        // Unsafe flow PRs that when a new unsafe update comes in..
         string? oldPrUrl = null;
         if (unsafeFlow && pr != null)
         {
