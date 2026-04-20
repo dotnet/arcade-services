@@ -1024,4 +1024,25 @@ internal class BackflowTests : CodeFlowTests
         var result = await CallBackflow("arcade", arcadeRepoPath, "backflow");
         result.ShouldHaveUpdates();
     }
+
+    [Test]
+    public async Task BackflowDoesntFlowOlderBuilds()
+    {
+        const string bfBranch = nameof(BackflowDoesntFlowOlderBuilds) + "-bf";
+
+        await EnsureTestRepoIsInitialized();
+
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "first change");
+        await GitOperations.CommitAll(VmrPath, "first change");
+        var oldBuild = await CreateNewVmrBuild([]);
+
+        var codeflowRes = await ChangeVmrFileAndFlowIt("second change", bfBranch);
+
+        codeflowRes.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranch);
+
+        var act = () => CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranch, buildToFlow: oldBuild);
+        var exceptionAssertion = await act.Should().ThrowAsync<NonLinearCodeflowException>();
+        exceptionAssertion.Which.FlowingOldBuild.Should().BeTrue();
+    }
 }
