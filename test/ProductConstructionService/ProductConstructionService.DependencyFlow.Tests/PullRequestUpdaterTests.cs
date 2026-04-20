@@ -627,6 +627,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         DarcRemotes[VmrUri]
             .Verify(r => r.ClosePullRequestAsync(oldPrUrl));
+        DarcRemotes[VmrUri]
+            .Verify(r => r.DeletePullRequestBranchAsync(oldPrUrl));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)
