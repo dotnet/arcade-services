@@ -324,6 +324,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         await remote.CommentPullRequestAsync(oldPrUrl,
             $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}");
         await remote.ClosePullRequestAsync(oldPrUrl);
+        await remote.DeletePullRequestBranchAsync(oldPrUrl);
     }
 
     private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
