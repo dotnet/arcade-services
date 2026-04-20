@@ -2,17 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
-using Maestro.Data;
-using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Octokit;

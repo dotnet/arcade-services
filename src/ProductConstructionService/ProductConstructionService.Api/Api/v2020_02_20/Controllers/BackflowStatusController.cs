@@ -8,11 +8,10 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
+using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

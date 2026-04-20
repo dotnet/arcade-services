@@ -25,11 +25,10 @@ using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
+using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 

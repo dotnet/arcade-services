@@ -11,9 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Tools.Cli.Core;
 using Tools.Cli.Common.Operations;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 using StackExchange.Redis;
-using ProductConstructionService.Common.Cache;
+using Maestro.Services.Common.Cache;
 
 namespace Tools.Cli.Common.Options;
 

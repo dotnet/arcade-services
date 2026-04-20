@@ -11,11 +11,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-using ProductConstructionService.Common.Cache;
-using ProductConstructionService.Common.FeatureFlags;
+using Maestro.Services.Common.Cache;
+using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

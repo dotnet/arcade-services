@@ -7,7 +7,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.SubscriptionTriggerer;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 if (args.Length < 1)
 {

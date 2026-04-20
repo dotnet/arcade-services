@@ -35,12 +35,11 @@ using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
-using ProductConstructionService.Common.FeatureFlags;
+using Maestro.Services.Common.Cache;
+using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.ServiceDefaults;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
+using Maestro.Services.Common;
 
 namespace ProductConstructionService.Api;
 
@@ -183,7 +182,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults();
+        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(

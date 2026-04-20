@@ -5,6 +5,7 @@ using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Common.Telemetry;
 using Maestro.Data;
+using Maestro.Services.Common;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -15,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.FeedCleaner;
 

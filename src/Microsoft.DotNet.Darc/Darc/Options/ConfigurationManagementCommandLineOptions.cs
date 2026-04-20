@@ -4,7 +4,6 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib.ConfigurationRepository;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.Extensions.DependencyInjection;
 
