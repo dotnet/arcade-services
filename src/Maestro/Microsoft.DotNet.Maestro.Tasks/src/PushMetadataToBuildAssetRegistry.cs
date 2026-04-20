@@ -20,7 +20,6 @@ using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
-using Microsoft.VisualStudio.Services.Common;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks;

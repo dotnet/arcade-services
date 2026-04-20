@@ -3,7 +3,6 @@
 
 using Azure;
 using Maestro.Services.Common.Cache;
-using Maestro.WorkItems;
 
 namespace Maestro.WorkItems;
 
