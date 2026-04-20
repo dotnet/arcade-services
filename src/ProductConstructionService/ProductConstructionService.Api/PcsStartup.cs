@@ -42,7 +42,6 @@ namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {
-    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
     private const string DefaultWorkItemType = "Default";
     private const string CodeFlowWorkItemType = "CodeFlow";
 
@@ -54,7 +53,6 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
-        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
