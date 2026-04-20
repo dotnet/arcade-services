@@ -28,11 +28,8 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using Octokit.Webhooks;
-using Octokit.Webhooks.AspNetCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using Maestro.Services.Common.Cache;
@@ -241,8 +238,6 @@ internal static class PcsStartup
                     options.Cookie.IsEssential = true;
                 });
 
-        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
-
         if (addSwagger)
         {
             builder.ConfigureSwagger();
@@ -283,10 +278,6 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
-
-            e.MapGitHubWebhooks(
-                path: GitHubWebHooksPath,
-                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 
