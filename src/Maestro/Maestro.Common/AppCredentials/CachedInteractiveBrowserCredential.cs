@@ -3,6 +3,8 @@
 
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Identity.Client.Extensions.Msal;
 
 namespace Maestro.Common.AppCredentials;
@@ -13,16 +15,19 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private readonly InteractiveBrowserCredentialOptions _options;
     private readonly string _authRecordPath;
+    private readonly ILogger<CachedInteractiveBrowserCredential> _logger;
 
     private int _isCached = 0;
     private int _isDeviceCodeFallback = 0;
 
     public CachedInteractiveBrowserCredential(
         InteractiveBrowserCredentialOptions options,
-        string authRecordPath)
+        string authRecordPath,
+        ILoggerFactory? loggerFactory = null)
     {
         _options = options;
         _authRecordPath = authRecordPath;
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<CachedInteractiveBrowserCredential>();
 
         if (File.Exists(_authRecordPath))
         {
@@ -144,12 +149,14 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         try
         {
+            _logger.LogInformation("Waiting for authentication in the browser...");
             return _browserCredential.Authenticate(requestContext, cancellationToken)
                 ?? _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
         catch (AuthenticationFailedException)
         {
             Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
+            _logger.LogInformation("Interactive browser authentication unavailable, falling back to device code authentication...");
             return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
     }

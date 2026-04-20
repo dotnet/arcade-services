@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.Common.AppCredentials;
 
@@ -41,16 +42,16 @@ public class AppCredential : TokenCredential
     /// <summary>
     /// Use this for user-based flows.
     /// </summary>
-    public static AppCredential CreateUserCredential(string appId, string userScope = ".default")
-        => CreateUserCredential(appId, new TokenRequestContext([$"api://{appId}/{userScope}"]));
+    public static AppCredential CreateUserCredential(string appId, string userScope = ".default", ILoggerFactory? loggerFactory = null)
+        => CreateUserCredential(appId, new TokenRequestContext([$"api://{appId}/{userScope}"]), loggerFactory);
 
     /// <summary>
     /// Use this for user-based flows.
     /// </summary>
-    public static AppCredential CreateUserCredential(string appId, TokenRequestContext requestContext)
+    public static AppCredential CreateUserCredential(string appId, TokenRequestContext requestContext, ILoggerFactory? loggerFactory = null)
     {
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
-        var credential = GetInteractiveCredential(appId, authRecordPath);
+        var credential = GetInteractiveCredential(appId, authRecordPath, loggerFactory);
 
         return new AppCredential(credential, requestContext);
     }
@@ -59,7 +60,7 @@ public class AppCredential : TokenCredential
     /// Creates an interactive credential. Checks local cache first for an authentication record.
     /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
     /// </summary>
-    private static CachedInteractiveBrowserCredential GetInteractiveCredential(string appId, string authRecordPath)
+    private static CachedInteractiveBrowserCredential GetInteractiveCredential(string appId, string authRecordPath, ILoggerFactory? loggerFactory)
     {
         // This is a usual configuration for a credential obtained against an entra app through a browser sign-in
         var credentialOptions = new InteractiveBrowserCredentialOptions
@@ -73,7 +74,7 @@ public class AppCredential : TokenCredential
             },
         };
 
-        return new CachedInteractiveBrowserCredential(credentialOptions, authRecordPath);
+        return new CachedInteractiveBrowserCredential(credentialOptions, authRecordPath, loggerFactory);
     }
 
     /// <summary>
