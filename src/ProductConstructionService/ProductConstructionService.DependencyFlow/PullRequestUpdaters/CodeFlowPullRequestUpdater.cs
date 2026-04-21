@@ -335,7 +335,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
         catch (Exception e) when (e is not NonLinearCodeflowException)
         {
-            _logger.LogError(e, "Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
             throw;
@@ -349,10 +349,18 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
         var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
 
-        await remote.CommentPullRequestAsync(oldPrUrl,
-            $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}");
-        await remote.ClosePullRequestAsync(oldPrUrl);
-        await remote.DeletePullRequestBranchAsync(oldPrUrl);
+        try
+        {
+            await remote.CommentPullRequestAsync(oldPrUrl,
+                $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}");
+            await remote.ClosePullRequestAsync(oldPrUrl);
+            await remote.DeletePullRequestBranchAsync(oldPrUrl);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Failed to cleanup old PR during unsafe flow: {message}", e.Message);
+            throw;
+        }
     }
 
     private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
