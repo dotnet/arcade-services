@@ -349,17 +349,25 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
         var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
 
-        try
+        await TryAsync(
+            () => remote.CommentPullRequestAsync(
+                oldPrUrl,
+                $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}"),
+            "comment on");
+        await TryAsync(() => remote.ClosePullRequestAsync(oldPrUrl), "close");
+        await TryAsync(() => remote.DeletePullRequestBranchAsync(oldPrUrl), "delete branch of");
+
+        async Task TryAsync(Func<Task> op, string verb)
         {
-            await remote.CommentPullRequestAsync(oldPrUrl,
-                $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}");
-            await remote.ClosePullRequestAsync(oldPrUrl);
-            await remote.DeletePullRequestBranchAsync(oldPrUrl);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("Failed to cleanup old PR during unsafe flow: {message}", e.Message);
-            throw;
+            try
+            {
+                await op();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to {verb} old PR {oldPrUrl} after unsafe flow for subscription {subscriptionId}",
+                    verb, oldPrUrl, subscription.Id);
+            }
         }
     }
 
