@@ -93,11 +93,12 @@ internal abstract partial class ScenarioTestBase
                 // We only want to set the Creation time when we're creating it
                 if (!_lastUpdatedPrTimes.ContainsKey(prs[0].Id))
                 {
-                    // some maestro policies require a successful non Maestro check, so just set it for every PR
-                    await CreateSuccessfulExternalStatusCheckAsync(targetRepo, prs[0]);
-
                     _lastUpdatedPrTimes[prs[0].Id] = prs[0].CreatedAt;
                 }
+
+                // some Maestro policies require a successful non Maestro check, so just set it for every PR
+                await CreateSuccessfulExternalStatusCheckAsync(targetRepo, prs[0]);
+
                 return prs[0];
             }
 
