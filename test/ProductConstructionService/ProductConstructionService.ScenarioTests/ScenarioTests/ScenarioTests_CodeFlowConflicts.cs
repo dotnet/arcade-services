@@ -292,7 +292,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, unsafePr))
             {
-                unsafePr.Body.Should().Contain("This is an unsafe codeflow update");
+                unsafePr.Body.Should().Contain("This is an **unsafe codeflow update**");
 
                 replacedPr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, replacedPr.Number);
                 replacedPr.State.Value.Should().Be(ItemState.Closed);
