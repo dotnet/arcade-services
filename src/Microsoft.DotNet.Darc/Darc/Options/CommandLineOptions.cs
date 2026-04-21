@@ -139,7 +139,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
             BuildAssetRegistryToken,
             managedIdentityId: null,
             disableInteractiveAuth: IsCi,
-            BuildAssetRegistryBaseUri));
+            BuildAssetRegistryBaseUri,
+            sp.GetRequiredService<ILoggerFactory>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());

@@ -12,6 +12,7 @@ using Azure;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions.Logging;
 using AsyncEnumerable = Microsoft.DotNet.ProductConstructionService.Client.AsyncEnumerable;
 
 #nullable enable
@@ -21,11 +22,11 @@ public class BarApiClient : IBarApiClient
 {
     private readonly IProductConstructionServiceApi _barClient;
 
-    public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null)
+    public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null, ILoggerFactory? loggerFactory = null)
     {
         _barClient = !string.IsNullOrEmpty(buildAssetRegistryBaseUri)
-            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth)
-            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth);
+            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory)
+            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory);
     }
 
     #region Channel Operations
