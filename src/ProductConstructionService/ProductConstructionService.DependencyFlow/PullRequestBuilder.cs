@@ -282,7 +282,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
                 > [!CAUTION]
                 > This is an **unsafe codeflow update** ⚠️ Please review carefully as it may contain undesirable changes and/or reverts.
-                > This PR is a self-corrective attempt caused most likely by a recent change in codeflow subscriptions which results in the currently flown branch `{build.GetBranch()}` being divergent from the previously flown `{fromBranch}`.
+                > This PR is a self-corrective attempt most likely caused by a recent change in codeflow subscriptions which results in the currently flown branch `{build.GetBranch()}` being divergent from the previously flown `{fromBranch}`.
                 >
                 > It may contain both source code changes from [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
                 > as well as dependency updates. Learn more [here]({UnsafeCodeflowPrFaqUri}).
