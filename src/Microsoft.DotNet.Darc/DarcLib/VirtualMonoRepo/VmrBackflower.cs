@@ -133,17 +133,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        if (!codeflowOptions.UnsafeFlow)
+
+        // We need to check if the commit we'd backflow won't try to override the target repo branch with a different one,
+        // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
+        // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
+        // with a different branch
+        var targetRepoHeadBranchSha = await targetRepo.GetShaForRefAsync(codeflowOptions.TargetBranch);
+        if (!await targetRepo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha))
         {
-            // We need to check if the commit we'd backflow won't try to override the target repo branch with a different one,
-            // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
-            // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
-            // with a different branch
-            var targetRepoHeadBranchSha = await targetRepo.GetShaForRefAsync(codeflowOptions.TargetBranch);
-            if (!await targetRepo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha))
-            {
-                throw new BackflowNonContinuableNonLinearCodeflowException(codeflowOptions.Build.Commit, lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha);
-            }
+            throw new BackflowNonContinuableNonLinearCodeflowException(codeflowOptions.Build.Commit, lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha);
         }
 
         CodeFlowResult result = await FlowCodeAsync(
