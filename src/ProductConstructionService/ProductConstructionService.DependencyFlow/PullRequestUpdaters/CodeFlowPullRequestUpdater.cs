@@ -223,37 +223,12 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             subscription.TargetBranch,
             prHeadBranch);
 
-        CodeFlowResult codeFlowRes;
+        CodeFlowResult? codeFlowRes;
         bool unsafeFlown = false;
+
         try
         {
-            codeFlowRes = subscription.IsForwardFlow()
-                ? await _vmrForwardFlower.FlowForwardAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    unsafeFlow: false,
-                    cancellationToken: default)
-                : await _vmrBackFlower.FlowBackAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    unsafeFlow: false,
-                    cancellationToken: default);
-        }
-        catch (BlockingCodeflowException) when (pr != null)
-        {
-            await HandleBlockingCodeflowException(pr);
-            return (null, false, prHeadBranch);
-        }
-        catch (TargetBranchNotFoundException)
-        {
-            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
-                subscription.TargetBranch,
-                subscription.Id);
-            return (null, false, prHeadBranch);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: false);
         }
         catch (NonLinearCodeflowException e)
         {
@@ -269,14 +244,22 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch = GetNewBranchName(subscription.TargetBranch);
             }
 
-            codeFlowRes = await ExecuteUnsafeCodeFlowAsync(subscription, build, prHeadBranch, forceUpdate);
-        }
-        catch (Exception)
-        {
-            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+            _logger.LogInformation(
+                "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
+                subscription.IsForwardFlow() ? "Forward" : "Back",
                 build.Id,
-                subscription.Id);
-            throw;
+                subscription.SourceRepository,
+                subscription.Id,
+                subscription.TargetRepository,
+                subscription.TargetBranch,
+                prHeadBranch);
+
+            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: true);
+        }
+
+        if (codeFlowRes is null)
+        {
+            return (null, unsafeFlown, prHeadBranch);
         }
 
         if (codeFlowRes.HadConflicts)
@@ -312,6 +295,53 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
+    private async Task<CodeFlowResult?> InvokeFlowAsync(
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        InProgressPullRequest? pr,
+        string branch,
+        bool forceUpdate,
+        bool unsafeFlow)
+    {
+        try
+        {
+            return subscription.IsForwardFlow()
+                ? await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    branch,
+                    forceUpdate,
+                    unsafeFlow: unsafeFlow,
+                    cancellationToken: default)
+                : await _vmrBackFlower.FlowBackAsync(
+                    subscription,
+                    build,
+                    branch,
+                    forceUpdate,
+                    unsafeFlow: unsafeFlow,
+                    cancellationToken: default);
+        }
+        catch (BlockingCodeflowException) when (pr != null)
+        {
+            await HandleBlockingCodeflowException(pr);
+            return null;
+        }
+        catch (TargetBranchNotFoundException)
+        {
+            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
+                subscription.TargetBranch,
+                subscription.Id);
+            return null;
+        }
+        catch (Exception e) when (e is not NonLinearCodeflowException)
+        {
+            _logger.LogError(e, "Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+                build.Id,
+                subscription.Id);
+            throw;
+        }
+    }
+
     private async Task ClosePullRequestAfterUnsafeFlowAsync(string oldPrUrl, SubscriptionDTO subscription, string newPrUrl)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -342,49 +372,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             GetManualConflictResolutionInitialCommitMessage(subscription));
 
         return prIsEmpty;
-    }
-
-    private async Task<CodeFlowResult> ExecuteUnsafeCodeFlowAsync(
-        SubscriptionDTO subscription,
-        BuildDTO build,
-        string prHeadBranch,
-        bool forceUpdate)
-    {
-        _logger.LogInformation(
-            "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
-            subscription.IsForwardFlow() ? "Forward" : "Back",
-            build.Id,
-            subscription.SourceRepository,
-            subscription.Id,
-            subscription.TargetRepository,
-            subscription.TargetBranch,
-            prHeadBranch);
-
-        try
-        {
-            return subscription.IsForwardFlow()
-                ? await _vmrForwardFlower.FlowForwardAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    unsafeFlow: true,
-                    cancellationToken: default)
-                : await _vmrBackFlower.FlowBackAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    unsafeFlow: true,
-                    cancellationToken: default);
-        }
-        catch (Exception)
-        {
-            _logger.LogError("Failed to unsafe flow source changes for build {buildId} in subscription {subscriptionId}",
-                build.Id,
-                subscription.Id);
-            throw;
-        }
     }
 
     // <summary>
