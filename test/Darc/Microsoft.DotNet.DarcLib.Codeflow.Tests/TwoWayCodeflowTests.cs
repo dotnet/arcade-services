@@ -818,6 +818,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // Update repo1 and repo3 dependencies in the product repo
         await GitOperations.Checkout(ProductRepoPath, "main");
+
+        var dfmFactory = ServiceProvider.GetRequiredService<IDependencyFileManagerFactory>();
+        var gitClientFactory = ServiceProvider.GetRequiredService<IGitRepoFactory>();
+
         await GetLocal(ProductRepoPath).UpdateDependenciesAsync(
             [
                 new DependencyDetail
@@ -843,8 +847,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                 },
             ],
             remoteFactory: null,
-            ServiceProvider.GetRequiredService<IGitRepoFactory>(),
-            Mock.Of<IBarApiClient>());
+            dfmFactory.CreateDependencyFileManager(gitClientFactory));
 
         await GitOperations.CommitAll(ProductRepoPath, "Update repo1 and repo3 dependencies in the product repo");
 

@@ -36,6 +36,7 @@ internal class UpdateDependenciesOperation : Operation
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
+    private readonly IDependencyFileManagerFactory _dependencyFileManagerFactory;
 
     public UpdateDependenciesOperation(
         UpdateDependenciesCommandLineOptions options,
@@ -44,17 +45,19 @@ internal class UpdateDependenciesOperation : Operation
         IRemoteTokenProvider remoteTokenProvider,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
-        ILogger<UpdateDependenciesOperation> logger,
-        IFileSystem fileSystem)
+        IFileSystem fileSystem,
+        IDependencyFileManagerFactory dependencyFileManagerFactory,
+        ILogger<UpdateDependenciesOperation> logger)
     {
         _options = options;
-        _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
         _remoteTokenProvider = remoteTokenProvider;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
+        _dependencyFileManagerFactory = dependencyFileManagerFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -84,7 +87,7 @@ internal class UpdateDependenciesOperation : Operation
 
             IReadOnlyList<IAssetMatcher> excludedAssetMatchers = [excludedAssetsMatcher];
 
-            ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
+            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
                 await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetMatchers);
@@ -317,7 +320,8 @@ internal class UpdateDependenciesOperation : Operation
         if (!_options.DryRun)
         {
             Console.Write("    Applying updates...");
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient, relativeBasePath);
+            var dependencyFileManager = _dependencyFileManagerFactory.CreateDependencyFileManager(_gitRepoFactory);
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, dependencyFileManager, relativeBasePath);
             Console.WriteLine("    done.");
         }
     }

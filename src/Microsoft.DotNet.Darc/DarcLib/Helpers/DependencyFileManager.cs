@@ -49,6 +49,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly Func<string, IGitRepo> _gitClientFactory;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly ILogger _logger;
 
     private const string MaestroBeginComment =
@@ -71,20 +72,24 @@ public class DependencyFileManager : IDependencyFileManager
     public DependencyFileManager(
         IGitRepo gitClient,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = _ => gitClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
     public DependencyFileManager(
         IGitRepoFactory gitClientFactory,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = gitClientFactory.CreateClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
@@ -483,7 +488,6 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         SemanticVersion incomingDotNetSdkVersion,
-        IAssetLocationResolver assetLocationResolver = null,
         bool? repoHasVersionDetailsProps = null,
         UnixPath relativeBasePath = null)
     {
@@ -492,7 +496,7 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
-        
+
         if (!repoHasVersionDetailsProps.HasValue)
         {
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
@@ -539,13 +543,10 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         IReadOnlyCollection<DependencyDetail> finalDependencies =
-            (await ParseVersionDetailsXmlAsync(repoUri, branch, relativeBasePath: relativeBasePath)).Dependencies;
+            _versionDetailsParser.ParseVersionDetailsXml(versionDetails).Dependencies;
 
-        if (assetLocationResolver != null)
-        {
-            await assetLocationResolver.AddAssetLocationToDependenciesAsync(finalDependencies);
-        }
-
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(finalDependencies);
+        
         var itemsToUpdateLocations = finalDependencies
             .GroupBy(d => d.Name)
             .ToDictionary(

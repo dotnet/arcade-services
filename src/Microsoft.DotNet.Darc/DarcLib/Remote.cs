@@ -21,12 +21,10 @@ namespace Microsoft.DotNet.DarcLib;
 
 public sealed class Remote : IRemote
 {
-    private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly DependencyFileManager _fileManager;
+    private readonly IDependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IAssetLocationResolver _locationResolver;
     private readonly IRedisCacheClient _cache;
     private readonly ILogger _logger;
 
@@ -40,20 +38,18 @@ public sealed class Remote : IRemote
 
     public Remote(
         IRemoteGitRepo remoteGitClient,
-        IVersionDetailsParser versionDetailsParser,
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
         IRedisCacheClient cacheClient,
+        IDependencyFileManagerFactory dependencyFileManagerFactory,
         ILogger logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
-        _versionDetailsParser = versionDetailsParser;
         _sourceMappingParser = sourceMappingParser;
         _remoteFactory = remoteFactory;
-        _locationResolver = locationResolver;
-        _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
+        _fileManager = dependencyFileManagerFactory.CreateDependencyFileManager(remoteGitClient);
         _cache = cacheClient;
     }
 

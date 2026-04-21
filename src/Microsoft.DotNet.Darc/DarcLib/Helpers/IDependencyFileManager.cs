@@ -80,7 +80,6 @@ public interface IDependencyFileManager
         string repoUri,
         string? branch,
         SemanticVersion? incomingDotNetSdkVersion,
-        IAssetLocationResolver? assetLocationResolver = null,
         bool? repoHasVersionDetailsProps = null,
         UnixPath? relativeBasePath = null);
 

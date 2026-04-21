@@ -86,6 +86,7 @@ public static class CodeflowExtensions
         services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddScoped<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
 
         services
             .AddHttpClient("GraphQL", httpClient =>

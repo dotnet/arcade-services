@@ -471,7 +471,6 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 null,
-                It.IsAny<IAssetLocationResolver>(),
                 It.IsAny<bool?>(),
                 It.IsAny<UnixPath>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,

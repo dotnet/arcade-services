@@ -19,9 +19,24 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class Local
+public interface ILocal
 {
-    private readonly DependencyFileManager _fileManager;
+    Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null, bool allowPinnedDependencyUpdate = false);
+    Task RemoveDependencyAsync(string dependencyName, UnixPath relativeBasePath = null);
+    Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IDependencyFileManager dependencyFileManager, UnixPath relativeDependencyBasePath = null);
+    Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true, UnixPath relativeBasePath = null);
+    Task<SourceDependency> GetSourceDependencyAsync(bool includePinned = true, UnixPath relativeBasePath = null);
+    Task<SourceManifest> GetSourceManifestAsync(string repoPath);
+    Task<bool> Verify();
+    IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true);
+    void Checkout(string commit, bool force = false);
+    Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl);
+    string GetRepoRoot();
+}
+
+public class Local : ILocal
+{
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly LocalLibGit2Client _gitClient;
     private readonly VersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
@@ -35,19 +50,39 @@ public class Local
     public Local(IRemoteTokenProvider tokenProvider, ILogger logger, string overrideRootPath = null)
     {
         _logger = logger;
-        _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalLibGit2Client(tokenProvider, new NoTelemetryRecorder(), new ProcessManager(logger, GitExecutable), new FileSystem(), logger);
-        _fileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
+
+        _gitClient = new LocalLibGit2Client(
+            tokenProvider,
+            new NoTelemetryRecorder(),
+            new ProcessManager(logger, GitExecutable),
+            new FileSystem(),
+            logger);
+
+        // _dependencyFileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
     }
+    public Local(
+        IRemoteTokenProvider tokenProvider,
+        IDependencyFileManager dependencyFileManager,
+        LocalLibGit2Client gitClient,
+        ILogger logger,
+        string overrideRootPath = null)
+    {
+        _logger = logger;
 
+        _gitClient = gitClient;
+
+        _dependencyFileManager = dependencyFileManager;
+
+        _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
+    }
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
     public async Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null, bool allowPinnedDependencyUpdate = false)
     {
-        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath, allowPinnedDependencyUpdate: allowPinnedDependencyUpdate);
+        await _dependencyFileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath, allowPinnedDependencyUpdate: allowPinnedDependencyUpdate);
     }
 
     /// <summary>
@@ -55,7 +90,7 @@ public class Local
     /// </summary>
     public async Task RemoveDependencyAsync(string dependencyName, UnixPath relativeBasePath = null)
     {
-        await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null, relativeBasePath);
+        await _dependencyFileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null, relativeBasePath);
     }
 
     /// <summary>
@@ -65,11 +100,8 @@ public class Local
     public async Task UpdateDependenciesAsync(
         List<DependencyDetail> dependencies,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory,
-        IBasicBarClient barClient,
         UnixPath relativeDependencyBasePath = null)
     {
-        var locationResolver = new AssetLocationResolver(barClient);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
@@ -79,28 +111,27 @@ public class Local
 
         if (arcadeItem != null)
         {
-            var fileManager = new DependencyFileManager(gitRepoFactory, _versionDetailsParser, _logger);
             try
             {
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
+                targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
                 repoIsVmr = false;
                 arcadeRelativeBasePath = null;
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
+                targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
             }
         }
 
-        var fileContainer = await _fileManager.UpdateDependencyFiles(
+        var fileContainer = await _dependencyFileManager.UpdateDependencyFiles(
             dependencies,
             sourceDependency: null,
             _repoRootDir.Value,
             branch: null,
             targetDotNetVersion,
-            locationResolver,
             relativeBasePath: relativeDependencyBasePath);
+
         List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
         if (arcadeItem != null)
@@ -184,7 +215,7 @@ public class Local
     /// </summary>
     public async Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true, UnixPath relativeBasePath = null)
     {
-        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned, relativeBasePath);
+        VersionDetails versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned, relativeBasePath);
         return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -197,7 +228,7 @@ public class Local
         bool includePinned = true,
         UnixPath relativeBasePath = null)
     {
-        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(
+        VersionDetails versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
             _repoRootDir.Value,
             null,
             includePinned,
@@ -225,7 +256,7 @@ public class Local
     /// <returns>True if verification succeeds, false otherwise.</returns>
     public Task<bool> Verify()
     {
-        return _fileManager.Verify(_repoRootDir.Value, null);
+        return _dependencyFileManager.Verify(_repoRootDir.Value, null);
     }
 
     /// <summary>

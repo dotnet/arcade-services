@@ -359,8 +359,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             new SourceDependency(codeflowOptions.Build, codeflowOptions.Mapping.Name),
             targetRepo.Path,
             branch: null, // reads the working tree
-            targetDotNetVersion,
-            _assetLocationResolver);
+            targetDotNetVersion);
 
         // This actually does not commit but stages only
         var filesToCommit = updatedFiles.GetFilesToCommit();

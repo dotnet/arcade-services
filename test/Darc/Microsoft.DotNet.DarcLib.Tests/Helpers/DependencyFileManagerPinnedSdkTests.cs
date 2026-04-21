@@ -11,6 +11,7 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
@@ -43,8 +44,13 @@ public class DependencyFileManagerPinnedSdkTests
         </configuration>
         """;
 
-    private static void SetupCommonMocks(Mock<IGitRepo> repo, string globalJsonContent)
+    private static void SetupCommonMocks(
+        Mock<IGitRepo> repo,
+        Mock<IAssetLocationResolver> assetLocationResolver,
+        string globalJsonContent)
     {
+        assetLocationResolver.Setup(alr => alr.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()));
+
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
@@ -93,11 +99,16 @@ public class DependencyFileManagerPinnedSdkTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
-        SetupCommonMocks(repo, globalJsonContent);
+        SetupCommonMocks(repo, assetLocationResolver, globalJsonContent);
         repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
-        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
+        var manager = new DependencyFileManager(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
 
         // Act
         var result = await manager.UpdateDependencyFiles(
@@ -142,11 +153,16 @@ public class DependencyFileManagerPinnedSdkTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
-        SetupCommonMocks(repo, globalJsonContent);
+        SetupCommonMocks(repo, assetLocationResolver, globalJsonContent);
         repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
-        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
+        var manager = new DependencyFileManager(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
 
         // Act
         var result = await manager.UpdateDependencyFiles(
@@ -192,11 +208,16 @@ public class DependencyFileManagerPinnedSdkTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
-        SetupCommonMocks(repo, globalJsonContent);
+        SetupCommonMocks(repo, assetLocationResolver, globalJsonContent);
         repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
-        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
+        var manager = new DependencyFileManager(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
 
         // Act
         var result = await manager.UpdateDependencyFiles(
