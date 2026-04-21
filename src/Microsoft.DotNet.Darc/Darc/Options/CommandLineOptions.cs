@@ -132,6 +132,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
         services.TryAddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.TryAddSingleton<ILocalFactory, LocalFactory>();
+        services.TryAddSingleton<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddSingleton<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddSingleton<IAssetLocationResolver, AssetLocationResolver>();

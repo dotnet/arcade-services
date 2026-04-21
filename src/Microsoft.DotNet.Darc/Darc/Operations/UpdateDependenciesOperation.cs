@@ -32,7 +32,8 @@ internal class UpdateDependenciesOperation : Operation
     private readonly ILogger<UpdateDependenciesOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
@@ -42,7 +43,8 @@ internal class UpdateDependenciesOperation : Operation
         UpdateDependenciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IFileSystem fileSystem,
@@ -52,7 +54,8 @@ internal class UpdateDependenciesOperation : Operation
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
-        _remoteTokenProvider = remoteTokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
@@ -81,7 +84,8 @@ internal class UpdateDependenciesOperation : Operation
                 await PopulateOptionsFromSubscriptionAsync();
             }
 
-            var local = new Local(_remoteTokenProvider, _logger);
+            var repoPath = await _gitClient.GetRootDirAsync();
+            var local = _localFactory.CreateLocalGitClient(repoPath);
             var excludedAssetsMatcher = new NameBasedAssetMatcher(_options.ExcludedAssets?.Split(';'));
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
@@ -112,7 +116,7 @@ internal class UpdateDependenciesOperation : Operation
         }
     }
 
-    private List<UnixPath> ResolveTargetDirectories(Local local)
+    private List<UnixPath> ResolveTargetDirectories(ILocal local)
     {
         List<UnixPath> targetDirectories = [];
         if (string.IsNullOrEmpty(_options.TargetDirectory))
@@ -122,7 +126,7 @@ internal class UpdateDependenciesOperation : Operation
         else
         {
             targetDirectories = [];
-            foreach (var dir in _options.TargetDirectory.Split(','))
+            foreach (var dir in _options.TargetDirectory.Split(',')))
             {
                 if (dir.EndsWith('*'))
                 {
@@ -234,11 +238,11 @@ internal class UpdateDependenciesOperation : Operation
 
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
-        Local local,
+        ILocal local,
         ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         IReadOnlyList<IAssetMatcher> excludedAssetMatchers)
     {
-        List<DependencyDetail> dependenciesToUpdate = [];
+        List<DependencyDetail> dependenciesToUpdate = []:
 
         // Get a list of all dependencies, then a list of dependencies that the user asked to be updated.
         // The list of all dependencies will be updated as we go through the update algorithm with the "current set",
@@ -320,8 +324,7 @@ internal class UpdateDependenciesOperation : Operation
         if (!_options.DryRun)
         {
             Console.Write("    Applying updates...");
-            var dependencyFileManager = _dependencyFileManagerFactory.CreateDependencyFileManager(_gitRepoFactory);
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, dependencyFileManager, relativeBasePath);
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, relativeBasePath);
             Console.WriteLine("    done.");
         }
     }
@@ -544,7 +547,7 @@ internal class UpdateDependenciesOperation : Operation
 
     private static IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
-        Dictionary<string, string> dependencyVersionMap = [];
+        Dictionary<string, string> dependencyVersionMap = []:
 
         // Not using Linq to make sure there are no duplicates
         foreach (DependencyDetail dependency in dependencies)
@@ -555,7 +558,7 @@ internal class UpdateDependenciesOperation : Operation
             }
         }
 
-        List<DependencyDetail> updatedDependencies = [];
+        List<DependencyDetail> updatedDependencies = []:
 
         if (!Directory.Exists(pathToFolder))
         {

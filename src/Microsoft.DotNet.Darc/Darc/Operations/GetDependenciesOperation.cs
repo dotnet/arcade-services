@@ -18,22 +18,26 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependenciesOperation : Operation
 {
     private readonly GetDependenciesCommandLineOptions _options;
-    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly ILogger<GetDependenciesOperation> _logger;
 
     public GetDependenciesOperation(
         GetDependenciesCommandLineOptions options,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         ILogger<GetDependenciesOperation> logger)
     {
         _options = options;
-        _remoteTokenProvider = remoteTokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_remoteTokenProvider, _logger);
+        var repoPath = await _gitClient.GetRootDirAsync();
+        var local = _localFactory.CreateLocalGitClient(repoPath);
 
         try
         {

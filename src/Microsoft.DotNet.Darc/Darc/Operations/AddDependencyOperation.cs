@@ -16,16 +16,19 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddDependencyOperation : Operation
 {
     private readonly AddDependencyCommandLineOptions _options;
-    private readonly IRemoteTokenProvider _tokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly ILogger<AddDependencyOperation> _logger;
 
     public AddDependencyOperation(
         AddDependencyCommandLineOptions options,
-        IRemoteTokenProvider tokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         ILogger<AddDependencyOperation> logger)
     {
         _options = options;
-        _tokenProvider = tokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _logger = logger;
     }
 
@@ -35,7 +38,8 @@ internal class AddDependencyOperation : Operation
             ? DependencyType.Toolset
             : DependencyType.Product;
 
-        var local = new Local(_tokenProvider, _logger);
+        var repoPath = await _gitClient.GetRootDirAsync();
+        var local = _localFactory.CreateLocalGitClient(repoPath);
 
         var dependency = new DependencyDetail
         {
@@ -45,7 +49,7 @@ internal class AddDependencyOperation : Operation
             Commit = _options.Commit ?? string.Empty,
             CoherentParentDependencyName = _options.CoherentParentDependencyName ?? string.Empty,
             Pinned = _options.Pinned,
-            SkipProperty = _options.SkipProperty,
+            SkipProperty = _options.SkipProperty,_
             Type = type,
         };
 

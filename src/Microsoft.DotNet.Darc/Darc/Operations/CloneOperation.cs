@@ -61,7 +61,8 @@ internal class CloneOperation : Operation
 {
     private readonly CloneCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly ILogger<CloneOperation> _logger;
 
     private const string GitDirRedirectPrefix = "gitdir: ";
@@ -69,12 +70,14 @@ internal class CloneOperation : Operation
     public CloneOperation(
         CloneCommandLineOptions options,
         IRemoteFactory remoteFactory,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         ILogger<CloneOperation> logger)
     {
         _options = options;
         _remoteFactory = remoteFactory;
-        _remoteTokenProvider = remoteTokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _logger = logger;
     }
 
@@ -89,7 +92,8 @@ internal class CloneOperation : Operation
 
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
-                var local = new Local(_remoteTokenProvider, _logger);
+                var repoPath = await _gitClient.GetRootDirAsync();
+                var local = _localFactory.CreateLocalGitClient(repoPath);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                 IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
@@ -134,7 +138,7 @@ internal class CloneOperation : Operation
                     // the .gitdir that is shared among all repo-hashes (temporarily, before they are orphaned)
                     string masterRepoGitDirPath = GetMasterGitDirPath(_options.GitDirFolder, repo.RepoUri);
                     // used for the specific-commit version of the repo
-                    Local local;
+                    ILocal local;
 
                     // Scenarios we handle: no/existing/orphaned master folder cross no/existing .gitdir
                     await HandleMasterCopy(_remoteFactory, repo.RepoUri, masterGitRepoPath, masterRepoGitDirPath);
@@ -234,14 +238,14 @@ internal class CloneOperation : Operation
         }
     }
 
-    private Local HandleRepoAtSpecificHash(string repoPath, string commit, string masterRepoGitDirPath)
+    private ILocal HandleRepoAtSpecificHash(string repoPath, string commit, string masterRepoGitDirPath)
     {
-        Local local;
+        ILocal local;
 
         if (Directory.Exists(repoPath))
         {
             _logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-            local = new Local(_remoteTokenProvider, _logger, repoPath);
+            local = _localFactory.CreateLocalGitClient(repoPath);
         }
         else
         {
@@ -249,7 +253,7 @@ internal class CloneOperation : Operation
             Directory.CreateDirectory(repoPath);
             File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
             _logger.LogInformation($"Checking out {commit} in {repoPath}");
-            local = new Local(_remoteTokenProvider, _logger, repoPath);
+            local = _localFactory.CreateLocalGitClient(repoPath);
             local.Checkout(commit, true);
         }
 
@@ -266,7 +270,7 @@ internal class CloneOperation : Operation
         {
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
-        var local = new Local(_remoteTokenProvider, _logger, masterGitRepoPath);
+        var local = _localFactory.CreateLocalGitClient(masterGitRepoPath);
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
@@ -371,7 +375,7 @@ internal class CloneOperation : Operation
             _logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
             Directory.CreateDirectory(masterGitRepoPath);
             File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-            var masterLocal = new Local(_remoteTokenProvider, _logger, masterGitRepoPath);
+            var masterLocal = _localFactory.CreateLocalGitClient(masterGitRepoPath);
             _logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
             masterLocal.Checkout(null, true);
         }
@@ -602,7 +606,7 @@ internal class CloneOperation : Operation
 
         public override string ToString()
         {
-            return $"{RepoUri}@{Commit} ({Dependencies.Count} deps)";
+            return $"{RepoUri}@{Commit}";
         }
     }
 }
