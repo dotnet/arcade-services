@@ -846,8 +846,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                     Commit = "def",
                 },
             ],
-            remoteFactory: null,
-            dfmFactory.CreateDependencyFileManager(gitClientFactory));
+            remoteFactory: null);
 
         await GitOperations.CommitAll(ProductRepoPath, "Update repo1 and repo3 dependencies in the product repo");
 

@@ -49,7 +49,7 @@ internal class AddDependencyOperation : Operation
             Commit = _options.Commit ?? string.Empty,
             CoherentParentDependencyName = _options.CoherentParentDependencyName ?? string.Empty,
             Pinned = _options.Pinned,
-            SkipProperty = _options.SkipProperty,_
+            SkipProperty = _options.SkipProperty,
             Type = type,
         };
 

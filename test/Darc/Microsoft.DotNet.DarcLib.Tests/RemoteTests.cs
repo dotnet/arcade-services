@@ -23,6 +23,7 @@ public class RemoteTests
         var barClient = new Mock<IBarApiClient>();
         var localGitClient = new Mock<ILocalLibGit2Client>();
         var sourceMappingParser = new Mock<ISourceMappingParser>();
+        var dependencyFileManagerFactory = new Mock<IDependencyFileManagerFactory>();
         var mergePullRequest = new MergePullRequestParameters
         {
             DeleteSourceBranch = true,
@@ -98,11 +99,11 @@ public class RemoteTests
 
         var remote = new Remote(
             client.Object,
-            new VersionDetailsParser(),
             sourceMappingParser.Object,
             Mock.Of<IRemoteFactory>(),
             new AssetLocationResolver(barClient.Object),
             new NoOpRedisClient(),
+            dependencyFileManagerFactory.Object,
             logger);
 
         await remote.MergeDependencyPullRequestAsync("https://github.com/test/test2", mergePullRequest);

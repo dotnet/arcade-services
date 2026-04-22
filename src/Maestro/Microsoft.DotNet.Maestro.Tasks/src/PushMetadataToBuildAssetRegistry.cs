@@ -15,11 +15,14 @@ using System.Xml.Serialization;
 using Maestro.Common;
 using Microsoft.Build.Framework;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using MSBuild = Microsoft.Build.Utilities;
 
@@ -217,8 +220,10 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
         IProductConstructionServiceApi client,
         CancellationToken cancellationToken)
     {
-        var logger = new MSBuildLogger(Log);
-        var local = new Local(new RemoteTokenProvider(), logger, RepoRoot);
+        using var serviceProvider = BuildServiceProvider();
+        var localFactory = serviceProvider.GetRequiredService<ILocalFactory>();
+        var local = localFactory.CreateLocalGitClient(RepoRoot);
+
         IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
         var builds = new Dictionary<int, bool>();
         var assetCache = new Dictionary<(string name, string version, string commit), int>();
@@ -751,5 +756,31 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
 
         Log.LogMessage(MessageImportance.High,
                     $"##vso[artifact.upload containerfolder=BlobArtifacts;artifactname=BlobArtifacts]{mergedManifestPath}");
+    }
+
+    /// <summary>
+    /// Builds a small DI container scoped to a single task invocation so we
+    /// can resolve <see cref="ILocalFactory"/> (and its transitive dependencies)
+    /// without hand-wiring every collaborator.
+    /// </summary>
+    private ServiceProvider BuildServiceProvider()
+    {
+        var services = new ServiceCollection();
+
+        services.AddLogging(b => b.AddProvider(new MSBuildLoggerProvider(Log)));
+
+        services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider());
+        services.AddSingleton<IVersionDetailsParser, VersionDetailsParser>();
+        services.AddSingleton<IBasicBarClient>(_ => new BarApiClient(
+            BuildAssetRegistryToken,
+            managedIdentityId: null,
+            disableInteractiveAuth: !AllowInteractive,
+            buildAssetRegistryBaseUri: MaestroApiEndpoint));
+        services.AddSingleton<IAssetLocationResolver, AssetLocationResolver>();
+        services.AddSingleton<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
+        services.AddSingleton<ILocalFactory, LocalFactory>();
+
+        return services.BuildServiceProvider();
     }
 }

@@ -136,6 +136,7 @@ internal class GetDependencyGraphOperation : Operation
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     _remoteFactory,
+                    _localFactory,
                     _barClient,
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
@@ -171,6 +172,7 @@ internal class GetDependencyGraphOperation : Operation
 
                 // Build graph using only local resources
                 graph = await DependencyGraph.BuildLocalDependencyGraphAsync(
+                    _localFactory,
                     rootDependencies,
                     graphBuildOptions,
                     _logger,

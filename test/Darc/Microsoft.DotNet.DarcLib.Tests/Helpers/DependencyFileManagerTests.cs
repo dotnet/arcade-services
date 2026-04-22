@@ -143,6 +143,7 @@ public class DependencyFileManagerTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);
@@ -178,11 +179,15 @@ public class DependencyFileManagerTests
                 }
             });
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         try
@@ -236,6 +241,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            null,
             NullLogger.Instance);
 
         Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
@@ -276,6 +282,7 @@ public class DependencyFileManagerTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionDetails);
@@ -286,6 +293,9 @@ public class DependencyFileManagerTests
         repoFactory
             .Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>()))
             .Returns(repo.Object);
+
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
 
         repo.Setup(r => r.CommitFilesAsync(
             It.IsAny<List<GitFile>>(),
@@ -310,6 +320,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -396,6 +407,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         var versionDetails = VersionDetails;
         var versionProps = VersionProps;
@@ -410,6 +422,9 @@ public class DependencyFileManagerTests
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
                 .Throws<DependencyFileNotFoundException>();
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
 
         repo.Setup(r => r.CommitFilesAsync(
             It.IsAny<List<GitFile>>(),
@@ -438,6 +453,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -594,6 +610,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         var versionDetails = VersionDetails;
 
@@ -603,9 +620,13 @@ public class DependencyFileManagerTests
             .ThrowsAsync(new DependencyFileNotFoundException());
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -653,6 +674,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         UnixPath relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath("path");
 
@@ -660,9 +682,13 @@ public class DependencyFileManagerTests
             .ReturnsAsync(() => VersionDetails);
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(

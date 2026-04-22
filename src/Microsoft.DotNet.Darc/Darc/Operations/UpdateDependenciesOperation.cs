@@ -126,7 +126,7 @@ internal class UpdateDependenciesOperation : Operation
         else
         {
             targetDirectories = [];
-            foreach (var dir in _options.TargetDirectory.Split(',')))
+            foreach (var dir in _options.TargetDirectory.Split(','))
             {
                 if (dir.EndsWith('*'))
                 {
@@ -242,7 +242,7 @@ internal class UpdateDependenciesOperation : Operation
         ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         IReadOnlyList<IAssetMatcher> excludedAssetMatchers)
     {
-        List<DependencyDetail> dependenciesToUpdate = []:
+        List<DependencyDetail> dependenciesToUpdate = [];
 
         // Get a list of all dependencies, then a list of dependencies that the user asked to be updated.
         // The list of all dependencies will be updated as we go through the update algorithm with the "current set",
@@ -547,7 +547,7 @@ internal class UpdateDependenciesOperation : Operation
 
     private static IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
-        Dictionary<string, string> dependencyVersionMap = []:
+        Dictionary<string, string> dependencyVersionMap = [];
 
         // Not using Linq to make sure there are no duplicates
         foreach (DependencyDetail dependency in dependencies)
@@ -558,7 +558,7 @@ internal class UpdateDependenciesOperation : Operation
             }
         }
 
-        List<DependencyDetail> updatedDependencies = []:
+        List<DependencyDetail> updatedDependencies = [];
 
         if (!Directory.Exists(pathToFolder))
         {
