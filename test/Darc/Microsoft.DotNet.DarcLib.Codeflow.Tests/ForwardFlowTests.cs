@@ -723,4 +723,24 @@ internal class ForwardFlowTests : CodeFlowTests
         (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
             "This file has been changed in target");
     }
+
+    [Test]
+    public async Task ForwardflowDoesntFlowOlderBuilds()
+    {
+        const string branch = nameof(ForwardflowDoesntFlowOlderBuilds);
+
+        await EnsureTestRepoIsInitialized();
+
+        await File.WriteAllTextAsync(ProductRepoPath / "file.txt", "first change");
+        await GitOperations.CommitAll(ProductRepoPath, "first change");
+        var oldBuild = await CreateNewRepoBuild([]);
+
+        var codeFlowChange = await ChangeRepoFileAndFlowIt("second change", branch);
+        codeFlowChange.ShouldHaveUpdates();
+        await FinalizeForwardFlow(branch);
+
+        var act = () => CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch, oldBuild);
+        var exception = await act.Should().ThrowAsync<NonLinearCodeflowException>();
+        exception.Which.FlowingOldBuild.Should().BeTrue();
+    }
 }

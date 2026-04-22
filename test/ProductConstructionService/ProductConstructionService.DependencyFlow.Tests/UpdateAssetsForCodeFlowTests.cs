@@ -354,6 +354,63 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         }
     }
 
+    [Test]
+    public async Task UnsafeFlowClosesOldPrAndOpensNewOne()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        var oldPrUrl = VmrPullRequestUrl;
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            WithForwardFlowThrowingNonLinearException();
+
+            // Set up the new PR URL
+            var newPrUrl = $"{VmrUri}/pulls/2";
+            VmrPullRequestUrl = newPrUrl;
+            CreatePullRequestShouldReturnAValidValue();
+
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+            var expectedState = new InProgressPullRequest()
+            {
+                UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+                Url = newPrUrl,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                SourceSha = newBuild.Commit,
+                ContainedSubscriptions =
+                [
+                    new()
+                    {
+                        SubscriptionId = Subscription.Id,
+                        BuildId = newBuild.Id,
+                        SourceRepo = newBuild.GetRepository(),
+                        CommitSha = newBuild.Commit
+                    }
+                ],
+                RequiredUpdates = [],
+                CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+                UnsafeFlow = true,
+            };
+
+            AndCodeFlowPullRequestShouldHaveBeenCreated();
+            AndOldPullRequestShouldHaveBeenClosed(oldPrUrl, newPrUrl);
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(newBuild, expectedState: expectedState);
+        }
+    }
+
     protected override void ThenShouldHavePendingUpdateState(Build forBuild, bool _ = false)
     {
         base.ThenShouldHavePendingUpdateState(forBuild, true);

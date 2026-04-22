@@ -6,7 +6,6 @@ using System.IO;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
@@ -142,7 +141,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
             BuildAssetRegistryToken,
             managedIdentityId: null,
             disableInteractiveAuth: IsCi,
-            BuildAssetRegistryBaseUri));
+            BuildAssetRegistryBaseUri,
+            sp.GetRequiredService<ILoggerFactory>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
@@ -185,7 +185,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
         {
             return new VmrInfo(string.Empty, string.Empty);
         });
-        services.TryAddSingleton<IRedisCacheClient, NoOpRedisClient>();
+        services.TryAddSingleton<ICache, MemoryCache>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
 
         return services;

@@ -14,14 +14,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class LoginOperation : Operation
 {
     private readonly LoginCommandLineOptions _options;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<LoginOperation> _logger;
 
     public LoginOperation(
         LoginCommandLineOptions options,
-        ILogger<LoginOperation> logger)
+        ILoggerFactory loggerFactory)
     {
         _options = options;
-        _logger = logger;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<LoginOperation>();
     }
 
     public override async Task<int> ExecuteAsync()
@@ -37,7 +39,7 @@ internal class LoginOperation : Operation
             
             // Create a user credential which will trigger interactive browser login
             // The authentication record will be stored automatically in ~/.darc/.auth-record-{appId}
-            var credential = AppCredential.CreateUserCredential(appId, "Maestro.User");
+            var credential = AppCredential.CreateUserCredential(appId, "Maestro.User", _loggerFactory);
             
             // Force authentication by requesting a token
             var tokenContext = new TokenRequestContext([$"api://{appId}/Maestro.User"]);

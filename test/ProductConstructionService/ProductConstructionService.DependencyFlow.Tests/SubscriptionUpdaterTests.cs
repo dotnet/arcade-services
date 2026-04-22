@@ -36,7 +36,6 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
                 Mock<IPullRequestUpdater> mock = PullRequestUpdaters.GetOrAddValue(
                     updaterId,
                     () => new Mock<IPullRequestUpdater>());
-                mock.Setup(updater => updater.Id).Returns(updaterId);
                 return mock.Object;
             });
 

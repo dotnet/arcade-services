@@ -113,7 +113,7 @@
                             @if (context.ForwardFlow.Subscription.LastAppliedBuild.Staleness is > 0)
                             {
                                 <span style="color: #888; font-size: 0.85em; margin-left: 4px;">
-                                    (@context.ForwardFlow.Subscription.LastAppliedBuild.Staleness build(s) @GetBuildTimeStaleness(context.ForwardFlow) behind newest build)
+                                    (@GetBuildTimeStaleness(context.ForwardFlow))
                                 </span>
                             }
                             else if (context.ForwardFlow.NewestBuildDate == null)
@@ -155,7 +155,7 @@
                             @if (context.Backflow.Subscription.LastAppliedBuild.Staleness is > 0)
                             {
                                 <span style="color: #888; font-size: 0.85em; margin-left: 4px;">
-                                    (@context.Backflow.Subscription.LastAppliedBuild.Staleness build(s) @GetBuildTimeStaleness(context.Backflow) behind newest build)
+                                    (@GetBuildTimeStaleness(context.Backflow))
                                 </span>
                             }
                             else if (context.Backflow.NewestBuildDate == null)
@@ -422,20 +422,20 @@ protected override async Task OnInitializedAsync()
 
     static string GetBuildTimeStaleness(CodeflowSubscriptionStatus status)
     {
+        var staleness = status?.Subscription?.LastAppliedBuild?.Staleness ?? 0;
+        var buildWord = staleness == 1 ? "build" : "builds";
+
         if (status?.Subscription?.LastAppliedBuild?.DateProduced == null
             || status?.Subscription?.LastAppliedBuild?.DateProduced < DateTimeOffset.UnixEpoch
             || status?.NewestBuildDate == null
             || status.NewestBuildDate < DateTimeOffset.UnixEpoch)
         {
-            return "";
+            return $"{staleness} {buildWord} behind newest build";
         }
 
-        DateTimeOffset newest = (DateTimeOffset)status.NewestBuildDate;
-        DateTimeOffset lastApplied = (DateTimeOffset)status.Subscription.LastAppliedBuild.DateProduced;
+        var age = ((DateTimeOffset)status.NewestBuildDate - status.Subscription.LastAppliedBuild.DateProduced).ToTimeAgo();
 
-        var age = (newest - status.Subscription.LastAppliedBuild.DateProduced).ToTimeAgo();
-
-        return "and " + age.Replace(" ago", "");
+        return $"{staleness} {buildWord} and {age.Replace(" ago", "")} behind newest build";
     }
 
     /// <summary>

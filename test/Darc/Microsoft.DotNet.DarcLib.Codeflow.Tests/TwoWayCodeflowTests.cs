@@ -1564,4 +1564,38 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
     }
+
+    [Test]
+    public async Task BackflowThrowsBackflowNonContinuableNonLinearCodeflowException()
+    {
+        const string ffBranchName = nameof(BackflowThrowsBackflowNonContinuableNonLinearCodeflowException);
+        const string bfBranchName = nameof(BackflowThrowsBackflowNonContinuableNonLinearCodeflowException) + "bf";
+
+        const string repoBranchName1 = "repoBranch1";
+        const string repoBranchName2 = "repoBranch2";
+
+        // Flow the first time, then create two branches that will diverge
+        await EnsureTestRepoIsInitialized();
+
+        var codeFlowResult = await ChangeVmrFileAndFlowIt("0", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        await GitOperations.CreateBranch(ProductRepoPath, repoBranchName2);
+        await GitOperations.CreateBranch(ProductRepoPath, repoBranchName1);
+
+        await GitOperations.Checkout(ProductRepoPath, repoBranchName1);
+        await File.WriteAllTextAsync(ProductRepoPath / "random_file.txt", "not important123");
+        await GitOperations.CommitAll(ProductRepoPath, "change on repo branch1");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // now checkout the second branch, make a change to it, and try backflowing
+        await GitOperations.Checkout(ProductRepoPath, repoBranchName2);
+        await File.WriteAllTextAsync(ProductRepoPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(ProductRepoPath, "change on repo branch2");
+        var act = () => ChangeVmrFileAndFlowIt("2", repoBranchName2);
+        await act.Should().ThrowAsync<BackflowNonContinuableNonLinearCodeflowException>();
+    }
 }

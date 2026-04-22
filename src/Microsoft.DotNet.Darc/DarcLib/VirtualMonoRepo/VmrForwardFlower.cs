@@ -555,7 +555,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (!await repo.IsAncestorCommit(lastFlowRepoSha, currentFlow.RepoSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.RepoSha, lastFlowRepoSha);
+            _logger.LogInformation("Cannot safely flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}", currentFlow.RepoSha, lastFlowRepoSha);
+            throw new NonLinearCodeflowException(await repo.IsAncestorCommit(currentFlow.RepoSha, lastFlowRepoSha));
         }
     }
 

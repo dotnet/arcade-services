@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -29,6 +29,7 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
+        services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();

@@ -8,8 +8,6 @@ using Azure.Core;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Common.Cache;
-using Maestro.Common.FeatureFlags;
 using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -30,23 +28,20 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using Octokit.Webhooks;
-using Octokit.Webhooks.AspNetCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using ProductConstructionService.Common;
+using Maestro.Services.Common.Cache;
+using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.ServiceDefaults;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
+using Maestro.Services.Common;
 
 namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {
-    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
     private const string DefaultWorkItemType = "Default";
     private const string CodeFlowWorkItemType = "CodeFlow";
 
@@ -58,7 +53,6 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
-        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -183,7 +177,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults();
+        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(
@@ -232,7 +226,6 @@ internal static class PcsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.WebAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
-            .AddGitHubWebHooks()
             .AddApiPagination()
             .AddCookieTempDataProvider(
                 options =>
@@ -241,8 +234,6 @@ internal static class PcsStartup
                     // The application will not function without this cookie.
                     options.Cookie.IsEssential = true;
                 });
-
-        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
 
         if (addSwagger)
         {
@@ -284,10 +275,6 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
-
-            e.MapGitHubWebhooks(
-                path: GitHubWebHooksPath,
-                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 

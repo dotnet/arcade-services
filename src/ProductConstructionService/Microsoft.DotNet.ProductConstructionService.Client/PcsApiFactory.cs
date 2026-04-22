@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.ProductConstructionService.Client
@@ -15,15 +16,18 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string? accessToken,
             string? managedIdentityId,
-            bool disableInteractiveAuth)
+            bool disableInteractiveAuth,
+            ILoggerFactory? loggerFactory = null)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 accessToken,
                 managedIdentityId,
-                disableInteractiveAuth));
+                disableInteractiveAuth,
+                loggerFactory));
         }
 
         /// <summary>
@@ -49,17 +53,20 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// </param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string baseUri,
             string? accessToken,
             string? managedIdentityId,
-            bool disableInteractiveAuth)
+            bool disableInteractiveAuth,
+            ILoggerFactory? loggerFactory = null)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 baseUri,
                 accessToken,
                 managedIdentityId,
-                disableInteractiveAuth));
+                disableInteractiveAuth,
+                loggerFactory));
         }
 
         /// <summary>

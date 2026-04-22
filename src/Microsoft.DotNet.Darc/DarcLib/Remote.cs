@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Maestro.Common.Cache;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -25,7 +25,7 @@ public sealed class Remote : IRemote
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IRedisCacheClient _cache;
+    private readonly ICache _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -41,8 +41,8 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
-        IRedisCacheClient cacheClient,
         IDependencyFileManagerFactory dependencyFileManagerFactory,
+        ICache cache,
         ILogger logger)
     {
         _logger = logger;
@@ -50,7 +50,7 @@ public sealed class Remote : IRemote
         _sourceMappingParser = sourceMappingParser;
         _remoteFactory = remoteFactory;
         _fileManager = dependencyFileManagerFactory.CreateDependencyFileManager(remoteGitClient);
-        _cache = cacheClient;
+        _cache = cache;
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
@@ -101,6 +101,9 @@ public sealed class Remote : IRemote
     {
         return _remoteGitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
     }
+
+    public Task ClosePullRequestAsync(string pullRequestUri) =>
+        _remoteGitClient.ClosePullRequestAsync(pullRequestUri);
 
     /// <summary>
     ///     Delete a Pull Request branch

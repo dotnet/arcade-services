@@ -74,7 +74,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [generate-tpn](#generate-tpn) - Generates a new THIRD-PARTY-NOTICES.txt.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
   - [push](#push) - Pushes given VMR branch to a given remote.
-  - [reset](#reset) - Resets the contents of a VMR mapping to match a specific commit SHA from the source repository.
+  - [reset](#reset) - Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
   - [diff](#diff) - Diffs the VMR and the product repositories.
 
 ## Scenarios
@@ -1896,8 +1896,8 @@ Looking up build 2038 in Build Asset Registry...
 Finding build for Microsoft.DotNet.Cli.Runtime@3.0.100-preview.19075.1...
 Looking up Microsoft.DotNet.Cli.Runtime@3.0.100-preview.19075.1 in Build Asset Registry...
 Looking up build 1946 in Build Asset Registry...
-Finding build for Microsoft.NET.Sdk@3.0.100-preview.19075.2...
-Looking up Microsoft.NET.Sdk@3.0.100-preview.19075.2 in Build Asset Registry...
+Finding build for Microsoft.NETSdk@3.0.100-preview.19075.2...
+Looking up Microsoft.NETSdk@3.0.100-preview.19075.2 in Build Asset Registry...
 Looking up build 1931 in Build Asset Registry...
 Finding build for Microsoft.Build@16.0.0-preview.386...
 Looking up Microsoft.Build@16.0.0-preview.386 in Build Asset Registry...
@@ -3239,12 +3239,26 @@ darc vmr push --remote-url https://github.com/myfork/dotnet --branch main --skip
 
 ### **`reset`**
 
-Resets the contents of a VMR mapping to match a specific commit SHA from the source repository, effectively restoring the mapping to a known good state. This command takes a single parameter in the format `[mapping]:[sha]`.
+Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
+
+The command accepts the following forms:
+- `[mapping]:[sha]` to reset to a specific commit
+- `[mapping] --build <barBuildId>` to reset to the commit associated with a BAR build
+- `[mapping] --channel <channelName>` to reset to the latest build from a channel
+
+`--build` and `--channel` are mutually exclusive. When using either of them, the positional parameter should be just the mapping name.
 
 **Sample**
 ```
 # Reset runtime mapping to specific commit
 darc vmr reset runtime:abc123def456
+
+# Reset runtime mapping to the commit from BAR build 123456
+darc vmr reset runtime --build 123456
+
+# Reset runtime mapping to the latest build from a channel
+darc vmr reset runtime --channel ".NET 10"
+
 # Invalid format - shows clear error
 darc vmr reset invalid-format
 # Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
@@ -3255,9 +3269,13 @@ darc vmr reset invalid-format
 Diffs the VMR and the product repositories. Outputs the diff to stdout or saves it to a patch file (or multiple if patch > 1 GB), if --output-path is provided.
 If input repos are not local, they'll be cloned locally and cleaned up afterwards, so the command might not be instant.
 
+Use `--path` to limit the diff to specific paths within the repository. This option can be specified multiple times.
+
 **Sample**
 ```
 darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries --path src/coreclr
 ```
 
 <!-- Begin Generated Content: Doc Feedback -->

@@ -86,8 +86,14 @@ public class ConflictInPrBranchException : DarcException
     }
 }
 
-public class NonLinearCodeflowException(string currentSha, string previousSha)
-    : DarcException($"Cannot flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}")
+public class NonLinearCodeflowException(bool flowingOldBuild = false) : DarcException()
+{
+    public bool FlowingOldBuild { get; } = flowingOldBuild;
+}
+
+public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrSha, string lastFFRepoSha, string currentRepoSha)
+    : DarcException($"Cannot unsafe backflow commit {currentVmrSha} because the current repo SHA {currentRepoSha} is not a descendant of the last fast-forwarded repo SHA {lastFFRepoSha}. "
+        + "Doing so would attempt to 'reset' the repo branch to a different branch")
 {
 }
 
