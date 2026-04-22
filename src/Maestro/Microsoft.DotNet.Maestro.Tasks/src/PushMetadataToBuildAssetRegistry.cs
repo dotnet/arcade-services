@@ -221,7 +221,7 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
         using var serviceProvider = BuildServiceProvider();
         var localFactory = serviceProvider.GetRequiredService<ILocalFactory>();
-        var local = localFactory.CreateLocalGitClient(RepoRoot);
+        var local = localFactory.CreateLocal(RepoRoot);
 
         IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
         var builds = new Dictionary<int, bool>();

@@ -841,7 +841,7 @@ public class DependencyGraph
 
                 if (Directory.Exists(testPath))
                 {
-                    var local = localFactory.CreateLocalGitClient(testPath);
+                    var local = localFactory.CreateLocal(testPath);
                     dependencies = await local.GetDependenciesAsync();
                 }
             }

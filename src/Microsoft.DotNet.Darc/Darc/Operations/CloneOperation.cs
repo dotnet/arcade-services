@@ -93,7 +93,7 @@ internal class CloneOperation : Operation
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
                 var repoPath = await _gitClient.GetRootDirAsync();
-                var local = _localFactory.CreateLocalGitClient(repoPath);
+                var local = _localFactory.CreateLocal(repoPath);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                 IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
@@ -245,7 +245,7 @@ internal class CloneOperation : Operation
         if (Directory.Exists(repoPath))
         {
             _logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-            local = _localFactory.CreateLocalGitClient(repoPath);
+            local = _localFactory.CreateLocal(repoPath);
         }
         else
         {
@@ -253,7 +253,7 @@ internal class CloneOperation : Operation
             Directory.CreateDirectory(repoPath);
             File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
             _logger.LogInformation($"Checking out {commit} in {repoPath}");
-            local = _localFactory.CreateLocalGitClient(repoPath);
+            local = _localFactory.CreateLocal(repoPath);
             local.Checkout(commit, true);
         }
 
@@ -270,7 +270,7 @@ internal class CloneOperation : Operation
         {
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
-        var local = _localFactory.CreateLocalGitClient(masterGitRepoPath);
+        var local = _localFactory.CreateLocal(masterGitRepoPath);
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
@@ -375,7 +375,7 @@ internal class CloneOperation : Operation
             _logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
             Directory.CreateDirectory(masterGitRepoPath);
             File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-            var masterLocal = _localFactory.CreateLocalGitClient(masterGitRepoPath);
+            var masterLocal = _localFactory.CreateLocal(masterGitRepoPath);
             _logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
             masterLocal.Checkout(null, true);
         }

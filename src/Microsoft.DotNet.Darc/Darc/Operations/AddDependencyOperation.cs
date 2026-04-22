@@ -39,7 +39,7 @@ internal class AddDependencyOperation : Operation
             : DependencyType.Product;
 
         var repoPath = await _gitClient.GetRootDirAsync();
-        var local = _localFactory.CreateLocalGitClient(repoPath);
+        var local = _localFactory.CreateLocal(repoPath);
 
         var dependency = new DependencyDetail
         {

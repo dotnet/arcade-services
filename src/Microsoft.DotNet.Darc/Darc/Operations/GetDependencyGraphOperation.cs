@@ -111,7 +111,7 @@ internal class GetDependencyGraphOperation : Operation
 
                     // Grab root dependency set from local repo
                     var repoRoot = await _gitClient.GetRootDirAsync();
-                    var local = _localFactory.CreateLocalGitClient(repoRoot);
+                    var local = _localFactory.CreateLocal(repoRoot);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
                 }
@@ -149,7 +149,7 @@ internal class GetDependencyGraphOperation : Operation
                 Console.WriteLine($"Getting root dependencies from local repository...");
 
                 var localRepoRoot = await _gitClient.GetRootDirAsync();
-                var local = _localFactory.CreateLocalGitClient(localRepoRoot);
+                var local = _localFactory.CreateLocal(localRepoRoot);
                 rootDependencies = await local.GetDependenciesAsync(
                     _options.AssetName);
 

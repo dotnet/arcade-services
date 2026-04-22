@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public interface ILocalFactory
 {
-    ILocal CreateLocalGitClient(string repoPath);
+    ILocal CreateLocal(string repoPath);
 }
 
 public class LocalFactory(
@@ -23,7 +23,7 @@ public class LocalFactory(
     private readonly IRemoteTokenProvider _tokenProvider = tokenProvider;
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
-    public ILocal CreateLocalGitClient(string repoPath)
+    public ILocal CreateLocal(string repoPath)
     {
         var gitClient =  new LocalLibGit2Client(
             _tokenProvider,

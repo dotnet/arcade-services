@@ -85,7 +85,7 @@ internal class UpdateDependenciesOperation : Operation
             }
 
             var repoPath = await _gitClient.GetRootDirAsync();
-            var local = _localFactory.CreateLocalGitClient(repoPath);
+            var local = _localFactory.CreateLocal(repoPath);
             var excludedAssetsMatcher = new NameBasedAssetMatcher(_options.ExcludedAssets?.Split(';'));
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 

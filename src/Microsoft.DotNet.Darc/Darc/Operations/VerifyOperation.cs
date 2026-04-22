@@ -37,7 +37,7 @@ internal class VerifyOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         var repoPath = await _gitClient.GetRootDirAsync();
-        var local = _localFactory.CreateLocalGitClient(repoPath);
+        var local = _localFactory.CreateLocal(repoPath);
 
         try
         {

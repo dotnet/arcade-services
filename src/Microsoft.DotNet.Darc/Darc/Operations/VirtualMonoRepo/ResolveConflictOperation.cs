@@ -100,7 +100,7 @@ internal class ResolveConflictOperation(
 
     private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath, string mappingName)
     {
-        var local = _localFactory.CreateLocalGitClient(repoPath);
+        var local = _localFactory.CreateLocal(repoPath);
 
         var sourceDependency = await local.GetSourceDependencyAsync();
 
@@ -162,7 +162,7 @@ internal class ResolveConflictOperation(
 
     private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath localPath)
     {
-        var local = _localFactory.CreateLocalGitClient(localPath);
+        var local = _localFactory.CreateLocal(localPath);
 
         if (subscription.IsForwardFlow())
         {
