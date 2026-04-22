@@ -41,6 +41,7 @@ internal class DependencyTestDriver
     public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, OutputDir); }
     public LocalLibGit2Client GitClient { get; private set; }
     public DependencyFileManager DependencyFileManager { get; private set; }
+    public ILocalFactory LocalFactory { get; private set; }
 
     public DependencyTestDriver(string testName)
     {
@@ -76,7 +77,7 @@ internal class DependencyTestDriver
         GitClient = new LocalLibGit2Client(new RemoteTokenProvider(), new NoTelemetryRecorder(), processManager, new FileSystem(), NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, assetLocationResolver.Object, NullLogger.Instance);
-
+        LocalFactory = new LocalFactory(null, null, null);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["init"]);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.email", DarcLib.Constants.DarcBotEmail]);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.name", DarcLib.Constants.DarcBotName]);
@@ -133,9 +134,9 @@ internal class DependencyTestDriver
             LookupBuilds = false,
             NodeDiff = NodeDiff.None
         };
-        throw new NotImplementedException("Test is not used");
-        /*
+
         return await DependencyGraph.BuildLocalDependencyGraphAsync(
+            LocalFactory,
             null,
             dependencyGraphBuildOptions,
             NullLogger.Instance,
@@ -144,7 +145,6 @@ internal class DependencyTestDriver
             reposFolder: null,
             remotesMap: null,
             testPath: RootInputsPath);
-        */
     }
 
     private static async Task TestAndCompareImpl(
