@@ -186,7 +186,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
-                    currentDescription: null);
+                    currentDescription: null,
+                    unsafeFlow:false);
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -269,7 +270,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
-                    description);
+                    description,
+                    unsafeFlow: false);
             });
 
         description.Should().Be(
@@ -902,7 +904,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     "previoussha123",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
-                    currentDescription: null);
+                    currentDescription: null,
+                    unsafeFlow: false);
             });
 
         // Then - Should contain enhanced build link with BAR details
@@ -946,7 +949,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     "previoussha456",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
-                    currentDescription: null);
+                    currentDescription: null,
+                    unsafeFlow: false);
             });
 
         // Then - Should contain enhanced build link with BAR details for Azure DevOps repo

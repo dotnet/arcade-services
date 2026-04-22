@@ -383,6 +383,20 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             });
     }
 
+    public async Task ClosePullRequestAsync(string pullRequestUri)
+    {
+        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
+
+        await GetClient(owner, repo).PullRequest.Update(
+            owner,
+            repo,
+            id,
+            new PullRequestUpdate
+            {
+                State = ItemState.Closed
+            });
+    }
+
     /// <summary>
     /// Gets all the commits related to the pull request
     /// </summary>

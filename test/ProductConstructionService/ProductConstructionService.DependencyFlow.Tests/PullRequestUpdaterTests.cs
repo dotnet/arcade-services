@@ -205,6 +205,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<bool>(),
+            It.IsAny<bool>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CodeFlowResult(false, [], new NativePath(VmrPath), []));
     }
@@ -216,6 +217,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -232,6 +234,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -579,9 +582,53 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<bool>(),
+            It.IsAny<bool>(),
             It.IsAny<CancellationToken>()));
 
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
+    }
+
+    /// <summary>
+    /// Sets up the forward flower to throw NonLinearCodeflowException on safe flow,
+    /// then succeed on unsafe flow.
+    /// </summary>
+    protected void WithForwardFlowThrowingNonLinearException()
+    {
+        // Safe flow (unsafeFlow: false) throws NonLinearCodeflowException
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            false,
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NonLinearCodeflowException());
+
+        // Unsafe flow (unsafeFlow: true) succeeds
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            true,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
+    }
+
+    protected void AndOldPullRequestShouldHaveBeenClosed(string oldPrUrl, string newPrUrl)
+    {
+        var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
+        var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
+
+        DarcRemotes[VmrUri]
+            .Verify(r => r.CommentPullRequestAsync(
+                oldPrUrl,
+                It.Is<string>(comment => comment.Contains("Closing this PR") && comment.Contains(newPrHtmlUrl))));
+
+        DarcRemotes[VmrUri]
+            .Verify(r => r.ClosePullRequestAsync(oldPrUrl));
+        DarcRemotes[VmrUri]
+            .Verify(r => r.DeletePullRequestBranchAsync(oldPrUrl));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)

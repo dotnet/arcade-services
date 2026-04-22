@@ -133,6 +133,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+
+        // We need to check if the commit we'd backflow won't try to override the target repo branch with a different one,
+        // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
+        // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
+        // with a different branch
+        var targetRepoHeadBranchSha = await targetRepo.GetShaForRefAsync(codeflowOptions.TargetBranch);
+        if (!await targetRepo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha))
+        {
+            throw new BackflowNonContinuableNonLinearCodeflowException(codeflowOptions.Build.Commit, lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha);
+        }
+
         CodeFlowResult result = await FlowCodeAsync(
             codeflowOptions,
             lastFlows,
@@ -578,9 +589,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
         if (!await vmr.IsAncestorCommit(lastBackFlowVmrSha, currentFlow.VmrSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastBackFlowVmrSha);
+            _logger.LogInformation("Cannot safely flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}", currentFlow.VmrSha, lastBackFlowVmrSha);
+            throw new NonLinearCodeflowException(await vmr.IsAncestorCommit(currentFlow.VmrSha, lastBackFlowVmrSha));
         }
     }
 

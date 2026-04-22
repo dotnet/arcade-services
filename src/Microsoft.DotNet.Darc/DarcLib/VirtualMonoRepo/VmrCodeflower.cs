@@ -350,7 +350,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     CrossingFlow: null);
             }
 
-            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+            _logger.LogInformation("Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})", sourceRepo, backwardSha, forwardSha);
+            throw new NonLinearCodeflowException();
         }
 
         // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
