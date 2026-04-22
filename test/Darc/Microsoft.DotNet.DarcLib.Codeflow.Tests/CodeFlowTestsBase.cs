@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;

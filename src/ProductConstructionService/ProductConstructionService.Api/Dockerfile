@@ -14,9 +14,11 @@ COPY ["eng/Version.Details.props", "./eng/"]
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
+COPY ["src/Maestro/Maestro.Services.Common/Maestro.Services.Common.csproj",                      "./Maestro.Services.Common/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro.MergePolicyEvaluation/"]
+COPY ["src/Maestro/Maestro.WorkItems/Maestro.WorkItems.csproj",                         "./Maestro.WorkItems/"]
 
 WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Microsoft.DotNet.Darc/DarcLib/"]
@@ -24,12 +26,9 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Mi
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj", "./ProductConstructionService.BarViz/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj", "./ProductConstructionService.FeedCleaner/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 COPY ["src/ProductConstructionService/Microsoft.DotNet.ProductConstructionService.Client/Microsoft.DotNet.ProductConstructionService.Client.csproj", "./Microsoft.DotNet.ProductConstructionService.Client/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
@@ -43,6 +42,8 @@ COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro.MergePolicyEvaluation"]
+COPY ["src/Maestro/Maestro.Services.Common",       "./Maestro.Services.Common"]
+COPY ["src/Maestro/Maestro.WorkItems",             "./Maestro.WorkItems"]
 
 WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]

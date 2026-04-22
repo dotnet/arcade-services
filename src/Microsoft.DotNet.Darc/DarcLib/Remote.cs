@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Maestro.Common.Cache;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -27,7 +27,7 @@ public sealed class Remote : IRemote
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
-    private readonly IRedisCacheClient _cache;
+    private readonly ICache _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -44,7 +44,7 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
-        IRedisCacheClient cacheClient,
+        ICache cache,
         ILogger logger)
     {
         _logger = logger;
@@ -54,7 +54,7 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
-        _cache = cacheClient;
+        _cache = cache;
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)

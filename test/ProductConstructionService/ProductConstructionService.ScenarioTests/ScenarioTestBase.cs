@@ -95,6 +95,10 @@ internal abstract partial class ScenarioTestBase
                 {
                     _lastUpdatedPrTimes[prs[0].Id] = prs[0].CreatedAt;
                 }
+
+                // some Maestro policies require a successful non Maestro check, so just set it for every PR
+                await CreateSuccessfulExternalStatusCheckAsync(targetRepo, prs[0]);
+
                 return prs[0];
             }
 
@@ -1123,6 +1127,19 @@ internal abstract partial class ScenarioTestBase
             await Task.Delay(WAIT_DELAY);
         }
         throw new ScenarioTestException($"No Maestro Merge Policy checks were found in the PR ({prUrl}) during the allotted time.");
+    }
+
+    protected static async Task CreateSuccessfulExternalStatusCheckAsync(string targetRepoName, Octokit.PullRequest pullRequest)
+    {
+        var commitStatus = new Octokit.NewCommitStatus
+        {
+            State = Octokit.CommitState.Success,
+            Context = "scenario-test/auto-check",
+            Description = "Scenario-test status used to satisfy Maestro merge policies",
+            TargetUrl = pullRequest.HtmlUrl
+        };
+
+        await GitHubApi.Repository.Status.Create(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Head.Sha, commitStatus);
     }
 
     protected async Task<Octokit.PullRequest> WaitForFileContentInPullRequest(

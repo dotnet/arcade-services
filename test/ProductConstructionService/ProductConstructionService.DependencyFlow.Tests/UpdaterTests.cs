@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
-using Maestro.Common.Cache;
-using Maestro.Common.FeatureFlags;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
@@ -13,9 +11,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using Maestro.Services.Common.Cache;
+using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
