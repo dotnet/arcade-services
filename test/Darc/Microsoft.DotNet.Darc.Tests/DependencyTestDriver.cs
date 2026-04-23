@@ -14,6 +14,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NuGet.Versioning;
 
@@ -77,7 +78,16 @@ internal class DependencyTestDriver
         GitClient = new LocalLibGit2Client(new RemoteTokenProvider(), new NoTelemetryRecorder(), processManager, new FileSystem(), NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, assetLocationResolver.Object, NullLogger.Instance);
-        LocalFactory = new LocalFactory(null, null, null);
+
+        Mock<ILoggerFactory> loggerFactory = new();
+        loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(NullLogger.Instance);
+
+        Mock<IDependencyFileManagerFactory> dfmFactory = new();
+        dfmFactory.Setup(d => d.CreateDependencyFileManager(It.IsAny<IGitRepo>())).Returns(DependencyFileManager);
+
+        Mock<IRemoteTokenProvider> tokenProvider = new();
+
+        LocalFactory = new LocalFactory(dfmFactory.Object, tokenProvider.Object, loggerFactory.Object);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["init"]);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.email", DarcLib.Constants.DarcBotEmail]);
         await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.name", DarcLib.Constants.DarcBotName]);
