@@ -173,7 +173,7 @@ public abstract class CloneManager : ICloneManager
 
         if (resetToRemote)
         {
-            // Reset all requested to their upstream
+            // Reset all requested refs to match their upstream
             foreach (var gitRef in requestedRefs.Where(r => !Constants.EmptyGitObject.StartsWith(r)))
             {
                 // get the upstream branch for this ref (if it is a local branch)
@@ -187,7 +187,7 @@ public abstract class CloneManager : ICloneManager
                     continue;
                 }
 
-                if (string.Equals(gitRef, checkoutRef, StringComparison.Ordinal))
+                if (string.Equals(gitRef, checkoutRef, StringComparison.OrdinalIgnoreCase))
                 {
                     // The checked-out branch must be updated via `reset --hard` since
                     // `git branch -f` refuses to update a branch that is currently checked out.
