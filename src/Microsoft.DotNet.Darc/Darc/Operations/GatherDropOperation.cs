@@ -40,18 +40,21 @@ internal class GatherDropOperation : Operation
     private readonly Lazy<TokenCredential> _azureTokenCredential;
     private readonly ILogger<GatherDropOperation> _logger;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly ILocalFactory _localFactory;
 
     public GatherDropOperation(
         GatherDropCommandLineOptions options,
         ILogger<GatherDropOperation> logger,
         IBarApiClient barClient,
-        IRemoteFactory remoteFactory)
+        IRemoteFactory remoteFactory,
+        ILocalFactory localFactory)
     {
         _options = options;
         _azureTokenCredential = new Lazy<TokenCredential>(AzureAuthentication.GetCliCredential);
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _localFactory = localFactory;
     }
 
     private const string PackagesSubPath = "packages";
@@ -489,6 +492,7 @@ internal class GatherDropOperation : Operation
             var rootBuildRepository = rootBuild.GetRepository();
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 _remoteFactory,
+                _localFactory,
                 _barClient,
                 rootBuildRepository,
                 rootBuild.Commit,

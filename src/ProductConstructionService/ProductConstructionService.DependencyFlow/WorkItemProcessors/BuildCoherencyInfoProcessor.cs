@@ -14,17 +14,20 @@ public class BuildCoherencyInfoProcessor : WorkItemProcessor<BuildCoherencyInfoW
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly ILocalFactory _localFactory;
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<BuildCoherencyInfoWorkItem> _logger;
 
     public BuildCoherencyInfoProcessor(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         IBasicBarClient barClient,
         ILogger<BuildCoherencyInfoWorkItem> logger)
     {
         _context = context;
         _remoteFactory = remoteFactory;
+        _localFactory = localFactory;
         _barClient = barClient;
         _logger = logger;
     }
@@ -57,6 +60,7 @@ public class BuildCoherencyInfoProcessor : WorkItemProcessor<BuildCoherencyInfoW
 
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 _remoteFactory,
+                _localFactory,
                 _barClient,
                 build.GetRepository(),
                 build.Commit,
