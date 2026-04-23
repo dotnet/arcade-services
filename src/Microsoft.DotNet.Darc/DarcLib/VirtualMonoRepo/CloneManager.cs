@@ -173,9 +173,7 @@ public abstract class CloneManager : ICloneManager
 
         if (resetToRemote)
         {
-            // Reset all requested refs (not just the checked-out one) to their upstream.
-            // This makes sure stale local branches from previous runs pick up the latest
-            // commits that were just fetched from the remotes.
+            // Reset all requested to their upstream
             foreach (var gitRef in requestedRefs.Where(r => !Constants.EmptyGitObject.StartsWith(r)))
             {
                 // get the upstream branch for this ref (if it is a local branch)
