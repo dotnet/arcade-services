@@ -2,9 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -14,6 +11,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
@@ -43,7 +41,7 @@ public class VmrCodeFlowerGetLastFlowsTests
     private Mock<ILocalGitRepo> _vmrRepo = null!;
     private Mock<ISourceComponent> _repoInVmr = null!;
 
-    private TestVmrCodeFlower _sut = null!;
+    private IVmrCodeFlower _codeFlower = null!;
 
     [SetUp]
     public void SetUp()
@@ -92,14 +90,23 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         _fileSystem = new Mock<IFileSystem>();
 
-        _sut = new TestVmrCodeFlower(
+        _codeFlower = new VmrForwardFlower(
             _vmrInfo.Object,
             _sourceManifest.Object,
+            Mock.Of<ICodeFlowVmrUpdater>(),
             _dependencyTracker.Object,
+            Mock.Of<IVmrCloneManager>(),
             _localGitClient.Object,
             _localGitRepoFactory.Object,
             _versionDetailsParser.Object,
-            _fileSystem.Object);
+            Mock.Of<ICodeflowChangeAnalyzer>(),
+            Mock.Of<IForwardFlowConflictResolver>(),
+            Mock.Of<IWorkBranchFactory>(),
+            Mock.Of<IProcessManager>(),
+            Mock.Of<IBasicBarClient>(),
+            _fileSystem.Object,
+            Mock.Of<ICommentCollector>(),
+            NullLogger<VmrCodeFlower>.Instance);
     }
 
     [Test]
@@ -107,7 +114,7 @@ public class VmrCodeFlowerGetLastFlowsTests
     {
         SetBackflowInVersionDetails(null);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -133,7 +140,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(LastBackflowRepoSha, LastForwardRepoSha))
             .ReturnsAsync(false);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -156,7 +163,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(LastForwardRepoSha, LastBackflowRepoSha))
             .ReturnsAsync(false);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -188,7 +195,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(LastBackflowVmrSha, currentVmrSha))
             .ReturnsAsync(false);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -211,7 +218,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(LastForwardVmrSha, LastBackflowVmrSha))
             .ReturnsAsync(false);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: true,
@@ -230,7 +237,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        Func<Task> act = () => _sut.GetLastFlowsAsync(
+        Func<Task> act = () => _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -248,7 +255,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.IsAncestorCommit(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(false);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -271,7 +278,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.GetObjectTypeAsync(LastForwardRepoSha))
             .ReturnsAsync(GitObjectType.Commit);
 
-        Func<Task> act = () => _sut.GetLastFlowsAsync(
+        Func<Task> act = () => _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -298,7 +305,7 @@ public class VmrCodeFlowerGetLastFlowsTests
             .Setup(x => x.GetObjectTypeAsync(sharedRepoSha))
             .ReturnsAsync(GitObjectType.Commit);
 
-        var result = await _sut.GetLastFlowsAsync(
+        var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
             _repoClone.Object,
             currentIsBackflow: false,
@@ -320,71 +327,5 @@ public class VmrCodeFlowerGetLastFlowsTests
     private void SetupCommitObjects(Mock<ILocalGitRepo> repo)
     {
         repo.Setup(x => x.GetObjectTypeAsync(It.IsAny<string>())).ReturnsAsync(GitObjectType.Commit);
-    }
-
-    /// <summary>
-    /// Test double that exposes <see cref="VmrCodeFlower.GetLastFlowsAsync"/> without requiring the
-    /// full flow-execution machinery. Abstract members that aren't exercised by the tested method
-    /// throw so that any accidental call is caught loudly.
-    /// </summary>
-    private sealed class TestVmrCodeFlower : VmrCodeFlower
-    {
-        public TestVmrCodeFlower(
-            IVmrInfo vmrInfo,
-            ISourceManifest sourceManifest,
-            IVmrDependencyTracker dependencyTracker,
-            ILocalGitClient localGitClient,
-            ILocalGitRepoFactory localGitRepoFactory,
-            IVersionDetailsParser versionDetailsParser,
-            IFileSystem fileSystem)
-            : base(
-                vmrInfo,
-                sourceManifest,
-                dependencyTracker,
-                localGitClient,
-                localGitRepoFactory,
-                versionDetailsParser,
-                fileSystem,
-                NullLogger<VmrCodeFlower>.Instance)
-        {
-        }
-
-        protected override Task<CodeFlowResult> SameDirectionFlowAsync(
-            CodeflowOptions codeflowOptions,
-            LastFlows lastFlows,
-            ILocalGitRepo repo,
-            bool headBranchExisted,
-            CancellationToken cancellationToken) => throw new NotImplementedException();
-
-        protected override Task<CodeFlowResult> OppositeDirectionFlowAsync(
-            CodeflowOptions codeflowOptions,
-            LastFlows lastFlows,
-            ILocalGitRepo sourceRepo,
-            bool headBranchExisted,
-            CancellationToken cancellationToken) => throw new NotImplementedException();
-
-        protected override Task<Codeflow?> DetectCrossingFlow(
-            Codeflow lastFlow,
-            Backflow? lastBackFlow,
-            ForwardFlow lastForwardFlow,
-            ILocalGitRepo repo) => Task.FromResult<Codeflow?>(null);
-
-        protected override Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
-            SourceMapping mapping,
-            ILocalGitRepo targetRepo,
-            LastFlows previousFlows,
-            string branchToCreate,
-            string targetBranch,
-            bool unsafeFlow,
-            CancellationToken cancellationToken) => throw new NotImplementedException();
-
-        protected override Task EnsureCodeflowLinearityAsync(
-            ILocalGitRepo repo,
-            Codeflow currentFlow,
-            LastFlows lastFlows) => Task.CompletedTask;
-
-        protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / "eng" / "common";
-
-        protected override bool TargetRepoIsVmr() => false;
     }
 }
