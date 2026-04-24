@@ -165,7 +165,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(vmr, codeflowOptions, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, codeflowOptions, headBranchExisted, cancellationToken);
             return true;
         }
 
@@ -197,6 +197,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private async Task TryResolvingSourceManifestConflict(
         ILocalGitRepo vmr,
         CodeflowOptions codeflowOptions,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         var mappingName = codeflowOptions.Mapping.Name!;
@@ -204,8 +205,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
+        var branchToShow = headBranchExisted ? codeflowOptions.HeadBranch : codeflowOptions.TargetBranch;
         var result = await vmr.RunGitCommandAsync(
-            ["show", $"{codeflowOptions.TargetBranch}:{VmrInfo.DefaultRelativeSourceManifestPath}"],
+            ["show", $"{branchToShow}:{VmrInfo.DefaultRelativeSourceManifestPath}"],
             cancellationToken);
 
         var targetBranchSourceManifest = SourceManifest.FromJson(result.StandardOutput);
