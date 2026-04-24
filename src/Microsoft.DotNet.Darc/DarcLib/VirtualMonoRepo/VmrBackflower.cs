@@ -246,6 +246,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 workBranch,
                 async keepConflicts => await ApplyPatchesAndCommitAsync(
                     patches,
+                    lastFlows,
                     targetRepo,
                     codeflowOptions,
                     keepConflicts,
@@ -256,6 +257,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             result = await ApplyPatchesAndCommitAsync(
                 patches,
+                lastFlows,
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
@@ -283,6 +285,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     private async Task<CodeFlowResult> ApplyPatchesAndCommitAsync(
         List<VmrIngestionPatch> patches,
+        LastFlows lastFlows,
         ILocalGitRepo targetRepo,
         CodeflowOptions codeflowOptions,
         bool keepConflicts,
@@ -300,6 +303,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             await CommitBackflow(
                 codeflowOptions.CurrentFlow,
+                lastFlows,
                 targetRepo,
                 codeflowOptions.Build,
                 cancellationToken);
@@ -384,7 +388,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
 
-        var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
+        var commitMessage = await CommitBackflow(
+            codeflowOptions.CurrentFlow,
+            lastFlows,
+            targetRepo,
+            codeflowOptions.Build,
+            cancellationToken);
 
         var conflictedFiles = await MergeWorkBranchAsync(
             codeflowOptions,
@@ -448,6 +457,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .ToArray();
 
         ILocalGitRepo targetRepo;
+        bool headBranchExisted = true;
 
         // Try to see if both base and target branch are available
         try
@@ -473,12 +483,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
-            return (true, mapping, lastFlows, targetRepo);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
+            headBranchExisted = false;
             try
             {
                 if (targetRepoPath == null)
@@ -508,11 +519,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: false);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-            return (false, mapping, lastFlows, targetRepo);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
     }
 
@@ -597,10 +608,20 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
     }
 
-    private static async Task<string> CommitBackflow(Codeflow currentFlow, ILocalGitRepo targetRepo, Build build, CancellationToken cancellationToken)
+    private static async Task<string> CommitBackflow(
+        Codeflow currentFlow,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        Build build,
+        CancellationToken cancellationToken)
     {
         var commitMessage = $"""
             Backflow from {build.GetRepository()} / {Commit.GetShortSha(currentFlow.VmrSha)} build {build.Id}
+
+            Diff: {build.GetRepository()}/compare/{lastFlows.LastFlow.VmrSha}..{currentFlow.VmrSha}
+
+            From: {build.GetRepository()}/commit/{lastFlows.LastFlow.VmrSha}
+            To: {build.GetRepository()}/commit/{currentFlow.VmrSha}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
