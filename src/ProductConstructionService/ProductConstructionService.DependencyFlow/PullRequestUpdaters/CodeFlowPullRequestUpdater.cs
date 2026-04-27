@@ -106,20 +106,17 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
 
         var isForwardFlow = subscription.IsForwardFlow();
-        string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
-
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var codeFlowRes = await ExecuteCodeFlowAsync(
+        var (codeFlowRes, unsafeFlow, prHeadBranch) = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
             update,
             subscription,
             build,
-            prHeadBranch,
             forceUpdate);
 
         if (codeFlowRes == null)
@@ -154,32 +151,46 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
         }
 
-        // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
         if (codeFlowRes.HadConflicts)
         {
-            await RequestManualConflictResolutionAsync(
+            await HandleConflictsAsync(
                 update,
                 pr,
                 previousSourceSha,
                 subscription,
                 prHeadBranch,
                 codeFlowRes,
-                upstreamRepoDiffs);
-
+                upstreamRepoDiffs,
+                unsafeFlow);
             return;
+        }
+
+        string? oldPrUrl = null;
+        if (unsafeFlow && pr != null)
+        {
+            oldPrUrl = pr.Url;
+            await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            pr = null;
+            prInfo = null;
         }
 
         if (pr == null)
         {
-            await CreateCodeFlowPullRequestAsync(
+            var (newPr, _) = await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
                 subscription,
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                unsafeFlow);
+
+            if (oldPrUrl != null)
+            {
+                await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPr.Url);
+            }
         }
-        else if (pr != null && prInfo != null)
+        else if (prInfo != null)
         {
             await UpdateCodeFlowPullRequestAsync(
                 update,
@@ -192,15 +203,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task<CodeFlowResult?> ExecuteCodeFlowAsync(
+    private async Task<(CodeFlowResult? codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         BuildDTO build,
-        string prHeadBranch,
         bool forceUpdate)
     {
+        string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
+
         _logger.LogInformation(
             "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
             subscription.IsForwardFlow() ? "Forward" : "Back",
@@ -211,53 +223,55 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             subscription.TargetBranch,
             prHeadBranch);
 
-        CodeFlowResult codeFlowRes;
+        CodeFlowResult? codeFlowRes;
+        bool unsafeFlown = false;
+
         try
         {
-            codeFlowRes = subscription.IsForwardFlow()
-                ? await _vmrForwardFlower.FlowForwardAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    cancellationToken: default)
-                : await _vmrBackFlower.FlowBackAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    forceUpdate,
-                    cancellationToken: default);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: false);
         }
-        catch (BlockingCodeflowException) when (pr != null)
+        catch (NonLinearCodeflowException e)
         {
-            await HandleBlockingCodeflowException(pr);
-            return null;
-        }
-        catch (TargetBranchNotFoundException)
-        {
-            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
-                subscription.TargetBranch,
-                subscription.Id);
-            return null;
-        }
-        catch (Exception)
-        {
-            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+            if (e.FlowingOldBuild)
+            {
+                _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
+                return (null, false, prHeadBranch);
+            }
+
+            unsafeFlown = true;
+            if (pr != null)
+            {
+                prHeadBranch = GetNewBranchName(subscription.TargetBranch);
+            }
+
+            _logger.LogInformation(
+                "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
+                subscription.IsForwardFlow() ? "Forward" : "Back",
                 build.Id,
-                subscription.Id);
-            throw;
+                subscription.SourceRepository,
+                subscription.Id,
+                subscription.TargetRepository,
+                subscription.TargetBranch,
+                prHeadBranch);
+
+            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: true);
+        }
+
+        if (codeFlowRes is null)
+        {
+            return (null, unsafeFlown, prHeadBranch);
         }
 
         if (codeFlowRes.HadConflicts)
         {
             _logger.LogInformation("Detected conflicts while rebasing new changes");
-            return codeFlowRes;
+            return (codeFlowRes, unsafeFlown, prHeadBranch);
         }
 
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            return codeFlowRes;
+            return (codeFlowRes, unsafeFlown, prHeadBranch);
         }
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
@@ -272,11 +286,108 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
 
         // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
+        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(
+            subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath,
+            prHeadBranch);
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
-        return codeFlowRes;
+        return (codeFlowRes, unsafeFlown, prHeadBranch);
+    }
+
+    private async Task<CodeFlowResult?> InvokeFlowAsync(
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        InProgressPullRequest? pr,
+        string branch,
+        bool forceUpdate,
+        bool unsafeFlow)
+    {
+        try
+        {
+            return subscription.IsForwardFlow()
+                ? await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    branch,
+                    forceUpdate,
+                    unsafeFlow: unsafeFlow,
+                    cancellationToken: default)
+                : await _vmrBackFlower.FlowBackAsync(
+                    subscription,
+                    build,
+                    branch,
+                    forceUpdate,
+                    unsafeFlow: unsafeFlow,
+                    cancellationToken: default);
+        }
+        catch (BlockingCodeflowException) when (pr != null)
+        {
+            await HandleBlockingCodeflowException(pr);
+            return null;
+        }
+        catch (TargetBranchNotFoundException)
+        {
+            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
+                subscription.TargetBranch,
+                subscription.Id);
+            return null;
+        }
+        catch (Exception e) when (e is not NonLinearCodeflowException)
+        {
+            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+                build.Id,
+                subscription.Id);
+            throw;
+        }
+    }
+
+    private async Task ClosePullRequestAfterUnsafeFlowAsync(string oldPrUrl, SubscriptionDTO subscription, string newPrUrl)
+    {
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+
+        var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
+        var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
+
+        await TryAsync(
+            () => remote.CommentPullRequestAsync(
+                oldPrUrl,
+                $"Closing this PR because the branch we're flowing from has changed, and the changes in this PR no longer apply. A new PR has been opened: {newPrHtmlUrl}"),
+            "comment on");
+        await TryAsync(() => remote.ClosePullRequestAsync(oldPrUrl), "close");
+        await TryAsync(() => remote.DeletePullRequestBranchAsync(oldPrUrl), "delete branch of");
+
+        async Task TryAsync(Func<Task> op, string verb)
+        {
+            try
+            {
+                await op();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to {verb} old PR {oldPrUrl} after unsafe flow for subscription {subscriptionId}",
+                    verb, oldPrUrl, subscription.Id);
+            }
+        }
+    }
+
+    private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
+        InProgressPullRequest pr,
+        SubscriptionDTO subscription,
+        NativePath localRepo)
+    {
+        if (!pr.UnsafeFlow)
+        {
+            return false;
+        }
+
+        var (prIsEmpty, _, _) = await GetManualConflictResolutionPrStateAsync(
+            subscription,
+            localRepo,
+            pr.HeadBranch,
+            GetManualConflictResolutionInitialCommitMessage(subscription));
+
+        return prIsEmpty;
     }
 
     // <summary>
@@ -317,20 +428,69 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return upstreamRepoDiffs;
     }
 
-    private async Task RequestManualConflictResolutionAsync(
+    private async Task HandleConflictsAsync(
+        SubscriptionUpdateWorkItem update,
+        InProgressPullRequest? pr,
+        string? previousSourceSha,
+        SubscriptionDTO subscription,
+        string prHeadBranch,
+        CodeFlowResult codeFlowRes,
+        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
+        bool unsafeFlow)
+    {
+        var manualResolutionBranch = prHeadBranch;
+        string? oldPrUrl = null;
+
+        if (unsafeFlow && pr != null)
+        {
+            var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+            var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localRepo);
+
+            if (shouldReuseExistingPr)
+            {
+                // Unsafe flow generates a fresh branch name when a PR already exists, but
+                // in the reusable empty-PR case that new branch was never pushed anywhere.
+                manualResolutionBranch = pr.HeadBranch;
+            }
+            else
+            {
+                oldPrUrl = pr.Url;
+                await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+                pr = null;
+            }
+        }
+
+        string newPrUrl = await RequestManualConflictResolutionAsync(
+            update,
+            pr,
+            previousSourceSha,
+            subscription,
+            manualResolutionBranch,
+            codeFlowRes,
+            upstreamRepoDiffs,
+            unsafeFlow);
+
+        if (oldPrUrl != null)
+        {
+            await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPrUrl);
+        }
+    }
+
+    private async Task<string> RequestManualConflictResolutionAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         string? previousSourceSha,
         SubscriptionDTO subscription,
         string prHeadBranch,
         CodeFlowResult codeFlowResult,
-        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
+        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
+        bool unsafeFlown)
     {
         PullRequest prInfo;
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         NativePath localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
         bool prIsEmpty;
-        string initialCommitMessage = $"Initial commit for subscription {subscription.Id}";
+        string initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
 
         if (pr == null)
         {
@@ -344,21 +504,17 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowResult.DependencyUpdates,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                unsafeFlown);
         }
         else
         {
-            // We get the latest SHAs of the PR branch and the target branch
-            var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
-                .First(r => r.Uri.Equals(subscription.TargetRepository))
-                .Name;
-            await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
-            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
-            var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
-
-            // We check if the PR branch still only contains the empty commit only
-            var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
-            prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
+            var (existingPrIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
+                subscription,
+                localRepo,
+                prHeadBranch,
+                initialCommitMessage);
+            prIsEmpty = existingPrIsEmpty;
 
             // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
             if (prIsEmpty && !await _gitClient.IsAncestorCommit(localRepo, latestTargetBranchCommit, latestPrCommit))
@@ -392,13 +548,40 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 codeFlowResult.ConflictedFiles,
                 prHeadBranch,
-                prIsEmpty),
+                prIsEmpty,
+                unsafeFlown),
             CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
+
+        return pr.Url;
     }
+
+    private async Task<(bool prIsEmpty, string latestPrCommit, string latestTargetBranchCommit)> GetManualConflictResolutionPrStateAsync(
+        SubscriptionDTO subscription,
+        NativePath localRepo,
+        string prHeadBranch,
+        string initialCommitMessage)
+    {
+        var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
+            .First(r => r.Uri.Equals(subscription.TargetRepository))
+            .Name;
+        await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
+
+        var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
+        var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
+        var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
+
+        return (
+            latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage),
+            latestPrCommit,
+            latestTargetBranchCommit);
+    }
+
+    private static string GetManualConflictResolutionInitialCommitMessage(SubscriptionDTO subscription)
+        => $"Initial commit for subscription {subscription.Id}";
 
     /// <summary>
     /// Creates and pushes a new branch.
@@ -423,7 +606,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
-        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
+        bool unsafeFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -438,7 +622,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 previousSourceSha,
                 requiredUpdates,
                 upstreamRepoDiffs,
-                currentDescription: null);
+                currentDescription: null,
+                unsafeFlow: unsafeFlow);
 
             PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 subscription.TargetRepository,
@@ -472,6 +657,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,
                 CreationDate = DateTime.UtcNow,
+                UnsafeFlow = unsafeFlow
             };
 
             await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
@@ -544,7 +730,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             previousSourceSha,
             pullRequest.RequiredUpdates,
             upstreamRepoDiffs,
-            prInfo?.Description);
+            prInfo?.Description,
+            unsafeFlow: false /* we never update PRs with unsafe flow */);
 
         try
         {

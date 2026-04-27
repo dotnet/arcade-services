@@ -83,6 +83,12 @@ public interface IRemote
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
     /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">URI of pull request to close.</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
+
+    /// <summary>
     ///     Delete a Pull Request branch
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request to delete branch for</param>

@@ -28,6 +28,7 @@ internal interface IPcsVmrForwardFlower
         Build build,
         string headBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -67,6 +68,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Build build,
         string headBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -81,7 +83,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             sourceRepo,
             subscription.TargetBranch,
             headBranch,
-            unsafeFlow: false,
+            unsafeFlow,
             cancellationToken);
 
         CodeFlowResult result = await FlowForwardAsync(
@@ -94,7 +96,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             lastFlows,
             headBranchExisted,
             forceUpdate,
-            unsafeFlow: false,
+            unsafeFlow,
             cancellationToken);
 
         result = result with

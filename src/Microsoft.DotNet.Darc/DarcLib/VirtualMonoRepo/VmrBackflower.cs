@@ -133,6 +133,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+
+        // We need to check if the commit we'd backflow won't try to override the target repo branch with a different one,
+        // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
+        // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
+        // with a different branch
+        var targetRepoHeadBranchSha = await targetRepo.GetShaForRefAsync(codeflowOptions.TargetBranch);
+        if (!await targetRepo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha))
+        {
+            throw new BackflowNonContinuableNonLinearCodeflowException(codeflowOptions.Build.Commit, lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha);
+        }
+
         CodeFlowResult result = await FlowCodeAsync(
             codeflowOptions,
             lastFlows,
@@ -235,6 +246,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 workBranch,
                 async keepConflicts => await ApplyPatchesAndCommitAsync(
                     patches,
+                    lastFlows,
                     targetRepo,
                     codeflowOptions,
                     keepConflicts,
@@ -245,6 +257,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             result = await ApplyPatchesAndCommitAsync(
                 patches,
+                lastFlows,
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
@@ -272,6 +285,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     private async Task<CodeFlowResult> ApplyPatchesAndCommitAsync(
         List<VmrIngestionPatch> patches,
+        LastFlows lastFlows,
         ILocalGitRepo targetRepo,
         CodeflowOptions codeflowOptions,
         bool keepConflicts,
@@ -289,6 +303,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             await CommitBackflow(
                 codeflowOptions.CurrentFlow,
+                lastFlows,
                 targetRepo,
                 codeflowOptions.Build,
                 cancellationToken);
@@ -373,7 +388,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
 
-        var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
+        var commitMessage = await CommitBackflow(
+            codeflowOptions.CurrentFlow,
+            lastFlows,
+            targetRepo,
+            codeflowOptions.Build,
+            cancellationToken);
 
         var conflictedFiles = await MergeWorkBranchAsync(
             codeflowOptions,
@@ -578,16 +598,28 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
         if (!await vmr.IsAncestorCommit(lastBackFlowVmrSha, currentFlow.VmrSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastBackFlowVmrSha);
+            _logger.LogInformation("Cannot safely flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}", currentFlow.VmrSha, lastBackFlowVmrSha);
+            throw new NonLinearCodeflowException(await vmr.IsAncestorCommit(currentFlow.VmrSha, lastBackFlowVmrSha));
         }
     }
 
-    private static async Task<string> CommitBackflow(Codeflow currentFlow, ILocalGitRepo targetRepo, Build build, CancellationToken cancellationToken)
+    private static async Task<string> CommitBackflow(
+        Codeflow currentFlow,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        Build build,
+        CancellationToken cancellationToken)
     {
         var commitMessage = $"""
             Backflow from {build.GetRepository()} / {Commit.GetShortSha(currentFlow.VmrSha)} build {build.Id}
+
+            Diff: {build.GetRepository()}/compare/{lastFlows.LastFlow.VmrSha}..{currentFlow.VmrSha}
+
+            From: {build.GetRepository()}/commit/{lastFlows.LastFlow.VmrSha}
+            To: {build.GetRepository()}/commit/{currentFlow.VmrSha}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;

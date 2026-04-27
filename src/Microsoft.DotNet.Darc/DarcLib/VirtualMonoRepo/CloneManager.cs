@@ -173,21 +173,37 @@ public abstract class CloneManager : ICloneManager
 
         if (resetToRemote)
         {
-            // get the upstream branch for the currently checked out branch
-            var result = await _localGitRepo.RunGitCommandAsync(path, ["for-each-ref", "--format=%(upstream:short)", $"refs/heads/{checkoutRef}"], cancellationToken);
-            result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
-            var upstream = result.StandardOutput.Trim();
-
-            // Only reset if we have an upstream branch to reset to
-            if (!string.IsNullOrEmpty(upstream))
+            // Reset all requested refs to match their upstream
+            foreach (var gitRef in requestedRefs.Where(r => !Constants.EmptyGitObject.StartsWith(r)))
             {
-                // reset the branch to the remote one
-                result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
-                result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
+                // get the upstream branch for this ref (if it is a local branch)
+                var result = await _localGitRepo.RunGitCommandAsync(path, ["for-each-ref", "--format=%(upstream:short)", $"refs/heads/{gitRef}"], cancellationToken);
+                result.ThrowIfFailed($"Couldn't get upstream branch for {gitRef}");
+                var upstream = result.StandardOutput.Trim();
 
-                // also clean the repo
-                result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
-                result.ThrowIfFailed("Couldn't clean the repository");
+                // Only reset if we have an upstream branch to reset to
+                if (string.IsNullOrEmpty(upstream))
+                {
+                    continue;
+                }
+
+                if (string.Equals(gitRef, checkoutRef, StringComparison.OrdinalIgnoreCase))
+                {
+                    // The checked-out branch must be updated via `reset --hard` since
+                    // `git branch -f` refuses to update a branch that is currently checked out.
+                    result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
+                    result.ThrowIfFailed($"Couldn't reset {gitRef} to remote ref {upstream}");
+
+                    // also clean the repo
+                    result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
+                    result.ThrowIfFailed("Couldn't clean the repository");
+                }
+                else
+                {
+                    // Non-checked-out branches can be force-updated directly.
+                    result = await _localGitRepo.RunGitCommandAsync(path, ["branch", "-f", gitRef, upstream], cancellationToken);
+                    result.ThrowIfFailed($"Couldn't reset {gitRef} to remote ref {upstream}");
+                }
             }
         }
 

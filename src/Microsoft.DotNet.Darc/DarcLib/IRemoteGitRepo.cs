@@ -91,6 +91,12 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequest">Pull request info to update</param>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
+    /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">Uri of pull request to close</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
+
 
     /// <summary>
     ///     Merges a Dependency update pull request
