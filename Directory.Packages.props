@@ -37,6 +37,7 @@
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.4.0" />
     <PackageVersion Include="Microsoft.Build" Version="18.0.2" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.0.1" />
     <PackageVersion Include="Microsoft.DncEng.Configuration.Extensions" Version="$(MicrosoftDncEngConfigurationExtensionsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.GitHub.Authentication" Version="$(MicrosoftDotNetGitHubAuthenticationVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" Version="$(MicrosoftDotNetInternalDependencyInjectionTestingVersion)" />
