@@ -84,8 +84,8 @@ public class AppCredential : TokenCredential
     public static AppCredential CreateManagedIdentityCredential(string appId, string managedIdentityId)
     {
         var miCredential = managedIdentityId == "system"
-            ? new ManagedIdentityCredential()
-            : new ManagedIdentityCredential(managedIdentityId);
+            ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+            : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(managedIdentityId));
 
         var appCredential = new ClientAssertionCredential(
             TENANT_ID,

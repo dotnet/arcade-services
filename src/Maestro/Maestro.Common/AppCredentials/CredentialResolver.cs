@@ -23,8 +23,8 @@ public static class CredentialResolver
         if (!string.IsNullOrEmpty(options.ManagedIdentityId))
         {
             return options.ManagedIdentityId == "system"
-                ? new ManagedIdentityCredential()
-                : new ManagedIdentityCredential(options.ManagedIdentityId);
+                ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(options.ManagedIdentityId));
         }
 
         // 3. Azure CLI authentication setup by the caller (for CI scenarios)
