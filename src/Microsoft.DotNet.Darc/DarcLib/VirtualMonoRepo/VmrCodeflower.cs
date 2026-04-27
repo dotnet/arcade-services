@@ -343,7 +343,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
 
                 return new LastFlows(
-                    // When ignoring non-linear flows, we should do an opposite direction flow
+                    // When ignoring non-linear flows, we should do a same direction flow
                     LastFlow: sourceRepo != repoClone ? lastBackflow : lastForwardFlow,
                     LastBackFlow: lastBackflow,
                     LastForwardFlow: lastForwardFlow,
