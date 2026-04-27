@@ -723,6 +723,102 @@ public class DependencyFileManagerTests
     private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 
     [Test]
+    public async Task UpdateDependencyFilesRunsAssetLocationResolver()
+    {
+        const string GlobalJson = """
+            {
+              "tools": {
+                "dotnet": "8.0.100"
+              }
+            }
+            """;
+
+        const string NugetConfig = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <packageSources>
+                <clear />
+              </packageSources>
+            </configuration>
+            """;
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(GlobalJson);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        foreach (var nugetConfigName in VersionFiles.NugetConfigNames)
+        {
+            if (nugetConfigName == VersionFiles.NugetConfigNames.First())
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(NugetConfig);
+            }
+            else
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .ThrowsAsync(new DependencyFileNotFoundException());
+            }
+        }
+
+        repoFactory.Setup(rf => rf.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        assetLocationResolver
+            .Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
+        var itemsToUpdate = new[]
+        {
+            new DependencyDetail
+            {
+                Name = "Foo",
+                Version = "2.0.0",
+                Commit = "sha2",
+                RepoUri = "https://github.com/dotnet/foo",
+                Type = DependencyType.Product,
+                Locations = null,
+            },
+            new DependencyDetail
+            {
+                Name = "Bar",
+                Version = "2.0.0",
+                Commit = "sha2",
+                RepoUri = "https://github.com/dotnet/bar",
+                Type = DependencyType.Product,
+                Locations = ["https://pkgs.dev.azure.com/some/feed/v3/index.json"],
+            },
+        };
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
+
+        await manager.UpdateDependencyFiles(
+            itemsToUpdate,
+            sourceDependency: null,
+            repoUri: "https://github.com/dotnet/test",
+            branch: "main",
+            incomingDotNetSdkVersion: null,
+            repoHasVersionDetailsProps: false);
+
+        // The asset location resolver should always be invoked for every UpdateDependencyFiles call.
+        assetLocationResolver.Verify(
+            r => r.AddAssetLocationToDependenciesAsync(
+                It.IsAny<IEnumerable<DependencyDetail>>()),
+            Times.Once);
+    }
+
+    [Test]
     public void GenerateVersionDetailsPropsMergesGitHubAndAzDoMirrors()
     {
         // Arrange: dependencies from both a GitHub and its AzDO mirror URI (dotnet/dotnet <-> dotnet-dotnet)
