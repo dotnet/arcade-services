@@ -741,6 +741,8 @@ public class DependencyFileManagerTests
               </packageSources>
             </configuration>
             """;
+        const string DummyLocation = "https://pkgs.dev.azure.com/dummy/feed/v3/index.json";
+
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
         Mock<IAssetLocationResolver> assetLocationResolver = new();
@@ -771,8 +773,19 @@ public class DependencyFileManagerTests
 
         repoFactory.Setup(rf => rf.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
+        // Capture the dependencies passed to the resolver and stamp a dummy location on each one,
+        // mimicking what the real resolver does.
+        IEnumerable<DependencyDetail> resolvedDependencies = null;
         assetLocationResolver
             .Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Callback<IEnumerable<DependencyDetail>>(deps =>
+            {
+                resolvedDependencies = deps;
+                foreach (var dep in deps)
+                {
+                    dep.Locations = [DummyLocation];
+                }
+            })
             .Returns(Task.CompletedTask);
 
         var itemsToUpdate = new[]
@@ -813,9 +826,13 @@ public class DependencyFileManagerTests
 
         // The asset location resolver should always be invoked for every UpdateDependencyFiles call.
         assetLocationResolver.Verify(
-            r => r.AddAssetLocationToDependenciesAsync(
-                It.IsAny<IEnumerable<DependencyDetail>>()),
+            r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()),
             Times.Once);
+
+        // And every dependency it received should now have the dummy location applied.
+        resolvedDependencies.Should().NotBeNull();
+        resolvedDependencies.Should().NotBeEmpty();
+        resolvedDependencies.Should().OnlyContain(d => d.Locations != null && d.Locations.Contains(DummyLocation));
     }
 
     [Test]
