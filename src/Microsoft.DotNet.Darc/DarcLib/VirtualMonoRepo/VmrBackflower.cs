@@ -457,6 +457,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .ToArray();
 
         ILocalGitRepo targetRepo;
+        bool headBranchExisted = true;
 
         // Try to see if both base and target branch are available
         try
@@ -482,12 +483,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
-            return (true, mapping, lastFlows, targetRepo);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
+            headBranchExisted = false;
             try
             {
                 if (targetRepoPath == null)
@@ -517,11 +519,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-            return (false, mapping, lastFlows, targetRepo);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
     }
 
@@ -577,7 +579,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             resetToRemote: false,
             cancellationToken);
 
-        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
         previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
 

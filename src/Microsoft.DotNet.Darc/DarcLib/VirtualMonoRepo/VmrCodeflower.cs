@@ -21,7 +21,8 @@ public interface IVmrCodeFlower
         string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
-        bool ignoreNonLinearFlow);
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted);
 }
 
 public record CodeflowOptions(
@@ -273,7 +274,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
-        bool ignoreNonLinearFlow)
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted)
     {
         await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -367,7 +369,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
             // For normal flows it should be, but for the case described above it will be on a different branch.
-            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            if (!headBranchExisted && !await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
             {
                 _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
