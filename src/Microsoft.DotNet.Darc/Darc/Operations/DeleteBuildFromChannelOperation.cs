@@ -74,11 +74,7 @@ internal class DeleteBuildFromChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError(e, $"Error: Failed to delete build '{_options.Id}' from channel '{_options.Channel}'.");
             return Constants.ErrorCode;

@@ -109,11 +109,7 @@ internal abstract class VmrOperationBase : Operation
                 _logger.LogInformation("{message}", e.Message);
                 return true;
             }
-            catch (ClientVersionTooOldException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (e is not ClientVersionTooOldException)
             {
                 _logger.LogError(
                     "The command terminated unsuccessfully. {exception}.", 

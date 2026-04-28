@@ -214,11 +214,7 @@ internal class AddBuildToChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
             return Constants.ErrorCode;
@@ -322,11 +318,7 @@ internal class AddBuildToChannelOperation : Operation
                     azdoBuildId);
             } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             Console.WriteLine($"Darc couldn't check status of the promotion build. {e.Message}");
             return Constants.ErrorCode;

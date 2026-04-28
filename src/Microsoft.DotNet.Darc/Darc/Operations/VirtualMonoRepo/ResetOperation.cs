@@ -109,11 +109,7 @@ internal class ResetOperation : Operation
             _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'",
                 mappingName, mapping.DefaultRemote);
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ClientVersionTooOldException)
         {
             _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
             return Constants.ErrorCode;
@@ -197,11 +193,7 @@ internal class ResetOperation : Operation
             _logger.LogInformation("Successfully reset {mapping} to {sha}", mappingName, targetSha);
             return Constants.SuccessCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ClientVersionTooOldException)
         {
             _logger.LogError(ex, "An error occurred while resetting {mapping}", mappingName);
             return Constants.ErrorCode;

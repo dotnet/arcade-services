@@ -27,7 +27,7 @@ string PcsApiBaseAddress = builder.HostEnvironment.IsDevelopment()
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(PcsApiBaseAddress) });
 builder.Services.AddFluentUIComponents();
-builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
+builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(baseUri: PcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
 builder.Services.AddSingleton<UserRoleManager>();

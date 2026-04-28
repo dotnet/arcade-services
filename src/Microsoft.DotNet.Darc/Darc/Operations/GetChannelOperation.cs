@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -63,11 +63,7 @@ internal class GetChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError(e, "Error: Failed to retrieve the channel");
             return Constants.ErrorCode;

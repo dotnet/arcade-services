@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -178,11 +178,7 @@ internal abstract class CodeFlowOperation(
             _logger.LogDebug("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
             await repo.CheckoutAsync(refToCheckout);
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ClientVersionTooOldException)
         {
             // Log but don't throw - we don't want to mask the original exception
             _logger.LogWarning(ex, "Failed to restore {repo} to original state", repo.Path);

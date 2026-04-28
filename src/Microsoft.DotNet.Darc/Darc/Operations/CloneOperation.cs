@@ -228,11 +228,7 @@ internal class CloneOperation : Operation
 
             return Constants.SuccessCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception exc)
+        catch (Exception exc) when (exc is not ClientVersionTooOldException)
         {
             _logger.LogError(exc, "Something failed while cloning.");
             return Constants.ErrorCode;

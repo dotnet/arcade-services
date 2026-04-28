@@ -64,11 +64,7 @@ internal class GetDependencyFlowGraphOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception exc)
+        catch (Exception exc) when (exc is not ClientVersionTooOldException)
         {
             _logger.LogError(exc, "Something failed while getting the dependency graph.");
             return Constants.ErrorCode;

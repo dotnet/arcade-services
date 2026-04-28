@@ -65,11 +65,7 @@ internal class AddDependencyOperation : Operation
                                  "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception exc)
+        catch (Exception exc) when (exc is not ClientVersionTooOldException)
         {
             _logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
             return Constants.ErrorCode;
