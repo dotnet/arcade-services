@@ -19,35 +19,7 @@ public class FileSystem : IFileSystem
 
     public void DeleteFile(string path) => File.Delete(path);
 
-    public void DeleteDirectory(string path, bool recursive)
-    {
-        if (recursive && Directory.Exists(path))
-        {
-            // Git stores objects under .git/objects as read-only files. On Windows,
-            // Directory.Delete cannot remove read-only files and throws UnauthorizedAccessException,
-            // so we clear the attribute first.
-            ClearReadOnlyAttributes(path);
-        }
-
-        Directory.Delete(path, recursive);
-    }
-
-    private static void ClearReadOnlyAttributes(string path)
-    {
-        var dirInfo = new DirectoryInfo(path);
-        if ((dirInfo.Attributes & FileAttributes.ReadOnly) != 0)
-        {
-            dirInfo.Attributes &= ~FileAttributes.ReadOnly;
-        }
-
-        foreach (var file in dirInfo.EnumerateFiles("*", SearchOption.AllDirectories))
-        {
-            if ((file.Attributes & FileAttributes.ReadOnly) != 0)
-            {
-                file.Attributes &= ~FileAttributes.ReadOnly;
-            }
-        }
-    }
+    public void DeleteDirectory(string path, bool recursive) => Directory.Delete(path, recursive);
 
     public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 
