@@ -50,6 +50,10 @@ internal class GetGoalOperation : Operation
             _logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");

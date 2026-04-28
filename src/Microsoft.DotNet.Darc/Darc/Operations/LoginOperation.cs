@@ -57,6 +57,10 @@ internal class LoginOperation : Operation
                 return Constants.ErrorCode;
             }
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Authentication failed: {message}", ex.Message);

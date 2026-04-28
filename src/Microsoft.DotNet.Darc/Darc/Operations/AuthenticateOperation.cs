@@ -8,6 +8,7 @@ using Maestro.Common.AppCredentials;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -40,6 +41,10 @@ internal class AuthenticateOperation : Operation
                 {
                     Directory.Delete(AppCredential.AUTH_CACHE, recursive: true);
                     Directory.CreateDirectory(AppCredential.AUTH_CACHE);
+                }
+                catch (ClientVersionTooOldException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {

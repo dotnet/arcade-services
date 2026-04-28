@@ -214,6 +214,10 @@ internal class AddBuildToChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
@@ -317,6 +321,10 @@ internal class AddBuildToChannelOperation : Operation
                     promotionPipelineInformation.project,
                     azdoBuildId);
             } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception e)
         {

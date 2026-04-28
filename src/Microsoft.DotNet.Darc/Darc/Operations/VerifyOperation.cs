@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -44,6 +45,10 @@ internal class VerifyOperation : Operation
             }
             Console.WriteLine("Dependency verification succeeded.");
             return Constants.SuccessCode;
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception e)
         {

@@ -9,6 +9,7 @@ using Maestro.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -93,6 +94,10 @@ internal class AddRepoOperation : Operation
                     CancellationToken.None);
 
                 _logger.LogInformation("Successfully added repository '{repoName}' from '{uri}' at revision '{revision}'", repoName, uri, revision);
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

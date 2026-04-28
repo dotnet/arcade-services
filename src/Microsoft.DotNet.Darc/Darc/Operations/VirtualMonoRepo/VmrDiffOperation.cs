@@ -14,6 +14,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -95,6 +96,10 @@ internal class VmrDiffOperation : Operation
             catch (InvalidOperationException)
             {
                 // Not in a git repository, proceed with normal parsing
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -218,6 +223,10 @@ internal class VmrDiffOperation : Operation
                 }
                 return exitCode;
             }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: Failed to execute diff against VMR: {ex.Message}");
@@ -256,6 +265,10 @@ internal class VmrDiffOperation : Operation
                 {
                     Console.WriteLine("(No differences found)");
                 }
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -329,6 +342,10 @@ internal class VmrDiffOperation : Operation
                     Console.WriteLine("(No differences found)");
                 }
                 return exitCode;
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

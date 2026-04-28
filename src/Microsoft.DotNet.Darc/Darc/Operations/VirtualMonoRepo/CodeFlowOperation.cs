@@ -178,6 +178,10 @@ internal abstract class CodeFlowOperation(
             _logger.LogDebug("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
             await repo.CheckoutAsync(refToCheckout);
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             // Log but don't throw - we don't want to mask the original exception

@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -93,6 +94,11 @@ internal static class Program
             Operation operation = opts.GetOperation(sp);
 
             return operation.ExecuteAsync().GetAwaiter().GetResult();
+        }
+        catch (ClientVersionTooOldException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return Constants.VersionMismatchErrorCode;
         }
         catch (Exception e)
         {

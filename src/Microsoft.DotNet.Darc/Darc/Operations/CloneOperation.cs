@@ -5,6 +5,7 @@ using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -226,6 +227,10 @@ internal class CloneOperation : Operation
             }   // end outer while(accumulatedDependencies.Any())
 
             return Constants.SuccessCode;
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception exc)
         {
