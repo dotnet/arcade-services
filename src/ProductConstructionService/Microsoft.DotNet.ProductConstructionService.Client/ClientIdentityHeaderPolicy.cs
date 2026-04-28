@@ -17,6 +17,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         public const string ClientNameHeader = "X-Client-Name";
         public const string ClientVersionHeader = "X-Client-Version";
 
+        /// <summary>
+        /// Response header used by the server to communicate the minimum required client
+        /// version when rejecting a request with HTTP 426 (Upgrade Required).
+        /// </summary>
+        public const string MinimumClientVersionHeader = "X-Minimum-Client-Version";
+
         private readonly string _clientName;
         private readonly string _clientVersion;
 
