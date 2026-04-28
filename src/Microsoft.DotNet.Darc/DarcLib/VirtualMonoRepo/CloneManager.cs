@@ -258,6 +258,7 @@ public abstract class CloneManager : ICloneManager
                 if (!result.Succeeded)
                 {
                     _logger.LogWarning("Failed to clean up {clonePath}, re-cloning", clonePath);
+
                     GitFile.MakeGitFilesDeletable(clonePath);
                     _fileSystem.DeleteDirectory(clonePath, recursive: true);
                     return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
@@ -273,6 +274,8 @@ public abstract class CloneManager : ICloneManager
             catch (Exception e) when (e.Message.Contains("fatal: not a git repository"))
             {
                 _logger.LogWarning("Clone at {clonePath} is not a git repository, re-cloning", clonePath);
+
+                GitFile.MakeGitFilesDeletable(clonePath);
                 _fileSystem.DeleteDirectory(clonePath, recursive: true);
                 return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
             }
