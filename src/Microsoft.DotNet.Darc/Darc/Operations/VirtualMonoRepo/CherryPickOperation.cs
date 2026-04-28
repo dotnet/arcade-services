@@ -49,11 +49,7 @@ internal class CherryPickOperation : Operation
         {
             return await ExecuteInternalAsync();
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError("Cherry-pick operation failed: {message}", e.Message);
             _logger.LogDebug("{exception}", e);
@@ -76,11 +72,7 @@ internal class CherryPickOperation : Operation
         {
             vmrCandidateGitRoot = new NativePath(_processManager.FindGitRoot(vmrCandidatePath));
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError("Could not find a git repository at '{path}': {message}", vmrCandidatePath, e.Message);
             return Constants.ErrorCode;
@@ -111,11 +103,7 @@ internal class CherryPickOperation : Operation
             {
                 sourceGitRoot = new NativePath(_processManager.FindGitRoot(source));
             }
-            catch (ClientVersionTooOldException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (e is not ClientVersionTooOldException)
             {
                 _logger.LogError("Could not find a git repository at '{path}': {message}", source, e.Message);
                 return Constants.ErrorCode;

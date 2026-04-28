@@ -97,11 +97,7 @@ internal class GetLatestBuildOperation : Operation
             console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             console.WriteLine("Failed to retrieve latest build: " + e);
             return Constants.ErrorCode;

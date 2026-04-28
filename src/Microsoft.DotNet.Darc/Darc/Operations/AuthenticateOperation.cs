@@ -42,11 +42,7 @@ internal class AuthenticateOperation : Operation
                     Directory.Delete(AppCredential.AUTH_CACHE, recursive: true);
                     Directory.CreateDirectory(AppCredential.AUTH_CACHE);
                 }
-                catch (ClientVersionTooOldException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not ClientVersionTooOldException)
                 {
                     _logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
                 }

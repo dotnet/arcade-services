@@ -95,11 +95,7 @@ internal class AddRepoOperation : Operation
 
                 _logger.LogInformation("Successfully added repository '{repoName}' from '{uri}' at revision '{revision}'", repoName, uri, revision);
             }
-            catch (ClientVersionTooOldException)
-            {
-                throw;
-            }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not ClientVersionTooOldException)
             {
                 _logger.LogError(ex, "Failed to add repository from '{uri}'", uri);
                 return Constants.ErrorCode;

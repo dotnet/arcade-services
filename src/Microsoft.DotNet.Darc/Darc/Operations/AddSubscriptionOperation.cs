@@ -165,11 +165,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
                 _logger.LogInformation("Copying settings from subscription '{SubscriptionId}'", copyFromSubscription.Id);
             }
-            catch (ClientVersionTooOldException)
-            {
-                throw;
-            }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not ClientVersionTooOldException)
             {
                 _logger.LogError(ex, "Failed to retrieve subscription '{SubscriptionId}'", _options.CopyFromSubscription);
                 return Constants.ErrorCode;
@@ -441,11 +437,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 ex.Branch);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;

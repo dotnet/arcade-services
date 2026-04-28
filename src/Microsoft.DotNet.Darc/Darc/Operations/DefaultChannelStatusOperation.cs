@@ -99,11 +99,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (ClientVersionTooOldException)
-        {
-            throw;
-        }
-        catch (Exception e)
+        catch (Exception e) when (e is not ClientVersionTooOldException)
         {
             _logger.LogError(e, "Error: Failed enable/disable default channel association.");
             return Constants.ErrorCode;
