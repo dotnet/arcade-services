@@ -9,6 +9,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -63,6 +64,10 @@ internal class AddDependencyOperation : Operation
             _logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
                                  "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
             return Constants.ErrorCode;
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception exc)
         {

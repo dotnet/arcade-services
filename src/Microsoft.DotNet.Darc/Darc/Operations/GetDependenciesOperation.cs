@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -61,6 +62,10 @@ internal class GetDependenciesOperation : Operation
             }
 
             return Constants.SuccessCode;
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception exc)
         {

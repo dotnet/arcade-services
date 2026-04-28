@@ -102,6 +102,10 @@ internal class UpdateDependenciesOperation : Operation
             _logger.LogError("Failed to update dependencies - GitHub token is invalid.");
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to update dependencies.");
@@ -754,6 +758,10 @@ internal class UpdateDependenciesOperation : Operation
                     manifestContent = await response.Content.ReadAsStringAsync();
                 }
             }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to download MergedManifest.xml from build {BuildId}", build.Id);
@@ -806,6 +814,10 @@ internal class UpdateDependenciesOperation : Operation
             }
 
             _logger.LogInformation("Parsed {Count} asset origin mappings from MergedManifest.xml", assetOrigins.Count);
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

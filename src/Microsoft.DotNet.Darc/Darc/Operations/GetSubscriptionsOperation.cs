@@ -66,6 +66,10 @@ internal class GetSubscriptionsOperation : Operation
             Console.WriteLine(ex.Message);
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error: Failed to retrieve subscriptions");

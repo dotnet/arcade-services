@@ -361,6 +361,10 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError($"Failed to update subscription: {e.Response.Content}");
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, $"Failed to update subscription.");

@@ -173,6 +173,10 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 "Make sure your authentication or access token is enabled for the organization associated with the repository `{repo}`.", repository);
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying branch existence for {repo}@{branch}", repository, branch);
@@ -251,6 +255,10 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 ex.Repository,
                 ex.Branch);
             return Constants.ErrorCode;
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception e)
         {

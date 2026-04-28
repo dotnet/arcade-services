@@ -87,6 +87,10 @@ internal class AddDefaultChannelOperation : Operation
                 e.Branch);
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to add a new default channel association.");

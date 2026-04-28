@@ -154,6 +154,10 @@ internal class GatherDropOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to gather drop.");
@@ -1499,6 +1503,10 @@ internal class GatherDropOperation : Operation
             try
             {
                 await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception e)
             {

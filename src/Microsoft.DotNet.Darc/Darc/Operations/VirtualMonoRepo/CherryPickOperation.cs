@@ -9,6 +9,7 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -48,6 +49,10 @@ internal class CherryPickOperation : Operation
         {
             return await ExecuteInternalAsync();
         }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
             _logger.LogError("Cherry-pick operation failed: {message}", e.Message);
@@ -70,6 +75,10 @@ internal class CherryPickOperation : Operation
         try
         {
             vmrCandidateGitRoot = new NativePath(_processManager.FindGitRoot(vmrCandidatePath));
+        }
+        catch (ClientVersionTooOldException)
+        {
+            throw;
         }
         catch (Exception e)
         {
@@ -101,6 +110,10 @@ internal class CherryPickOperation : Operation
             try
             {
                 sourceGitRoot = new NativePath(_processManager.FindGitRoot(source));
+            }
+            catch (ClientVersionTooOldException)
+            {
+                throw;
             }
             catch (Exception e)
             {

@@ -121,6 +121,11 @@ internal static class Program
 
             return await operation.ExecuteAsync();
         }
+        catch (ClientVersionTooOldException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return Constants.VersionMismatchErrorCode;
+        }
         catch (Exception e)
         {
             Console.WriteLine("Unhandled exception encountered");
