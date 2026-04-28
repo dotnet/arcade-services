@@ -122,8 +122,8 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             if (!string.IsNullOrEmpty(option.ManagedIdentityId))
             {
                 credentials[account] = option.ManagedIdentityId == "system"
-                    ? new ManagedIdentityCredential()
-                    : new ManagedIdentityCredential(option.ManagedIdentityId);
+                    ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+                    : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(option.ManagedIdentityId));
                 continue;
             }
 
