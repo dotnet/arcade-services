@@ -1178,9 +1178,9 @@ darc add-subscription `
 
 # Step 3: make a final change and open a single PR for everything
 darc set-repository-policies `
-  --repository https://github.com/dotnet/target-repo `
+  --repo https://github.com/dotnet/target-repo `
   --branch main `
-  --merge-policies allChecksSuccessful=true `
+  --all-checks-passed `
   --configuration-branch net11-preview4-config
 ```
 
