@@ -1131,11 +1131,9 @@ You will find them on the `Checks` tab of each updates PRs created by maestro. D
 
 ### Making multiple configuration changes
 
-Configuration management commands such as `add-channel`, `update-channel`, `add-subscription`,
-`update-subscription`, `add-default-channel`, `delete-default-channel`, and `set-repository-policies`
-all support a common set of parameters that can be used to make multiple changes in a single PR.
-By combining `--configuration-branch` with `--no-pr`, you can stage several related configuration
-changes onto the same branch and then open a single pull request for all of them.
+The configuration management commands support a common set of parameters that allow you to combine
+multiple changes. By using `--configuration-branch` with `--no-pr`, you can stage several related
+configuration changes onto the same branch and then open a single pull request for all of them.
 
 This is useful when you want to make a coordinated set of changes, such as:
 
