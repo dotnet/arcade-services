@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -140,7 +141,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
             managedIdentityId: null,
             disableInteractiveAuth: IsCi,
             BuildAssetRegistryBaseUri,
-            sp.GetRequiredService<ILoggerFactory>()));
+            sp.GetRequiredService<ILoggerFactory>(),
+            clientName: "darc",
+            clientVersion: GetDarcVersion()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
@@ -187,5 +190,16 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddScoped<ICommentCollector, CommentCollector>();
 
         return services;
+    }
+
+    private static string GetDarcVersion()
+    {
+        string informationalVersion = typeof(CommandLineOptions).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        // Strip the SourceLink "+<commit-sha>" suffix
+        int plusIndex = informationalVersion?.IndexOf('+') ?? -1;
+        return plusIndex >= 0 ? informationalVersion.Substring(0, plusIndex) : informationalVersion;
     }
 }
