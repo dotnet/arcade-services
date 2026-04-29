@@ -12,7 +12,6 @@ public class Constants
 {
     public const string SettingsFileName = "settings";
     public const int ErrorCode = 42;
-    public const int VersionMismatchErrorCode = 43;
     public const int SuccessCode = 0;
     public const int MaxPopupTries = 3;
     public const string DefaultDarcClonesDirectoryName = "darc-clones";
