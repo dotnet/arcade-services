@@ -5,7 +5,6 @@ using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -228,7 +227,7 @@ internal class CloneOperation : Operation
 
             return Constants.SuccessCode;
         }
-        catch (Exception exc) when (exc is not ClientVersionTooOldException)
+        catch (Exception exc)
         {
             _logger.LogError(exc, "Something failed while cloning.");
             return Constants.ErrorCode;

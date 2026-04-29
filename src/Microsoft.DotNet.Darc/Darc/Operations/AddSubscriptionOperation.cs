@@ -165,7 +165,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
                 _logger.LogInformation("Copying settings from subscription '{SubscriptionId}'", copyFromSubscription.Id);
             }
-            catch (Exception ex) when (ex is not ClientVersionTooOldException)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve subscription '{SubscriptionId}'", _options.CopyFromSubscription);
                 return Constants.ErrorCode;

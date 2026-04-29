@@ -11,7 +11,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -63,7 +62,7 @@ internal class GetDependenciesOperation : Operation
 
             return Constants.SuccessCode;
         }
-        catch (Exception exc) when (exc is not ClientVersionTooOldException)
+        catch (Exception exc)
         {
             if (!string.IsNullOrEmpty(_options.Name))
             {

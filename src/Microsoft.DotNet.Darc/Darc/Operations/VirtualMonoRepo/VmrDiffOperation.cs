@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -97,7 +96,7 @@ internal class VmrDiffOperation : Operation
             {
                 // Not in a git repository, proceed with normal parsing
             }
-            catch (Exception ex) when (ex is not ClientVersionTooOldException)
+            catch (Exception ex)
             {
                 // Unexpected error, log for debugging and proceed with normal parsing
                 Console.Error.WriteLine($"Unexpected error while checking for single mapping name: {ex}");
@@ -219,7 +218,7 @@ internal class VmrDiffOperation : Operation
                 }
                 return exitCode;
             }
-            catch (Exception ex) when (ex is not ClientVersionTooOldException)
+            catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: Failed to execute diff against VMR: {ex.Message}");
                 return 1;
@@ -258,7 +257,7 @@ internal class VmrDiffOperation : Operation
                     Console.WriteLine("(No differences found)");
                 }
             }
-            catch (Exception ex) when (ex is not ClientVersionTooOldException)
+            catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: Failed to execute diff for {repository.Path}: {ex.Message}");
                 hasAnyDifferences = true;
@@ -331,7 +330,7 @@ internal class VmrDiffOperation : Operation
                 }
                 return exitCode;
             }
-            catch (Exception ex) when (ex is not ClientVersionTooOldException)
+            catch (Exception ex)
             {
                 Console.WriteLine($"ERROR: Failed to execute diff for {mappingName}: {ex.Message}");
                 return 1;
