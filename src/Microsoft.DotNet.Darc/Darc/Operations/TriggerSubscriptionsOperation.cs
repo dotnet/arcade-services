@@ -155,7 +155,7 @@ internal class TriggerSubscriptionsOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Unexpected error while triggering subscriptions.");
             return Constants.ErrorCode;

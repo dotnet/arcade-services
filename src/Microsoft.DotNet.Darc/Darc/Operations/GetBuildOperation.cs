@@ -116,7 +116,7 @@ internal class GetBuildOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to retrieve build information.");
             return Constants.ErrorCode;

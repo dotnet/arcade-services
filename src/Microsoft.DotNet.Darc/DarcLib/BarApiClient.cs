@@ -29,6 +29,11 @@ public class BarApiClient : IBarApiClient
             : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory, clientName, clientVersion);
     }
 
+    public BarApiClient(IProductConstructionServiceApi barClient)
+    {
+        _barClient = barClient;
+    }
+
     #region Channel Operations
 
     /// <summary>

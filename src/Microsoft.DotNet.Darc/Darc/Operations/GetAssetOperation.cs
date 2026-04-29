@@ -199,7 +199,7 @@ internal class GetAssetOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to retrieve information about assets.");
             return Constants.ErrorCode;

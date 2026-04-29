@@ -252,7 +252,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 ex.Branch);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, $"Failed to set merge policies.");
             return Constants.ErrorCode;

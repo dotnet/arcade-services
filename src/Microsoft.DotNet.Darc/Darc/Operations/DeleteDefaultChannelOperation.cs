@@ -65,7 +65,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed remove the default channel association.");
             return Constants.ErrorCode;

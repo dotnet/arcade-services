@@ -73,7 +73,7 @@ internal class GetDefaultChannelsOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to retrieve default channel information.");
             return Constants.ErrorCode;

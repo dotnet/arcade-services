@@ -33,7 +33,7 @@ internal class MergeBandsOperation : Operation
         {
             return await ExecuteInternalAsync();
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError("Merge-bands operation failed: {message}", e.Message);
             _logger.LogDebug("{exception}", e);
