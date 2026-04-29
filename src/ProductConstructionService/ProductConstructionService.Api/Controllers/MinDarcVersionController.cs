@@ -49,7 +49,7 @@ public class MinDarcVersionController : ControllerBase
     [HttpPut(Name = "SetMinDarcVersion")]
     [SwaggerApiResponse(HttpStatusCode.OK, Description = "Minimum darc client version stored")]
     [SwaggerApiResponse(HttpStatusCode.BadRequest, Type = typeof(ApiError), Description = "The supplied version could not be parsed")]
-    public async Task<IActionResult> SetMinDarcVersionAsync([FromBody] string minimumVersion)
+    public async Task<IActionResult> SetMinDarcVersionAsync([FromQuery] string minimumVersion)
     {
         if (string.IsNullOrWhiteSpace(minimumVersion))
         {

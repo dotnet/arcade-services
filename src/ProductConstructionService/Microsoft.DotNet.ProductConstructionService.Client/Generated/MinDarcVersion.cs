@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -20,7 +19,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         );
 
         Task SetMinDarcVersionAsync(
-            string body = default,
+            string minimumVersion,
             CancellationToken cancellationToken = default
         );
 
@@ -113,10 +112,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         partial void HandleFailedSetMinDarcVersionRequest(RestApiException ex);
 
         public async Task SetMinDarcVersionAsync(
-            string body = default,
+            string minimumVersion,
             CancellationToken cancellationToken = default
         )
         {
+
+            if (string.IsNullOrEmpty(minimumVersion))
+            {
+                throw new ArgumentNullException(nameof(minimumVersion));
+            }
 
             const string apiVersion = "2020-02-20";
 
@@ -127,6 +131,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 "/api/min-darc-version",
                 false);
 
+            if (!string.IsNullOrEmpty(minimumVersion))
+            {
+                _url.AppendQuery("minimumVersion", Client.Serialize(minimumVersion));
+            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
@@ -134,12 +142,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             {
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Put;
-
-                if (!string.IsNullOrEmpty(body))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
 
                 using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
