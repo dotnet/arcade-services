@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
+using Maestro.Common;
 using Newtonsoft.Json.Linq;
 
 #nullable enable
@@ -56,7 +57,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         private ClientVersionTooOldException BuildClientVersionTooOldException(RestApiException ex)
         {
             string? minimumVersion = null;
-            if (ex.Response.Headers.TryGetValue(ClientIdentityHeaderPolicy.MinimumClientVersionHeader, out string? headerValue)
+            if (ex.Response.Headers.TryGetValue(MinClientVersionConstants.MinimumClientVersionHeader, out string? headerValue)
                 && !string.IsNullOrWhiteSpace(headerValue))
             {
                 minimumVersion = headerValue;

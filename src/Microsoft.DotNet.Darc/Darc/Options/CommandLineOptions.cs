@@ -31,8 +31,6 @@ public abstract class CommandLineOptions<T> : CommandLineOptions where T : Opera
 
 public abstract class CommandLineOptions : ICommandLineOptions
 {
-    private const string DarcClientName = "darc";
-
     [Option('p', "password",
         HelpText = "Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.")]
     [RedactFromLogging]
@@ -193,8 +191,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
     private void RegisterPcsClient(IServiceCollection sp) =>
         sp.TryAddSingleton(sp =>
             !string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
-                ? PcsApiFactory.GetAuthenticated(BuildAssetRegistryBaseUri, BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), DarcClientName, GetDarcVersion())
-                : PcsApiFactory.GetAuthenticated(BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), DarcClientName, GetDarcVersion()));
+                ? PcsApiFactory.GetAuthenticated(BuildAssetRegistryBaseUri, BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), MinClientVersionConstants.DarcClientName, GetDarcVersion())
+                : PcsApiFactory.GetAuthenticated(BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), MinClientVersionConstants.DarcClientName, GetDarcVersion()));
 
     private static string GetDarcVersion()
     {

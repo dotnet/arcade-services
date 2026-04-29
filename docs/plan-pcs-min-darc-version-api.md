@@ -15,7 +15,7 @@ Server-side counterpart to docs/plan-pcs-min-darc-version-client.md. Adds a midd
 
 **Order (decision tree, first-match wins):**
 1. Path doesn't match `/api/*` → pass through.
-2. `X-Client-Name` or `X-Client-Version` header missing → **426** (case: missing-headers).
+2. `X-Client-Name` or `X-Client-Version` header missing → pass through (no enforcement when client identity is unknown).
 3. `X-Client-Name != "darc"` → pass through (only darc is enforced).
 4. `X-Client-Version` ends with `-dev` (case-insensitive suffix) → pass through (local dev builds).
 5. Read `min-client-version-darc` from Redis. If missing → log warning ("minimum client version not configured in Redis"), pass through. If lookup throws → log warning, fail-open pass through.
@@ -27,7 +27,6 @@ Server-side counterpart to docs/plan-pcs-min-darc-version-client.md. Adds a midd
 - Status `426`.
 - Header `X-Minimum-Client-Version: <semver>` when Redis value is known and parseable.
 - JSON body = `ApiError` with per-case message:
-  - missing-headers: "Required client identity headers (X-Client-Name, X-Client-Version) are missing. Please upgrade your client."
   - unparseable: "Client version '{value}' could not be parsed. Please upgrade your darc client."
   - too-old: "Your darc version {client} is below the minimum required version {min}. Run `darc-init` (or `dotnet tool update -g microsoft.dotnet.darc`) to upgrade."
 - Short-circuit (do not call `next`).
@@ -131,7 +130,7 @@ Server-side counterpart to docs/plan-pcs-min-darc-version-client.md. Adds a midd
 
 1. `./build.sh` succeeds with no new warnings.
 2. `./.dotnet/dotnet test --no-build --filter "FullyQualifiedName~ClientVersionControllerTests"` passes all 5+ cases.
-3. Manual: launch PCS via Aspire, hit a `/api/*` route with no headers → expect 426 + `ApiError` body. Hit with `X-Client-Name=darc` + `X-Client-Version=0.0.99-dev` → 200. With version below configured min → 426 + `X-Minimum-Client-Version` header. With no Redis key set → 200 and a warning in logs.
+3. Manual: launch PCS via Aspire, hit a `/api/*` route with no headers → expect 200 (pass-through). Hit with `X-Client-Name=darc` + `X-Client-Version=0.0.99-dev` → 200. With version below configured min → 426 + `X-Minimum-Client-Version` header. With no Redis key set → 200 and a warning in logs.
 4. Manual: run pcs-cli `set-min-darc-version 1.2.3`, then `get-min-darc-version`, then `clear-min-darc-version`. Verify Redis state via direct inspection.
 
 ---
@@ -141,7 +140,7 @@ Server-side counterpart to docs/plan-pcs-min-darc-version-client.md. Adds a midd
 - Dev-version bypass: any `X-Client-Version` ending in `-dev` (case-insensitive). Bypass occurs after header presence check and after client-name filter.
 - Redis key shape: single global `min-client-version-darc`, no TTL. Missing key ⇒ pass-through with warning log. Lookup error ⇒ pass-through with warning (fail-open).
 - Enforcement runs as ASP.NET middleware **before** `UseAuthentication()` (so even unauthenticated old clients get a clean 426). Scoped to `/api/*` only — health/swagger/`status` GET unaffected.
-- Missing headers ⇒ 426 for ALL `/api/*` requests (forces non-darc Client-lib consumers to upgrade once; matches client plan Phase 1).
+- Missing headers ⇒ pass-through (no enforcement when client identity is unknown; avoids breaking non-darc / older callers that don't send the headers).
 - Version comparison via `NuGet.Versioning.NuGetVersion`. Unparseable client version ⇒ 426. Unparseable Redis value ⇒ pass-through + error log.
 - Per-case `ApiError.Message` text (server owns wording; client prints verbatim per client-side Phase 4).
 - New `ClientVersionController` (separate from `StatusController`), admin-only via `AdminAuthorizationPolicyName`. GET / PUT / DELETE for `/client-version/min-darc`.

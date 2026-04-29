@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using Azure.Core.Pipeline;
+using Maestro.Common;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
@@ -14,15 +15,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
     /// </summary>
     internal sealed class ClientIdentityHeaderPolicy : HttpPipelineSynchronousPolicy
     {
-        public const string ClientNameHeader = "X-Client-Name";
-        public const string ClientVersionHeader = "X-Client-Version";
-
-        /// <summary>
-        /// Response header used by the server to communicate the minimum required client
-        /// version when rejecting a request with HTTP 426 (Upgrade Required).
-        /// </summary>
-        public const string MinimumClientVersionHeader = "X-Minimum-Client-Version";
-
         private readonly string _clientName;
         private readonly string _clientVersion;
 
@@ -34,8 +26,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public override void OnSendingRequest(HttpMessage message)
         {
-            message.Request.Headers.SetValue(ClientNameHeader, _clientName);
-            message.Request.Headers.SetValue(ClientVersionHeader, _clientVersion);
+            message.Request.Headers.SetValue(MinClientVersionConstants.ClientNameHeader, _clientName);
+            message.Request.Headers.SetValue(MinClientVersionConstants.ClientVersionHeader, _clientVersion);
         }
     }
 }
