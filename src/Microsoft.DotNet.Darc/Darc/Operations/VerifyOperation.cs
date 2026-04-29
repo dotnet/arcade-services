@@ -46,7 +46,7 @@ internal class VerifyOperation : Operation
             Console.WriteLine("Dependency verification succeeded.");
             return Constants.SuccessCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to verify repository dependency state.");
             return Constants.ErrorCode;

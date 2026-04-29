@@ -63,7 +63,7 @@ internal class GetChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to retrieve the channel");
             return Constants.ErrorCode;

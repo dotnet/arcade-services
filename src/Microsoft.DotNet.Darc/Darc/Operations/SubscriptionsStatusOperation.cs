@@ -158,7 +158,7 @@ internal class SubscriptionsStatusOperation : Operation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, $"Unexpected error while {actionStatusMessage.ToLower()} subscriptions.");
             return Constants.ErrorCode;

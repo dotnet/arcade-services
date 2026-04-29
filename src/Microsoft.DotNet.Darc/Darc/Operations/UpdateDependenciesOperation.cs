@@ -102,7 +102,7 @@ internal class UpdateDependenciesOperation : Operation
             _logger.LogError("Failed to update dependencies - GitHub token is invalid.");
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Failed to update dependencies.");
             return Constants.ErrorCode;

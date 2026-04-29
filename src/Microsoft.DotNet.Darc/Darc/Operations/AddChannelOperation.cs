@@ -76,7 +76,7 @@ internal class AddChannelOperation : Operation
                e.Branch);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to create new channel.");
             return Constants.ErrorCode;

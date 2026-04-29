@@ -43,7 +43,7 @@ internal class PushOperation : Operation
             await _vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.SkipCommitVerification, _options.CommitVerificationPat, listener.Token);
             return 0;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(
                     "Pushing to the VMR failed. {exception}",

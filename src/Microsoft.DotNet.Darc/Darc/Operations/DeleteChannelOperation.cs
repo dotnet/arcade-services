@@ -68,7 +68,7 @@ internal class DeleteChannelOperation : Operation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to delete channel.");
             return Constants.ErrorCode;

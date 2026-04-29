@@ -87,7 +87,7 @@ internal class UpdateChannelOperation : Operation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to update channel.");
             return Constants.ErrorCode;

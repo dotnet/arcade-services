@@ -437,7 +437,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 ex.Branch);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;

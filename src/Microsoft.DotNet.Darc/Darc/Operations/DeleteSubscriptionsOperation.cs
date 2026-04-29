@@ -105,7 +105,7 @@ internal class DeleteSubscriptionsOperation : Operation
                 ex.BranchName);
             return Constants.ErrorCode;
         }
-        catch (Exception e) when (e is not ClientVersionTooOldException)
+        catch (Exception e)
         {
             _logger.LogError(e, "Unexpected error while deleting subscriptions.");
             return Constants.ErrorCode;
