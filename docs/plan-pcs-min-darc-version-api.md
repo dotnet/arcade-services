@@ -128,8 +128,8 @@ Server-side counterpart to docs/plan-pcs-min-darc-version-client.md. Adds a midd
 
 ## Verification
 
-1. `./build.sh` succeeds with no new warnings.
-2. `./.dotnet/dotnet test --no-build --filter "FullyQualifiedName~ClientVersionControllerTests"` passes all 5+ cases.
+1. `dotnet build` succeeds with no new warnings.
+2. `dotnet test --no-build --filter "FullyQualifiedName~ClientVersionControllerTests"` passes all 5+ cases.
 3. Manual: launch PCS via Aspire, hit a `/api/*` route with no headers → expect 200 (pass-through). Hit with `X-Client-Name=darc` + `X-Client-Version=0.0.99-dev` → 200. With version below configured min → 426 + `X-Minimum-Client-Version` header. With no Redis key set → 200 and a warning in logs.
 4. Manual: run pcs-cli `set-min-darc-version 1.2.3`, then `get-min-darc-version`, then `clear-min-darc-version`. Verify Redis state via direct inspection.
 
