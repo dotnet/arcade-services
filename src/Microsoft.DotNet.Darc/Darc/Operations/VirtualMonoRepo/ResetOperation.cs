@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -109,7 +108,7 @@ internal class ResetOperation : Operation
             _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'",
                 mappingName, mapping.DefaultRemote);
         }
-        catch (Exception ex) when (ex is not ClientVersionTooOldException)
+        catch (Exception ex)
         {
             _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
             return Constants.ErrorCode;
@@ -193,7 +192,7 @@ internal class ResetOperation : Operation
             _logger.LogInformation("Successfully reset {mapping} to {sha}", mappingName, targetSha);
             return Constants.SuccessCode;
         }
-        catch (Exception ex) when (ex is not ClientVersionTooOldException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while resetting {mapping}", mappingName);
             return Constants.ErrorCode;

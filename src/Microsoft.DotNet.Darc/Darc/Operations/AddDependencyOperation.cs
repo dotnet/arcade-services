@@ -9,7 +9,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -65,7 +64,7 @@ internal class AddDependencyOperation : Operation
                                  "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
             return Constants.ErrorCode;
         }
-        catch (Exception exc) when (exc is not ClientVersionTooOldException)
+        catch (Exception exc)
         {
             _logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
             return Constants.ErrorCode;

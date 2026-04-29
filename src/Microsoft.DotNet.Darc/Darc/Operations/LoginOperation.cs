@@ -57,7 +57,7 @@ internal class LoginOperation : Operation
                 return Constants.ErrorCode;
             }
         }
-        catch (Exception ex) when (ex is not ClientVersionTooOldException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Authentication failed: {message}", ex.Message);
             _logger.LogInformation("If authentication continues to fail, you can use 'darc authenticate' to manually configure tokens.");

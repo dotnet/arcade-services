@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
