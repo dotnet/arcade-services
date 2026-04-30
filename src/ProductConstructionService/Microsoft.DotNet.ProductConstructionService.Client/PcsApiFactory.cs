@@ -17,23 +17,17 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
-        /// <param name="clientName">Optional override for the <c>X-Client-Name</c> header.</param>
-        /// <param name="clientVersion">Optional override for the <c>X-Client-Version</c> header.</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string? accessToken,
             string? managedIdentityId,
             bool disableInteractiveAuth,
-            ILoggerFactory? loggerFactory = null,
-            string? clientName = null,
-            string? clientVersion = null)
+            ILoggerFactory? loggerFactory = null)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 accessToken,
                 managedIdentityId,
                 disableInteractiveAuth,
-                loggerFactory,
-                clientName,
-                clientVersion));
+                loggerFactory));
         }
 
         /// <summary>
@@ -44,15 +38,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// Attempt to access internal queues by such client will cause
         /// <see cref="ArgumentException"/> triggered by <c>SendAsync</c> call.
         /// </remarks>
-        public static IProductConstructionServiceApi GetAnonymous(
-            string? clientName = null,
-            string? clientVersion = null)
+        public static IProductConstructionServiceApi GetAnonymous()
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 new Uri(""),
-                credentials: null!,
-                clientName,
-                clientVersion));
+                credentials: null!));
         }
 
         /// <summary>
@@ -66,25 +56,19 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
-        /// <param name="clientName">Optional override for the <c>X-Client-Name</c> header.</param>
-        /// <param name="clientVersion">Optional override for the <c>X-Client-Version</c> header.</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string baseUri,
             string? accessToken,
             string? managedIdentityId,
             bool disableInteractiveAuth,
-            ILoggerFactory? loggerFactory = null,
-            string? clientName = null,
-            string? clientVersion = null)
+            ILoggerFactory? loggerFactory = null)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 baseUri,
                 accessToken,
                 managedIdentityId,
                 disableInteractiveAuth,
-                loggerFactory,
-                clientName,
-                clientVersion));
+                loggerFactory));
         }
 
         /// <summary>
@@ -96,15 +80,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <see cref="ArgumentException"/> triggered by <c>SendAsync</c> call.
         /// </remarks>
         public static IProductConstructionServiceApi GetAnonymous(
-            string baseUri,
-            string? clientName = null,
-            string? clientVersion = null)
+            string baseUri)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 new Uri(baseUri),
-                credentials: null!,
-                clientName,
-                clientVersion));
+                credentials: null!));
         }
     }
 }

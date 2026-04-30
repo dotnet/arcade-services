@@ -25,11 +25,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         // then a generic RestApiException is thrown.
         partial void HandleFailedRequest(RestApiException ex)
         {
-            if (ex.Response.Status == 426)
-            {
-                throw BuildClientVersionTooOldException(ex);
-            }
-            else if (ex.Response.Status == (int)HttpStatusCode.BadRequest)
+            if (ex.Response.Status == (int)HttpStatusCode.BadRequest)
             {
                 JObject content;
                 try
@@ -51,22 +47,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 throw new AuthenticationException("Unauthorized access while trying to use Maestro API. " +
                     "Make sure your darc client is authenticated. More details: https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md");
             }
-        }
-
-        private ClientVersionTooOldException BuildClientVersionTooOldException(RestApiException ex)
-        {
-            string? minimumVersion = null;
-            if (ex.Response.Headers.TryGetValue(ClientIdentityHeaderPolicy.MinimumClientVersionHeader, out string? headerValue)
-                && !string.IsNullOrWhiteSpace(headerValue))
-            {
-                minimumVersion = headerValue;
-            }
-
-            return new ClientVersionTooOldException(
-                clientName: Options?.ClientName,
-                currentVersion: Options?.ClientVersion,
-                minimumVersion: minimumVersion,
-                innerException: ex);
         }
 
         public async Task<bool> IsAdmin(CancellationToken cancellationToken = default)
