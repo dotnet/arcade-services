@@ -32,14 +32,7 @@ public class ClientVersionEnforcementMiddleware : IMiddleware
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        // 1. Path doesn't match /api/* -> pass through.
-        if (!context.Request.Path.StartsWithSegments(ApiPathSegment))
-        {
-            await next(context);
-            return;
-        }
-
-        // 2. Headers missing -> pass through (no enforcement when client identity is unknown).
+        // 1. Headers missing -> pass through (no enforcement when client identity is unknown).
         if (!context.Request.Headers.TryGetValue(MinClientVersionConstants.ClientNameHeader, out var clientNameValues)
             || !context.Request.Headers.TryGetValue(MinClientVersionConstants.ClientVersionHeader, out var clientVersionValues))
         {
@@ -56,21 +49,21 @@ public class ClientVersionEnforcementMiddleware : IMiddleware
             return;
         }
 
-        // 3. Only darc is enforced.
+        // 2. Only darc is enforced.
         if (!string.Equals(clientName, MinClientVersionConstants.DarcClientName, StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;
         }
 
-        // 4. Dev builds bypass enforcement.
+        // 3. Dev builds bypass enforcement.
         if (clientVersionString.EndsWith(DevVersionSuffix, StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;
         }
 
-        // 5. Read minimum from Redis.
+        // 4. Read minimum from Redis.
         string? minVersionString;
         try
         {
@@ -92,7 +85,7 @@ public class ClientVersionEnforcementMiddleware : IMiddleware
             return;
         }
 
-        // 6. Parse client version.
+        // 5. Parse client version.
         if (!NuGetVersion.TryParse(clientVersionString, out var clientVersion))
         {
             await WriteRejectionAsync(
@@ -102,7 +95,7 @@ public class ClientVersionEnforcementMiddleware : IMiddleware
             return;
         }
 
-        // 7. Parse minimum version. Bad config -> log and pass through.
+        // 6. Parse minimum version. Bad config -> log and pass through.
         if (!NuGetVersion.TryParse(minVersionString, out var minVersion))
         {
             _logger.LogError(
@@ -113,7 +106,7 @@ public class ClientVersionEnforcementMiddleware : IMiddleware
             return;
         }
 
-        // 8. Compare.
+        // 7. Compare.
         if (clientVersion < minVersion)
         {
             await WriteRejectionAsync(

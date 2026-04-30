@@ -90,7 +90,7 @@ internal static class Program
         var barClient = sp.GetRequiredService<IProductConstructionServiceApi>();
         try
         {
-            await barClient.Assets.GetDarcVersionAsync();
+            await barClient.MinDarcVersion.GetMinDarcVersionAsync();
             return true;
         }
         catch (ClientVersionTooOldException ex)
