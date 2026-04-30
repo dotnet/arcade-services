@@ -259,8 +259,7 @@ public abstract class CloneManager : ICloneManager
                 {
                     _logger.LogWarning("Failed to clean up {clonePath}, re-cloning", clonePath);
 
-                    GitFile.MakeGitFilesDeletable(clonePath);
-                    _fileSystem.DeleteDirectory(clonePath, recursive: true);
+                    DeleteCloneDirectory(clonePath);
                     return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
                 }
             }
@@ -275,8 +274,7 @@ public abstract class CloneManager : ICloneManager
             {
                 _logger.LogWarning("Clone at {clonePath} is not a git repository, re-cloning", clonePath);
 
-                GitFile.MakeGitFilesDeletable(clonePath);
-                _fileSystem.DeleteDirectory(clonePath, recursive: true);
+                DeleteCloneDirectory(clonePath);
                 return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
             }
 
@@ -293,4 +291,18 @@ public abstract class CloneManager : ICloneManager
     }
 
     protected virtual NativePath GetClonePath(string dirName) => _vmrInfo.TmpPath / dirName;
+
+    private void DeleteCloneDirectory(NativePath clonePath)
+    {
+        try
+        {
+            GitFile.MakeGitFilesDeletable(clonePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to make git files in {clonePath} deletable", clonePath);
+        }
+
+        _fileSystem.DeleteDirectory(clonePath, recursive: true);
+    }
 }
