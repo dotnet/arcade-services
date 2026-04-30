@@ -1135,6 +1135,9 @@ The configuration management commands support a common set of parameters that al
 multiple changes. By using `--configuration-branch` with `--no-pr`, you can stage several related
 configuration changes onto the same branch and then open a single pull request for all of them.
 
+You can either just keep supplying a constant value for `--configuration-branch` where the first call with create a pull request too and all subsequent calls with notice the branch and will pile onto the PR branch.  
+Alternatively, you can supply also `--no-pr` for the first calls if you want to stall the PR creation and only omit it on the last call to get the PR up when all changes are ready. This is somewhat faster as the tool does not need to query for the PR existence etc..
+
 This is useful when you want to make a coordinated set of changes, such as:
 
 - creating a new channel
