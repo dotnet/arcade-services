@@ -24,5 +24,6 @@ public enum OutcomeType
 {
     Failure,
     Success,
-    NoUpdate
+    NoUpdate,
+    NotUpdatable
 }
