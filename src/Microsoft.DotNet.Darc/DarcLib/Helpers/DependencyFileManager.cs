@@ -49,6 +49,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly Func<string, IGitRepo> _gitClientFactory;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly ILogger _logger;
 
     private const string MaestroBeginComment =
@@ -71,20 +72,24 @@ public class DependencyFileManager : IDependencyFileManager
     public DependencyFileManager(
         IGitRepo gitClient,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = _ => gitClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
     public DependencyFileManager(
         IGitRepoFactory gitClientFactory,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = gitClientFactory.CreateClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
@@ -482,7 +487,6 @@ public class DependencyFileManager : IDependencyFileManager
         SourceDependency sourceDependency,
         string repoUri,
         string branch,
-        IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
         bool? repoHasVersionDetailsProps = null,
         UnixPath relativeBasePath = null)
@@ -492,7 +496,7 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
-        
+
         if (!repoHasVersionDetailsProps.HasValue)
         {
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
@@ -538,20 +542,16 @@ public class DependencyFileManager : IDependencyFileManager
             UpdateVersionDetailsXmlSourceTag(versionDetails, sourceDependency);
         }
 
-        // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
-        // prefer that one over the old dependencies
-        Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
+        IReadOnlyCollection<DependencyDetail> finalDependencies =
+            _versionDetailsParser.ParseVersionDetailsXml(versionDetails).Dependencies;
 
-        if (oldDependencies != null)
-        {
-            foreach (DependencyDetail dependency in oldDependencies)
-            {
-                if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
-                {
-                    itemsToUpdateLocations.Add(dependency.Name, [.. dependency.Locations]);
-                }
-            }
-        }
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(finalDependencies);
+        
+        var itemsToUpdateLocations = finalDependencies
+            .GroupBy(d => d.Name)
+            .ToDictionary(
+                g => g.Key,
+                g => g.SelectMany(d => d.Locations ?? []).ToHashSet());
 
         // At this point we only care about the Maestro managed locations for the assets.
         // Flatten the dictionary into a set that has all the managed feeds
@@ -1807,24 +1807,6 @@ public class DependencyFileManager : IDependencyFileManager
             _logger.LogError($"Unable to parse feed {feed} as a Maestro managed feed");
             throw new ArgumentException($"feed {feed} is not a valid Maestro managed feed");
         }
-    }
-
-    private static Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
-    {
-        var assetLocationMappings = new Dictionary<string, HashSet<string>>();
-
-        foreach (var dependency in dependencies)
-        {
-            if (!assetLocationMappings.TryGetValue(dependency.Name, out HashSet<string> value))
-            {
-                value = [];
-                assetLocationMappings[dependency.Name] = value;
-            }
-
-            value.UnionWith(dependency.Locations ?? []);
-        }
-
-        return assetLocationMappings;
     }
 
     public static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)

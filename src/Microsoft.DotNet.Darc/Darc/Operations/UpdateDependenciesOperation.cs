@@ -32,29 +32,35 @@ internal class UpdateDependenciesOperation : Operation
     private readonly ILogger<UpdateDependenciesOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
+    private readonly IDependencyFileManagerFactory _dependencyFileManagerFactory;
 
     public UpdateDependenciesOperation(
         UpdateDependenciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
-        ILogger<UpdateDependenciesOperation> logger,
-        IFileSystem fileSystem)
+        IFileSystem fileSystem,
+        IDependencyFileManagerFactory dependencyFileManagerFactory,
+        ILogger<UpdateDependenciesOperation> logger)
     {
         _options = options;
-        _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
-        _remoteTokenProvider = remoteTokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
+        _dependencyFileManagerFactory = dependencyFileManagerFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -78,13 +84,14 @@ internal class UpdateDependenciesOperation : Operation
                 await PopulateOptionsFromSubscriptionAsync();
             }
 
-            var local = new Local(_remoteTokenProvider, _logger);
+            var repoPath = await _gitClient.GetRootDirAsync();
+            var local = _localFactory.CreateLocal(repoPath);
             var excludedAssetsMatcher = new NameBasedAssetMatcher(_options.ExcludedAssets?.Split(';'));
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
             IReadOnlyList<IAssetMatcher> excludedAssetMatchers = [excludedAssetsMatcher];
 
-            ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
+            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
                 await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetMatchers);
@@ -109,7 +116,7 @@ internal class UpdateDependenciesOperation : Operation
         }
     }
 
-    private List<UnixPath> ResolveTargetDirectories(Local local)
+    private List<UnixPath> ResolveTargetDirectories(ILocal local)
     {
         List<UnixPath> targetDirectories = [];
         if (string.IsNullOrEmpty(_options.TargetDirectory))
@@ -231,7 +238,7 @@ internal class UpdateDependenciesOperation : Operation
 
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
-        Local local,
+        ILocal local,
         ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         IReadOnlyList<IAssetMatcher> excludedAssetMatchers)
     {
@@ -317,7 +324,7 @@ internal class UpdateDependenciesOperation : Operation
         if (!_options.DryRun)
         {
             Console.Write("    Applying updates...");
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient, relativeBasePath);
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, relativeBasePath);
             Console.WriteLine("    done.");
         }
     }

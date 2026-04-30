@@ -328,16 +328,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         var currentRepoDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
 
-        List<DependencyDetail> buildUpdates = _coherencyUpdateResolver
+        List<DependencyDetail> buildUpdates = [.. _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
                 codeflowOptions.Build.GetRepository(),
                 codeflowOptions.Build.Commit,
                 buildAssets,
                 currentRepoDependencies.Dependencies)
-            .Select(u => u.To)
-            .ToList();
-
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(buildUpdates);
+            .Select(u => u.To)];
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = buildUpdates.GetArcadeUpdate();
@@ -361,7 +358,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             new SourceDependency(codeflowOptions.Build, codeflowOptions.Mapping.Name),
             targetRepo.Path,
             branch: null, // reads the working tree
-            currentRepoDependencies.Dependencies,
             targetDotNetVersion);
 
         // This actually does not commit but stages only

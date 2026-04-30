@@ -13,16 +13,19 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class VerifyOperation : Operation
 {
     private readonly VerifyCommandLineOptions _options;
-    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly ILocalFactory _localFactory;
+    private readonly ILocalGitClient _gitClient;
     private readonly ILogger<VerifyOperation> _logger;
 
     public VerifyOperation(
         VerifyCommandLineOptions options,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
+        ILocalGitClient gitClient,
         ILogger<VerifyOperation> logger)
     {
         _options = options;
-        _remoteTokenProvider = remoteTokenProvider;
+        _localFactory = localFactory;
+        _gitClient = gitClient;
         _logger = logger;
     }
 
@@ -33,7 +36,8 @@ internal class VerifyOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_remoteTokenProvider, _logger);
+        var repoPath = await _gitClient.GetRootDirAsync();
+        var local = _localFactory.CreateLocal(repoPath);
 
         try
         {
