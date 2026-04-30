@@ -65,6 +65,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
     public DbSet<GoalTime> GoalTime { get; set; }
     public DbSet<Namespace> Namespaces { get; set; }
+    public DbSet<SubscriptionOutcome> SubscriptionOutcomes { get; set; }
 
     public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates
         .TemporalAll()
@@ -241,6 +242,23 @@ public class BuildAssetRegistryContext(DbContextOptions options)
                 typeof(string),
                 null
             ));
+
+        // SubscriptionOutcome is intentionally decoupled from Subscription and Build:
+        // - OperationId is the primary key.
+        // - SubscriptionId / BuildId are plain scalar columns (no navigation properties, no FK
+        //   constraints) so deleting a Subscription or a Build leaves outcome rows untouched.
+        // - Indexes on SubscriptionId and BuildId support lookups by either id.
+        builder.Entity<SubscriptionOutcome>(b =>
+        {
+            b.HasKey(o => o.OperationId);
+            // Operation IDs are 32-char hex strings (e.g. "dbd48626590fcd10d5685a27baecbca5").
+            b.Property(o => o.OperationId).HasMaxLength(32).IsFixedLength();
+            b.Property(o => o.OutcomeType).HasConversion<string>();
+            b.HasIndex(o => o.BuildId);
+            b.HasIndex(o => o.Date).IsDescending();
+            b.HasIndex(nameof(SubscriptionOutcome.SubscriptionId), nameof(SubscriptionOutcome.Date))
+                .IsDescending(false, true);
+        });
     }
 
     public virtual Task<long> GetInstallationId(string repositoryUrl)
