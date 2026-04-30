@@ -13,7 +13,7 @@ public class SubscriptionOutcome
 
     public int BuildId { get; set; }
 
-    public DateTime Date { get; set;  }
+    public DateTime Date { get; set; }
 
     public string OutcomeMessage { get; set; }
 
@@ -26,5 +26,5 @@ public enum OutcomeType
     NoUpdate,
     NotUpdatable,
     Failure,
-    UserError
+    UserError,
 }
