@@ -62,7 +62,6 @@ if (isDevelopment)
 }
 
 app.UseCookiePolicy();
-app.UseMiddleware<ClientVersionEnforcementMiddleware>();
 app.UseAuthentication();
 app.UseRouting();
 app.UseAuthorization();

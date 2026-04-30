@@ -15,8 +15,8 @@ using ProductConstructionService.Api.Configuration;
 namespace ProductConstructionService.Api.Controllers;
 
 /// <summary>
-/// Admin-only management of the minimum required darc client version enforced by
-/// <see cref="ClientVersionEnforcementMiddleware"/>.
+/// Admin-only management of the minimum required darc client version. Darc clients
+/// fetch this value via <c>GET /api/min-darc-version</c> and self-enforce it.
 /// </summary>
 [Route("min-darc-version")]
 [ApiVersion("2020-02-20")]
@@ -31,6 +31,7 @@ public class MinDarcVersionController : ControllerBase
     }
 
     [HttpGet(Name = "GetMinDarcVersion")]
+    [AllowAnonymous]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(string), Description = "Returns the configured minimum darc client version")]
     [SwaggerApiResponse(HttpStatusCode.NoContent, Description = "No minimum darc client version is configured")]
     public async Task<IActionResult> GetMinDarcVersionAsync()
