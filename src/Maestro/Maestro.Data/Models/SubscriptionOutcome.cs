@@ -22,7 +22,7 @@ public class SubscriptionOutcome
 
 public enum OutcomeType
 {
-    Fail,
+    Failure,
     Success,
     NoUpdate
 }
