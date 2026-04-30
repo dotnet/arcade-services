@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Azure.Core.Pipeline;
 using Azure.Core;
 using Maestro.Common.AppCredentials;
@@ -12,6 +13,53 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial class ProductConstructionServiceApiOptions
     {
+        /// <summary>
+        /// Sentinel used for <see cref="ClientName"/> when no override is supplied.
+        /// Sent verbatim on the wire.
+        /// </summary>
+        public const string UnknownClientIdentity = "default";
+
+        /// <summary>
+        /// Effective client name sent in the <c>X-Client-Name</c> header. Set from the
+        /// constructor override, or <see cref="UnknownClientIdentity"/> when none is supplied.
+        /// </summary>
+        public string ClientName { get; private set; }
+
+        /// <summary>
+        /// Effective client version sent in the <c>X-Client-Version</c> header. Set from the
+        /// constructor override, falling back to the entry assembly's informational version.
+        /// </summary>
+        public string ClientVersion { get; private set; }
+
+        private static string ResolveClientVersion(string clientVersionOverride)
+        {
+            if (clientVersionOverride != null)
+            {
+                return clientVersionOverride;
+            }
+
+            string informationalVersion = Assembly.GetEntryAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                .InformationalVersion;
+
+            // Strip the SourceLink "+<commit-sha>" suffix.
+            int plusIndex = informationalVersion.IndexOf('+');
+            return plusIndex >= 0 ? informationalVersion.Substring(0, plusIndex) : informationalVersion;
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="ProductConstructionServiceApiOptions"/> with the provided base URI,
+        /// credentials, and client identity overrides used for the <c>X-Client-Name</c> /
+        /// <c>X-Client-Version</c> headers.
+        /// </summary>
+        public ProductConstructionServiceApiOptions(Uri baseUri, TokenCredential credentials, string clientName, string clientVersion)
+        {
+            ClientName = string.IsNullOrWhiteSpace(clientName) ? UnknownClientIdentity : clientName;
+            ClientVersion = ResolveClientVersion(clientVersion);
+            BaseUri = baseUri;
+            Credentials = credentials;
+            InitializeOptions();
+        }
         // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/54c17f3d-7325-4eca-9db7-f090bfc765a8/isMSAApp~/false
         private const string MaestroProductionAppId = "54c17f3d-7325-4eca-9db7-f090bfc765a8";
 
@@ -65,7 +113,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
-        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
+        /// <param name="clientName">Optional override for the <c>X-Client-Name</c> header.</param>
+        /// <param name="clientVersion">Optional override for the <c>X-Client-Version</c> header.</param>
+        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null, string clientName = null, string clientVersion = null)
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
@@ -76,7 +126,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                           ManagedIdentityId = managedIdentityId,
                           UserScope = APP_USER_SCOPE,
                       },
-                      loggerFactory))
+                      loggerFactory),
+                  clientName,
+                  clientVersion)
         {
         }
 
@@ -87,8 +139,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
-        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
-            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth, loggerFactory)
+        /// <param name="clientName">Optional override for the <c>X-Client-Name</c> header.</param>
+        /// <param name="clientVersion">Optional override for the <c>X-Client-Version</c> header.</param>
+        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null, string clientName = null, string clientVersion = null)
+            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth, loggerFactory, clientName, clientVersion)
         {
         }
 
@@ -100,6 +154,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     new BearerTokenAuthenticationPolicy(Credentials, Array.Empty<string>()),
                     HttpPipelinePosition.PerCall);
             }
+
+            // Always-on client identity headers so the server can identify the caller and
+            // (for darc) enforce a minimum version.
+            AddPolicy(
+                new ClientIdentityHeaderPolicy(ClientName, ClientVersion),
+                HttpPipelinePosition.PerCall);
         }
     }
 }

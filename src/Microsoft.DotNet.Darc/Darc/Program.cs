@@ -5,11 +5,13 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +19,7 @@ namespace Microsoft.DotNet.Darc;
 
 internal static class Program
 {
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         if (args.Contains("--debug"))
         {
@@ -44,9 +46,9 @@ internal static class Program
 
         Parser parser = new(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
 
-        return parser.ParseArguments(args, options)
+        return await parser.ParseArguments(args, options)
                 .MapResult(
-                    (CommandLineOptions opts) => {
+                    async (CommandLineOptions opts) => {
                         ServiceCollection services = new();
 
                         opts.RegisterServices(services);
@@ -54,7 +56,12 @@ internal static class Program
                         using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        var ret = RunOperation(opts, provider);
+                        if (!await ValidateDarcVersionAsync(provider))
+                        {
+                            return Constants.ErrorCode;
+                        }
+
+                        var ret = await RunOperationAsync(opts, provider);
 
                         var logger = provider.GetRequiredService<ILogger>();
                         var comments = provider.GetRequiredService<ICommentCollector>().GetComments();
@@ -75,7 +82,27 @@ internal static class Program
 
                         return ret;
                     },
-                    (errs => 1));
+                    errs => Task.FromResult(1));
+    }
+
+    private static async Task<bool> ValidateDarcVersionAsync(IServiceProvider sp)
+    {
+        var barClient = sp.GetRequiredService<IProductConstructionServiceApi>();
+        try
+        {
+            await barClient.Assets.GetDarcVersionAsync();
+            return true;
+        }
+        catch (ClientVersionTooOldException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to validate darc version against the Product Construction Service: {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -86,13 +113,13 @@ internal static class Program
     /// <remarks>The primary reason for this is a workaround for an issue in the logging factory which
     /// causes it to not dispose the logging providers on process exit.  This causes missed logs, logs that end midway through
     /// and cause issues with the console coloring, etc.</remarks>
-    private static int RunOperation(CommandLineOptions opts, ServiceProvider sp)
+    private static async Task<int> RunOperationAsync(CommandLineOptions opts, ServiceProvider sp)
     {
         try
         {
             Operation operation = opts.GetOperation(sp);
 
-            return operation.ExecuteAsync().GetAwaiter().GetResult();
+            return await operation.ExecuteAsync();
         }
         catch (Exception e)
         {

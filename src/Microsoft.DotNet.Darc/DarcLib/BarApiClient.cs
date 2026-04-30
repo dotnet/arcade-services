@@ -22,11 +22,16 @@ public class BarApiClient : IBarApiClient
 {
     private readonly IProductConstructionServiceApi _barClient;
 
-    public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null, ILoggerFactory? loggerFactory = null)
+    public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null, ILoggerFactory? loggerFactory = null, string? clientName = null, string? clientVersion = null)
     {
         _barClient = !string.IsNullOrEmpty(buildAssetRegistryBaseUri)
-            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory)
-            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory);
+            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory, clientName, clientVersion)
+            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth, loggerFactory, clientName, clientVersion);
+    }
+
+    public BarApiClient(IProductConstructionServiceApi barClient)
+    {
+        _barClient = barClient;
     }
 
     #region Channel Operations

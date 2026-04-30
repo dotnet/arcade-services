@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -12,6 +13,7 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -29,6 +31,8 @@ public abstract class CommandLineOptions<T> : CommandLineOptions where T : Opera
 
 public abstract class CommandLineOptions : ICommandLineOptions
 {
+    private const string DarcClientName = "darc";
+
     [Option('p', "password",
         HelpText = "Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.")]
     [RedactFromLogging]
@@ -135,12 +139,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddSingleton<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
+        RegisterPcsClient(services);
         services.TryAddSingleton<IBarApiClient>(sp => new BarApiClient(
-            BuildAssetRegistryToken,
-            managedIdentityId: null,
-            disableInteractiveAuth: IsCi,
-            BuildAssetRegistryBaseUri,
-            sp.GetRequiredService<ILoggerFactory>()));
+            sp.GetRequiredService<IProductConstructionServiceApi>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
@@ -187,5 +188,22 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddScoped<ICommentCollector, CommentCollector>();
 
         return services;
+    }
+
+    private void RegisterPcsClient(IServiceCollection sp) =>
+        sp.TryAddSingleton(sp =>
+            !string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
+                ? PcsApiFactory.GetAuthenticated(BuildAssetRegistryBaseUri, BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), DarcClientName, GetDarcVersion())
+                : PcsApiFactory.GetAuthenticated(BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>(), DarcClientName, GetDarcVersion()));
+
+    private static string GetDarcVersion()
+    {
+        string informationalVersion = typeof(CommandLineOptions).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        // Strip the SourceLink "+<commit-sha>" suffix
+        int plusIndex = informationalVersion?.IndexOf('+') ?? -1;
+        return plusIndex >= 0 ? informationalVersion.Substring(0, plusIndex) : informationalVersion;
     }
 }
