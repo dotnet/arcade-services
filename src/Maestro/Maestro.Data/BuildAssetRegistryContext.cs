@@ -253,7 +253,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             b.HasKey(o => o.OperationId);
             // Operation IDs are 32-char hex strings (e.g. "dbd48626590fcd10d5685a27baecbca5").
             b.Property(o => o.OperationId).HasMaxLength(32).IsFixedLength();
-            b.Property(o => o.OutcomeType).HasConversion<string>();
+            b.Property(o => o.Type).HasConversion<string>();
             b.HasIndex(o => o.BuildId);
             b.HasIndex(o => o.Date).IsDescending();
             b.HasIndex(nameof(SubscriptionOutcome.SubscriptionId), nameof(SubscriptionOutcome.Date))

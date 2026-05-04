@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20260430134841_SubscriptionOutcome")]
+    [Migration("20260504094509_SubscriptionOutcome")]
     partial class SubscriptionOutcome
     {
         /// <inheritdoc />
@@ -581,15 +581,15 @@ namespace Maestro.Data.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("OutcomeMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OutcomeType")
-                        .IsRequired()
+                    b.Property<string>("Message")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("SubscriptionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("OperationId");
 

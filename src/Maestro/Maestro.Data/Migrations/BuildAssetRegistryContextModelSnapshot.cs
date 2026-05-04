@@ -578,15 +578,15 @@ namespace Maestro.Data.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("OutcomeMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OutcomeType")
-                        .IsRequired()
+                    b.Property<string>("Message")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("SubscriptionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("OperationId");
 

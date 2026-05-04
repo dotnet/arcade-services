@@ -15,9 +15,9 @@ public class SubscriptionOutcome
 
     public DateTime Date { get; set; }
 
-    public string OutcomeMessage { get; set; }
+    public string Message { get; set; }
 
-    public OutcomeType OutcomeType { get; set; }
+    public OutcomeType Type { get; set; }
 }
 
 public enum OutcomeType

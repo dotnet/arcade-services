@@ -19,8 +19,8 @@ namespace Maestro.Data.Migrations
                     SubscriptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     BuildId = table.Column<int>(type: "int", nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    OutcomeMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    OutcomeType = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
