@@ -66,7 +66,7 @@ public class DependencyFileManagerTests
         "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
     public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
     {
-        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), null, NullLogger.Instance);
 
         string inputNugetPath = Path.Combine(
             Environment.CurrentDirectory,
@@ -121,7 +121,7 @@ public class DependencyFileManagerTests
     [TestCase("NoDuplicatedDifferentConditions.props", false)]
     public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
     {
-        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), null, NullLogger.Instance);
 
         string inputVersionPropsPath = Path.Combine(
             Environment.CurrentDirectory,

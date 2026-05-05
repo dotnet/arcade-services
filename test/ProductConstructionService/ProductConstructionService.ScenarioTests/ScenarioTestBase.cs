@@ -825,7 +825,9 @@ internal abstract partial class ScenarioTestBase
         List<AssetData> dependencies,
         string repoUri,
         string coherentParent = "",
-        bool pinned = false)
+        bool pinned = false,
+        string commit = "",
+        string? relativeBasePath = null)
     {
         using (ChangeDirectory(repoPath))
         {
@@ -839,6 +841,18 @@ internal abstract partial class ScenarioTestBase
                     "--type", "product",
                     "--repo", repoUri,
                 ];
+
+                if (!string.IsNullOrEmpty(commit))
+                {
+                    parameters.Add("--commit");
+                    parameters.Add(commit);
+                }
+
+                if (!string.IsNullOrEmpty(relativeBasePath))
+                {
+                    parameters.Add("--relative-base-path");
+                    parameters.Add(relativeBasePath);
+                }
 
                 if (!string.IsNullOrEmpty(coherentParent))
                 {

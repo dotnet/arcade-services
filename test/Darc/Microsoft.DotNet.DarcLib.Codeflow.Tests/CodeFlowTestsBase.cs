@@ -40,6 +40,7 @@ internal abstract class CodeFlowTestsBase
 
     private readonly CancellationTokenSource _cancellationToken = new();
     protected readonly Mock<IBasicBarClient> _basicBarClient = new();
+    protected readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
 
     private int _buildId = 100;
     private List<string> _lastFlowCollectedComments = [];
@@ -98,7 +99,10 @@ internal abstract class CodeFlowTestsBase
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddCodeflow(TmpPath, VmrPath)
         .AddSingleton(_basicBarClient.Object)
+        .AddSingleton(_assetLocationResolver.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
+        .AddTransient<IDependencyFileManagerFactory, DependencyFileManagerFactory>()
+        .AddTransient<ILocalFactory, LocalFactory>()
         .AddSingleton(Mock.Of<IRemoteTokenProvider>());
 
     protected static List<NativePath> GetExpectedFilesInVmr(
@@ -385,7 +389,12 @@ internal abstract class CodeFlowTestsBase
     }
 
     // Needed for some local git operations
-    protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(ServiceProvider, repoPath.ToString());
+    protected ILocal GetLocal(NativePath repoPath)
+    {
+        var localFactory = ActivatorUtilities.CreateInstance<LocalFactory>(ServiceProvider);
+        return localFactory.CreateLocal(repoPath);
+    }
+
     protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(ServiceProvider);
 
     protected async Task<ProductConstructionService.Client.Models.Build> CreateNewVmrBuild((string name, string version)[] assets, string? commit = null)

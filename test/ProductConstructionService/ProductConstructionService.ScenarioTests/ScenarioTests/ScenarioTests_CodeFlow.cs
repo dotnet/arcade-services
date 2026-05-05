@@ -17,6 +17,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     private const string TestFile1Name = "newFile1.txt";
     private const string TestFile2Name = "newFile2.txt";
     private const string DefaultPatch = "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file";
+    private const string RepoSideDependencyCommit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const string VmrSideDependencyCommit = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    private const string BuildDependencyInitialCommit = "cccccccccccccccccccccccccccccccccccccccc";
+
+    private static string GetMaestroManagedFeedLocation(string repoName, string sha)
+        => $"https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-{repoName}-{sha}/nuget/v3/index.json";
 
     private static readonly Dictionary<string, string> TestFilesContent = new()
     {
@@ -128,13 +134,21 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestParameters.GitHubTestOrg,
             sourceDirectory: TestRepository.TestRepo2Name);
 
-        string package1 = GetUniqueAssetName("Foo");
-        string package2 = GetUniqueAssetName("Bar");
+        string repoSidePackage = GetUniqueAssetName("RepoSide");
+        string vmrSidePackage = GetUniqueAssetName("VmrSide");
+        string buildPackage = GetUniqueAssetName("Build");
         string pinnedArcade = DependencyFileManager.ArcadeSdkPackageName;
         string pinnedPackage = GetUniqueAssetName("Pinned");
-        List<AssetData> source1Assets = GetAssetData(package1, "1.1.0", package2, "2.1.0");
+
+        string repoSidePackageLocation = GetMaestroManagedFeedLocation("repo-side", RepoSideDependencyCommit);
+        string vmrSidePackageLocation = GetMaestroManagedFeedLocation("vmr-side", VmrSideDependencyCommit);
+        string buildPackageLocation = GetMaestroManagedFeedLocation("build-update", "dddddddddddddddddddddddddddddddddddddddd");
+
+        List<AssetData> repoSideAssets = [GetAssetDataWithLocations(repoSidePackage, "1.17.0", repoSidePackageLocation, LocationType.NugetFeed)];
+        List<AssetData> vmrSideAssets = [GetAssetDataWithLocations(vmrSidePackage, "2.17.0", vmrSidePackageLocation, LocationType.NugetFeed)];
+        List<AssetData> source1Assets = [GetAssetDataWithLocations(buildPackage, "3.1.0", buildPackageLocation, LocationType.NugetFeed)];
         List<AssetData> pinnedAssets = GetAssetData(pinnedArcade, "1.1.0", pinnedPackage, "2.1.0");
-        List<AssetData> source1AssetsUpdated = GetAssetData(package1, "1.17.0", package2, "2.17.0");
+        List<AssetData> source1AssetsUpdated = [GetAssetDataWithLocations(buildPackage, "3.17.0", buildPackageLocation, LocationType.NugetFeed)];
         List<AssetData> updatedPinnedAssets = GetAssetData(pinnedArcade, "1.17.0", pinnedPackage, "2.17.0");
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo2Name);
@@ -142,10 +156,14 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo2Name, TestFile1Name);
 
+        await CreateBuildAsync(sourceRepoUri, branchName, RepoSideDependencyCommit, "repo-side-location", repoSideAssets);
+        await CreateBuildAsync(sourceRepoUri, branchName, VmrSideDependencyCommit, "vmr-side-location", vmrSideAssets);
+
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
             TestContext.WriteLine("Adding dependencies to target repo");
-            await AddDependenciesToLocalRepo(testRepoFolder.Directory, source1Assets, sourceRepoUri);
+            await AddDependenciesToLocalRepo(testRepoFolder.Directory, repoSideAssets, sourceRepoUri, commit: RepoSideDependencyCommit);
+            await AddDependenciesToLocalRepo(testRepoFolder.Directory, source1Assets, sourceRepoUri, commit: BuildDependencyInitialCommit);
             await AddDependenciesToLocalRepo(testRepoFolder.Directory, pinnedAssets, sourceRepoUri, pinned: true);
 
             TestContext.WriteLine("Pushing branch to remote");
@@ -159,6 +177,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                     {
                         // Make a change in the VMR
                         TestContext.WriteLine("Making code changes in the VMR");
+                        await AddDependenciesToLocalRepo(
+                            vmrFolder.Directory,
+                            vmrSideAssets,
+                            sourceRepoUri,
+                            commit: VmrSideDependencyCommit,
+                            relativeBasePath: $"src/{TestRepository.TestRepo2Name}");
                         File.WriteAllText(newFilePath, TestFilesContent[TestFile1Name]);
 
                         await GitAddAllAsync();
@@ -186,6 +210,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                             TestContext.WriteLine("Verifying subscription PR");
                             var assetsToVerify = pinnedAssets
+                                .Concat(repoSideAssets)
+                                .Concat(vmrSideAssets)
                                 .Concat(source1AssetsUpdated)
                                 .Select(a => new DependencyDetail() { Name = a.Name, Version = a.Version}).ToList();
                             await CheckBackwardFlowGitHubPullRequest(
@@ -196,7 +222,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 TestFilePatches,
                                 assetsToVerify,
                                 repoSha,
-                                build.Id);
+                                build.Id,
+                                [repoSidePackageLocation, vmrSidePackageLocation, buildPackageLocation]);
                         }
                     }
                 }

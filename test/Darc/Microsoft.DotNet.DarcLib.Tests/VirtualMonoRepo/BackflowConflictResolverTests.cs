@@ -341,9 +341,9 @@ public class BackflowConflictResolverTests
             .Callback(() =>
             {
                 // Simulate that MergeVersionDetails applied the update to the working tree
-                _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
+                _versionDetails[$"repo/"] = new VersionDetails(
                     [updatedDependency],
-                    _versionDetails[$"repo/{TargetBranch}"].Source);
+                    _versionDetails[$"repo/"].Source);
             })
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
                 [],
@@ -470,7 +470,6 @@ public class BackflowConflictResolverTests
                 It.IsAny<SourceDependency>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
                 It.IsAny<bool?>(),
                 It.IsAny<UnixPath>()))
@@ -478,15 +477,15 @@ public class BackflowConflictResolverTests
                        SourceDependency? sourceDependency,
                        string repo,
                        string? commit,
-                       IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
                        bool? _,
                        UnixPath __) =>
             {
                 // Update dependencies in-memory
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
+                var currentDependencies = _versionDetails[key].Dependencies;
                 _versionDetails[key] = new VersionDetails(
-                    oldDependencies
+                                        currentDependencies
                         .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name.Equals(dep.Name, StringComparison.OrdinalIgnoreCase)) ?? dep)
                         .ToArray(),
                     new SourceDependency(build, MappingName));
