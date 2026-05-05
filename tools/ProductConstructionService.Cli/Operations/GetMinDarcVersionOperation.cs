@@ -23,7 +23,7 @@ internal class GetMinDarcVersionOperation : IOperation
     {
         try
         {
-            var version = await _client.MinDarcVersion.GetMinDarcVersionAsync();
+            var version = await _client.DarcVersion.GetMinDarcVersionAsync();
             if (string.IsNullOrWhiteSpace(version))
             {
                 _logger.LogInformation("Minimum darc client version is not set.");

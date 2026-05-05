@@ -28,7 +28,7 @@ internal static class DarcVersionValidator
         string minVersionString;
         try
         {
-            minVersionString = await pcsClient.MinDarcVersion.GetMinDarcVersionAsync();
+            minVersionString = await pcsClient.DarcVersion.GetMinDarcVersionAsync();
         }
         catch (Exception ex)
         {

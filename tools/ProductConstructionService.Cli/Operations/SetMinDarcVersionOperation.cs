@@ -26,7 +26,7 @@ internal class SetMinDarcVersionOperation : IOperation
 
     public async Task<int> RunAsync()
     {
-        await _client.MinDarcVersion.SetMinDarcVersionAsync(_options.Version);
+        await _client.DarcVersion.SetMinDarcVersionAsync(_options.Version);
         _logger.LogInformation("Minimum darc client version set to {version}", _options.Version);
         return 0;
     }

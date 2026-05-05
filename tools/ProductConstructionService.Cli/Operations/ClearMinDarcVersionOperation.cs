@@ -20,7 +20,7 @@ internal class ClearMinDarcVersionOperation : IOperation
 
     public async Task<int> RunAsync()
     {
-        await _client.MinDarcVersion.ClearMinDarcVersionAsync();
+        await _client.DarcVersion.ClearMinDarcVersionAsync();
         _logger.LogInformation("Minimum darc client version cleared.");
         return 0;
     }
