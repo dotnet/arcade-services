@@ -85,7 +85,7 @@ public class TestParameters : IDisposable
         });
 
         PcsApi = PcsBaseUri.Contains("localhost") || PcsBaseUri.Contains("127.0.0.1")
-            ? PcsApiFactory.GetAnonymous(PcsBaseUri)
+            ? PcsApiFactory.GetAnonymous(baseUri: PcsBaseUri)
             : PcsApiFactory.GetAuthenticated(PcsBaseUri, accessToken: null, managedIdentityId: null, disableInteractiveAuth: IsCI);
 
         IServiceCollection services = new ServiceCollection();

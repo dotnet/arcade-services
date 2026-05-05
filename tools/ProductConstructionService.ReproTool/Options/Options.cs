@@ -36,7 +36,7 @@ internal abstract class Options
             managedIdentityId: null,
             disableInteractiveAuth: false,
             MaestroProdUri));
-        services.AddKeyedSingleton("local", PcsApiFactory.GetAnonymous(PcsLocalUri));
+        services.AddKeyedSingleton("local", PcsApiFactory.GetAnonymous(baseUri: PcsLocalUri));
         services.AddSingleton(PcsApiFactory.GetAuthenticated(MaestroProdUri, null, null, false));
         services.AddSingleton(_ => new GitHubClient(new ProductHeaderValue("repro-tool"))
         {

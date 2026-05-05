@@ -522,6 +522,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             WithForwardFlowConflict(remote, [new UnixPath("src/conflict.txt")]);
         }
 
+        if (blockedFromFutureUpdates && !willFlowNewBuild)
+        {
+            remote
+                .Setup(x => x.CommentPullRequestAsync(
+                    prUrl,
+                    It.Is<string>(content => content.Contains("opposite codeflow merged"))))
+                .Returns(Task.CompletedTask);
+        }
+
         if (mockMergePolicyEvaluator)
         {
             var results = policyEvaluationStatus.HasValue
@@ -663,7 +672,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool? sourceRepoNotified = null,
         UnixPath? relativeBasePath = null,
         string? url = null,
-        List<DependencyUpdateSummary>? dependencyUpdates = null)
+        List<DependencyUpdateSummary>? dependencyUpdates = null,
+        bool blockedFromFutureUpdates = false)
     {
         var prUrl = string.IsNullOrEmpty(url)
             ? Subscription.SourceEnabled
@@ -684,7 +694,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
                     relativeBasePath,
-                    dependencyUpdates: dependencyUpdates));
+                    dependencyUpdates: dependencyUpdates,
+                    blockedFromFutureUpdates: blockedFromFutureUpdates));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null, UnixPath? relativeBasePath = null)

@@ -11,8 +11,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [Updating dependencies in your local repository](#updating-dependencies-in-your-local-repository)
   - [Removing dependencies from a repository](#removing-dependencies-from-a-repository)
   - [Changing a dependency's type](#changing-a-dependencys-type)
-  - ['Pinning' dependencies so they do not
-    update](#pinning-dependencies-so-they-do-not-update)
+  - ['Pinning' dependencies so they do not update](#pinning-dependencies-so-they-do-not-update)
   - [Coherent parent dependencies](#coherent-parent-dependencies)
   - [Version.Details.props and the SkipProperty attribute](#versiondetailsprops-and-the-skipproperty-attribute)
   - [Adding dependency flow](#adding-dependency-flow)
@@ -22,6 +21,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [Assigning an individual build to a channel](#assigning-an-individual-build-to-a-channel)
   - [Locating the BAR build ID for a build](#locating-the-bar-build-id-for-a-build)
   - [Checking Merge Policies on Github](#checking-merge-policies-on-github)
+  - [Making multiple configuration changes](#making-multiple-configuration-changes)
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
@@ -1129,6 +1129,63 @@ You will find them on the `Checks` tab of each updates PRs created by maestro. D
 
 ![Checks Merge Policies](ChecksMergePolicies.png)
 
+### Making multiple configuration changes
+
+The configuration management commands support a common set of parameters that allow you to combine
+multiple changes. By using `--configuration-branch` with `--no-pr`, you can stage several related
+configuration changes onto the same branch and then open a single pull request for all of them.
+
+You can either just keep supplying a constant value for `--configuration-branch` where the first call with create a pull request too and all subsequent calls with notice the branch and will pile onto the PR branch.  
+Alternatively, you can supply also `--no-pr` for the first calls if you want to stall the PR creation and only omit it on the last call to get the PR up when all changes are ready. This is somewhat faster as the tool does not need to query for the PR existence etc..
+
+This is useful when you want to make a coordinated set of changes, such as:
+
+- creating a new channel
+- adding or updating subscriptions that flow into that channel
+- updating merge policies for the affected repository and branch
+
+#### How it works
+
+1. Pick a branch name to hold your configuration changes.
+2. Run each darc command with `--configuration-branch <branch-name>`.
+3. Pass `--no-pr` on each command while you are still batching changes.
+4. On the final command, omit `--no-pr` so darc opens one PR containing all of
+   the accumulated edits.
+
+If the branch does not already exist, darc creates it from
+`--configuration-base-branch` (or `production` if not specified).
+
+#### Example
+
+The following example creates a channel, adds a subscription, and updates
+repository policies in a single PR:
+
+```powershell
+# Step 1: create or reuse a configuration branch and add the first change
+darc add-channel `
+  --name "NET 11 Preview 4" `
+  --classification preview `
+  --configuration-branch net11-preview4-config `
+  --configuration-base-branch production `
+  --no-pr
+
+# Step 2: add another change to the same configuration branch
+darc add-subscription `
+  --channel "NET 11 Preview 4" `
+  --source-repo https://github.com/dotnet/source-repo `
+  --target-repo https://github.com/dotnet/target-repo `
+  --target-branch main `
+  --update-frequency everyBuild `
+  --configuration-branch net11-preview4-config `
+  --no-pr
+
+# Step 3: make a final change and open a single PR for everything
+darc set-repository-policies `
+  --repo https://github.com/dotnet/target-repo `
+  --branch main `
+  --all-checks-passed `
+  --configuration-branch net11-preview4-config
+```
 
 ## Command Reference
 
