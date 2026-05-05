@@ -56,7 +56,9 @@ internal static class Program
                         using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        if (!await ValidateDarcVersionAsync(provider))
+                        if (!await DarcVersionValidator.ValidateAsync(
+                                provider.GetRequiredService<IProductConstructionServiceApi>(),
+                                provider.GetRequiredService<ILogger>()))
                         {
                             return Constants.ErrorCode;
                         }
@@ -83,26 +85,6 @@ internal static class Program
                         return ret;
                     },
                     errs => Task.FromResult(1));
-    }
-
-    private static async Task<bool> ValidateDarcVersionAsync(IServiceProvider sp)
-    {
-        var barClient = sp.GetRequiredService<IProductConstructionServiceApi>();
-        try
-        {
-            await barClient.Assets.GetDarcVersionAsync();
-            return true;
-        }
-        catch (ClientVersionTooOldException ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Failed to validate darc version against the Product Construction Service: {ex.Message}");
-            return false;
-        }
     }
 
     /// <summary>
