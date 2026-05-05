@@ -12,11 +12,11 @@ using ProductConstructionService.Api.Controllers;
 namespace ProductConstructionService.Api.Tests;
 
 [TestFixture]
-public class MinDarcVersionControllerTests
+public class DarcVersionControllerTests
 {
     private Mock<IRedisCacheFactory> _mockFactory = null!;
     private Mock<IRedisCache> _mockCache = null!;
-    private MinDarcVersionController _controller = null!;
+    private DarcVersionController _controller = null!;
 
     [SetUp]
     public void Setup()
@@ -26,7 +26,7 @@ public class MinDarcVersionControllerTests
         _mockFactory
             .Setup(f => f.Create(MinClientVersionConstants.DarcMinVersionRedisKey))
             .Returns(_mockCache.Object);
-        _controller = new MinDarcVersionController(_mockFactory.Object);
+        _controller = new DarcVersionController(_mockFactory.Object);
     }
 
     [Test]

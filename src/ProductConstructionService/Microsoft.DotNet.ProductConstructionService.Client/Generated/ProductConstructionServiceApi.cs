@@ -33,10 +33,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IChannels Channels { get; }
         ICodeflow Codeflow { get; }
         IConfigurationIngestion Ingestion { get; }
+        IDarcVersion DarcVersion { get; }
         IDefaultChannels DefaultChannels { get; }
         IFeatureFlags FeatureFlags { get; }
         IGoal Goal { get; }
-        IMinDarcVersion MinDarcVersion { get; }
         IPipelines Pipelines { get; }
         IPullRequest PullRequest { get; }
         IRepository Repository { get; }
@@ -137,9 +137,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IGoal Goal { get; }
 
-        public IMinDarcVersion MinDarcVersion { get; }
-
         public IConfigurationIngestion Ingestion { get; }
+
+        public IDarcVersion DarcVersion { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -170,8 +170,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             DefaultChannels = new DefaultChannels(this);
             FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);
-            MinDarcVersion = new MinDarcVersion(this);
             Ingestion = new ConfigurationIngestion(this);
+            DarcVersion = new DarcVersion(this);
             Pipelines = new Pipelines(this);
             PullRequest = new PullRequest(this);
             Repository = new Repository(this);
