@@ -11,7 +11,7 @@ namespace ProductConstructionService.Cli.Options;
 [Verb("set-min-darc-version", HelpText = "Set the minimum required darc client version")]
 internal class SetMinDarcVersionOptions : PcsApiOptions
 {
-    [Value(0, MetaName = "version", Required = true, HelpText = "The minimum required darc client version (semver, e.g. 1.2.3)")]
+    [Value(0, MetaName = "version", Required = true, HelpText = "The minimum required darc client version (semver, e.g. 1.1.0-beta.26227.1)")]
     public required string Version { get; init; }
 
     public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<SetMinDarcVersionOperation>(sp, this);
