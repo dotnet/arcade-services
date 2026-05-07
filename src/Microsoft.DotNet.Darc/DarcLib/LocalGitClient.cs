@@ -613,11 +613,63 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task ResolveConflict(string repoPath, string file, bool ours)
     {
-        var result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", file);
-        result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+        // Use porcelain status to determine the conflict shape. The first two
+        // characters (XY) tell us what each side did:
+        //   X = our side, Y = their side
+        // For unmerged paths the relevant codes are:
+        //   DD both deleted        AU added by us         UD deleted by them
+        //   UA added by them       DU deleted by us       AA both added
+        //   UU both modified
+        // Resolution rules:
+        //   - chosen side is 'D'  -> that side deleted; honor it with `rm`
+        //   - other side is 'D'   -> modify/delete; the working tree already has
+        //                            the non-deleter's content, just `git add`
+        //   - both sides have a blob (UU, AA) -> use `checkout --ours/--theirs`
+        //                                         to pick a side, then `add`
+        var status = await _processManager.ExecuteGit(repoPath, "status", "--porcelain=v1", "--", file);
+        status.ThrowIfFailed($"Failed to inspect status of {file} in {repoPath}");
 
-        result = await _processManager.ExecuteGit(repoPath, "add", file);
-        result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
+        var line = status.GetOutputLines().FirstOrDefault()
+            ?? throw new Exception($"No status entry found for {file} in {repoPath} - is it actually conflicted?");
+
+        if (line.Length < 2)
+        {
+            throw new Exception($"Unexpected git status output for {file} in {repoPath}: '{line}'");
+        }
+
+        var chosenSideCode = ours ? line[0] : line[1];
+        var otherSideCode = ours ? line[1] : line[0];
+
+        ProcessExecutionResult result;
+        if (chosenSideCode == 'D')
+        {
+            // The chosen side deleted the file - accept the deletion.
+            // Use --cached as a fallback if the working-tree copy is gone
+            // (e.g. "deleted by us": git removes the working-tree file).
+            result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--", file);
+            if (!result.Succeeded)
+            {
+                result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--cached", "--", file);
+            }
+            result.ThrowIfFailed($"Failed to resolve delete/modify conflict in {file} in {repoPath}");
+        }
+        else if (otherSideCode == 'D')
+        {
+            // Modify/delete conflict where we're keeping the non-deleting side.
+            // The working tree already contains the chosen side's content,
+            // so a plain `git add` resolves it.
+            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result.ThrowIfFailed($"Failed to stage modify/delete resolution for {file} in {repoPath}");
+        }
+        else
+        {
+            // Both sides contributed a blob - pick the chosen side and stage it.
+            result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", "--", file);
+            result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+
+            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
+        }
     }
 
     public async Task<string> GetMergeBaseAsync(
