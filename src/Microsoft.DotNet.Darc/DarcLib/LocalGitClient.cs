@@ -629,24 +629,6 @@ public class LocalGitClient : ILocalGitClient
         // Note that 'U' is overloaded: in UD/DU/UU the side with U has a blob
         // (it modified the file), but in AU/UA the U side has no blob (the
         // other side simply added something it doesn't have).
-        //
-        // Resolution rules driven by the chosen side:
-        //   - chosen side has no blob (D, or U paired with A) -> `rm`
-        //   - other side has no blob  (D, or U paired with A) -> `git add`
-        //     (working tree already contains the chosen side's content)
-        //   - both sides have a blob (AA, UU) -> `checkout --ours/--theirs` + `add`
-        //
-        // Resulting per-code behavior:
-        //
-        //   code  ours=true                       ours=false
-        //   ----  ------------------------------  ------------------------------
-        //   DD    rm                              rm
-        //   AU    add (keep our addition)         rm
-        //   UD    add (keep our modification)     rm
-        //   UA    rm                              add (keep their addition)
-        //   DU    rm                              add (keep their modification)
-        //   AA    checkout --ours + add           checkout --theirs + add
-        //   UU    checkout --ours + add           checkout --theirs + add
         var status = await _processManager.ExecuteGit(repoPath, "status", "--porcelain=v1", "--", file);
         status.ThrowIfFailed($"Failed to inspect status of {file} in {repoPath}");
 
@@ -658,16 +640,21 @@ public class LocalGitClient : ILocalGitClient
             throw new Exception($"Unexpected git status output for {file} in {repoPath}: '{line}'");
         }
 
-        var usCode = line[0];
-        var themCode = line[1];
+        var code = line[..2];
 
-        // A side has a blob unless it deleted the file ('D'), or it's marked
-        // unmerged ('U') because the *other* side added it from nothing ('A').
-        static bool SideHasBlob(char thisSide, char otherSide)
-            => thisSide != 'D' && !(thisSide == 'U' && otherSide == 'A');
-
-        var ourBlob = SideHasBlob(usCode, themCode);
-        var theirBlob = SideHasBlob(themCode, usCode);
+        // Map each unmerged status code to (ourBlob, theirBlob) - whether each
+        // side contributed a blob to the index.
+        var (ourBlob, theirBlob) = code switch
+        {
+            "DD" => (false, false),
+            "DU" => (false, true),
+            "UD" => (true, false),
+            "AU" => (true, false),
+            "UA" => (false, true),
+            "UU" => (true, true),
+            "AA" => (true, true),
+            _ => throw new Exception($"Unexpected unmerged status '{code}' for {file} in {repoPath}"),
+        };
 
         var chosenHasBlob = ours ? ourBlob : theirBlob;
         var otherHasBlob = ours ? theirBlob : ourBlob;
@@ -675,20 +662,12 @@ public class LocalGitClient : ILocalGitClient
         ProcessExecutionResult result;
         if (!chosenHasBlob)
         {
-            // Chosen side has nothing - accept absence by removing the path.
-            // Use --cached as a fallback if the working-tree copy is gone
-            // (e.g. "deleted by us": git removes the working-tree file).
             result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--", file);
-            if (!result.Succeeded)
-            {
-                result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--cached", "--", file);
-            }
             result.ThrowIfFailed($"Failed to remove {file} in {repoPath}");
         }
         else if (!otherHasBlob)
         {
-            // Only the chosen side has content; the working tree already
-            // contains it (modify/delete or one-sided add), so `git add` is enough.
+            // Only the chosen side has content
             result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
             result.ThrowIfFailed($"Failed to stage {file} in {repoPath}");
         }
