@@ -614,18 +614,39 @@ public class LocalGitClient : ILocalGitClient
     public async Task ResolveConflict(string repoPath, string file, bool ours)
     {
         // Use porcelain status to determine the conflict shape. The first two
-        // characters (XY) tell us what each side did:
-        //   X = our side, Y = their side
-        // For unmerged paths the relevant codes are:
-        //   DD both deleted        AU added by us         UD deleted by them
-        //   UA added by them       DU deleted by us       AA both added
-        //   UU both modified
-        // Resolution rules:
-        //   - chosen side is 'D'  -> that side deleted; honor it with `rm`
-        //   - other side is 'D'   -> modify/delete; the working tree already has
-        //                            the non-deleter's content, just `git add`
-        //   - both sides have a blob (UU, AA) -> use `checkout --ours/--theirs`
-        //                                         to pick a side, then `add`
+        // characters (XY) tell us what each side did. For unmerged paths:
+        //
+        //   pair  meaning              stage 2 (us)  stage 3 (them)
+        //   ----  -------------------  ------------  --------------
+        //   DD    both deleted              -              -
+        //   AU    added by us               yes            -
+        //   UD    deleted by them           yes            -
+        //   UA    added by them             -              yes
+        //   DU    deleted by us             -              yes
+        //   AA    both added                yes            yes
+        //   UU    both modified             yes            yes
+        //
+        // Note that 'U' is overloaded: in UD/DU/UU the side with U has a blob
+        // (it modified the file), but in AU/UA the U side has no blob (the
+        // other side simply added something it doesn't have).
+        //
+        // Resolution rules driven by the chosen side:
+        //   - chosen side has no blob (D, or U paired with A) -> `rm`
+        //   - other side has no blob  (D, or U paired with A) -> `git add`
+        //     (working tree already contains the chosen side's content)
+        //   - both sides have a blob (AA, UU) -> `checkout --ours/--theirs` + `add`
+        //
+        // Resulting per-code behavior:
+        //
+        //   code  ours=true                       ours=false
+        //   ----  ------------------------------  ------------------------------
+        //   DD    rm                              rm
+        //   AU    add (keep our addition)         rm
+        //   UD    add (keep our modification)     rm
+        //   UA    rm                              add (keep their addition)
+        //   DU    rm                              add (keep their modification)
+        //   AA    checkout --ours + add           checkout --theirs + add
+        //   UU    checkout --ours + add           checkout --theirs + add
         var status = await _processManager.ExecuteGit(repoPath, "status", "--porcelain=v1", "--", file);
         status.ThrowIfFailed($"Failed to inspect status of {file} in {repoPath}");
 
@@ -637,13 +658,24 @@ public class LocalGitClient : ILocalGitClient
             throw new Exception($"Unexpected git status output for {file} in {repoPath}: '{line}'");
         }
 
-        var chosenSideCode = ours ? line[0] : line[1];
-        var otherSideCode = ours ? line[1] : line[0];
+        var usCode = line[0];
+        var themCode = line[1];
+
+        // A side has a blob unless it deleted the file ('D'), or it's marked
+        // unmerged ('U') because the *other* side added it from nothing ('A').
+        static bool SideHasBlob(char thisSide, char otherSide)
+            => thisSide != 'D' && !(thisSide == 'U' && otherSide == 'A');
+
+        var ourBlob = SideHasBlob(usCode, themCode);
+        var theirBlob = SideHasBlob(themCode, usCode);
+
+        var chosenHasBlob = ours ? ourBlob : theirBlob;
+        var otherHasBlob = ours ? theirBlob : ourBlob;
 
         ProcessExecutionResult result;
-        if (chosenSideCode == 'D')
+        if (!chosenHasBlob)
         {
-            // The chosen side deleted the file - accept the deletion.
+            // Chosen side has nothing - accept absence by removing the path.
             // Use --cached as a fallback if the working-tree copy is gone
             // (e.g. "deleted by us": git removes the working-tree file).
             result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--", file);
@@ -651,15 +683,14 @@ public class LocalGitClient : ILocalGitClient
             {
                 result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--cached", "--", file);
             }
-            result.ThrowIfFailed($"Failed to resolve delete/modify conflict in {file} in {repoPath}");
+            result.ThrowIfFailed($"Failed to remove {file} in {repoPath}");
         }
-        else if (otherSideCode == 'D')
+        else if (!otherHasBlob)
         {
-            // Modify/delete conflict where we're keeping the non-deleting side.
-            // The working tree already contains the chosen side's content,
-            // so a plain `git add` resolves it.
+            // Only the chosen side has content; the working tree already
+            // contains it (modify/delete or one-sided add), so `git add` is enough.
             result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
-            result.ThrowIfFailed($"Failed to stage modify/delete resolution for {file} in {repoPath}");
+            result.ThrowIfFailed($"Failed to stage {file} in {repoPath}");
         }
         else
         {
