@@ -219,14 +219,125 @@ public abstract class CodeFlowConflictResolver
     {
         _logger.LogDebug("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
-        UnixPath vmrRepoPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
-        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrRepoPath + '/'))
+        var crossingFlowPatch = await TryCreateCrossingFlowPatchAsync(codeflowOptions, vmr, repo, conflictedFile, crossingFlow, cancellationToken);
+        if (crossingFlowPatch is null)
         {
-            _logger.LogWarning("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
             return false;
         }
 
-        // Create patch for the file represent only the most current flow
+        var (targetRepo, patch) = crossingFlowPatch.Value;
+
+        try
+        {
+            await targetRepo.ResolveConflict(conflictedFile, ours: true);
+        }
+        // file does not exist in the target repo anymore
+        catch (ProcessFailedException e) when (e.Message.Contains("does not have our version"))
+        {
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+            return false;
+        }
+
+        if (_fileSystem.GetFileInfo(patch.Path).Length == 0)
+        {
+            // This file did not change in the last flow
+            return true;
+        }
+
+        try
+        {
+            await _patchHandler.ApplyPatch(
+                patch,
+                targetRepo.Path,
+                removePatchAfter: true,
+                keepConflicts: false,
+                cancellationToken: cancellationToken);
+            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+
+            await targetRepo.ExecuteGitCommand(["restore", conflictedFile], cancellationToken);
+
+            return true;
+        }
+        catch (PatchApplicationFailedException)
+        {
+            // If the patch failed, we cannot resolve the conflict automatically
+            // We will just leave it as is and let the user resolve it manually
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+
+            // Revert the file into the conflicted state for manual resolution
+            await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Reapplies the changes from the crossing flow on top of a non-conflicted file.
+    /// </summary>
+    /// <returns>True when the patch was applied successfully (or was a no-op)</returns>
+    private async Task<bool> TryReapplyingCrossingFlowChangesAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo repo,
+        UnixPath file,
+        Codeflow crossingFlow,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Trying to reapply crossing-flow changes to {filePath}...", file);
+
+        var crossingFlowPatch = await TryCreateCrossingFlowPatchAsync(codeflowOptions, vmr, repo, file, crossingFlow, cancellationToken);
+        if (crossingFlowPatch is null)
+        {
+            return false;
+        }
+
+        var (targetRepo, patch) = crossingFlowPatch.Value;
+
+        if (_fileSystem.GetFileInfo(patch.Path).Length == 0)
+        {
+            // This file did not change in the last flow
+            return true;
+        }
+
+        try
+        {
+            await _patchHandler.ApplyPatch(
+                patch,
+                targetRepo.Path,
+                removePatchAfter: true,
+                keepConflicts: false,
+                cancellationToken: cancellationToken);
+            _logger.LogDebug("Successfully reapplied crossing-flow changes to {filePath}", file);
+            return true;
+        }
+        catch (PatchApplicationFailedException)
+        {
+            _logger.LogInformation("Failed to reapply crossing-flow changes to {filePath}", file);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Builds a patch capturing the source-side changes between the crossing flow and the current flow
+    /// for a single file. Returns null if the file is outside the source repo path (forward flow only),
+    /// throws if the resulting patch would be too large to handle.
+    /// </summary>
+    private async Task<(ILocalGitRepo TargetRepo, VmrIngestionPatch Patch)?> TryCreateCrossingFlowPatchAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo repo,
+        UnixPath file,
+        Codeflow crossingFlow,
+        CancellationToken cancellationToken)
+    {
+        UnixPath vmrRepoPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        if (codeflowOptions.CurrentFlow.IsForwardFlow && !file.Path.StartsWith(vmrRepoPath + '/'))
+        {
+            _logger.LogWarning("File {file} is not in the source repo, skipping crossing-flow auto-resolution", file);
+            return null;
+        }
+
+        // Create patch for the file representing only the most current flow
         var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
             : (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
@@ -237,8 +348,8 @@ public abstract class CodeFlowConflictResolver
             fromSha,
             toSha,
             path: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? new UnixPath(conflictedFile.Path.Substring(vmrRepoPath.Length + 1))
-                : conflictedFile,
+                ? new UnixPath(file.Path.Substring(vmrRepoPath.Length + 1))
+                : file,
             filters: null,
             relativePaths: true,
             workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
@@ -267,48 +378,7 @@ public abstract class CodeFlowConflictResolver
         }
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-        try
-        {
-            await targetRepo.ResolveConflict(conflictedFile, ours: true);
-        }
-        // file does not exist in the target repo anymore
-        catch (ProcessFailedException e) when (e.Message.Contains("does not have our version"))
-        {
-            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
-            return false;
-        }
-
-        if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
-        {
-            // This file did not change in the last flow
-            return true;
-        }
-
-        try
-        {
-            await _patchHandler.ApplyPatch(
-                patches[0],
-                targetRepo.Path,
-                removePatchAfter: true,
-                keepConflicts: false,
-                cancellationToken: cancellationToken);
-            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
-
-            await targetRepo.ExecuteGitCommand(["restore", conflictedFile], cancellationToken);
-
-            return true;
-        }
-        catch (PatchApplicationFailedException)
-        {
-            // If the patch failed, we cannot resolve the conflict automatically
-            // We will just leave it as is and let the user resolve it manually
-            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
-
-            // Revert the file into the conflicted state for manual resolution
-            await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
-
-            return false;
-        }
+        return (targetRepo, patches[0]);
     }
 
     /// <summary>
@@ -552,7 +622,7 @@ public abstract class CodeFlowConflictResolver
                 return;
             }
 
-            if (!await TryResolvingConflictWithCrossingFlow(
+            if (!await TryReapplyingCrossingFlowChangesAsync(
                 codeflowOptions,
                 vmr,
                 productRepo,
