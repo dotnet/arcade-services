@@ -633,11 +633,11 @@ public class LocalGitClient : ILocalGitClient
         status.ThrowIfFailed($"Failed to inspect status of {file} in {repoPath}");
 
         var line = status.GetOutputLines().FirstOrDefault()
-            ?? throw new Exception($"No status entry found for {file} in {repoPath} - is it actually conflicted?");
+            ?? throw new InvalidOperationException($"No status entry found for {file} in {repoPath} - is it actually conflicted?");
 
         if (line.Length < 2)
         {
-            throw new Exception($"Unexpected git status output for {file} in {repoPath}: '{line}'");
+            throw new InvalidOperationException($"Unexpected git status output for {file} in {repoPath}: '{line}'");
         }
 
         var code = line[..2];
