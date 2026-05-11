@@ -13,6 +13,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -403,6 +404,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
+        var submodulePaths = _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(codeflowOptions.Mapping.Name + '/'))
+            .Select(s => "src/" + s.Path);
+
+        bool FilterSubmodulePaths(string filePath)
+            => submodulePaths.Any(s => filePath.StartsWith(s));
+
         await RevertFalsePositiveAdditionsAndDeletionsAsync(
             lastFlows,
             vmr,
@@ -410,6 +418,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             file => file.Substring(vmrSourcesPath.Length + 1),
             lastFlows.LastForwardFlow.RepoSha,
             codeflowOptions.CurrentFlow.RepoSha,
+            FilterSubmodulePaths,
             cancellationToken);
 
         return result;

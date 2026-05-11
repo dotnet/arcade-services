@@ -188,6 +188,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         Func<string, string> toSourcePath,
         string lastSameDirectionSha,
         string currentFlowSha,
+        Func<string, bool> shouldSkipPath,
         CancellationToken cancellationToken)
     {
         if (lastFlows.CrossingFlow == null)
@@ -199,6 +200,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         foreach (var addedFile in addedFiles)
         {
+            if (shouldSkipPath(addedFile))
+            {
+                continue;
+            }
+
             var sourcePath = toSourcePath(addedFile);
             var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
             var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
@@ -215,6 +221,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         foreach (var deletedFile in deletedFiles)
         {
+            if (shouldSkipPath(deletedFile))
+            {
+                continue;
+            }
+
             var sourcePath = toSourcePath(deletedFile);
             var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
             var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
