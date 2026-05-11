@@ -415,7 +415,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 file => vmrSourcesPath / file,
                 lastFlows.LastBackFlow.VmrSha,
                 codeflowOptions.CurrentFlow.VmrSha,
-                _ => true,
+                _ => false,
                 cancellationToken);
         }
 
