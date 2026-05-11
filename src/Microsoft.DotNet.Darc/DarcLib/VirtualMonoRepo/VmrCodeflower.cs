@@ -182,13 +182,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
     /// </summary>
     protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
+        SourceMapping mapping,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
         ILocalGitRepo sourceRepo,
-        Func<string, string> toSourcePath,
         string lastSameDirectionSha,
         string currentFlowSha,
-        Func<string, bool> shouldSkipPath,
         CancellationToken cancellationToken)
     {
         if (lastFlows.CrossingFlow == null)
@@ -198,14 +197,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"], cancellationToken)).GetOutputLines();
 
-        foreach (var addedFile in addedFiles)
+        foreach (var addedFile in addedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
         {
-            if (shouldSkipPath(addedFile))
-            {
-                continue;
-            }
-
-            var sourcePath = toSourcePath(addedFile);
+            var sourcePath = ToSourceRepoPath(addedFile, mapping);
             var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
             var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
 
@@ -219,14 +213,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"], cancellationToken)).GetOutputLines();
 
-        foreach (var deletedFile in deletedFiles)
+        foreach (var deletedFile in deletedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
         {
-            if (shouldSkipPath(deletedFile))
-            {
-                continue;
-            }
-
-            var sourcePath = toSourcePath(deletedFile);
+            var sourcePath = ToSourceRepoPath(deletedFile, mapping);
             var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
             var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
 
@@ -237,6 +226,20 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
     }
+
+    /// <summary>
+    /// Maps a path that is relative to the target repo of the current flow to a path that is
+    /// relative to the source repo. Used by RevertFalsePositiveAdditionsAndDeletionsAsync to
+    /// look up the equivalent file in the source repo.
+    /// </summary>
+    protected abstract string ToSourceRepoPath(string targetPath, SourceMapping mapping);
+
+    /// <summary>
+    /// Returns true if the given target-repo-relative path should be skipped by
+    /// <see cref="RevertFalsePositiveAdditionsAndDeletionsAsync"/> (e.g. because it lives
+    /// inside a submodule whose contents are not stored in the source repo).
+    /// </summary>
+    protected abstract bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping);
 
     /// <summary>
     /// Tries to detect if given last flows (forward and backward) are crossing each other.
