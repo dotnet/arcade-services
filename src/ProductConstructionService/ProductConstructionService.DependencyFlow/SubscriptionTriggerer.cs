@@ -6,6 +6,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -76,18 +77,13 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         }
     }
 
-    public async Task UpdateSubscriptionAsync(int buildId, bool force = false)
+    public async Task<SubscriptionUpdateResult> UpdateSubscriptionAsync(
+        Subscription subscription,
+        Build build,
+        bool force = false)
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
-
-        if (subscription == null)
-        {
-            _logger.LogWarning("Could not find subscription with ID {subscriptionId}. Skipping update.", _subscriptionId);
-            return;
-        }
-
         await AddDependencyFlowEventAsync(
-            buildId,
+            build.Id,
             DependencyFlowEventType.Fired,
             DependencyFlowEventReason.New,
             MergePolicyCheckResult.PendingPolicies,
@@ -107,21 +103,23 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
 
         var mutexKey = pullRequestUpdaterId.Id;
 
-        await _distributedLock.ExecuteWithLockAsync(mutexKey,
+        return await _distributedLock.ExecuteWithLockAsync(mutexKey,
             async () =>
             {
                 _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
 
-                await pullRequestUpdater.UpdateAssetsAsync(
+                var res = await pullRequestUpdater.UpdateAssetsAsync(
                     _subscriptionId,
                     subscription.SourceEnabled
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
-                    buildId,
+                    build.Id,
                     applyNewestOnly: false,
                     forceUpdate: force);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
+
+                return res;
             });
     }
 }
