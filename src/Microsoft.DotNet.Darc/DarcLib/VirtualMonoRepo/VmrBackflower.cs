@@ -415,7 +415,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 file => vmrSourcesPath / file,
                 lastFlows.LastBackFlow.VmrSha,
                 codeflowOptions.CurrentFlow.VmrSha,
-                _ => false,
+                _ => false, // backflows don't touch submodules we don't have anything to filter here
                 cancellationToken);
         }
 
