@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -17,7 +19,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
 /// This class is able to remove a repository from the VMR.
-/// It removes the sources, updates the source manifest, and optionally regenerates 
+/// It removes the sources, updates the source manifest, removes the repo project file,
+/// cleans up RepositoryReference entries in other repo projects, and optionally regenerates
 /// third-party notices, codeowners, and credential scan suppressions.
 /// </summary>
 public class VmrRemover : VmrManagerBase, IVmrRemover
@@ -28,6 +31,8 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
+
+    private const string RepoProjectsDirName = "repo-projects";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -116,6 +121,13 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
                 pathsToStage.Add(sourceMappingsPath);
             }
 
+            // Remove repo project file and references from other repo projects
+            var repoProjectsDir = _vmrInfo.VmrPath / RepoProjectsDirName;
+            if (_fileSystem.DirectoryExists(repoProjectsDir))
+            {
+                pathsToStage.AddRange(await RemoveRepoProjectAsync(mapping.Name, repoProjectsDir));
+            }
+
             await _localGitClient.StageAsync(_vmrInfo.VmrPath, pathsToStage, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -190,5 +202,56 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             repoName, VmrInfo.SourceMappingsFileName);
 
         return true;
+    }
+
+    /// <summary>
+    /// Removes the repo-projects/{repoName}.proj file and any RepositoryReference
+    /// elements referencing the repo from other .proj files in the repo-projects directory.
+    /// </summary>
+    /// <returns>List of modified or deleted file paths to stage</returns>
+    private async Task<List<string>> RemoveRepoProjectAsync(string repoName, string repoProjectsDir)
+    {
+        var modifiedPaths = new List<string>();
+
+        // Remove the repo's own project file
+        var repoProjectFile = Path.Combine(repoProjectsDir, $"{repoName}.proj");
+        if (_fileSystem.FileExists(repoProjectFile))
+        {
+            _logger.LogInformation("Removing repo project file {path}", repoProjectFile);
+            _fileSystem.DeleteFile(repoProjectFile);
+            modifiedPaths.Add(repoProjectFile);
+        }
+        else
+        {
+            _logger.LogWarning("Repo project file {path} does not exist", repoProjectFile);
+        }
+
+        // Remove RepositoryReference entries from other .proj files
+        var projFiles = _fileSystem.GetFiles(repoProjectsDir)
+            .Where(f => f.EndsWith(".proj", StringComparison.OrdinalIgnoreCase));
+
+        // Match lines like: <RepositoryReference Include="repoName" />
+        // or with additional attributes/whitespace variations
+        var pattern = new Regex(
+            @"^[ \t]*<RepositoryReference\s+Include\s*=\s*""" + Regex.Escape(repoName) + @"""[^/]*/>\s*$",
+            RegexOptions.Multiline);
+
+        foreach (var projFile in projFiles)
+        {
+            var content = await _fileSystem.ReadAllTextAsync(projFile);
+            var newContent = pattern.Replace(content, string.Empty);
+
+            if (content != newContent)
+            {
+                // Clean up any resulting empty lines (consecutive newlines)
+                newContent = Regex.Replace(newContent, @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
+
+                _fileSystem.WriteToFile(projFile, newContent);
+                _logger.LogInformation("Removed RepositoryReference for '{repoName}' from {file}", repoName, projFile);
+                modifiedPaths.Add(projFile);
+            }
+        }
+
+        return modifiedPaths;
     }
 }
