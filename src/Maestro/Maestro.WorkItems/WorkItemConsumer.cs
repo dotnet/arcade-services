@@ -120,6 +120,8 @@ internal class WorkItemConsumer(
                 _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
                 await workItemScope.RunWorkItemAsync(
                     node,
+                    message.DequeueCount,
+                    _options.Value.MaxWorkItemRetries,
                     telemetryScope,
                     // We record the delay between the message being queued and the processing start time
                     // We must only measure that once we actually start processing the work item which might mean waiting for lock

@@ -14,17 +14,20 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
     private readonly BuildAssetRegistryContext _context;
     private readonly OperationManager _operations;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly ILogger<SubscriptionTriggerProcessor> _logger;
 
     public SubscriptionTriggerProcessor(
         BuildAssetRegistryContext context,
         OperationManager operationManager,
         IPullRequestUpdaterFactory updaterFactory,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<SubscriptionTriggerProcessor> logger)
     {
         _context = context;
         _operations = operationManager;
         _updaterFactory = updaterFactory;
+        _outcomeRecorder = outcomeRecorder;
         _logger = logger;
     }
 
@@ -32,15 +35,23 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         SubscriptionTriggerWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        if (workItem.BuildId.HasValue && workItem.BuildId.Value > 0)
+        return await _outcomeRecorder.RunUpdateWithOutcomePersistenceAsync(workItem, async () =>
         {
-            return await StartSubscriptionUpdateForSpecificBuildAsync(
-                workItem.SubscriptionId,
-                workItem.BuildId.Value,
-                workItem.Force);
-        }
+            bool success;
+            if (workItem.BuildId.HasValue && workItem.BuildId.Value > 0)
+            {
+                success = await StartSubscriptionUpdateForSpecificBuildAsync(
+                    workItem.SubscriptionId,
+                    workItem.BuildId.Value,
+                    workItem.Force);
+            }
+            else
+            {
+                success = await StartSubscriptionUpdateAsync(workItem.SubscriptionId, workItem.Force);
+            }
 
-        return await StartSubscriptionUpdateAsync(workItem.SubscriptionId, workItem.Force);
+            return success ? SubscriptionUpdateOutcome.Success : SubscriptionUpdateOutcome.Failure;
+        });
     }
 
     protected override string? GetSynchronizationKey(SubscriptionTriggerWorkItem workItem) => "SubscriptionTrigger_" + workItem.SubscriptionId;
@@ -121,6 +132,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
             catch (Exception)
             {
                 _logger.LogError("Failed to update subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId);
+                //todo log subscription trigger outcome exception here
                 throw;
             }
         }

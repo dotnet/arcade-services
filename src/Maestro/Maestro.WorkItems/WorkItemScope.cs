@@ -34,11 +34,50 @@ public class WorkItemScope : IAsyncDisposable
         _workItemScope.Dispose();
     }
 
-    public async Task RunWorkItemAsync(
+    public Task RunWorkItemAsync(
         JsonNode node,
         ITelemetryScope telemetryScope,
         Action onWorkItemStarted,
+        CancellationToken cancellationToken) =>
+        RunWorkItemAsync(
+            node,
+            attemptNumber: 1,
+            maxAttempts: 1,
+            telemetryScope,
+            onWorkItemStarted,
+            cancellationToken);
+
+    public async Task RunWorkItemAsync(
+        JsonNode node,
+        long attemptNumber,
+        int maxAttempts,
+        ITelemetryScope telemetryScope,
+        Action onWorkItemStarted,
         CancellationToken cancellationToken)
+    {
+        var (workItem, processor) = await CreateWorkItemAndProcessorAsync<WorkItem>(
+            node,
+            attemptNumber,
+            maxAttempts,
+            telemetryScope,
+            onWorkItemStarted,
+            cancellationToken);
+
+        await RunWorkItemAsync(
+            workItem,
+            processor,
+            telemetryScope,
+            onWorkItemStarted,
+            cancellationToken);
+    }
+
+    public async Task<(WorkItem, IWorkItemProcessor)> CreateWorkItemAndProcessorAsync<T>(
+        JsonNode node,
+        long attemptNumber,
+        int maxAttempts,
+        ITelemetryScope telemetryScope,
+        Action onWorkItemStarted,
+        CancellationToken cancellationToken) where T : WorkItem
     {
         var type = node["type"]!.ToString();
 
@@ -55,6 +94,17 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
         }
 
+        workItem.SetAttemptInfo(attemptNumber, maxAttempts);
+
+        return (workItem, processor);
+    }
+    public async Task RunWorkItemAsync(
+        WorkItem workItem,
+        IWorkItemProcessor processor,
+        ITelemetryScope telemetryScope,
+        Action onWorkItemStarted,
+        CancellationToken cancellationToken)
+    {
         var logger = _workItemScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
 
         async Task ProcessWorkItemAsync()
@@ -67,11 +117,11 @@ public class WorkItemScope : IAsyncDisposable
                 if (success)
                 {
                     telemetryScope.SetSuccess();
-                    logger.LogInformation("Work item {type} processed successfully", type);
+                    logger.LogInformation("Work item {type} processed successfully", workItem.Type);
                 }
                 else
                 {
-                    logger.LogInformation("Work item {type} processed unsuccessfully", type);
+                    logger.LogInformation("Work item {type} processed unsuccessfully", workItem.Type);
                 }
             }
         }
