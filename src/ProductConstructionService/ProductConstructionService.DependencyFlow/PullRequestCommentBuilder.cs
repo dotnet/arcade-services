@@ -83,7 +83,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .Split('+')
             .First();
 
-        var unsafeMessage = unsafeFlow
+        var unsafeMessage = unsafeFlow && !subscription.IsBackflow()
             ? $"""
 
                 If you don't care about the changes made in the VMR, and just want the vmr branch to match your repo you can use
