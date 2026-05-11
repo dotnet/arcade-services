@@ -243,8 +243,11 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
             if (content != newContent)
             {
-                // Clean up any resulting empty lines (consecutive newlines)
-                newContent = Regex.Replace(newContent, @"(\r?\n){3,}", Environment.NewLine + Environment.NewLine);
+                // Detect the original line ending style
+                var lineEnding = content.Contains("\r\n") ? "\r\n" : "\n";
+
+                // Clean up any resulting empty lines (3+ consecutive newlines become 2)
+                newContent = Regex.Replace(newContent, @"(" + Regex.Escape(lineEnding) + @"){3,}", lineEnding + lineEnding);
 
                 _fileSystem.WriteToFile(projFile, newContent);
                 _logger.LogInformation("Removed RepositoryReference for '{repoName}' from {file}", repoName, projFile);
