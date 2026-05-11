@@ -11,7 +11,6 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +56,7 @@ internal static class Program
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
                         if (!await DarcVersionValidator.ValidateAsync(
-                                provider.GetRequiredService<IProductConstructionServiceApi>(),
+                                opts.BuildAssetRegistryBaseUri,
                                 provider.GetRequiredService<ILogger>()))
                         {
                             return Constants.ErrorCode;
