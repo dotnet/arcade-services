@@ -57,7 +57,7 @@ internal static class Program
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
                         if (!await DarcVersionValidator.ValidateAsync(
-                                provider.GetRequiredService<IProductConstructionServiceApi>(),
+                                opts.BuildAssetRegistryBaseUri,
                                 provider.GetRequiredService<ILogger>()))
                         {
                             return Constants.ErrorCode;

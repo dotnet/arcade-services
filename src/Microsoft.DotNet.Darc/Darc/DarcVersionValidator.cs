@@ -14,7 +14,7 @@ internal static class DarcVersionValidator
 {
     private const string DevVersionSuffix = "-dev";
 
-    public static async Task<bool> ValidateAsync(IProductConstructionServiceApi pcsClient, ILogger logger)
+    public static async Task<bool> ValidateAsync(string baseUri, ILogger logger)
     {
         var darcVersionString = GetDarcVersion();
 
@@ -24,6 +24,10 @@ internal static class DarcVersionValidator
         {
             return true;
         }
+
+        var pcsClient = string.IsNullOrEmpty(baseUri)
+            ? PcsApiFactory.GetAnonymous()
+            : PcsApiFactory.GetAnonymous(baseUri);
 
         string minVersionString;
         try
