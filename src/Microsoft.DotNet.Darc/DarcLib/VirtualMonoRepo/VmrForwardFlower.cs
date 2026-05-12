@@ -404,10 +404,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
         await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            codeflowOptions.Mapping,
             lastFlows,
             vmr,
             sourceRepo,
-            file => file.Substring(vmrSourcesPath.Length + 1),
             lastFlows.LastForwardFlow.RepoSha,
             codeflowOptions.CurrentFlow.RepoSha,
             cancellationToken);
@@ -564,6 +564,20 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
+
+    protected override string ToSourceRepoPath(string targetPath, SourceMapping mapping)
+    {
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mapping);
+        return targetPath.Substring(vmrSourcesPath.Length + 1);
+    }
+
+    // We shouldn't try to fix reverts in submodules
+    protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping)
+        => _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+            .Select(s => (string)(VmrInfo.SourcesDir / s.Path))
+            .Any(p => targetPath.Equals(p, StringComparison.OrdinalIgnoreCase)
+                || targetPath.StartsWith(p + '/', StringComparison.OrdinalIgnoreCase));
 
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected virtual bool ShouldResetVmr => false;
