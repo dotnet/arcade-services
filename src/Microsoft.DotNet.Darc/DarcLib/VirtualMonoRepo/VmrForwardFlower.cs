@@ -577,7 +577,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             .Where(s => s.Path.StartsWith(mapping.Name + '/'))
             .Select(s => (string)(VmrInfo.SourcesDir / s.Path))
             .Any(p => targetPath.Equals(p, StringComparison.OrdinalIgnoreCase)
-                || targetPath.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
+                || targetPath.StartsWith(p + '/', StringComparison.OrdinalIgnoreCase));
 
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected virtual bool ShouldResetVmr => false;
