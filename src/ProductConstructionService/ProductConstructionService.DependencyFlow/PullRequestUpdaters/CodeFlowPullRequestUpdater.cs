@@ -68,7 +68,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _target = target;
     }
 
-    protected async override Task ProcessSubscriptionUpdateAsync(
+    protected override async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         PullRequest? prInfo,
@@ -84,7 +84,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            return;
+            return new SubscriptionUpdateResult(
+                $"PR is already up to date with source commit {update.SourceSha}",
+                Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate,
+                pr.Url);
         }
 
         if (pr?.BlockedFromFutureUpdates == true && !forceUpdate)
@@ -95,7 +98,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            return;
+            return new SubscriptionUpdateResult(
+                $"Failed to update pr {pr.Url} for subscription {update.SubscriptionId} because it is blocked from future updates",
+                Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable,
+                pr.Url);
         }
 
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
@@ -103,7 +109,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
-            return;
+            return new SubscriptionUpdateResult(
+                $"Subscription {update.SubscriptionId} was not found.",
+                Maestro.Data.Models.SubscriptionOutcomeType.Failure,
+                pr?.Url);
         }
 
         var isForwardFlow = subscription.IsForwardFlow();
@@ -112,22 +121,34 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var (codeFlowRes, unsafeFlow, prHeadBranch) = await ExecuteCodeFlowAsync(
-            pr,
-            prInfo,
-            update,
-            subscription,
-            build,
-            forceUpdate);
-
-        if (codeFlowRes == null)
+        CodeFlowResult codeFlowRes;
+        bool isUnsafeFlow;
+        string? prHeadBranch;
+        try
         {
-            return;
+            (codeFlowRes, isUnsafeFlow, prHeadBranch) = await ExecuteCodeFlowAsync(
+                pr,
+                prInfo,
+                update,
+                subscription,
+                build,
+                forceUpdate);
+        }
+        catch (BlockingCodeflowException e) when (pr != null)
+        {
+            await HandleBlockingCodeflowException(pr);
+            return new SubscriptionUpdateResult(
+                e.Message,
+                Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable,
+                pr?.Url);
         }
 
         if (!codeFlowRes.HadUpdates)
         {
-            return;
+            return new SubscriptionUpdateResult(
+                $"There were no code-flow updates for subscription {subscription.Id}",
+                Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate,
+                pr?.Url);
         }
 
         if (isForwardFlow)
@@ -154,7 +175,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (codeFlowRes.HadConflicts)
         {
-            await HandleConflictsAsync(
+            var prUrl = await HandleConflictsAsync(
                 update,
                 pr,
                 previousSourceSha,
@@ -162,12 +183,15 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs,
-                unsafeFlow);
-            return;
+                isUnsafeFlow);
+            return new SubscriptionUpdateResult(
+                $"Code-flow updates have been applied for subscription {subscription.Id}, but conflict resolution is required by user.",
+                Maestro.Data.Models.SubscriptionOutcomeType.HasConflict,
+                prUrl);
         }
 
         string? oldPrUrl = null;
-        if (unsafeFlow && pr != null)
+        if (isUnsafeFlow && pr != null)
         {
             oldPrUrl = pr.Url;
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
@@ -177,18 +201,18 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (pr == null)
         {
-            var (newPr, _) = await CreateCodeFlowPullRequestAsync(
+            (pr, var _) = await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
                 subscription,
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs,
-                unsafeFlow);
+                isUnsafeFlow);
 
             if (oldPrUrl != null)
             {
-                await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPr.Url);
+                await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, pr.Url);
             }
         }
         else if (prInfo != null)
@@ -202,9 +226,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs);
         }
+
+        return new SubscriptionUpdateResult(
+            $"Code-flow updates have been successfully applied for subscription {subscription.Id}.",
+            Maestro.Data.Models.SubscriptionOutcomeType.Success,
+            pr.Url);
     }
 
-    private async Task<(CodeFlowResult? codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
+    private async Task<(CodeFlowResult codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -236,7 +265,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             if (e.FlowingOldBuild)
             {
                 _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
-                return (null, false, prHeadBranch);
+                // todo: replace this hack before merging. ideally, when flowing old builds, we'd just throw
+                // a different type of exception that we don't need to catch
+                return (new CodeFlowResult(false, [], new NativePath(""), [], false), false, prHeadBranch);
             }
 
             unsafeFlown = true;
@@ -256,11 +287,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch);
 
             codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: true);
-        }
-
-        if (codeFlowRes is null)
-        {
-            return (null, unsafeFlown, prHeadBranch);
         }
 
         if (codeFlowRes.HadConflicts)
@@ -296,7 +322,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
-    private async Task<CodeFlowResult?> InvokeFlowAsync(
+    private async Task<CodeFlowResult> InvokeFlowAsync(
         SubscriptionDTO subscription,
         BuildDTO build,
         InProgressPullRequest? pr,
@@ -321,18 +347,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     forceUpdate,
                     unsafeFlow: unsafeFlow,
                     cancellationToken: default);
-        }
-        catch (BlockingCodeflowException) when (pr != null)
-        {
-            await HandleBlockingCodeflowException(pr);
-            return null;
-        }
-        catch (TargetBranchNotFoundException)
-        {
-            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
-                subscription.TargetBranch,
-                subscription.Id);
-            return null;
         }
         catch (Exception e) when (e is not NonLinearCodeflowException)
         {
@@ -429,7 +443,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return upstreamRepoDiffs;
     }
 
-    private async Task HandleConflictsAsync(
+    private async Task<string> HandleConflictsAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         string? previousSourceSha,
@@ -475,6 +489,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPrUrl);
         }
+
+        return newPrUrl;
     }
 
     private async Task<string> RequestManualConflictResolutionAsync(

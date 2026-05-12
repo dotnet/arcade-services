@@ -5,7 +5,9 @@ using Maestro.Data;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using Maestro.WorkItems;
+using Maestro.Data.Models;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
@@ -35,23 +37,24 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         SubscriptionTriggerWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        return await _outcomeRecorder.RunUpdateWithOutcomePersistenceAsync(workItem, async () =>
-        {
-            bool success;
-            if (workItem.BuildId.HasValue && workItem.BuildId.Value > 0)
-            {
-                success = await StartSubscriptionUpdateForSpecificBuildAsync(
-                    workItem.SubscriptionId,
-                    workItem.BuildId.Value,
-                    workItem.Force);
-            }
-            else
-            {
-                success = await StartSubscriptionUpdateAsync(workItem.SubscriptionId, workItem.Force);
-            }
+        return await _outcomeRecorder.RunUpdateWithOutcomePersistenceAsync(
+            workItem,
+            async () => await ProcessSubscriptionTriggerAsync(workItem));
+    }
 
-            return success ? SubscriptionUpdateOutcome.Success : SubscriptionUpdateOutcome.Failure;
-        });
+    private async Task<SubscriptionUpdateResult> ProcessSubscriptionTriggerAsync(SubscriptionTriggerWorkItem workItem)
+    {
+        if (workItem.BuildId.HasValue && workItem.BuildId.Value > 0)
+        {
+            return await StartSubscriptionUpdateForSpecificBuildAsync(
+                workItem.SubscriptionId,
+                workItem.BuildId.Value,
+                workItem.Force);
+        }
+        else
+        {
+            return await StartSubscriptionUpdateAsync(workItem.SubscriptionId, workItem.Force);
+        }
     }
 
     protected override string? GetSynchronizationKey(SubscriptionTriggerWorkItem workItem) => "SubscriptionTrigger_" + workItem.SubscriptionId;
@@ -62,7 +65,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
     /// <param name="subscriptionId">Subscription to run the update for.</param>
     /// <param name="buildId">BAR build id to run the update for</param>
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
-    private async Task<bool> StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId, bool force)
+    private async Task<SubscriptionUpdateResult> StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId, bool force)
     {
         var subscriptionToUpdate =
             (from sub in _context.Subscriptions
@@ -76,13 +79,16 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
              where specificBuild != null
              select new
              {
-                 subscription = sub.Id,
-                 specificBuild = specificBuild.Id
+                 subscription = sub,
+                 specificBuild = specificBuild
              }).SingleOrDefault();
 
         if (subscriptionToUpdate == null)
         {
-            return true;
+            return new SubscriptionUpdateResult(
+                "No matching subscription and build found",
+                SubscriptionOutcomeType.Failure,
+                null);
         }
 
         return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.specificBuild, force);
@@ -93,7 +99,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
     /// </summary>
     /// <param name="subscriptionId">Subscription to run the update for.</param>
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
-    private async Task<bool> StartSubscriptionUpdateAsync(Guid subscriptionId, bool force)
+    private async Task<SubscriptionUpdateResult> StartSubscriptionUpdateAsync(Guid subscriptionId, bool force)
     {
         var subscriptionToUpdate =
             (from sub in _context.Subscriptions
@@ -107,32 +113,33 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
              where latestBuild != null
              select new
              {
-                 subscription = sub.Id,
-                 latestBuild = latestBuild.Id
+                 subscription = sub,
+                 latestBuild = latestBuild
              }).SingleOrDefault();
 
         if (subscriptionToUpdate == null)
         {
-            return true;
+            return new SubscriptionUpdateResult(
+                "No matching subscription and build found",
+                SubscriptionOutcomeType.Failure,
+                null);
         }
 
         return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.latestBuild, force);
     }
 
-    private async Task<bool> UpdateSubscriptionAsync(Guid subscriptionId, int buildId, bool force)
+    private async Task<SubscriptionUpdateResult> UpdateSubscriptionAsync(Subscription subscription, Build build, bool force)
     {
-        using (_operations.BeginOperation("Updating subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId))
+        using (_operations.BeginOperation("Updating subscription '{subscriptionId}' with build '{buildId}'", subscription.Id, build.Id))
         {
             try
             {
-                ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(subscriptionId);
-                await triggerer.UpdateSubscriptionAsync(buildId, force);
-                return true;
+                ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(subscription.Id);
+                return await triggerer.UpdateSubscriptionAsync(subscription, build, force);
             }
             catch (Exception)
             {
-                _logger.LogError("Failed to update subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId);
-                //todo log subscription trigger outcome exception here
+                _logger.LogError("Failed to update subscription '{subscriptionId}' with build '{buildId}'", subscription.Id, build.Id);
                 throw;
             }
         }

@@ -17,14 +17,16 @@ public class SubscriptionOutcome
 
     public string Message { get; set; }
 
-    public OutcomeType Type { get; set; }
+    public SubscriptionOutcomeType Type { get; set; }
 }
 
-public enum OutcomeType
+public enum SubscriptionOutcomeType
 {
     Success,
     NoUpdate,
     NotUpdatable,
     Failure,
     UserError,
+    HasConflict,
+    Rescheduled,
 }

@@ -155,6 +155,6 @@ internal class WorkItemConsumer(
     }
 }
 
-internal class NonRetriableException(string message) : Exception(message)
+public class NonRetriableException(string message) : Exception(message)
 {
 }

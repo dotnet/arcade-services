@@ -4,6 +4,7 @@
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -11,13 +12,13 @@ public interface IPullRequestUpdater
 {
     Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck);
 
-    Task ProcessPendingUpdatesAsync(
+    Task<SubscriptionUpdateResult> ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update,
         bool applyNewestOnly,
         bool forceUpdate,
         Build build);
 
-    Task UpdateAssetsAsync(
+    Task<SubscriptionUpdateResult> UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,

@@ -3,8 +3,10 @@
 
 using Maestro.DataProviders;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
@@ -24,43 +26,30 @@ public class SubscriptionUpdateProcessor(
         SubscriptionUpdateWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        Func<Task<SubscriptionUpdateOutcome>> subscriptionUpdateHandler = () =>
-            ProcessSubscriptionUpdateAsync(workItem);
-
         return await _outcomeRecorder.RunUpdateWithOutcomePersistenceAsync(
             workItem,
-            subscriptionUpdateHandler);
+            () => ProcessSubscriptionUpdateAsync(workItem));
     }
 
-    private async Task<SubscriptionUpdateOutcome> ProcessSubscriptionUpdateAsync(
+    private async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
         SubscriptionUpdateWorkItem workItem)
     {
-        var build = await _sqlClient.GetBuildAsync(workItem.BuildId);
-        if (build == null)
-        {
-            _logger.LogError("Build with buildId {BuildId} not found in the DB.", workItem.BuildId);
-            return SubscriptionUpdateOutcome.Failure;
-        }
+        var build = await _sqlClient.GetBuildAsync(workItem.BuildId)
+            ?? throw new NonRetriableException($"Build with buildId {workItem.BuildId} not found in the DB.");
 
-        var subscription = await _sqlClient.GetSubscriptionAsync(workItem.SubscriptionId);
-        if (subscription == null)
-        {
-            _logger.LogError("Subscription with subscriptionId {SubscriptionId} not found in the DB.", workItem.SubscriptionId);
-            return SubscriptionUpdateOutcome.Failure;
-        }
+        var subscription = await _sqlClient.GetSubscriptionAsync(workItem.SubscriptionId)
+            ?? throw new NonRetriableException($"Subscription with subscriptionId {workItem.SubscriptionId} not found in the DB.");
 
         var updater = _updaterFactory.CreatePullRequestUpdater(
             PullRequestUpdaterId.Parse(
                 workItem.UpdaterId,
                 workItem.SubscriptionType == SubscriptionType.DependenciesAndSources));
 
-        await updater.ProcessPendingUpdatesAsync(
+        return await updater.ProcessPendingUpdatesAsync(
             workItem,
             applyNewestOnly: true,
             forceUpdate: false,
             build);
-
-        return SubscriptionUpdateOutcome.Success;
     }
 
     protected override Dictionary<string, object> GetLoggingContextData(SubscriptionUpdateWorkItem workItem)

@@ -98,6 +98,7 @@ public class WorkItemScope : IAsyncDisposable
 
         return (workItem, processor);
     }
+
     public async Task RunWorkItemAsync(
         WorkItem workItem,
         IWorkItemProcessor processor,
