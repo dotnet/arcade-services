@@ -39,4 +39,7 @@ Type[] GetOptions() =>
         typeof(FeatureFlagAvailableOptions),
         typeof(ExportConfigurationOptions),
         typeof(DeleteNamespaceOptions),
+        typeof(GetMinDarcVersionOptions),
+        typeof(SetMinDarcVersionOptions),
+        typeof(ClearMinDarcVersionOptions),
     ];

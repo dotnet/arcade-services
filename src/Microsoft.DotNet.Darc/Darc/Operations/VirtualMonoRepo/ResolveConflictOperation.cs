@@ -30,7 +30,7 @@ internal class ResolveConflictOperation(
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IBarApiClient barApiClient,
-        IRemoteTokenProvider remoteTokenProvider,
+        ILocalFactory localFactory,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ResolveConflictOperation> logger)
@@ -42,7 +42,7 @@ internal class ResolveConflictOperation(
     private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly IProcessManager _processManager = processManager;
     private readonly IBarApiClient _barClient = barApiClient;
-    private readonly IRemoteTokenProvider _remoteTokenProvider = remoteTokenProvider;
+    private readonly ILocalFactory _localFactory = localFactory;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
     private readonly IFileSystem _fileSystem = fileSystem;
 
@@ -100,7 +100,8 @@ internal class ResolveConflictOperation(
 
     private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath, string mappingName)
     {
-        var local = new Local(_remoteTokenProvider, _logger, repoPath);
+        var local = _localFactory.CreateLocal(repoPath);
+
         var sourceDependency = await local.GetSourceDependencyAsync();
 
         if (string.IsNullOrEmpty(sourceDependency?.Mapping))
@@ -161,7 +162,7 @@ internal class ResolveConflictOperation(
 
     private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath localPath)
     {
-        var local = new Local(_remoteTokenProvider, _logger, localPath);
+        var local = _localFactory.CreateLocal(localPath);
 
         if (subscription.IsForwardFlow())
         {

@@ -79,7 +79,6 @@ public interface IDependencyFileManager
         SourceDependency? sourceDependency,
         string repoUri,
         string? branch,
-        IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion,
         bool? repoHasVersionDetailsProps = null,
         UnixPath? relativeBasePath = null);

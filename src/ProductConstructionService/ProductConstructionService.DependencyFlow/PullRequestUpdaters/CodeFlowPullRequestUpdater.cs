@@ -567,7 +567,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         string initialCommitMessage)
     {
         var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
-            .First(r => r.Uri.Equals(subscription.TargetRepository))
+            .First(r => r.Uri.Equals(subscription.TargetRepository, StringComparison.OrdinalIgnoreCase))
             .Name;
         await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
 

@@ -11,7 +11,6 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -56,7 +55,9 @@ internal static class Program
                         using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        if (!await ValidateDarcVersionAsync(provider))
+                        if (!await DarcVersionValidator.ValidateAsync(
+                                opts.BuildAssetRegistryBaseUri,
+                                provider.GetRequiredService<ILogger>()))
                         {
                             return Constants.ErrorCode;
                         }
@@ -83,26 +84,6 @@ internal static class Program
                         return ret;
                     },
                     errs => Task.FromResult(1));
-    }
-
-    private static async Task<bool> ValidateDarcVersionAsync(IServiceProvider sp)
-    {
-        var barClient = sp.GetRequiredService<IProductConstructionServiceApi>();
-        try
-        {
-            await barClient.Assets.GetDarcVersionAsync();
-            return true;
-        }
-        catch (ClientVersionTooOldException ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Failed to validate darc version against the Product Construction Service: {ex.Message}");
-            return false;
-        }
     }
 
     /// <summary>

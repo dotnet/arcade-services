@@ -160,6 +160,8 @@ internal static class PcsStartup
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
+        builder.Services.AddScoped<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
+        builder.Services.AddScoped<ILocalFactory, LocalFactory>();
         builder.Services.AddTransient<IGitHubInstallationIdResolver, GitHubInstallationIdResolver>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
