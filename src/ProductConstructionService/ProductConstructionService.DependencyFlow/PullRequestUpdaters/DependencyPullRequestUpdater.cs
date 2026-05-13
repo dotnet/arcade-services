@@ -84,7 +84,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                "No updates required for the target repository, no pull request created",
+                "Pull request created successfully",
                 SubscriptionOutcomeType.Success,
                 newPr.Url);
         }
