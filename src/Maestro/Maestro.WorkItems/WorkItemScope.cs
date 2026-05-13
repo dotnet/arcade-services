@@ -34,19 +34,6 @@ public class WorkItemScope : IAsyncDisposable
         _workItemScope.Dispose();
     }
 
-    public Task RunWorkItemAsync(
-        JsonNode node,
-        ITelemetryScope telemetryScope,
-        Action onWorkItemStarted,
-        CancellationToken cancellationToken) =>
-        RunWorkItemAsync(
-            node,
-            attemptNumber: 1,
-            maxAttempts: 1,
-            telemetryScope,
-            onWorkItemStarted,
-            cancellationToken);
-
     public async Task RunWorkItemAsync(
         JsonNode node,
         long attemptNumber,
