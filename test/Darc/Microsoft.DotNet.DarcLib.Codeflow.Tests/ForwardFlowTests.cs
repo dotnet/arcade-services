@@ -797,8 +797,7 @@ internal class ForwardFlowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / vmrSideFileName).Should().BeTrue();
         CheckFileContents(_productRepoVmrPath / vmrSideFileName, "VMR-only change in the product repo");
 
-        // 6. Backflow without merging - the product repo's file should be reverted on the branch
-        // back to its first-change content, matching the current VMR state
+        // 6. Backflow without merging - the product repo's file shouldn't be reverted back to the first state
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         CheckFileContents(_productRepoFilePath, "Second change in the individual repo");
