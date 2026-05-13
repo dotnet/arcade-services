@@ -42,30 +42,6 @@ public class WorkItemScope : IAsyncDisposable
         Action onWorkItemStarted,
         CancellationToken cancellationToken)
     {
-        var (workItem, processor) = await CreateWorkItemAndProcessorAsync<WorkItem>(
-            node,
-            attemptNumber,
-            maxAttempts,
-            telemetryScope,
-            onWorkItemStarted,
-            cancellationToken);
-
-        await RunWorkItemAsync(
-            workItem,
-            processor,
-            telemetryScope,
-            onWorkItemStarted,
-            cancellationToken);
-    }
-
-    public async Task<(WorkItem, IWorkItemProcessor)> CreateWorkItemAndProcessorAsync<T>(
-        JsonNode node,
-        long attemptNumber,
-        int maxAttempts,
-        ITelemetryScope telemetryScope,
-        Action onWorkItemStarted,
-        CancellationToken cancellationToken) where T : WorkItem
-    {
         var type = node["type"]!.ToString();
 
         if (!_processorRegistrations.Processors.TryGetValue(type, out (Type WorkItem, Type Processor) processorType))
@@ -83,16 +59,6 @@ public class WorkItemScope : IAsyncDisposable
 
         workItem.SetAttemptInfo(attemptNumber, maxAttempts);
 
-        return (workItem, processor);
-    }
-
-    public async Task RunWorkItemAsync(
-        WorkItem workItem,
-        IWorkItemProcessor processor,
-        ITelemetryScope telemetryScope,
-        Action onWorkItemStarted,
-        CancellationToken cancellationToken)
-    {
         var logger = _workItemScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
 
         async Task ProcessWorkItemAsync()
