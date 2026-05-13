@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.WorkItems;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -100,7 +101,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
+            Assert.ThrowsAsync<NonRetriableException>(
+                async () => await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true));
 
             ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             AndShouldHaveNoPendingUpdateState();
