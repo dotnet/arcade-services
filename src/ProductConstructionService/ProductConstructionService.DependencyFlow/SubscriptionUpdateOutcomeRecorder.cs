@@ -4,7 +4,6 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.WorkItems;
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
@@ -22,10 +21,8 @@ public interface ISubscriptionUpdateOutcomeRecorder
 }
 
 public class SubscriptionUpdateOutcomeRecorder(
-    BuildAssetRegistryContext context,
-    ILogger<SubscriptionUpdateOutcomeRecorder> logger) : ISubscriptionUpdateOutcomeRecorder
+    BuildAssetRegistryContext context) : ISubscriptionUpdateOutcomeRecorder
 {
-    private readonly ILogger<SubscriptionUpdateOutcomeRecorder> _logger = logger;
     private readonly BuildAssetRegistryContext _context = context;
 
     public Task<bool> RunUpdateWithOutcomePersistenceAsync(
@@ -47,10 +44,12 @@ public class SubscriptionUpdateOutcomeRecorder(
         try
         {
             var result = await processAsync();
+
             if (result.OutcomeType is SubscriptionOutcomeType.Rescheduled
                 && workItem is SubscriptionUpdateWorkItem)
             {
-                // Workitem will be retried in 5 minutes - we don't want to record any outcome now.
+                // Processing a SubscriptionUpdateWorkItem means it's already a rescheduled attempt.
+                // There's no need to record the same outcome again.
                 return true;
             }
 
@@ -59,7 +58,7 @@ public class SubscriptionUpdateOutcomeRecorder(
         }
         catch (Exception e)
         {
-            if (workItem.IsFinalAttempt())
+            if (workItem.IsFinalAttempt() || e is NonRetriableException)
             {
                 await RecordFailureAsync(e.Message, subscriptionId, buildId);
             }
@@ -81,6 +80,7 @@ public class SubscriptionUpdateOutcomeRecorder(
             Type = SubscriptionOutcomeType.Failure,
             Date = DateTime.UtcNow
         });
+        await _context.SaveChangesAsync();
     }
 
     private async Task RecordSubscriptionUpdateAsync(
@@ -98,6 +98,6 @@ public class SubscriptionUpdateOutcomeRecorder(
             Type = type,
             Date = DateTime.UtcNow
         });
+        await _context.SaveChangesAsync();
     }
-
 }

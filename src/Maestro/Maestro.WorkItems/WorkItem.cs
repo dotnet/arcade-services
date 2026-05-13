@@ -16,7 +16,7 @@ public abstract class WorkItem
     public long AttemptNumber { get; set; }
 
     [JsonIgnore]
-    static int MaxAttempts = 3;
+    public int MaxAttempts { get; set; }
 
     /// <summary>
     /// Period of time before the WorkItem becomes visible in the queue.
