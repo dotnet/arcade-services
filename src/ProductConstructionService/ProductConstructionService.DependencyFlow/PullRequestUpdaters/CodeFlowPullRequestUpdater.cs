@@ -4,6 +4,7 @@
 using Maestro.Common.Telemetry;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
+using Maestro.WorkItems;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -264,10 +265,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             if (e.FlowingOldBuild)
             {
-                _logger.LogInformation("Attempted to flow an older commit for subscription {subscriptionId}, giving up", subscription.Id);
-                // todo: replace this hack before merging. ideally, when flowing old builds, we'd just throw
-                // a different type of exception that we don't need to catch
-                return (new CodeFlowResult(false, [], new NativePath(""), [], false), false, prHeadBranch);
+                throw new NonRetriableException("The commit of the build being triggered is older than the already applied commit.");
             }
 
             unsafeFlown = true;
