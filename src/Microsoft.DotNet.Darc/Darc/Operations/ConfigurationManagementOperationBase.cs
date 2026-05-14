@@ -45,7 +45,7 @@ internal abstract class ConfigurationManagementOperationBase : Operation
         if (string.IsNullOrEmpty(_configOptions.ConfigurationBranch))
         {
             Console.WriteLine();
-            Console.WriteLine($"💡 Making more changes? Supply --configuration-branch {_configOptions.GetOrGenerateConfigurationBranch()} with the next darc command to clump the changes in one PR.");
+            Console.WriteLine($"💡 Making more changes? Supply `--configuration-branch {_configOptions.GetOrGenerateConfigurationBranch()}` with the next darc command to clump the changes in one PR.");
         }
     }
 }
