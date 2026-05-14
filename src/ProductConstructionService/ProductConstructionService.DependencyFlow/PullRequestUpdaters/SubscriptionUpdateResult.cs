@@ -7,5 +7,4 @@ namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 public record SubscriptionUpdateResult(
     string OutcomeMessage,
-    SubscriptionOutcomeType OutcomeType,
-    string? PrUrl);
+    SubscriptionOutcomeType OutcomeType);

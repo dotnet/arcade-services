@@ -158,3 +158,11 @@ internal class WorkItemConsumer(
 public class NonRetriableException(string message) : Exception(message)
 {
 }
+
+/// <summary>
+/// Represents exceptions that happen in the subscription update process due to configuration issues that are fixable
+/// by the user.
+/// </summary>
+public class UserException(string message) : NonRetriableException(message)
+{
+}

@@ -438,9 +438,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
                     await _stateManager.ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return new SubscriptionUpdateResult(
-                        "PR cannot be updated at this time. Update has been deferred and will be applied when the PR becomes updateable.",
-                        SubscriptionOutcomeType.Rescheduled,
-                        pr.Url);
+                        $"The existing PR cannot be updated at this time due to pending checks, and will be retried periodically. Pr url: {pr.Url}",
+                        SubscriptionOutcomeType.Rescheduled);
                 default:
                     throw new NotImplementedException($"Unknown PR status {status}");
             }

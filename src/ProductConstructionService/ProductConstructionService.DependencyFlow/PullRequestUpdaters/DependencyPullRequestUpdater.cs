@@ -62,9 +62,8 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             await UpdatePullRequestAsync(update, pr, prInfo, build);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                "Dependencies successfully updated",
-                SubscriptionOutcomeType.Success,
-                pr.Url);
+                $"Dependencies successfully updated into existing PR: {pr.Url}",
+                SubscriptionOutcomeType.Success);
         }
 
         // Create a new (regular) dependency update PR
@@ -75,18 +74,16 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                "No updates required for the target repository, no pull request created",
-                SubscriptionOutcomeType.NoUpdate,
-                null);
+                "",
+                SubscriptionOutcomeType.NoUpdate);
         }
         else
         {
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                "Pull request created successfully",
-                SubscriptionOutcomeType.Success,
-                newPr.Url);
+                $"Pull request created successfully: {newPr.Url}",
+                SubscriptionOutcomeType.Success);
         }
     }
 

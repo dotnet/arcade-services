@@ -56,31 +56,27 @@ public class SubscriptionUpdateOutcomeRecorder(
             await RecordSubscriptionUpdateAsync(result.OutcomeMessage, result.OutcomeType, subscriptionId, buildId);
             return true;
         }
+        catch (UserException e)
+        {
+            await RecordSubscriptionUpdateAsync(
+                e.Message,
+                SubscriptionOutcomeType.UserError,
+                subscriptionId,
+                buildId);
+            throw;
+        }
         catch (Exception e)
         {
             if (workItem.IsFinalAttempt() || e is NonRetriableException)
             {
-                await RecordFailureAsync(e.Message, subscriptionId, buildId);
+                await RecordSubscriptionUpdateAsync(
+                    e.Message,
+                    SubscriptionOutcomeType.Failure,
+                    subscriptionId,
+                    buildId);
             }
             throw;
         }
-    }
-
-    private async Task RecordFailureAsync(
-        string message,
-        Guid subscriptionId,
-        int? buildId)
-    {
-        await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
-        {
-            Message = message,
-            OperationId = Guid.NewGuid().ToString(),
-            SubscriptionId = subscriptionId,
-            BuildId = buildId ?? -1,
-            Type = SubscriptionOutcomeType.Failure,
-            Date = DateTime.UtcNow
-        });
-        await _context.SaveChangesAsync();
     }
 
     private async Task RecordSubscriptionUpdateAsync(
