@@ -36,7 +36,7 @@ internal class UpdateChannelOperation : ConfigurationManagementOperationBase
     /// Updates an existing channel's metadata (name and/or classification).
     /// </summary>
     /// <returns>Process exit code.</returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -72,7 +72,6 @@ internal class UpdateChannelOperation : ConfigurationManagementOperationBase
                 _options.ToConfigurationRepositoryOperationParameters(),
                 updatedChannelYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

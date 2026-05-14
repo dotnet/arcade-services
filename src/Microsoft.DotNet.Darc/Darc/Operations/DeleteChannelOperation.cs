@@ -38,7 +38,7 @@ internal class DeleteChannelOperation : ConfigurationManagementOperationBase
     /// Deletes a channel by name
     /// </summary>
     /// <returns></returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
         if (existingChannel == null)
@@ -53,7 +53,6 @@ internal class DeleteChannelOperation : ConfigurationManagementOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         ChannelYaml.FromClientModel(existingChannel));
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

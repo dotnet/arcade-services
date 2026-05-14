@@ -45,7 +45,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
@@ -226,7 +226,6 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
                                 branchMergePoliciesYaml);
             }
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

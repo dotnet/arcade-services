@@ -31,7 +31,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -47,7 +47,6 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         defaultChannelYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

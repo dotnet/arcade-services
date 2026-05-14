@@ -34,7 +34,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
     /// <summary>
     /// Implements the default channel enable/disable operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))
@@ -81,7 +81,6 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         updatedDefaultChannelYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

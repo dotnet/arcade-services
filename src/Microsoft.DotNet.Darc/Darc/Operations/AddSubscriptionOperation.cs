@@ -44,7 +44,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'add-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
         {
@@ -422,7 +422,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 _options.ToConfigurationRepositoryOperationParameters(),
                 subscriptionYamlParameters);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

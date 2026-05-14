@@ -41,7 +41,7 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperationBase
         _configurationRepositoryManager = configurationRepositoryManager;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -70,7 +70,6 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         defaultChannelYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

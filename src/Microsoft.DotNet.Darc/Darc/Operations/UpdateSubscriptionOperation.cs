@@ -39,7 +39,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'update-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
@@ -334,7 +334,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         updatedSubscriptionYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

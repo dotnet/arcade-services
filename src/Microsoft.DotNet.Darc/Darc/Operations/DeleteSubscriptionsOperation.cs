@@ -35,7 +35,7 @@ internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBa
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -86,7 +86,6 @@ internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBa
 
             Console.WriteLine("done");
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

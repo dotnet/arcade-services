@@ -41,7 +41,7 @@ internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBa
     /// Implements the 'subscription-status' operation
     /// </summary>
     /// <param name="options"></param>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))
@@ -140,7 +140,6 @@ internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBa
             }
             Console.WriteLine("done");
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

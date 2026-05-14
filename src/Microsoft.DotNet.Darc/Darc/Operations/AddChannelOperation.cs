@@ -37,7 +37,7 @@ internal class AddChannelOperation : ConfigurationManagementOperationBase
     /// Adds a new channel with the specified name.
     /// </summary>
     /// <returns>Process exit code.</returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -61,7 +61,6 @@ internal class AddChannelOperation : ConfigurationManagementOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         channelYaml);
 
-            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
