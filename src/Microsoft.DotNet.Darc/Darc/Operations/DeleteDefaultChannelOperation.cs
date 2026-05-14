@@ -24,7 +24,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<DeleteDefaultChannelOperation> logger)
-        : base(options, barClient)
+        : base(options, barClient, logger)
     {
         _options = options;
         _configurationRepositoryManager = configurationRepositoryManager;

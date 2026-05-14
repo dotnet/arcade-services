@@ -24,7 +24,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<DefaultChannelStatusOperation> logger)
-        : base(options, barClient)
+        : base(options, barClient, logger)
     {
         _options = options;
         _logger = logger;

@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -18,8 +19,8 @@ internal abstract class UpdateDefaultChannelBaseOperation : ConfigurationManagem
     protected readonly IBarApiClient _barClient;
     private readonly IUpdateDefaultChannelBaseCommandLineOptions _options;
 
-    public UpdateDefaultChannelBaseOperation(IUpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient)
-        : base(options)
+    public UpdateDefaultChannelBaseOperation(IUpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient, ILogger logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;

@@ -25,7 +25,7 @@ internal class AddChannelOperation : ConfigurationManagementOperationBase
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<AddChannelOperation> logger)
-        : base(options)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;

@@ -26,7 +26,7 @@ internal class DeleteChannelOperation : ConfigurationManagementOperationBase
         ILogger<DeleteChannelOperation> logger,
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager)
-        : base(options)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;

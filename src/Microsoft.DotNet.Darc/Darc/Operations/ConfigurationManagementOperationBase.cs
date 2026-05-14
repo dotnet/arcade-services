@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -15,10 +15,12 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal abstract class ConfigurationManagementOperationBase : Operation
 {
     private readonly IConfigurationManagementCommandLineOptions _configOptions;
+    private readonly ILogger _logger;
 
-    protected ConfigurationManagementOperationBase(IConfigurationManagementCommandLineOptions configOptions)
+    protected ConfigurationManagementOperationBase(IConfigurationManagementCommandLineOptions configOptions, ILogger logger)
     {
         _configOptions = configOptions;
+        _logger = logger;
     }
 
     /// <summary>
@@ -26,7 +28,9 @@ internal abstract class ConfigurationManagementOperationBase : Operation
     /// </summary>
     public sealed override async Task<int> ExecuteAsync()
     {
-        Console.WriteLine($"This command will make changes to the configuration repository '{_configOptions.ConfigurationRepository}' on branch '{_configOptions.GetOrGenerateConfigurationBranch()}'.");
+        _logger.LogInformation("This command will make changes to the configuration repository '{ConfigurationRepository}' on branch '{ConfigurationBranch}'.",
+            _configOptions.ConfigurationRepository,
+            _configOptions.GetOrGenerateConfigurationBranch());
         int exitCode = await ExecuteInternalAsync();
         if (exitCode == Constants.SuccessCode)
         {
@@ -45,8 +49,8 @@ internal abstract class ConfigurationManagementOperationBase : Operation
     {
         if (string.IsNullOrEmpty(_configOptions.ConfigurationBranch))
         {
-            Console.WriteLine();
-            Console.WriteLine($"💡 Making more changes? Supply `--configuration-branch {_configOptions.GetOrGenerateConfigurationBranch()}` with the next darc command to clump the changes in one PR.");
+            _logger.LogInformation("💡 Making more changes? Supply `--configuration-branch {ConfigurationBranch}` with the next darc command to clump the changes in one PR.",
+                _configOptions.GetOrGenerateConfigurationBranch());
         }
     }
 }

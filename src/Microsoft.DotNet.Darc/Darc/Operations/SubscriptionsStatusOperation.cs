@@ -29,7 +29,7 @@ internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBa
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SubscriptionsStatusOperation> logger)
-        : base(options)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;

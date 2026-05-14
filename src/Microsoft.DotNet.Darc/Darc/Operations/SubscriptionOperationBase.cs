@@ -24,7 +24,7 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger logger,
         IConfigurationManagementCommandLineOptions configOptions)
-        : base(configOptions)
+        : base(configOptions, logger)
     {
         _barClient = barClient;
         _configurationRepositoryManager = configurationRepositoryManager;

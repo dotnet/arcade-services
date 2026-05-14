@@ -36,7 +36,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         IRemoteFactory remoteFactory,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
-        : base(options)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;

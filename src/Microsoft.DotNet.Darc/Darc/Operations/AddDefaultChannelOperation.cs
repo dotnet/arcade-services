@@ -31,7 +31,7 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperationBase
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configurationRepositoryManager)
-        : base(options)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;
