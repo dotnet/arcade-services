@@ -87,8 +87,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         {
             return new SubscriptionUpdateResult(
                 "No matching subscription and build found",
-                SubscriptionOutcomeType.Failure,
-                null);
+                SubscriptionOutcomeType.Failure);
         }
 
         return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.specificBuild, force);
@@ -121,8 +120,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         {
             return new SubscriptionUpdateResult(
                 "No matching subscription and build found",
-                SubscriptionOutcomeType.Failure,
-                null);
+                SubscriptionOutcomeType.Failure);
         }
 
         return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.latestBuild, force);

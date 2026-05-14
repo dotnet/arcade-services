@@ -213,8 +213,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 $"New codeflow PR created: {pr.Url}.",
                 Maestro.Data.Models.SubscriptionOutcomeType.Success);
         }
-        else if (prInfo != null)
+        else
         {
+            if (prInfo == null)
+            {
+                throw new InvalidOperationException("Inconsistent state: pr is null but prInfo is not");
+            }
+
             await UpdateCodeFlowPullRequestAsync(
                 update,
                 pr,
