@@ -164,8 +164,9 @@ public class AddChannelOperationConfigRepoTests : ConfigurationManagementTestBas
         // Assert
         result.Should().Be(Constants.SuccessCode);
         var output = ConsoleOutput.GetOutput();
-        output.Should().Contain("--configuration-branch");
-        output.Should().Contain("darc/");
+        var generatedBranchName = options.GetOrGenerateConfigurationBranch();
+        output.Should().Contain($"--configuration-branch {generatedBranchName}");
+        output.Should().Contain("💡 Making more changes?");
     }
 
     [Test]
