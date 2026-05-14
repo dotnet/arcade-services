@@ -169,10 +169,19 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return true;
         }
 
+        var relativeRepoSourcePath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+        // If there's a conflict outside of the repo folder we're flowing
+        // we don't want the changes
+        if (!conflictedFile.Path.StartsWith(relativeRepoSourcePath))
+        {
+            await vmr.ResolveConflict(conflictedFile.Path, ours: true);
+            return true;
+        }
+
         // eng/common is always preferred from the source side
         // In rebase mode: ours=true means keep the incoming changes (source)
         // In merge mode: ours=false means prefer theirs (source being merged in)
-        var engCommon = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping) / Constants.CommonScriptFilesPath;
+        var engCommon = relativeRepoSourcePath / Constants.CommonScriptFilesPath;
         if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
         {
             await vmr.ResolveConflict(conflictedFile, ours: true);

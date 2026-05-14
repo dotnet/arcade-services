@@ -613,11 +613,73 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task ResolveConflict(string repoPath, string file, bool ours)
     {
-        var result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", file);
-        result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+        // Use porcelain status to determine the conflict shape. The first two
+        // characters (XY) tell us what each side did. For unmerged paths:
+        //
+        //   pair  meaning              stage 2 (us)  stage 3 (them)
+        //   ----  -------------------  ------------  --------------
+        //   DD    both deleted              -              -
+        //   AU    added by us               yes            -
+        //   UD    deleted by them           yes            -
+        //   UA    added by them             -              yes
+        //   DU    deleted by us             -              yes
+        //   AA    both added                yes            yes
+        //   UU    both modified             yes            yes
+        //
+        // Note that 'U' is overloaded: in UD/DU/UU the side with U has a blob
+        // (it modified the file), but in AU/UA the U side has no blob (the
+        // other side simply added something it doesn't have).
+        var status = await _processManager.ExecuteGit(repoPath, "status", "--porcelain=v1", "--", file);
+        status.ThrowIfFailed($"Failed to inspect status of {file} in {repoPath}");
 
-        result = await _processManager.ExecuteGit(repoPath, "add", file);
-        result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
+        var line = status.GetOutputLines().FirstOrDefault()
+            ?? throw new InvalidOperationException($"No status entry found for {file} in {repoPath} - is it actually conflicted?");
+
+        if (line.Length < 2)
+        {
+            throw new InvalidOperationException($"Unexpected git status output for {file} in {repoPath}: '{line}'");
+        }
+
+        var code = line[..2];
+
+        // Map each unmerged status code to (ourBlob, theirBlob) - whether each
+        // side contributed a blob to the index.
+        var (ourBlob, theirBlob) = code switch
+        {
+            "DD" => (false, false),
+            "DU" => (false, true),
+            "UD" => (true, false),
+            "AU" => (true, false),
+            "UA" => (false, true),
+            "UU" => (true, true),
+            "AA" => (true, true),
+            _ => throw new Exception($"Unexpected unmerged status '{code}' for {file} in {repoPath}"),
+        };
+
+        var chosenHasBlob = ours ? ourBlob : theirBlob;
+        var otherHasBlob = ours ? theirBlob : ourBlob;
+
+        ProcessExecutionResult result;
+        if (!chosenHasBlob)
+        {
+            result = await _processManager.ExecuteGit(repoPath, "rm", "-f", "--", file);
+            result.ThrowIfFailed($"Failed to remove {file} in {repoPath}");
+        }
+        else if (!otherHasBlob)
+        {
+            // Only the chosen side has content
+            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result.ThrowIfFailed($"Failed to stage {file} in {repoPath}");
+        }
+        else
+        {
+            // Both sides contributed a blob - pick the chosen side and stage it.
+            result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", "--", file);
+            result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+
+            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
+        }
     }
 
     public async Task<string> GetMergeBaseAsync(
