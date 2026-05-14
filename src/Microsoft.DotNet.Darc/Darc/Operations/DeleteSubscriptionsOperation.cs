@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteSubscriptionsOperation : Operation
+internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteSubscriptionsCommandLineOptions _options;
@@ -27,6 +27,7 @@ internal class DeleteSubscriptionsOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configRepositoryManager,
         ILogger<DeleteSubscriptionsOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -34,7 +35,7 @@ internal class DeleteSubscriptionsOperation : Operation
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -75,10 +76,6 @@ internal class DeleteSubscriptionsOperation : Operation
             }
 
             var parameters = _options.ToConfigurationRepositoryOperationParameters();
-            if (subscriptionsToDelete.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
-            {
-                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
-            }
 
             foreach (Subscription subscription in subscriptionsToDelete)
             {

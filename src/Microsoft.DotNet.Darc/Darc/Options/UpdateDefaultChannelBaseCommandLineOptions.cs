@@ -6,7 +6,7 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal interface IUpdateDefaultChannelBaseCommandLineOptions : ICommandLineOptions
+internal interface IUpdateDefaultChannelBaseCommandLineOptions : ICommandLineOptions, IConfigurationManagementCommandLineOptions
 {
     string Branch { get; set; }
     string Channel { get; set; }

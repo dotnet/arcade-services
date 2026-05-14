@@ -30,7 +30,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         IBarApiClient barClient,
         DarcLib.IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configurationRepositoryManager,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger)
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger, options)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -39,7 +39,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'update-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`

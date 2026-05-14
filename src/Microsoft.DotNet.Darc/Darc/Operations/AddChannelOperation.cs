@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddChannelOperation : Operation
+internal class AddChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly AddChannelCommandLineOptions _options;
     private readonly ILogger<AddChannelOperation> _logger;
@@ -25,6 +25,7 @@ internal class AddChannelOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<AddChannelOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -36,7 +37,7 @@ internal class AddChannelOperation : Operation
     /// Adds a new channel with the specified name.
     /// </summary>
     /// <returns>Process exit code.</returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {

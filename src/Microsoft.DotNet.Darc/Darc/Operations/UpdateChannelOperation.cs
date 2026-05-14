@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class UpdateChannelOperation : Operation
+internal class UpdateChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly UpdateChannelCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -24,6 +24,7 @@ internal class UpdateChannelOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<UpdateChannelOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -35,7 +36,7 @@ internal class UpdateChannelOperation : Operation
     /// Updates an existing channel's metadata (name and/or classification).
     /// </summary>
     /// <returns>Process exit code.</returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {

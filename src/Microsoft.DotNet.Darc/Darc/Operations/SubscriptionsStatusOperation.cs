@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class SubscriptionsStatusOperation : Operation
+internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBase
 {
     private readonly SubscriptionsStatusCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -29,6 +29,7 @@ internal class SubscriptionsStatusOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SubscriptionsStatusOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -40,7 +41,7 @@ internal class SubscriptionsStatusOperation : Operation
     /// Implements the 'subscription-status' operation
     /// </summary>
     /// <param name="options"></param>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))
@@ -118,10 +119,6 @@ internal class SubscriptionsStatusOperation : Operation
 
             Console.Write($"{actionStatusMessage} {subscriptionsToEnableDisable.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
             var parameters = _options.ToConfigurationRepositoryOperationParameters();
-            if (subscriptionsToEnableDisable.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
-            {
-                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
-            }
 
             foreach (var subscription in subscriptionsToEnableDisable)
             {

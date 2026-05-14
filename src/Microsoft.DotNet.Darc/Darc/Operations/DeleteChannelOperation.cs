@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteChannelOperation : Operation
+internal class DeleteChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteChannelCommandLineOptions _options;
@@ -26,6 +26,7 @@ internal class DeleteChannelOperation : Operation
         ILogger<DeleteChannelOperation> logger,
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;
@@ -37,7 +38,7 @@ internal class DeleteChannelOperation : Operation
     /// Deletes a channel by name
     /// </summary>
     /// <returns></returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
         if (existingChannel == null)
