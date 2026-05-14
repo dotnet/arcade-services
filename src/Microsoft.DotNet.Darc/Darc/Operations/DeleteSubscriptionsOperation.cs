@@ -74,10 +74,16 @@ internal class DeleteSubscriptionsOperation : Operation
                 subscriptionsToDelete.AddRange(subscriptions);
             }
 
+            var parameters = _options.ToConfigurationRepositoryOperationParameters();
+            if (subscriptionsToDelete.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
+            {
+                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
+            }
+
             foreach (Subscription subscription in subscriptionsToDelete)
             {
                 await _configRepositoryManager.DeleteSubscriptionAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
+                                parameters,
                                 SubscriptionYaml.FromClientModel(subscription));
             }
 

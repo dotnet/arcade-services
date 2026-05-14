@@ -51,6 +51,15 @@ public interface IRemote
     Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of the repository</param>
+    /// <param name="headBranch">Head (source) branch for the PR</param>
+    /// <param name="targetBranch">Target branch for the PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch);
+
+    /// <summary>
     ///     Retrieve information about a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>
@@ -72,6 +81,12 @@ public interface IRemote
     /// <param name="pullRequestUri">URI of pull request to update</param>
     /// <param name="pullRequest">Pull request information to update.</param>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
+
+    /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">URI of pull request to close.</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
 
     /// <summary>
     ///     Delete a Pull Request branch

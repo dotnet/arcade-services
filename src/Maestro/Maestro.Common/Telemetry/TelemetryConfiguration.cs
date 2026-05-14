@@ -3,6 +3,7 @@
 
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maestro.Common.Telemetry;
 
@@ -10,7 +11,8 @@ public static class TelemetryConfiguration
 {
     public static void AddTelemetry(this IServiceCollection services)
     {
-        services.AddSingleton<ITelemetryInitializer, TelemetryRoleNameInitializer>();
-        services.AddSingleton<ITelemetryRecorder, TelemetryRecorder>();
+        services.TryAddSingleton<ITelemetryInitializer, TelemetryRoleNameInitializer>();
+        services.TryAddSingleton<ITelemetryRecorder, TelemetryRecorder>();
+        services.TryAddSingleton<IMetricRecorder, MetricRecorder>();
     }
 }

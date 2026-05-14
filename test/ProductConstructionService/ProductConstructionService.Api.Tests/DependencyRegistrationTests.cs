@@ -5,8 +5,6 @@ using AwesomeAssertions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -19,11 +17,6 @@ public class DependencyRegistrationTests
         await builder.ConfigurePcs(
             addKeyVault: false,
             addSwagger: true);
-
-        builder.Services.AddTransient<NonBatchedPullRequestUpdater>();
-        builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid()));
-        builder.Services.AddTransient<BatchedPullRequestUpdater>();
-        builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch"));
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

@@ -53,6 +53,15 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
         string? author = null);
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    Task<string?> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch);
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -81,6 +90,12 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
+
+    /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">Uri of pull request to close</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
 
 
     /// <summary>

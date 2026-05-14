@@ -55,4 +55,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public bool BlockedFromFutureUpdates { get; set; } = false;
 
     public DateTime CreationDate { get; set; }
+
+    public bool UnsafeFlow { get; set; } = false;
 }

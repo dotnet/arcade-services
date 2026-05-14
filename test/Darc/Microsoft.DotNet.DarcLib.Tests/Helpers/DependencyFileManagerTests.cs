@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -142,6 +143,7 @@ public class DependencyFileManagerTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);
@@ -177,11 +179,15 @@ public class DependencyFileManagerTests
                 }
             });
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         try
@@ -235,6 +241,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            null,
             NullLogger.Instance);
 
         Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
@@ -275,6 +282,7 @@ public class DependencyFileManagerTests
 
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionDetails);
@@ -285,6 +293,9 @@ public class DependencyFileManagerTests
         repoFactory
             .Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>()))
             .Returns(repo.Object);
+
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
 
         repo.Setup(r => r.CommitFilesAsync(
             It.IsAny<List<GitFile>>(),
@@ -309,6 +320,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -395,6 +407,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         var versionDetails = VersionDetails;
         var versionProps = VersionProps;
@@ -409,6 +422,9 @@ public class DependencyFileManagerTests
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
                 .Throws<DependencyFileNotFoundException>();
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
 
         repo.Setup(r => r.CommitFilesAsync(
             It.IsAny<List<GitFile>>(),
@@ -437,6 +453,7 @@ public class DependencyFileManagerTests
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -479,16 +496,16 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
-                <!-- dotnet/bar dependencies -->
+                <!-- dotnet-bar dependencies -->
                 <BarPackageVersion>1.0.0</BarPackageVersion>
               </PropertyGroup>
               <!--Property group for alternate package version names-->
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooVersion>$(FooPackageVersion)</FooVersion>
-                <!-- dotnet/bar dependencies -->
+                <!-- dotnet-bar dependencies -->
                 <BarVersion>$(BarPackageVersion)</BarVersion>
               </PropertyGroup>
             </Project>
@@ -527,12 +544,12 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
               </PropertyGroup>
               <!--Property group for alternate package version names-->
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooVersion>$(FooPackageVersion)</FooVersion>
               </PropertyGroup>
             </Project>
@@ -593,6 +610,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         var versionDetails = VersionDetails;
 
@@ -602,9 +620,13 @@ public class DependencyFileManagerTests
             .ThrowsAsync(new DependencyFileNotFoundException());
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -652,6 +674,7 @@ public class DependencyFileManagerTests
     {
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
 
         UnixPath relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath("path");
 
@@ -659,9 +682,13 @@ public class DependencyFileManagerTests
             .ReturnsAsync(() => VersionDetails);
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
+        assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
         DependencyFileManager manager = new(
             repoFactory.Object,
             new VersionDetailsParser(),
+            assetLocationResolver.Object,
             NullLogger.Instance);
 
         await manager.AddDependencyAsync(
@@ -694,4 +721,238 @@ public class DependencyFileManagerTests
     }
 
     private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
+
+    [Test]
+    public async Task UpdateDependencyFilesRunsAssetLocationResolver()
+    {
+        const string GlobalJson = """
+            {
+              "tools": {
+                "dotnet": "8.0.100"
+              }
+            }
+            """;
+
+        const string NugetConfig = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <packageSources>
+                <clear />
+              </packageSources>
+            </configuration>
+            """;
+        const string DummyLocation = "https://pkgs.dev.azure.com/dummy/feed/v3/index.json";
+
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(GlobalJson);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        foreach (var nugetConfigName in VersionFiles.NugetConfigNames)
+        {
+            if (nugetConfigName == VersionFiles.NugetConfigNames.First())
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(NugetConfig);
+            }
+            else
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .ThrowsAsync(new DependencyFileNotFoundException());
+            }
+        }
+
+        repoFactory.Setup(rf => rf.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        // Capture the dependencies passed to the resolver and stamp a dummy location on each one,
+        // mimicking what the real resolver does.
+        IEnumerable<DependencyDetail> resolvedDependencies = null;
+        assetLocationResolver
+            .Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Callback<IEnumerable<DependencyDetail>>(deps =>
+            {
+                resolvedDependencies = deps;
+                foreach (var dep in deps)
+                {
+                    dep.Locations = [DummyLocation];
+                }
+            })
+            .Returns(Task.CompletedTask);
+
+        var itemsToUpdate = new[]
+        {
+            new DependencyDetail
+            {
+                Name = "Foo",
+                Version = "2.0.0",
+                Commit = "sha2",
+                RepoUri = "https://github.com/dotnet/foo",
+                Type = DependencyType.Product,
+                Locations = null,
+            },
+            new DependencyDetail
+            {
+                Name = "Bar",
+                Version = "2.0.0",
+                Commit = "sha2",
+                RepoUri = "https://github.com/dotnet/bar",
+                Type = DependencyType.Product,
+                Locations = ["https://pkgs.dev.azure.com/some/feed/v3/index.json"],
+            },
+        };
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
+
+        await manager.UpdateDependencyFiles(
+            itemsToUpdate,
+            sourceDependency: null,
+            repoUri: "https://github.com/dotnet/test",
+            branch: "main",
+            incomingDotNetSdkVersion: null,
+            repoHasVersionDetailsProps: false);
+
+        // The asset location resolver should always be invoked for every UpdateDependencyFiles call.
+        assetLocationResolver.Verify(
+            r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()),
+            Times.Once);
+
+        // And every dependency it received should now have the dummy location applied.
+        resolvedDependencies.Should().NotBeNull();
+        resolvedDependencies.Should().NotBeEmpty();
+        resolvedDependencies.Should().OnlyContain(d => d.Locations != null && d.Locations.Contains(DummyLocation));
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsMergesGitHubAndAzDoMirrors()
+    {
+        // Arrange: dependencies from both a GitHub and its AzDO mirror URI (dotnet/dotnet <-> dotnet-dotnet)
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-dotnet", Commit = "def" },
+            new DependencyDetail { Name = "PackageC", Version = "3.0.0", RepoUri = "https://github.com/dotnet/arcade", Commit = "ghi" },
+        ], null);
+
+        // Act
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        // Assert: GitHub and AzDO mirror URIs are grouped under the same "dotnet-dotnet" section
+        xml.Should().Contain("dotnet-dotnet dependencies");
+        xml.Should().NotContain("dotnet/dotnet dependencies");
+        xml.Should().NotContain("_git/dotnet-dotnet dependencies");
+
+        // The dotnet-arcade section should also use the org-repo format
+        xml.Should().Contain("dotnet-arcade dependencies");
+        xml.Should().NotContain("dotnet/arcade dependencies");
+
+        // Both packages from the merged section should be present
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        xml.Should().Contain("PackageCPackageVersion");
+
+        // Sections should appear in alphabetical order: dotnet-arcade < dotnet-dotnet
+        xml.IndexOf("dotnet-arcade dependencies", StringComparison.Ordinal)
+            .Should().BeLessThan(xml.IndexOf("dotnet-dotnet dependencies", StringComparison.Ordinal));
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenAzDoRepoUriIsGitHubUrl()
+    {
+        // When a build's AzDO repository field contains a GitHub URL (no separate internal mirror),
+        // the dep.RepoUri will be a GitHub URL and must still produce an org-repo section heading
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-dotnet dependencies");
+        xml.Should().NotContain("dotnet/dotnet dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-dotnet dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenBothUrisAreAzDo()
+    {
+        // When both the AzDO and GitHub URI fields of a build are AzDO URIs,
+        // multiple deps with AzDO RepoUris for the same repo must merge into one section
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-runtime dependencies");
+        xml.Should().NotContain("_git/dotnet-runtime dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-runtime dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenBothUrisAreGitHub()
+    {
+        // When both the AzDO and GitHub URI fields of a build are GitHub URIs,
+        // multiple deps with GitHub RepoUris for the same repo must merge into one section
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/runtime", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://github.com/dotnet/runtime", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-runtime dependencies");
+        xml.Should().NotContain("dotnet/runtime dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-runtime dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingStripesTrustedSuffixFromAzDoUri()
+    {
+        // AzDO repos with the -Trusted suffix (e.g. NuGet-NuGet.Client-Trusted) should
+        // have the suffix stripped so the heading matches the equivalent non-Trusted repo
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/NuGet-NuGet.Client-Trusted", Commit = "abc" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("NuGet-NuGet.Client dependencies");
+        xml.Should().NotContain("NuGet-NuGet.Client-Trusted dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+    }
 }

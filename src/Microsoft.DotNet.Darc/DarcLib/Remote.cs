@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Maestro.Common.Cache;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -21,13 +21,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 public sealed class Remote : IRemote
 {
-    private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly DependencyFileManager _fileManager;
+    private readonly IDependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IAssetLocationResolver _locationResolver;
-    private readonly IRedisCacheClient _cache;
+    private readonly ICache _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -40,21 +38,19 @@ public sealed class Remote : IRemote
 
     public Remote(
         IRemoteGitRepo remoteGitClient,
-        IVersionDetailsParser versionDetailsParser,
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
-        IRedisCacheClient cacheClient,
+        IDependencyFileManagerFactory dependencyFileManagerFactory,
+        ICache cache,
         ILogger logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
-        _versionDetailsParser = versionDetailsParser;
         _sourceMappingParser = sourceMappingParser;
         _remoteFactory = remoteFactory;
-        _locationResolver = locationResolver;
-        _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
-        _cache = cacheClient;
+        _fileManager = dependencyFileManagerFactory.CreateDependencyFileManager(remoteGitClient);
+        _cache = cache;
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
@@ -105,6 +101,9 @@ public sealed class Remote : IRemote
     {
         return _remoteGitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
     }
+
+    public Task ClosePullRequestAsync(string pullRequestUri) =>
+        _remoteGitClient.ClosePullRequestAsync(pullRequestUri);
 
     /// <summary>
     ///     Delete a Pull Request branch
@@ -177,9 +176,6 @@ public sealed class Remote : IRemote
         List<DependencyDetail> itemsToUpdate,
         UnixPath targetDirectory)
     {
-        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(targetRepo, branch, relativeBasePath: targetDirectory)];
-        await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
-
         var arcadePackage = itemsToUpdate.GetArcadeUpdate();
 
         bool isRecursiveUpdateTargetingRootDirectory = targetRepo == itemsToUpdate.FirstOrDefault()?.RepoUri &&
@@ -195,7 +191,6 @@ public sealed class Remote : IRemote
                 sourceDependency: null,
                 targetRepo,
                 branch,
-                oldDependencies,
                 incomingDotNetSdkVersion: null,
                 relativeBasePath: targetDirectory);
 
@@ -206,7 +201,6 @@ public sealed class Remote : IRemote
             return await GetUpdatedDependencyAndArcadeFiles(
                 targetRepo,
                 branch,
-                oldDependencies,
                 itemsToUpdate,
                 arcadePackage,
                 targetDirectory);
@@ -216,7 +210,6 @@ public sealed class Remote : IRemote
     private async Task<List<GitFile>> GetUpdatedDependencyAndArcadeFiles(
         string targetRepo,
         string branch,
-        List<DependencyDetail> oldDependencies,
         List<DependencyDetail> itemsToUpdate,
         DependencyDetail arcadePackage,
         UnixPath targetDirectory)
@@ -228,7 +221,6 @@ public sealed class Remote : IRemote
             sourceDependency: null,
             targetRepo,
             branch,
-            oldDependencies,
             targetDotNetVersion,
             relativeBasePath: targetDirectory);
 
@@ -345,6 +337,11 @@ public sealed class Remote : IRemote
     public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
     {
         return _remoteGitClient.GetPullRequestAsync(pullRequestUri);
+    }
+
+    public Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        return _remoteGitClient.GetPullRequestUrlAsync(repoUri, headBranch, targetBranch);
     }
 
     public Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)

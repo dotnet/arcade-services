@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;

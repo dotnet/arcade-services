@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.Common.AppCredentials;
 
@@ -10,7 +11,7 @@ public static class AppCredentialResolver
     /// <summary>
     /// Creates a credential based on parameters provided.
     /// </summary>
-    public static TokenCredential CreateCredential(AppCredentialResolverOptions options)
+    public static TokenCredential CreateCredential(AppCredentialResolverOptions options, ILoggerFactory? loggerFactory = null)
     {
         // 1. BAR or Entra token that can directly be used to authenticate against a service
         if (!string.IsNullOrEmpty(options.Token))
@@ -31,6 +32,6 @@ public static class AppCredentialResolver
         }
 
         // 4. Interactive login (user-based scenario)
-        return AppCredential.CreateUserCredential(options.AppId, options.UserScope);
+        return AppCredential.CreateUserCredential(options.AppId, options.UserScope, loggerFactory);
     }
 }

@@ -28,7 +28,7 @@ internal static class SubscriptionValidator
     /// <param name="subscriptions">The subscription collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
     internal static void ValidateSubscriptions(
-        IEnumerable<IngestedSubscription> subscriptions)
+        IReadOnlyCollection<IngestedSubscription> subscriptions)
     {
         EntityValidator.ValidateEntityUniqueness(subscriptions);
 

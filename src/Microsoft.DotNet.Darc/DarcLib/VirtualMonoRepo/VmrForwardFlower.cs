@@ -122,6 +122,33 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             unsafeFlow,
             cancellationToken);
 
+        return await FlowForwardAsync(
+            mappingName,
+            sourceRepo,
+            build,
+            excludedAssets,
+            targetBranch,
+            headBranch,
+            lastFlows,
+            headBranchExisted,
+            forceUpdate,
+            unsafeFlow,
+            cancellationToken);
+    }
+
+    protected async Task<CodeFlowResult> FlowForwardAsync(
+        string mappingName,
+        ILocalGitRepo sourceRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        string headBranch,
+        LastFlows lastFlows,
+        bool headBranchExisted,
+        bool forceUpdate,
+        bool unsafeFlow,
+        CancellationToken cancellationToken)
+    {
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
 
@@ -137,7 +164,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             excludedAssets,
             KeepConflicts: true,
             forceUpdate,
-            unsafeFlow);
+            unsafeFlow,
+            UseRecreationFallback: true);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -178,7 +206,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// and creates the head branch at that point.
     /// </summary>
     /// <returns>True if the head branch already existed</returns>
-    private async Task<(bool, LastFlows)> PrepareHeadBranch(
+    protected async Task<(bool HeadBranchExisted, LastFlows LastFlows)> PrepareHeadBranch(
         string vmrUri,
         string mappingName,
         ILocalGitRepo sourceRepo,
@@ -188,6 +216,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
+        bool headBranchExisted = true;
 
         try
         {
@@ -198,11 +227,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 ShouldResetVmr,
                 cancellationToken);
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
-            return (true, lastFlows);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            return (headBranchExisted, lastFlows);
         }
         catch (NotFoundException)
         {
+            headBranchExisted = false;
             // If the head branch does not exist, we need to create it at the point of the last sync
             ILocalGitRepo vmr;
             try
@@ -220,11 +250,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-            return (false, lastFlows);
+            return (headBranchExisted, lastFlows);
         }
     }
 
@@ -244,21 +274,35 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, codeflowOptions.CurrentFlow.GetBranchName(), codeflowOptions.HeadBranch);
         }
 
-        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
-            codeflowOptions,
-            lastFlows,
-            sourceRepo,
-            headBranchExisted,
-            workBranch,
-            async keepConflicts =>
-                await _vmrUpdater.UpdateRepository(
-                    codeflowOptions.Mapping,
-                    codeflowOptions.Build,
-                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                    resetToRemoteWhenCloningRepo: ShouldResetClones,
-                    keepConflicts: keepConflicts,
-                    cancellationToken: cancellationToken),
-            cancellationToken);
+        CodeFlowResult result;
+        if (codeflowOptions.UseRecreationFallback)
+        {
+            result = await ApplyChangesWithRecreationFallbackAsync(
+                codeflowOptions,
+                lastFlows,
+                sourceRepo,
+                headBranchExisted,
+                workBranch,
+                async keepConflicts =>
+                    await _vmrUpdater.UpdateRepository(
+                        codeflowOptions.Mapping,
+                        codeflowOptions.Build,
+                        additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                        resetToRemoteWhenCloningRepo: ShouldResetClones,
+                        keepConflicts: keepConflicts,
+                        cancellationToken: cancellationToken),
+                cancellationToken);
+        }
+        else
+        {
+            result = await _vmrUpdater.UpdateRepository(
+                codeflowOptions.Mapping,
+                codeflowOptions.Build,
+                additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                resetToRemoteWhenCloningRepo: ShouldResetClones,
+                keepConflicts: codeflowOptions.KeepConflicts,
+                cancellationToken: cancellationToken);
+        }
 
         if (workBranch != null)
         {
@@ -356,6 +400,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     cancellationToken)
             };
         }
+
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+
+        await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            codeflowOptions.Mapping,
+            lastFlows,
+            vmr,
+            sourceRepo,
+            lastFlows.LastForwardFlow.RepoSha,
+            codeflowOptions.CurrentFlow.RepoSha,
+            cancellationToken);
 
         return result;
     }
@@ -474,8 +529,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemote: false,
             cancellationToken);
 
-        await sourceRepo.ForceCheckoutAsync(previousFlow.RepoSha);
-
         var previousFlowSha = await _localGitClient.BlameLineAsync(
             _vmrInfo.SourceManifestPath,
             line => line.Contains(previousFlow.RepoSha),
@@ -490,7 +543,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
 
         await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
         previousFlow = previousFlows.LastForwardFlow;
 
         await vmr.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);
@@ -504,12 +557,27 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (!await repo.IsAncestorCommit(lastFlowRepoSha, currentFlow.RepoSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastFlowRepoSha);
+            _logger.LogInformation("Cannot safely flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}", currentFlow.RepoSha, lastFlowRepoSha);
+            throw new NonLinearCodeflowException(await repo.IsAncestorCommit(currentFlow.RepoSha, lastFlowRepoSha));
         }
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
+
+    protected override string ToSourceRepoPath(string targetPath, SourceMapping mapping)
+    {
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mapping);
+        return targetPath.Substring(vmrSourcesPath.Length + 1);
+    }
+
+    // We shouldn't try to fix reverts in submodules
+    protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping)
+        => _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+            .Select(s => (string)(VmrInfo.SourcesDir / s.Path))
+            .Any(p => targetPath.Equals(p, StringComparison.OrdinalIgnoreCase)
+                || targetPath.StartsWith(p + '/', StringComparison.OrdinalIgnoreCase));
 
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected virtual bool ShouldResetVmr => false;

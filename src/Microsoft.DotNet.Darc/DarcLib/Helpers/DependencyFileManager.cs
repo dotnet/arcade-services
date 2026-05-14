@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
@@ -48,6 +49,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly Func<string, IGitRepo> _gitClientFactory;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly ILogger _logger;
 
     private const string MaestroBeginComment =
@@ -70,20 +72,24 @@ public class DependencyFileManager : IDependencyFileManager
     public DependencyFileManager(
         IGitRepo gitClient,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = _ => gitClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
     public DependencyFileManager(
         IGitRepoFactory gitClientFactory,
         IVersionDetailsParser versionDetailsParser,
+        IAssetLocationResolver assetLocationResolver,
         ILogger logger)
     {
         _gitClientFactory = gitClientFactory.CreateClient;
         _versionDetailsParser = versionDetailsParser;
+        _assetLocationResolver = assetLocationResolver;
         _logger = logger;
     }
 
@@ -481,7 +487,6 @@ public class DependencyFileManager : IDependencyFileManager
         SourceDependency sourceDependency,
         string repoUri,
         string branch,
-        IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
         bool? repoHasVersionDetailsProps = null,
         UnixPath relativeBasePath = null)
@@ -491,7 +496,7 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
-        
+
         if (!repoHasVersionDetailsProps.HasValue)
         {
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
@@ -537,20 +542,16 @@ public class DependencyFileManager : IDependencyFileManager
             UpdateVersionDetailsXmlSourceTag(versionDetails, sourceDependency);
         }
 
-        // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
-        // prefer that one over the old dependencies
-        Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
+        IReadOnlyCollection<DependencyDetail> finalDependencies =
+            _versionDetailsParser.ParseVersionDetailsXml(versionDetails).Dependencies;
 
-        if (oldDependencies != null)
-        {
-            foreach (DependencyDetail dependency in oldDependencies)
-            {
-                if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
-                {
-                    itemsToUpdateLocations.Add(dependency.Name, [.. dependency.Locations]);
-                }
-            }
-        }
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(finalDependencies);
+        
+        var itemsToUpdateLocations = finalDependencies
+            .GroupBy(d => d.Name)
+            .ToDictionary(
+                g => g.Key,
+                g => g.SelectMany(d => d.Locations ?? []).ToHashSet());
 
         // At this point we only care about the Maestro managed locations for the assets.
         // Flatten the dictionary into a set that has all the managed feeds
@@ -1808,24 +1809,6 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
-    private static Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
-    {
-        var assetLocationMappings = new Dictionary<string, HashSet<string>>();
-
-        foreach (var dependency in dependencies)
-        {
-            if (!assetLocationMappings.TryGetValue(dependency.Name, out HashSet<string> value))
-            {
-                value = [];
-                assetLocationMappings[dependency.Name] = value;
-            }
-
-            value.UnionWith(dependency.Locations ?? []);
-        }
-
-        return assetLocationMappings;
-    }
-
     public static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
     {
         XmlDocument output = new();
@@ -1845,21 +1828,16 @@ public class DependencyFileManager : IDependencyFileManager
         XmlElement alternatePropertyGroup = output.CreateElement("PropertyGroup");
         projectElement.AppendChild(alternatePropertyGroup);
 
-        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
+        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => GetNormalizedRepoName(dep.RepoUri), dep => dep);
 
-        foreach (var repoDependencies in versionDetailsLookup)
+        foreach (var repoDependencies in versionDetailsLookup.OrderBy(g => g.Key))
         {
             if (repoDependencies.All(d => d.SkipProperty))
             {
                 continue;
             }
 
-            var repoUriParts = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var repoName = repoUriParts.Last();
-            if (repoUriParts.Length > 1)
-            {
-                repoName = $"{repoUriParts[repoUriParts.Length - 2]}/{repoName}";
-            }
+            var repoName = repoDependencies.Key;
 
             propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             alternatePropertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
@@ -1883,6 +1861,33 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// Returns a normalized repo name used as section heading and grouping key in Version.Details.props.
+    /// Both AzDO and GitHub URIs for the same mirror repo are normalized to the same name using the
+    /// "org-repo" convention. For example, both "https://github.com/dotnet/runtime" and
+    /// "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime" normalize to "dotnet-runtime".
+    /// </summary>
+    private static string GetNormalizedRepoName(string repoUri)
+    {
+        try
+        {
+            var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);
+            return $"{org}-{repoName}";
+        }
+        catch (ArgumentException)
+        {
+            // Fall through to fallback
+        }
+
+        // Fallback: use last two path segments
+        var parts = repoUri.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1)
+        {
+            return $"{parts[parts.Length - 2]}/{parts[parts.Length - 1]}";
+        }
+        return parts.Length > 0 ? parts[parts.Length - 1] : repoUri;
     }
 
     public static XmlNode GetVersionPropsNode(XmlDocument versionProps, string nodeName) =>

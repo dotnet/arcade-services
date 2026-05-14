@@ -170,10 +170,10 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         return build;
     }
 
-    protected PullRequestUpdaterId GetPullRequestUpdaterId()
+    protected PullRequestUpdaterId GetPullRequestUpdaterId(bool isCodeflow = false)
     {
         return Subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch)
-            : new NonBatchedPullRequestUpdaterId(Subscription.Id);
+            ? new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch, isCodeflow)
+            : new NonBatchedPullRequestUpdaterId(Subscription.Id, isCodeflow);
     }
 }

@@ -28,6 +28,7 @@ internal interface IPcsVmrForwardFlower
         Build build,
         string headBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -67,6 +68,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Build build,
         string headBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -75,17 +77,33 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             ShouldResetClones,
             cancellationToken);
 
+        (bool headBranchExisted, LastFlows lastFlows) = await PrepareHeadBranch(
+            subscription.TargetRepository,
+            subscription.TargetDirectory,
+            sourceRepo,
+            subscription.TargetBranch,
+            headBranch,
+            unsafeFlow,
+            cancellationToken);
+
         CodeFlowResult result = await FlowForwardAsync(
             subscription.TargetDirectory,
-            sourceRepo.Path,
+            sourceRepo,
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,
             headBranch,
-            subscription.TargetRepository,
+            lastFlows,
+            headBranchExisted,
             forceUpdate,
-            unsafeFlow: false,
+            unsafeFlow,
             cancellationToken);
+
+        result = result with
+        {
+            // We want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
+            HadUpdates = result.HadUpdates || headBranchExisted,
+        };
 
         if (result.HadUpdates && !result.HadConflicts)
         {

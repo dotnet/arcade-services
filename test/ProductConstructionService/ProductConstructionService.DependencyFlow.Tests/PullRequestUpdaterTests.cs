@@ -198,6 +198,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     .Excluding(pr => pr.Description));
     }
 
+    protected void WithForwardFlowerReturningNoUpdates()
+    {
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CodeFlowResult(false, [], new NativePath(VmrPath), []));
+    }
+
     protected void ThenCodeShouldHaveBeenBackflown(Build build)
     {
         _backFlower
@@ -205,6 +217,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -221,6 +234,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -508,6 +522,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             WithForwardFlowConflict(remote, [new UnixPath("src/conflict.txt")]);
         }
 
+        if (blockedFromFutureUpdates && !willFlowNewBuild)
+        {
+            remote
+                .Setup(x => x.CommentPullRequestAsync(
+                    prUrl,
+                    It.Is<string>(content => content.Contains("opposite codeflow merged"))))
+                .Returns(Task.CompletedTask);
+        }
+
         if (mockMergePolicyEvaluator)
         {
             var results = policyEvaluationStatus.HasValue
@@ -568,9 +591,53 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<bool>(),
+            It.IsAny<bool>(),
             It.IsAny<CancellationToken>()));
 
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
+    }
+
+    /// <summary>
+    /// Sets up the forward flower to throw NonLinearCodeflowException on safe flow,
+    /// then succeed on unsafe flow.
+    /// </summary>
+    protected void WithForwardFlowThrowingNonLinearException()
+    {
+        // Safe flow (unsafeFlow: false) throws NonLinearCodeflowException
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            false,
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NonLinearCodeflowException());
+
+        // Unsafe flow (unsafeFlow: true) succeeds
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            true,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
+    }
+
+    protected void AndOldPullRequestShouldHaveBeenClosed(string oldPrUrl, string newPrUrl)
+    {
+        var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
+        var newPrHtmlUrl = $"https://github.com/{owner}/{repo}/pull/{id}";
+
+        DarcRemotes[VmrUri]
+            .Verify(r => r.CommentPullRequestAsync(
+                oldPrUrl,
+                It.Is<string>(comment => comment.Contains("Closing this PR") && comment.Contains(newPrHtmlUrl))));
+
+        DarcRemotes[VmrUri]
+            .Verify(r => r.ClosePullRequestAsync(oldPrUrl));
+        DarcRemotes[VmrUri]
+            .Verify(r => r.DeletePullRequestBranchAsync(oldPrUrl));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)
@@ -605,7 +672,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool? sourceRepoNotified = null,
         UnixPath? relativeBasePath = null,
         string? url = null,
-        List<DependencyUpdateSummary>? dependencyUpdates = null)
+        List<DependencyUpdateSummary>? dependencyUpdates = null,
+        bool blockedFromFutureUpdates = false)
     {
         var prUrl = string.IsNullOrEmpty(url)
             ? Subscription.SourceEnabled
@@ -626,7 +694,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
                     relativeBasePath,
-                    dependencyUpdates: dependencyUpdates));
+                    dependencyUpdates: dependencyUpdates,
+                    blockedFromFutureUpdates: blockedFromFutureUpdates));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null, UnixPath? relativeBasePath = null)
@@ -656,10 +725,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
     }
 
-    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
+    protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context, bool isCodeflow = false)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId(isCodeflow));
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)

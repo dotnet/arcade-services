@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.SubscriptionTriggerer.Tests;
 

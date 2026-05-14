@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
+using Maestro.Services.Common.Cache;
 
 namespace ProductConstructionService.DependencyFlow.Tests.Mocks;
 
@@ -49,6 +49,9 @@ internal class MockRedisCache : IRedisCache
     {
         return AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
     }
+
+    public async Task<Dictionary<string, string?>> GetBatchAsync(IEnumerable<string> keys)
+        => throw new NotImplementedException();
 }
 
 internal class MockRedisCache<T>
@@ -96,4 +99,7 @@ internal class MockRedisCache<T>
     {
         return AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
     }
+
+    public async Task<Dictionary<string, T?>> TryGetStateBatchAsync(IEnumerable<string> keys)
+        => throw new NotImplementedException();
 }

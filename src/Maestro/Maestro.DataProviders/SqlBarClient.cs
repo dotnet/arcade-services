@@ -547,10 +547,8 @@ public class SqlBarClient : ISqlBarClient
         IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
         bool andSaveContext = true)
     {
-        var existingSubscriptions = await _context.Subscriptions.ToListAsync();
-
         var existingSubscriptionHashes = new HashSet<string>(
-            existingSubscriptions.Select(SubscriptionComparisonKey));
+            _context.Subscriptions.Local.Select(SubscriptionComparisonKey));
 
         var newSubscriptionHashes = new HashSet<string>();
 

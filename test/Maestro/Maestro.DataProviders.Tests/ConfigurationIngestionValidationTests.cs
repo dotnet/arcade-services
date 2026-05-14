@@ -352,6 +352,82 @@ public class ConfigurationIngestionValidationTests
         exception.Message.Should().Contain(sharedId.ToString());
     }
 
+    [Test]
+    public void ValidateEntityUniqueness_DuplicateChannels_CaseInsensitive_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var channels = new[]
+        {
+            new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" }),
+            new IngestedChannel(new ChannelYaml { Name = ".net 8", Classification = "dev" }),
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => EntityValidator.ValidateEntityUniqueness(channels));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("collection contains duplicate Ids");
+    }
+
+    [Test]
+    public void ValidateEntityUniqueness_DuplicateDefaultChannels_CaseInsensitive_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var defaultChannels = new[]
+        {
+            new IngestedDefaultChannel(new DefaultChannelYaml
+            {
+                Repository = "https://github.com/dotnet/Runtime",
+                Branch = "Main",
+                Channel = ".NET 8",
+                Enabled = true,
+            }),
+            new IngestedDefaultChannel(new DefaultChannelYaml
+            {
+                Repository = "https://github.com/dotnet/runtime",
+                Branch = "main",
+                Channel = ".net 8",
+                Enabled = false,
+            }),
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => EntityValidator.ValidateEntityUniqueness(defaultChannels));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("collection contains duplicate Ids");
+    }
+
+    [Test]
+    public void ValidateEntityUniqueness_DuplicateBranchMergePolicies_CaseInsensitive_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var branchMergePolicies = new[]
+        {
+            new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
+            {
+                Repository = "https://github.com/dotnet/Runtime",
+                Branch = "Main",
+                MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            }),
+            new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
+            {
+                Repository = "https://github.com/dotnet/runtime",
+                Branch = "main",
+                MergePolicies = [new MergePolicyYaml { Name = "Standard" }],
+            }),
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => EntityValidator.ValidateEntityUniqueness(branchMergePolicies));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("collection contains duplicate Ids");
+    }
+
     #endregion
 
     #region ToString Tests

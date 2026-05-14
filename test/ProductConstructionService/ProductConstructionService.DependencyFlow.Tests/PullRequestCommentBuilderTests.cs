@@ -141,7 +141,7 @@ public class PullRequestCommentBuilderTests
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", isCodeflow: false).Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
@@ -166,7 +166,7 @@ public class PullRequestCommentBuilderTests
 
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", isCodeflow: false).Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
@@ -215,7 +215,8 @@ public class PullRequestCommentBuilderTests
             forwardFlowSubscription,
             conflictedFiles,
             "pr-head-branch",
-            true);
+            prIsEmpty: true,
+            unsafeFlow: false);
 
         // Verify only files under src/sdk/ are included
         comment.Should().Contain("file1.cs");

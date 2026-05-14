@@ -123,7 +123,7 @@ internal partial class ConfigurationIngestor(
         await DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals, namespaceEntity);
         await DeleteChannels(configurationDataUpdate.Channels.Removals);
 
-        var existingChannels = _context.Channels.ToDictionary(c => c.Name);
+        var existingChannels = _context.Channels.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
 
         // Channels must be updated first due to entity relationships
         CreateChannels(configurationDataUpdate.Channels.Creations, namespaceEntity);
@@ -132,7 +132,7 @@ internal partial class ConfigurationIngestor(
         // We fetch the channels again including newly created ones
         existingChannels = _context.Channels
             .Local
-            .ToDictionary(c => c.Name);
+            .ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
 
         // Before creating subscriptions and branch policies, ensure that all referenced repositories have a Repository row in the DB
         await EnsureRepositoryRegistrationAsync(configurationDataUpdate.Subscriptions.Creations
@@ -243,7 +243,7 @@ internal partial class ConfigurationIngestor(
         IEnumerable<IngestedChannel> updatedChannels,
         List<Channel> dbChannels)
     {
-        var dbChannelsByName = dbChannels.ToDictionary(c => c.Name);
+        var dbChannelsByName = dbChannels.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
 
         foreach (var channel in updatedChannels)
         {
@@ -297,7 +297,7 @@ internal partial class ConfigurationIngestor(
     {
         var dbDefaultChannels = await _context.DefaultChannels
             .Where(dc => dc.Namespace == namespaceEntity)
-            .ToDictionaryAsync(dc => (dc.Repository, dc.Branch, dc.Channel.Name));
+            .ToDictionaryAsync(dc => (dc.Repository, dc.Branch, dc.Channel.Name), CaseInsensitiveTupleComparer.Triple());
 
         foreach (var defaultChannel in updatedDefaultChannels)
         {
@@ -320,7 +320,7 @@ internal partial class ConfigurationIngestor(
     {
         var dbDefaultChannels = await _context.DefaultChannels
             .Where(dc => dc.Namespace == namespaceEntity)
-            .ToDictionaryAsync(dc => (dc.Repository, dc.Branch, dc.Channel.Name));
+            .ToDictionaryAsync(dc => (dc.Repository, dc.Branch, dc.Channel.Name), CaseInsensitiveTupleComparer.Triple());
 
         var defaultChannelRemovals = new List<DefaultChannel>();
 
@@ -352,7 +352,7 @@ internal partial class ConfigurationIngestor(
     {
         var dbRepositoryBranches = await _context.RepositoryBranches
             .Where(rb => rb.Namespace.Name == namespaceEntity.Name)
-            .ToDictionaryAsync(rb => (rb.RepositoryName, rb.BranchName));
+            .ToDictionaryAsync(rb => (rb.RepositoryName, rb.BranchName), CaseInsensitiveTupleComparer.Pair());
 
         foreach (var bmp in updatedBranchMergePolicies)
         {
@@ -376,7 +376,7 @@ internal partial class ConfigurationIngestor(
 
         var dbRepositoryBranches = await _context.RepositoryBranches
             .Where(rb => rb.Namespace == namespaceEntity)
-            .ToDictionaryAsync(rb => rb.RepositoryName + "|" + rb.BranchName);
+            .ToDictionaryAsync(rb => rb.RepositoryName + "|" + rb.BranchName, StringComparer.OrdinalIgnoreCase);
 
         foreach (var bmp in removedBRanchMergePolicies)
         {

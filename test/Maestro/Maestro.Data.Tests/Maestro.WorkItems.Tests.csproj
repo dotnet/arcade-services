@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Maestro\Maestro.WorkItems\Maestro.WorkItems.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+  </ItemGroup>
+
+</Project>

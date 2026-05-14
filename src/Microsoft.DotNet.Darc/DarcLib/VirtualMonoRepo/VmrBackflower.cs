@@ -118,7 +118,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 excludedAssets,
                 KeepConflicts: true,
                 forceUpdate,
-                unsafeFlow),
+                unsafeFlow,
+                UseRecreationFallback: true),
             targetRepo,
             lastFlows,
             headBranchExisted,
@@ -132,6 +133,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+
+        // We need to check if the commit we'd backflow won't try to override the target repo branch with a different one,
+        // to do this we need to check if the last forward flow repo sha is ancestor to the current backflow repo sha
+        // if it is, we can continue with the unsafe flow, if it's not, that means we'll try to overwrite the branch contents
+        // with a different branch
+        var targetRepoHeadBranchSha = await targetRepo.GetShaForRefAsync(codeflowOptions.TargetBranch);
+        if (!await targetRepo.IsAncestorCommit(lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha))
+        {
+            throw new BackflowNonContinuableNonLinearCodeflowException(codeflowOptions.Build.Commit, lastFlows.LastForwardFlow.RepoSha, targetRepoHeadBranchSha);
+        }
+
         CodeFlowResult result = await FlowCodeAsync(
             codeflowOptions,
             lastFlows,
@@ -223,34 +235,34 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 codeflowOptions.HeadBranch);
         }
 
-        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
-            codeflowOptions,
-            lastFlows,
-            targetRepo,
-            headBranchExisted,
-            workBranch,
-            async keepConflicts =>
-            {
-                var conflicts = await _vmrPatchHandler.ApplyPatches(
+        CodeFlowResult result;
+        if (codeflowOptions.UseRecreationFallback)
+        {
+            result = await ApplyChangesWithRecreationFallbackAsync(
+                codeflowOptions,
+                lastFlows,
+                targetRepo,
+                headBranchExisted,
+                workBranch,
+                async keepConflicts => await ApplyPatchesAndCommitAsync(
                     patches,
-                    targetRepo.Path,
-                    removePatchAfter: true,
-                    keepConflicts: keepConflicts,
-                    cancellationToken: cancellationToken);
-
-                // We need to commit because we are on the working branch
-                if (conflicts.Count == 0)
-                {
-                    await CommitBackflow(
-                        codeflowOptions.CurrentFlow,
-                        targetRepo,
-                        codeflowOptions.Build,
-                        cancellationToken);
-                }
-
-                return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
-            },
-            cancellationToken);
+                    lastFlows,
+                    targetRepo,
+                    codeflowOptions,
+                    keepConflicts,
+                    cancellationToken),
+                cancellationToken);
+        }
+        else
+        {
+            result = await ApplyPatchesAndCommitAsync(
+                patches,
+                lastFlows,
+                targetRepo,
+                codeflowOptions,
+                codeflowOptions.KeepConflicts,
+                cancellationToken);
+        }
 
         if (workBranch != null)
         {
@@ -269,6 +281,35 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         return result;
+    }
+
+    private async Task<CodeFlowResult> ApplyPatchesAndCommitAsync(
+        List<VmrIngestionPatch> patches,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        CodeflowOptions codeflowOptions,
+        bool keepConflicts,
+        CancellationToken cancellationToken)
+    {
+        var conflicts = await _vmrPatchHandler.ApplyPatches(
+            patches,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: keepConflicts,
+            cancellationToken: cancellationToken);
+
+        // We need to commit because we are on the working branch
+        if (conflicts.Count == 0)
+        {
+            await CommitBackflow(
+                codeflowOptions.CurrentFlow,
+                lastFlows,
+                targetRepo,
+                codeflowOptions.Build,
+                cancellationToken);
+        }
+
+        return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
     }
 
     protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
@@ -347,7 +388,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
 
-        var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
+        var commitMessage = await CommitBackflow(
+            codeflowOptions.CurrentFlow,
+            lastFlows,
+            targetRepo,
+            codeflowOptions.Build,
+            cancellationToken);
 
         var conflictedFiles = await MergeWorkBranchAsync(
             codeflowOptions,
@@ -356,6 +402,20 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             commitMessage,
             cancellationToken);
+
+        if (lastFlows.LastBackFlow != null)
+        {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+            await RevertFalsePositiveAdditionsAndDeletionsAsync(
+                codeflowOptions.Mapping,
+                lastFlows,
+                targetRepo,
+                vmr,
+                lastFlows.LastBackFlow.VmrSha,
+                codeflowOptions.CurrentFlow.VmrSha,
+                cancellationToken);
+        }
 
         return new CodeFlowResult(true, conflictedFiles, targetRepo.Path, []);
     }
@@ -396,6 +456,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .ToArray();
 
         ILocalGitRepo targetRepo;
+        bool headBranchExisted = true;
 
         // Try to see if both base and target branch are available
         try
@@ -421,12 +482,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
-            return (true, mapping, lastFlows, targetRepo);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
+            headBranchExisted = false;
             try
             {
                 if (targetRepoPath == null)
@@ -456,11 +518,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-            return (false, mapping, lastFlows, targetRepo);
+            return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
     }
 
@@ -501,12 +563,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ?? throw new DarcException("No more backflows found to recreate");
 
         await targetRepo.ForceCheckoutAsync(previousFlow.RepoSha);
-        await _vmrCloneManager.PrepareVmrAsync(
-            [_vmrInfo.VmrUri],
-            [previousFlow.VmrSha],
-            previousFlow.VmrSha,
-            resetToRemote: false,
-            cancellationToken);
 
         var previousFlowSha = await _localGitClient.BlameLineAsync(
             targetRepo.Path / VersionFiles.VersionDetailsXml,
@@ -522,7 +578,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             resetToRemote: false,
             cancellationToken);
 
-        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
         previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
 
@@ -543,16 +599,28 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
         if (!await vmr.IsAncestorCommit(lastBackFlowVmrSha, currentFlow.VmrSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastBackFlowVmrSha);
+            _logger.LogInformation("Cannot safely flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}", currentFlow.VmrSha, lastBackFlowVmrSha);
+            throw new NonLinearCodeflowException(await vmr.IsAncestorCommit(currentFlow.VmrSha, lastBackFlowVmrSha));
         }
     }
 
-    private static async Task<string> CommitBackflow(Codeflow currentFlow, ILocalGitRepo targetRepo, Build build, CancellationToken cancellationToken)
+    private static async Task<string> CommitBackflow(
+        Codeflow currentFlow,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        Build build,
+        CancellationToken cancellationToken)
     {
         var commitMessage = $"""
             Backflow from {build.GetRepository()} / {Commit.GetShortSha(currentFlow.VmrSha)} build {build.Id}
+
+            Diff: {build.GetRepository()}/compare/{lastFlows.LastFlow.VmrSha}..{currentFlow.VmrSha}
+
+            From: {build.GetRepository()}/commit/{lastFlows.LastFlow.VmrSha}
+            To: {build.GetRepository()}/commit/{currentFlow.VmrSha}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -564,6 +632,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
+
+    protected override string ToSourceRepoPath(string targetPath, SourceMapping mapping)
+        => VmrInfo.GetRelativeRepoSourcesPath(mapping) / targetPath;
+
+    // Backflows ignore submodules at the patch level (see GetPatchExclusions), so submodule
+    // paths never make it into the diff being reverted here. Nothing to skip.
+    protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping) => false;
+
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
     protected virtual bool ShouldResetClones => false;
 }

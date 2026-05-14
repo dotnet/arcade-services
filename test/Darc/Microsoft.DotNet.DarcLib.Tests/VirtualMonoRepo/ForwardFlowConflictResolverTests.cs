@@ -133,10 +133,11 @@ public class ForwardFlowConflictResolverTests
             versionDetailsFileMergerMock.Object,
             versionDetailsParserMock.Object,
             new Mock<IFileSystem>().Object,
+            new Mock<ICommentCollector>().Object,
             NullLogger<ForwardFlowConflictResolver>.Instance);
 
         await resolver.MergeDependenciesAsync(
-            new CodeflowOptions(new SourceMapping(mapping, "https://github.com/dotnet/runtime", "main", [], [], false), currentFlow, targetBranch, "main", null!, null, false, false, false),
+            new CodeflowOptions(new SourceMapping(mapping, "https://github.com/dotnet/runtime", "main", [], [], false), currentFlow, targetBranch, "main", null!, null, false, false, false, false),
             productRepo.Object,
             targetBranch,
             lastFlow.RepoSha,

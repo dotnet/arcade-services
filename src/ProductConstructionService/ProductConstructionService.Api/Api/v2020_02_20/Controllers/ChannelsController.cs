@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Common;
 using Build = Maestro.Data.Models.Build;
 using Channel = ProductConstructionService.Api.v2020_02_20.Models.Channel;
 

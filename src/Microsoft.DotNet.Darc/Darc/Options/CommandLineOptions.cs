@@ -6,13 +6,13 @@ using System.IO;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Common.Cache;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -132,15 +132,15 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
         services.TryAddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.TryAddTransient<ILocalFactory, LocalFactory>();
+        services.TryAddTransient<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddSingleton<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddSingleton<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
+        RegisterPcsClient(services);
         services.TryAddSingleton<IBarApiClient>(sp => new BarApiClient(
-            BuildAssetRegistryToken,
-            managedIdentityId: null,
-            disableInteractiveAuth: IsCi,
-            BuildAssetRegistryBaseUri));
+            sp.GetRequiredService<IProductConstructionServiceApi>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
@@ -183,9 +183,15 @@ public abstract class CommandLineOptions : ICommandLineOptions
         {
             return new VmrInfo(string.Empty, string.Empty);
         });
-        services.TryAddSingleton<IRedisCacheClient, NoOpRedisClient>();
+        services.TryAddSingleton<ICache, MemoryCache>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
 
         return services;
     }
+
+    private void RegisterPcsClient(IServiceCollection sp) =>
+        sp.TryAddSingleton(sp =>
+            !string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
+                ? PcsApiFactory.GetAuthenticated(BuildAssetRegistryBaseUri, BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>())
+                : PcsApiFactory.GetAuthenticated(BuildAssetRegistryToken, managedIdentityId: null, IsCi, sp.GetRequiredService<ILoggerFactory>()));
 }

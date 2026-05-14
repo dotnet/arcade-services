@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
-using Maestro.Common.FeatureFlags;
+using Maestro.Services.Common.FeatureFlags;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;

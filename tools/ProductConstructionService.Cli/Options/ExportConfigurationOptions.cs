@@ -1,10 +1,11 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Cli.Operations;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Options;
 

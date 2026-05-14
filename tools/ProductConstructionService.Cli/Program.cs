@@ -4,6 +4,8 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
+using Tools.Cli.Common.Options;
 
 return Parser.Default.ParseArguments(args, GetOptions())
     .MapResult((Options options) =>
@@ -37,4 +39,7 @@ Type[] GetOptions() =>
         typeof(FeatureFlagAvailableOptions),
         typeof(ExportConfigurationOptions),
         typeof(DeleteNamespaceOptions),
+        typeof(GetMinDarcVersionOptions),
+        typeof(SetMinDarcVersionOptions),
+        typeof(ClearMinDarcVersionOptions),
     ];

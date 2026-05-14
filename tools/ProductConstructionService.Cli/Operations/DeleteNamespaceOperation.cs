@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.ProductConstructionService.Client;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 

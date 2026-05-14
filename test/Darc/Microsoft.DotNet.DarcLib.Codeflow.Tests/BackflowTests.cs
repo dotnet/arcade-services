@@ -1008,4 +1008,41 @@ internal class BackflowTests : CodeFlowTests
         (await File.ReadAllTextAsync(ProductRepoPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
             "This file has been changed in target");
     }
+
+    [Test]
+    public async Task BackflowToArcadeSdkOnlyUpdate()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var arcadeRepoPath = CurrentTestDirectory / "arcade";
+        CopyDirectory(ProductRepoPath, arcadeRepoPath);
+        await GitOperations.InitialCommit(arcadeRepoPath);
+
+        await InitializeRepoAtLastCommit("arcade", arcadeRepoPath);
+
+        // vmrs root global json should flow back to arcade, so we should have updates
+        var result = await CallBackflow("arcade", arcadeRepoPath, "backflow");
+        result.ShouldHaveUpdates();
+    }
+
+    [Test]
+    public async Task BackflowDoesntFlowOlderBuilds()
+    {
+        const string bfBranch = nameof(BackflowDoesntFlowOlderBuilds) + "-bf";
+
+        await EnsureTestRepoIsInitialized();
+
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "first change");
+        await GitOperations.CommitAll(VmrPath, "first change");
+        var oldBuild = await CreateNewVmrBuild([]);
+
+        var codeflowRes = await ChangeVmrFileAndFlowIt("second change", bfBranch);
+
+        codeflowRes.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranch);
+
+        var act = () => CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranch, buildToFlow: oldBuild);
+        var exceptionAssertion = await act.Should().ThrowAsync<NonLinearCodeflowException>();
+        exceptionAssertion.Which.FlowingOldBuild.Should().BeTrue();
+    }
 }

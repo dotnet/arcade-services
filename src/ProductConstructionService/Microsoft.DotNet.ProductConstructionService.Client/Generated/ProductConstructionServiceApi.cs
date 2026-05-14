@@ -31,7 +31,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
         IChannels Channels { get; }
+        ICodeflow Codeflow { get; }
         IConfigurationIngestion Ingestion { get; }
+        IDarcVersion DarcVersion { get; }
         IDefaultChannels DefaultChannels { get; }
         IFeatureFlags FeatureFlags { get; }
         IGoal Goal { get; }
@@ -127,6 +129,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IChannels Channels { get; }
 
+        public ICodeflow Codeflow { get; }
+
         public IDefaultChannels DefaultChannels { get; }
 
         public IFeatureFlags FeatureFlags { get; }
@@ -134,6 +138,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         public IGoal Goal { get; }
 
         public IConfigurationIngestion Ingestion { get; }
+
+        public IDarcVersion DarcVersion { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -160,10 +166,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
             Channels = new Channels(this);
+            Codeflow = new Codeflow(this);
             DefaultChannels = new DefaultChannels(this);
             FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);
             Ingestion = new ConfigurationIngestion(this);
+            DarcVersion = new DarcVersion(this);
             Pipelines = new Pipelines(this);
             PullRequest = new PullRequest(this);
             Repository = new Repository(this);

@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
@@ -155,7 +157,29 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         IRemote verifyRemote = await _remoteFactory.CreateRemoteAsync(repository);
 
-        if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
+        bool branchExistsOnRepo;
+        try
+        {
+            branchExistsOnRepo = await UxHelpers.VerifyAndConfirmBranchExistsAsync(
+                verifyRemote,
+                repository,
+                branch,
+                !_options.Quiet);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            _logger.LogError("Your GitHub or Azure DevOps authentication seems to be invalid." +
+                "Please see https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#step-3-set-additional-pats-for-azure-devops-and-github-operations" +
+                "Make sure your authentication or access token is enabled for the organization associated with the repository `{repo}`.", repository);
+            return Constants.ErrorCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying branch existence for {repo}@{branch}", repository, branch);
+            return Constants.ErrorCode;
+        }
+
+        if (!branchExistsOnRepo)
         {
             Console.WriteLine("Aborting merge policy creation.");
             return Constants.ErrorCode;

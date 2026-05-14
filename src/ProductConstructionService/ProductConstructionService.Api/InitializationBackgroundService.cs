@@ -3,7 +3,7 @@
 
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api;
 

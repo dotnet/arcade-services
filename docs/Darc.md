@@ -11,8 +11,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [Updating dependencies in your local repository](#updating-dependencies-in-your-local-repository)
   - [Removing dependencies from a repository](#removing-dependencies-from-a-repository)
   - [Changing a dependency's type](#changing-a-dependencys-type)
-  - ['Pinning' dependencies so they do not
-    update](#pinning-dependencies-so-they-do-not-update)
+  - ['Pinning' dependencies so they do not update](#pinning-dependencies-so-they-do-not-update)
   - [Coherent parent dependencies](#coherent-parent-dependencies)
   - [Version.Details.props and the SkipProperty attribute](#versiondetailsprops-and-the-skipproperty-attribute)
   - [Adding dependency flow](#adding-dependency-flow)
@@ -22,6 +21,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [Assigning an individual build to a channel](#assigning-an-individual-build-to-a-channel)
   - [Locating the BAR build ID for a build](#locating-the-bar-build-id-for-a-build)
   - [Checking Merge Policies on Github](#checking-merge-policies-on-github)
+  - [Making multiple configuration changes](#making-multiple-configuration-changes)
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
@@ -74,7 +74,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [generate-tpn](#generate-tpn) - Generates a new THIRD-PARTY-NOTICES.txt.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
   - [push](#push) - Pushes given VMR branch to a given remote.
-  - [reset](#reset) - Resets the contents of a VMR mapping to match a specific commit SHA from the source repository.
+  - [reset](#reset) - Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
   - [diff](#diff) - Diffs the VMR and the product repositories.
 
 ## Scenarios
@@ -1129,6 +1129,63 @@ You will find them on the `Checks` tab of each updates PRs created by maestro. D
 
 ![Checks Merge Policies](ChecksMergePolicies.png)
 
+### Making multiple configuration changes
+
+The configuration management commands support a common set of parameters that allow you to combine
+multiple changes. By using `--configuration-branch` with `--no-pr`, you can stage several related
+configuration changes onto the same branch and then open a single pull request for all of them.
+
+You can either just keep supplying a constant value for `--configuration-branch` where the first call with create a pull request too and all subsequent calls with notice the branch and will pile onto the PR branch.  
+Alternatively, you can supply also `--no-pr` for the first calls if you want to stall the PR creation and only omit it on the last call to get the PR up when all changes are ready. This is somewhat faster as the tool does not need to query for the PR existence etc..
+
+This is useful when you want to make a coordinated set of changes, such as:
+
+- creating a new channel
+- adding or updating subscriptions that flow into that channel
+- updating merge policies for the affected repository and branch
+
+#### How it works
+
+1. Pick a branch name to hold your configuration changes.
+2. Run each darc command with `--configuration-branch <branch-name>`.
+3. Pass `--no-pr` on each command while you are still batching changes.
+4. On the final command, omit `--no-pr` so darc opens one PR containing all of
+   the accumulated edits.
+
+If the branch does not already exist, darc creates it from
+`--configuration-base-branch` (or `production` if not specified).
+
+#### Example
+
+The following example creates a channel, adds a subscription, and updates
+repository policies in a single PR:
+
+```powershell
+# Step 1: create or reuse a configuration branch and add the first change
+darc add-channel `
+  --name "NET 11 Preview 4" `
+  --classification preview `
+  --configuration-branch net11-preview4-config `
+  --configuration-base-branch production `
+  --no-pr
+
+# Step 2: add another change to the same configuration branch
+darc add-subscription `
+  --channel "NET 11 Preview 4" `
+  --source-repo https://github.com/dotnet/source-repo `
+  --target-repo https://github.com/dotnet/target-repo `
+  --target-branch main `
+  --update-frequency everyBuild `
+  --configuration-branch net11-preview4-config `
+  --no-pr
+
+# Step 3: make a final change and open a single PR for everything
+darc set-repository-policies `
+  --repo https://github.com/dotnet/target-repo `
+  --branch main `
+  --all-checks-passed `
+  --configuration-branch net11-preview4-config
+```
 
 ## Command Reference
 
@@ -1896,8 +1953,8 @@ Looking up build 2038 in Build Asset Registry...
 Finding build for Microsoft.DotNet.Cli.Runtime@3.0.100-preview.19075.1...
 Looking up Microsoft.DotNet.Cli.Runtime@3.0.100-preview.19075.1 in Build Asset Registry...
 Looking up build 1946 in Build Asset Registry...
-Finding build for Microsoft.NET.Sdk@3.0.100-preview.19075.2...
-Looking up Microsoft.NET.Sdk@3.0.100-preview.19075.2 in Build Asset Registry...
+Finding build for Microsoft.NETSdk@3.0.100-preview.19075.2...
+Looking up Microsoft.NETSdk@3.0.100-preview.19075.2 in Build Asset Registry...
 Looking up build 1931 in Build Asset Registry...
 Finding build for Microsoft.Build@16.0.0-preview.386...
 Looking up Microsoft.Build@16.0.0-preview.386 in Build Asset Registry...
@@ -3239,12 +3296,26 @@ darc vmr push --remote-url https://github.com/myfork/dotnet --branch main --skip
 
 ### **`reset`**
 
-Resets the contents of a VMR mapping to match a specific commit SHA from the source repository, effectively restoring the mapping to a known good state. This command takes a single parameter in the format `[mapping]:[sha]`.
+Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
+
+The command accepts the following forms:
+- `[mapping]:[sha]` to reset to a specific commit
+- `[mapping] --build <barBuildId>` to reset to the commit associated with a BAR build
+- `[mapping] --channel <channelName>` to reset to the latest build from a channel
+
+`--build` and `--channel` are mutually exclusive. When using either of them, the positional parameter should be just the mapping name.
 
 **Sample**
 ```
 # Reset runtime mapping to specific commit
 darc vmr reset runtime:abc123def456
+
+# Reset runtime mapping to the commit from BAR build 123456
+darc vmr reset runtime --build 123456
+
+# Reset runtime mapping to the latest build from a channel
+darc vmr reset runtime --channel ".NET 10"
+
 # Invalid format - shows clear error
 darc vmr reset invalid-format
 # Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
@@ -3255,9 +3326,13 @@ darc vmr reset invalid-format
 Diffs the VMR and the product repositories. Outputs the diff to stdout or saves it to a patch file (or multiple if patch > 1 GB), if --output-path is provided.
 If input repos are not local, they'll be cloned locally and cleaned up afterwards, so the command might not be instant.
 
+Use `--path` to limit the diff to specific paths within the repository. This option can be specified multiple times.
+
 **Sample**
 ```
 darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries
+darc vmr diff C:\Path\VMR..https://github.com/dotnet/runtime:main --path src/libraries --path src/coreclr
 ```
 
 <!-- Begin Generated Content: Doc Feedback -->

@@ -36,6 +36,7 @@ All relevant information, including the rollout PR, issues encountered during th
   - Note: this [PCS exceptions query](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
   - Keep track of any issues encountered during the rollout either in this issue (or in a dedicated issue linked to this one)
 - [ ] Merge (⚠️ **DO NOT SQUASH**) the `production => main` PR in `arcade-services`
+- [ ] If this rollout includes critical bugfixes that affect darc (e.g. codeflow or Maestro configuration management), bump the minimum required darc version using the PCS CLI: `set-min-darc-version`
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
 

@@ -21,7 +21,8 @@ public interface IVmrCodeFlower
         string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
-        bool ignoreNonLinearFlow);
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted);
 }
 
 public record CodeflowOptions(
@@ -33,7 +34,8 @@ public record CodeflowOptions(
     IReadOnlyCollection<string>? ExcludedAssets,
     bool KeepConflicts,
     bool ForceUpdate,
-    bool UnsafeFlow);
+    bool UnsafeFlow,
+    bool UseRecreationFallback);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -175,6 +177,71 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// If the last flow was adding or deleting a file, and this change was reverted in PR, the next opposite direction flow
+    /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they haven't,
+    /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
+    /// </summary>
+    protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        ILocalGitRepo sourceRepo,
+        string lastSameDirectionSha,
+        string currentFlowSha,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow == null)
+        {
+            return;
+        }
+
+        var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"], cancellationToken)).GetOutputLines();
+
+        foreach (var addedFile in addedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
+        {
+            var sourcePath = ToSourceRepoPath(addedFile, mapping);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                _fileSystem.DeleteFile(targetRepo.Path / addedFile);
+                await targetRepo.StageAsync([addedFile], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be added in the last flow, but got removed in the PR, removing it from this flow", addedFile);
+            }
+        }
+
+        var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"], cancellationToken)).GetOutputLines();
+
+        foreach (var deletedFile in deletedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
+        {
+            var sourcePath = ToSourceRepoPath(deletedFile, mapping);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be deleted in the last flow, but got added back in the PR, adding it back in this flow", deletedFile);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Maps a path that is relative to the target repo of the current flow to a path that is
+    /// relative to the source repo. Used by RevertFalsePositiveAdditionsAndDeletionsAsync to
+    /// look up the equivalent file in the source repo.
+    /// </summary>
+    protected abstract string ToSourceRepoPath(string targetPath, SourceMapping mapping);
+
+    /// <summary>
+    /// Returns true if the given target-repo-relative path should be skipped by
+    /// <see cref="RevertFalsePositiveAdditionsAndDeletionsAsync"/> (e.g. because it lives
+    /// inside a submodule whose contents are not stored in the source repo).
+    /// </summary>
+    protected abstract bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping);
+
+    /// <summary>
     /// Tries to detect if given last flows (forward and backward) are crossing each other.
     /// In the following diagram, where we are creating the flow 7. the flows 3->6 and 1->5
     /// are crossing each other.
@@ -221,7 +288,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
-        bool ignoreNonLinearFlow)
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted)
     {
         await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -291,14 +359,15 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
 
                 return new LastFlows(
-                    // When ignoring non-linear flows, we should do an opposite direction flow
+                    // When ignoring non-linear flows, we should do a same direction flow
                     LastFlow: sourceRepo != repoClone ? lastBackflow : lastForwardFlow,
                     LastBackFlow: lastBackflow,
                     LastForwardFlow: lastForwardFlow,
                     CrossingFlow: null);
             }
 
-            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+            _logger.LogInformation("Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})", sourceRepo, backwardSha, forwardSha);
+            throw new NonLinearCodeflowException();
         }
 
         // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
@@ -314,7 +383,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
             // For normal flows it should be, but for the case described above it will be on a different branch.
-            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            if (!headBranchExisted && !await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
             {
                 _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
@@ -429,6 +498,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                             : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
                         KeepConflicts = false,
                         ForceUpdate = true,
+                        UseRecreationFallback = false,
                     },
                     previousFlows,
                     repo,

@@ -37,7 +37,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         GivenPendingUpdates(build);
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
+        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
         // with assets and other info just like we do in UpdatePullRequestAsync.
@@ -110,7 +110,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
-            await WhenUpdateAssetsAsyncIsCalled(build);
+            await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build);
@@ -136,7 +136,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             ExpectPrMetadataToBeUpdated();
 
-            await WhenUpdateAssetsAsyncIsCalled(newBuild);
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
@@ -164,7 +164,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             DarcRemotes[Subscription.TargetRepository],
             [new UnixPath($"src/{Subscription.TargetDirectory}/conflict.txt")]);
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
+        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
         // with assets and other info just like we do in UpdatePullRequestAsync.
@@ -242,7 +242,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             VmrPullRequestUrl = $"{VmrUri}/pulls/2";
             CreatePullRequestShouldReturnAValidValue();
 
-            await WhenUpdateAssetsAsyncIsCalled(build2);
+            await WhenUpdateAssetsAsyncIsCalled(build2, isCodeflow: true);
 
             var expectedState = new InProgressPullRequest()
             {
@@ -324,7 +324,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             VmrPullRequestUrl = $"{VmrUri}/pulls/2";
             CreatePullRequestShouldReturnAValidValue();
 
-            await WhenUpdateAssetsAsyncIsCalled(build2);
+            await WhenUpdateAssetsAsyncIsCalled(build2, isCodeflow: true);
 
             Subscription.LastAppliedBuild.Id.Should().Be(build1.Id);
 
@@ -351,6 +351,63 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
+        }
+    }
+
+    [Test]
+    public async Task UnsafeFlowClosesOldPrAndOpensNewOne()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        var oldPrUrl = VmrPullRequestUrl;
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            WithForwardFlowThrowingNonLinearException();
+
+            // Set up the new PR URL
+            var newPrUrl = $"{VmrUri}/pulls/2";
+            VmrPullRequestUrl = newPrUrl;
+            CreatePullRequestShouldReturnAValidValue();
+
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+            var expectedState = new InProgressPullRequest()
+            {
+                UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+                Url = newPrUrl,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                SourceSha = newBuild.Commit,
+                ContainedSubscriptions =
+                [
+                    new()
+                    {
+                        SubscriptionId = Subscription.Id,
+                        BuildId = newBuild.Id,
+                        SourceRepo = newBuild.GetRepository(),
+                        CommitSha = newBuild.Commit
+                    }
+                ],
+                RequiredUpdates = [],
+                CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+                UnsafeFlow = true,
+            };
+
+            AndCodeFlowPullRequestShouldHaveBeenCreated();
+            AndOldPullRequestShouldHaveBeenClosed(oldPrUrl, newPrUrl);
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(newBuild, expectedState: expectedState);
         }
     }
 

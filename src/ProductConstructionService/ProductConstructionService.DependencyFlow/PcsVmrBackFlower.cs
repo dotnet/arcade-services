@@ -30,6 +30,7 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
         Build build,
         string targetBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -59,6 +60,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Build build,
         string headBranch,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -67,7 +69,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             targetRepoPath: null,
-            unsafeFlow: false,
+            unsafeFlow,
             cancellationToken);
 
         CodeFlowResult result = await FlowBackAsync(
@@ -80,11 +82,18 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 subscription.ExcludedAssets,
                 KeepConflicts: true,
                 forceUpdate,
-                UnsafeFlow: false),
+                unsafeFlow,
+                UseRecreationFallback: true),
             targetRepo,
             lastFlows,
             headBranchExisted,
             cancellationToken);
+
+        result = result with
+        {
+            // We want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
+            HadUpdates = result.HadUpdates || headBranchExisted,
+        };
 
         if (result.HadUpdates && !result.HadConflicts)
         {
@@ -102,11 +111,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             }
         }
 
-        return result with
-        {
-            // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
-            HadUpdates = result.HadUpdates || headBranchExisted,
-        };
+        return result;
     }
 
     protected override bool ShouldResetClones => true;

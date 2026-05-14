@@ -4,7 +4,6 @@
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
-using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

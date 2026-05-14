@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Azure.Core.Pipeline;
 using Azure.Core;
 using Maestro.Common.AppCredentials;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
@@ -63,7 +64,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth)
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
+        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
@@ -73,7 +75,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                           Token = accessToken,
                           ManagedIdentityId = managedIdentityId,
                           UserScope = APP_USER_SCOPE,
-                      }))
+                      },
+                      loggerFactory))
         {
         }
 
@@ -83,8 +86,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth)
-            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth)
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
+        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
+            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth, loggerFactory)
         {
         }
 

@@ -18,7 +18,7 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
         services.AddSingleton(MergePolicyEvaluator.Object);
     }
 
-    protected async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild, bool shouldGetUpdates = false)
+    protected async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild, bool shouldGetUpdates = false, bool isCodeflow = false)
     {
         await Execute(
             async context =>
@@ -29,7 +29,7 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                         .ReturnsAsync([new GitFile("path", "content")]);
                 }
 
-                IPullRequestUpdater updater = CreatePullRequestActor(context);
+                IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeflow);
                 await updater.UpdateAssetsAsync(
                     Subscription.Id,
                     Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,

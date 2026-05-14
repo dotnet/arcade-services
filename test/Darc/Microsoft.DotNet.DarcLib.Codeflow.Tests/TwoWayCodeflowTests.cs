@@ -818,6 +818,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // Update repo1 and repo3 dependencies in the product repo
         await GitOperations.Checkout(ProductRepoPath, "main");
+
+        var gitClientFactory = ServiceProvider.GetRequiredService<IGitRepoFactory>();
+
         await GetLocal(ProductRepoPath).UpdateDependenciesAsync(
             [
                 new DependencyDetail
@@ -842,9 +845,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                     Commit = "def",
                 },
             ],
-            remoteFactory: null,
-            ServiceProvider.GetRequiredService<IGitRepoFactory>(),
-            Mock.Of<IBarApiClient>());
+            remoteFactory: null);
 
         await GitOperations.CommitAll(ProductRepoPath, "Update repo1 and repo3 dependencies in the product repo");
 
@@ -1243,10 +1244,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     }
 
     [Test]
-    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    public async Task BackflowOppositeDirectionFlowRevertsFalsePositiveTest()
     {
-        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest);
-        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest) + "bf";
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
 
         var problematicFilePath = "badFile.txt";
 
@@ -1307,5 +1308,314 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // file should still say 1
         File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    {
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // open a backflow with some random file change, don't close yet
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(VmrPath, "random change in the VMR");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // merge the previously opened ff, backflow is still open
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // do a ff just for fluff
+        result = await ChangeRepoFileAndFlowIt("4", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // close the backflow
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // revert the problematic file back to the original state, forward flow
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // file should still say 1
+        File.ReadAllText(_productRepoVmrPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task RevertCommitHappensBetweenLastAndCrossingFlowTest()
+    {
+        const string ffBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest);
+        const string bfBranchName = nameof(RevertCommitHappensBetweenLastAndCrossingFlowTest) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // open a backflow, don't merge
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(VmrPath, "random change in the VMR");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // now revert the prolematic file change
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+
+        // merge the previously opened backflow, ff is already merged
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // now backflow again, this should not cause any issues and the file should still be 1 in the VMR
+        result = await ChangeVmrFileAndFlowIt("3", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // file should still say 1
+        File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task OppositeDirectionBringsBackFilesDeletedOrReaddedInForwardFlowPR()
+    {
+        const string ffBranchName = nameof(OppositeDirectionBringsBackFilesDeletedOrReaddedInForwardFlowPR) + "ff";
+        const string bfBranchName = nameof(OppositeDirectionBringsBackFilesDeletedOrReaddedInForwardFlowPR) + "bf";
+
+        await EnsureTestRepoIsInitialized();
+
+        var fileDeletedInFFPR = "fileee-deleted-in-pr.txt";
+        var fileAddedBackInFFPR = "fileee-added-back-in-pr.txt";
+        var fileAddedBackInFFPRContent = "not important";
+
+        // Also test that new submodule files are not deleted after flowing to the VMR
+        var submoduleRelativePath = new NativePath("externals") / Constants.SecondRepoName;
+        await GitOperations.InitializeSubmodule(
+            ProductRepoPath, "second-repo", SecondRepoPath, submoduleRelativePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
+        var submoduleVmrPath = _productRepoVmrPath / submoduleRelativePath;
+
+        // Add a file that we'll delete in the repo, but add back in the FF PR, flow it
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInFFPR, fileAddedBackInFFPRContent);
+        await GitOperations.CommitAll(ProductRepoPath, "Add fileee-added-back-in-pr.txt");
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // Add a file that will later delete in the FF
+        // and delete the file we added above
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / fileDeletedInFFPR, "text");
+        File.Delete(ProductRepoPath / fileAddedBackInFFPR);
+        await GitOperations.CommitAll(ProductRepoPath, "Add and delete a file");
+
+        // now open up a forward flow, but don't merge it yet
+        codeFlowResult = await ChangeRepoFileAndFlowIt("2", ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // add some file to the VMR and backflow, with merging
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "vmrfile.txt", "also not important");
+        await GitOperations.CommitAll(VmrPath, "add vmrfile.txt");
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now checkout the FF branch in the VMR, delete and bring back a file and merge the PR
+        await GitOperations.Checkout(VmrPath, ffBranchName);
+        File.Delete(_productRepoVmrPath / fileDeletedInFFPR);
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileAddedBackInFFPR, fileAddedBackInFFPRContent);
+        await GitOperations.CommitAll(VmrPath, "Delete and bring back file in FF");
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // Update submodule, adding a new file
+        const string newSubmoduleFileName = "new-file-in-submodule.txt";
+        const string newSubmoduleFileContent = "Added inside the submodule";
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(SecondRepoPath / newSubmoduleFileName, newSubmoduleFileContent);
+        await GitOperations.CommitAll(SecondRepoPath, "Add file in submodule");
+        await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Bump submodule");
+        var newSubmoduleFileVmrPath = submoduleVmrPath / newSubmoduleFileName;
+
+        // now do a second FF, the file we deleted in the PR shouldn't be there, while the file we added back should be there
+        codeFlowResult = await ChangeRepoFileAndFlowIt("3", ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        File.Exists(_productRepoVmrPath / fileDeletedInFFPR).Should().BeFalse();
+        File.Exists(_productRepoVmrPath / fileAddedBackInFFPR).Should().BeTrue();
+        File.ReadAllText(_productRepoVmrPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
+
+        // The new submodule file should be in the VMR
+        File.Exists(newSubmoduleFileVmrPath).Should().BeTrue();
+        CheckFileContents(newSubmoduleFileVmrPath, newSubmoduleFileContent);
+
+        // now backflow again, this should make the files equivalent
+        codeFlowResult = await ChangeVmrFileAndFlowIt("4", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        File.Exists(ProductRepoPath / fileDeletedInFFPR).Should().BeFalse();
+        File.Exists(ProductRepoPath / fileAddedBackInFFPR).Should().BeTrue();
+        File.ReadAllText(ProductRepoPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
+    }
+
+    [Test]
+    public async Task OppositeDirectionBringsBackFilesDeletedOrReaddedInBackflowPR()
+    {
+        const string ffBranchName = nameof(OppositeDirectionBringsBackFilesDeletedOrReaddedInBackflowPR) + "ff";
+        const string bfBranchName = nameof(OppositeDirectionBringsBackFilesDeletedOrReaddedInBackflowPR) + "bf";
+
+        await EnsureTestRepoIsInitialized();
+
+        var fileDeletedInBFPR = "fileee-deleted-in-pr.txt";
+        var fileAddedBackInBFPR = "fileee-added-back-in-pr.txt";
+        var fileAddedBackInBFPRContent = "not important";
+
+        // Add a file that we'll delete in the repo, but add back in the BF PR, flow it
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
+        await GitOperations.CommitAll(VmrPath, "Add fileee-added-back-in-pr.txt");
+        var codeFlowResult = await ChangeVmrFileAndFlowIt("1", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // Add a file that will later delete in the BF
+        // and delete the file we added above
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileDeletedInBFPR, "text");
+        File.Delete(_productRepoVmrPath / fileAddedBackInBFPR);
+        await GitOperations.CommitAll(VmrPath, "Add and delete a file");
+
+        // now open up a bf, but don't merge it yet
+        codeFlowResult = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // add some file to the repo and ff, with merging
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "vmrfile.txt", "also not important");
+        await GitOperations.CommitAll(ProductRepoPath, "add vmrfile.txt");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // now checkout the BF branch in the repo, delete and bring back a file and merge the PR
+        await GitOperations.Checkout(ProductRepoPath, bfBranchName);
+        File.Delete(ProductRepoPath / fileDeletedInBFPR);
+        await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
+        await GitOperations.CommitAll(ProductRepoPath, "Delete and bring back file in BF");
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // now do a second BF, the file we deleted in the PR shouldn't be there, while the file we added back should be there
+        codeFlowResult = await ChangeVmrFileAndFlowIt("3", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        File.Exists(ProductRepoPath / fileDeletedInBFPR).Should().BeFalse();
+        File.Exists(ProductRepoPath / fileAddedBackInBFPR).Should().BeTrue();
+        File.ReadAllText(ProductRepoPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
+
+        // forward flow to make sure the files stay the same as in the repo
+        codeFlowResult = await ChangeRepoFileAndFlowIt("4", ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        File.Exists(_productRepoVmrPath / fileDeletedInBFPR).Should().BeFalse();
+        File.Exists(_productRepoVmrPath / fileAddedBackInBFPR).Should().BeTrue();
+        File.ReadAllText(_productRepoVmrPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
+    }
+
+    [Test]
+    public async Task BackflowThrowsBackflowNonContinuableNonLinearCodeflowException()
+    {
+        const string ffBranchName = nameof(BackflowThrowsBackflowNonContinuableNonLinearCodeflowException);
+        const string bfBranchName = nameof(BackflowThrowsBackflowNonContinuableNonLinearCodeflowException) + "bf";
+
+        const string repoBranchName1 = "repoBranch1";
+        const string repoBranchName2 = "repoBranch2";
+
+        // Flow the first time, then create two branches that will diverge
+        await EnsureTestRepoIsInitialized();
+
+        var codeFlowResult = await ChangeVmrFileAndFlowIt("0", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        await GitOperations.CreateBranch(ProductRepoPath, repoBranchName2);
+        await GitOperations.CreateBranch(ProductRepoPath, repoBranchName1);
+
+        await GitOperations.Checkout(ProductRepoPath, repoBranchName1);
+        await File.WriteAllTextAsync(ProductRepoPath / "random_file.txt", "not important123");
+        await GitOperations.CommitAll(ProductRepoPath, "change on repo branch1");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // now checkout the second branch, make a change to it, and try backflowing
+        await GitOperations.Checkout(ProductRepoPath, repoBranchName2);
+        await File.WriteAllTextAsync(ProductRepoPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(ProductRepoPath, "change on repo branch2");
+        var act = () => ChangeVmrFileAndFlowIt("2", repoBranchName2);
+        await act.Should().ThrowAsync<BackflowNonContinuableNonLinearCodeflowException>();
     }
 }

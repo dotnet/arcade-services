@@ -3,7 +3,6 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Api;
 

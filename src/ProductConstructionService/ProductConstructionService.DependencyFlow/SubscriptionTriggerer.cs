@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common.Cache;
+using Maestro.Services.Common.Cache;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.Extensions.Logging;
@@ -105,7 +105,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             subscription.TargetRepository,
             subscription.PolicyObject.Batchable);
 
-        var mutexKey = pullRequestUpdater.Id.ToString();
+        var mutexKey = pullRequestUpdaterId.Id;
 
         await _distributedLock.ExecuteWithLockAsync(mutexKey,
             async () =>

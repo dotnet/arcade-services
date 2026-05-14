@@ -4,7 +4,6 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Common;
-using Maestro.Common.Cache;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -13,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -204,7 +204,7 @@ public partial class PullRequestController : ControllerBase
         return url;
     }
 
-    private static TrackedPullRequest ToTrackedPullRequest(
+    internal static TrackedPullRequest ToTrackedPullRequest(
         InProgressPullRequest pr,
         string subscriptionId,
         Maestro.Data.Models.Subscription? subscription)
@@ -243,7 +243,7 @@ public partial class PullRequestController : ControllerBase
             pr.CreationDate);
     }
 
-    private record TrackedPullRequest(
+    public record TrackedPullRequest(
         string Id,
         string Url,
         Channel? Channel,
@@ -257,7 +257,7 @@ public partial class PullRequestController : ControllerBase
         Dictionary<Guid, int> NextBuildsToApply,
         DateTime CreationDate);
 
-    private record PullRequestUpdate(
+    public record PullRequestUpdate(
         string SourceRepository,
         Guid SubscriptionId,
         int BuildId);

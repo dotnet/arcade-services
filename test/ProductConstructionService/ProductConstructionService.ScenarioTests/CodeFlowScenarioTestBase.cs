@@ -75,7 +75,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         Dictionary<string, string> testFilePatches,
         IReadOnlyList<DependencyDetail> dependenciesToVerify,
         string commitSha,
-        int buildId)
+        int buildId,
+        IReadOnlyList<string>? expectedNuGetConfigPackageSources = null)
     {
         PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
@@ -107,6 +108,23 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(repositoryContents[0].Content, includePinned: true);
             dependenciesToVerify.All(
                 dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).Should().BeTrue();
+
+            if (expectedNuGetConfigPackageSources != null)
+            {
+                var nuGetConfigFile = files.FirstOrDefault(file => VersionFiles.NugetConfigNames.Contains(file.FileName));
+                nuGetConfigFile.Should().NotBeNull();
+
+                IReadOnlyList<RepositoryContent> nuGetConfigContents = await GitHubApi.Repository.Content.GetAllContentsByRef(
+                    TestParameters.GitHubTestOrg,
+                    targetRepoName,
+                    nuGetConfigFile!.FileName,
+                    pullRequest.Head.Ref);
+
+                foreach (var expectedPackageSource in expectedNuGetConfigPackageSources)
+                {
+                    nuGetConfigContents[0].Content.Should().Contain(expectedPackageSource);
+                }
+            }
         }
     }
 

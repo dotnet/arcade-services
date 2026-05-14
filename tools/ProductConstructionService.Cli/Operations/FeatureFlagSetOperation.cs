@@ -5,6 +5,7 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 
@@ -48,7 +49,7 @@ internal class FeatureFlagSetOperation : IOperation
             if (result.Success)
             {
                 _logger.LogInformation("✓ Successfully set feature flag '{FlagName}' = '{Value}' for subscription {SubscriptionId}", _options.FlagName, _options.Value, subscriptionId);
-                
+
                 return 0;
             }
             else

@@ -398,8 +398,8 @@ public class RepositoryCloneManagerTests
     {
         // Arrange
         var clonePath = new NativePath("/test/existing/repo");
-        var remoteUris = new List<string> { "https://github.com/test/repo.git", "https://github.com/fork/repo.git" };
-        var requestedRefs = new List<string> { "main", "feature-branch" };
+        List<string> remoteUris = ["https://github.com/test/repo.git", "https://github.com/fork/repo.git"];
+        List<string> requestedRefs = ["main", "feature-branch"];
         var cancellationToken = CancellationToken.None;
 
         _fileSystem.Setup(fs => fs.DirectoryExists(clonePath.Path))
@@ -427,17 +427,18 @@ public class RepositoryCloneManagerTests
             clonePath,
             remoteUris,
             requestedRefs,
-            Ref,
+            requestedRefs[1],
             true,
             cancellationToken);
 
         // Assert
         Assert.That(result.Path, Is.EqualTo(clonePath));
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, requestedRefs[1]), Times.Once);
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + Ref }, It.IsAny<CancellationToken>()), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + requestedRefs[0] }, It.IsAny<CancellationToken>()), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + requestedRefs[1] }, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private class RemoteState

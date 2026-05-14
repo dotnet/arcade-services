@@ -17,8 +17,9 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
 /// This class is able to remove a repository from the VMR.
-/// It removes the sources, updates the source manifest, and optionally regenerates 
-/// third-party notices, codeowners, and credential scan suppressions.
+/// It removes the sources, updates the source manifest, removes the repo-projects entry
+/// and any RepositoryReference entries, and optionally regenerates third-party notices,
+/// codeowners, and credential scan suppressions.
 /// </summary>
 public class VmrRemover : VmrManagerBase, IVmrRemover
 {
@@ -28,6 +29,8 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
+
+    private const string RepoProjectsDirName = "repo-projects";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -103,11 +106,10 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             _sourceManifest.RemoveRepository(mapping.Name);
             _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
-            var pathsToStage = new List<string>
-            {
+            List<string> pathsToStage = [
                 _vmrInfo.SourceManifestPath,
                 sourcesPath
-            };
+            ];
 
             // Remove source mapping
             var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
@@ -115,6 +117,11 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             {
                 pathsToStage.Add(sourceMappingsPath);
             }
+
+            // Remove the repo-projects/<repo>.proj file
+            pathsToStage.AddRange(RemoveRepoProjectFile(mapping.Name));
+
+            pathsToStage.AddRange(await RemoveRepositoryReferencesAsync(mapping.Name, cancellationToken));
 
             await _localGitClient.StageAsync(_vmrInfo.VmrPath, pathsToStage, cancellationToken);
 
@@ -190,5 +197,69 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             repoName, VmrInfo.SourceMappingsFileName);
 
         return true;
+    }
+
+    /// <summary>
+    /// Deletes the repo-projects/{repoName}.proj file if it exists.
+    /// </summary>
+    /// <returns>The path of the removed file (for staging), or empty if there was nothing to remove.</returns>
+    private IEnumerable<string> RemoveRepoProjectFile(string repoName)
+    {
+        var repoProjectFile = _vmrInfo.VmrPath / RepoProjectsDirName / $"{repoName}.proj";
+
+        if (!_fileSystem.FileExists(repoProjectFile))
+        {
+            _logger.LogWarning("Repo project file {path} does not exist", repoProjectFile);
+            return [];
+        }
+
+        _logger.LogInformation("Removing repo project file {path}", repoProjectFile);
+        _fileSystem.DeleteFile(repoProjectFile);
+        return [repoProjectFile];
+    }
+
+    /// <summary>
+    /// Removes <RepositoryReference Include="{repoName}" /> lines
+    /// Uses <c>git grep</c> to locate matching files.
+    /// </summary>
+    private async Task<IEnumerable<string>> RemoveRepositoryReferencesAsync(string repoName, CancellationToken cancellationToken)
+    {
+        var referenceLine = $"<RepositoryReference Include=\"{repoName}\" />";
+
+        // git grep returns exit code 1 when there are no matches - treat that as "no files" rather than failure.
+        var grepResult = await _localGitClient.RunGitCommandAsync(
+            _vmrInfo.VmrPath,
+            ["grep", "-l", "-F", referenceLine],
+            cancellationToken);
+
+        if (grepResult.ExitCode == 1)
+        {
+            return [];
+        }
+
+        grepResult.ThrowIfFailed($"Failed to search for RepositoryReference entries for '{repoName}'");
+
+        List<string> modifiedPaths = [];
+        foreach (var relativePath in grepResult.GetOutputLines())
+        {
+            var fullPath = _vmrInfo.VmrPath / relativePath;
+            var content = await _fileSystem.ReadAllTextAsync(fullPath);
+
+            // Split on '\n' only so that any trailing '\r' stays on each line,
+            // preserving the file's original line endings (LF or CRLF) when we rejoin.
+            var lines = content.Split('\n');
+            var filtered = lines.Where(line => !line.Contains(referenceLine)).ToArray();
+
+            if (filtered.Length == lines.Length)
+            {
+                continue;
+            }
+
+            _fileSystem.WriteToFile(fullPath, string.Join('\n', filtered));
+            _logger.LogInformation("Removed RepositoryReference for '{repoName}' from {file}", repoName, fullPath);
+            modifiedPaths.Add(fullPath);
+        }
+
+        return modifiedPaths;
     }
 }

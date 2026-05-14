@@ -11,7 +11,7 @@ namespace ProductConstructionService.Cli.Options;
 /// <summary>
 /// Base options class for operations that need to communicate with the Product Construction Service API.
 /// </summary>
-internal abstract class PcsApiOptions : Options
+internal abstract class PcsApiOptions : Tools.Cli.Core.Options
 {
     [Option("isCi", Required = false, HelpText = "Is running in CI, defaults to false")]
     public required bool IsCi { get; init; } = false;

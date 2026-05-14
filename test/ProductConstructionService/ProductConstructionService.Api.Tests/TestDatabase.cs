@@ -3,7 +3,6 @@
 
 using Maestro.Data;
 using Microsoft.Data.SqlClient;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

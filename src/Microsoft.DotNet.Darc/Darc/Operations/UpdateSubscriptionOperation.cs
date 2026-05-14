@@ -272,6 +272,11 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{subscription.SourceEnabled}')");
             }
 
+            if (updateSubscriptionPopUp.Batchable != subscription.Policy.Batchable)
+            {
+                immutableFieldErrors.Add($"Batchable (cannot be changed from '{subscription.Policy.Batchable}')");
+            }
+
             if (immutableFieldErrors.Count != 0)
             {
                 _logger.LogError("The following immutable fields cannot be modified:");

@@ -7,7 +7,6 @@ using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

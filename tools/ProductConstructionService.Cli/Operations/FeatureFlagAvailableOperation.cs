@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 
