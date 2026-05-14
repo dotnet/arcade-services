@@ -225,6 +225,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                                 branchMergePoliciesYaml);
             }
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

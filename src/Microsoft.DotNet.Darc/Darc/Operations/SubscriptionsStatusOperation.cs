@@ -118,10 +118,6 @@ internal class SubscriptionsStatusOperation : Operation
 
             Console.Write($"{actionStatusMessage} {subscriptionsToEnableDisable.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
             var parameters = _options.ToConfigurationRepositoryOperationParameters();
-            if (subscriptionsToEnableDisable.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
-            {
-                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
-            }
 
             foreach (var subscription in subscriptionsToEnableDisable)
             {
@@ -143,6 +139,7 @@ internal class SubscriptionsStatusOperation : Operation
             }
             Console.WriteLine("done");
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

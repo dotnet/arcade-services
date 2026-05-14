@@ -422,6 +422,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 _options.ToConfigurationRepositoryOperationParameters(),
                 subscriptionYamlParameters);
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

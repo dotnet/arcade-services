@@ -71,6 +71,7 @@ internal class UpdateChannelOperation : Operation
                 _options.ToConfigurationRepositoryOperationParameters(),
                 updatedChannelYaml);
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

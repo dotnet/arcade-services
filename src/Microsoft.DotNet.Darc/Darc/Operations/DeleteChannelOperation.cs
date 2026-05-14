@@ -52,6 +52,7 @@ internal class DeleteChannelOperation : Operation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         ChannelYaml.FromClientModel(existingChannel));
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

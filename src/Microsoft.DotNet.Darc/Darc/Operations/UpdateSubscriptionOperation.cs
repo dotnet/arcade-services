@@ -334,6 +334,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         updatedSubscriptionYaml);
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

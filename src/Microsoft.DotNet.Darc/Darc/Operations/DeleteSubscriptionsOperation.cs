@@ -75,10 +75,6 @@ internal class DeleteSubscriptionsOperation : Operation
             }
 
             var parameters = _options.ToConfigurationRepositoryOperationParameters();
-            if (subscriptionsToDelete.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
-            {
-                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
-            }
 
             foreach (Subscription subscription in subscriptionsToDelete)
             {
@@ -89,6 +85,7 @@ internal class DeleteSubscriptionsOperation : Operation
 
             Console.WriteLine("done");
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

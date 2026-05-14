@@ -149,6 +149,42 @@ public class AddChannelOperationConfigRepoTests : ConfigurationManagementTestBas
         channels[0].Name.Should().Be(channelToAdd.Name);
     }
 
+    [Test]
+    public async Task AddChannelOperation_PrintsConfigurationBranchHint_WhenNoBranchSpecified()
+    {
+        // Arrange
+        var channel = new ChannelYaml { Name = ".NET 9", Classification = "product" };
+        // No configurationBranch specified - should trigger hint
+        var options = CreateAddChannelOptions(channel);
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+        var output = ConsoleOutput.GetOutput();
+        output.Should().Contain("--configuration-branch");
+        output.Should().Contain("darc/");
+    }
+
+    [Test]
+    public async Task AddChannelOperation_DoesNotPrintConfigurationBranchHint_WhenBranchSpecified()
+    {
+        // Arrange
+        var channel = new ChannelYaml { Name = ".NET 9", Classification = "product" };
+        var options = CreateAddChannelOptions(channel, configurationBranch: GetTestBranch());
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+        var output = ConsoleOutput.GetOutput();
+        output.Should().NotContain("--configuration-branch");
+    }
+
     private AddChannelCommandLineOptions CreateAddChannelOptions(
         ChannelYaml channel,
         string? configurationBranch = null,

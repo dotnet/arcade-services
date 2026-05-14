@@ -69,6 +69,7 @@ internal class AddDefaultChannelOperation : Operation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         defaultChannelYaml);
 
+            _options.PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

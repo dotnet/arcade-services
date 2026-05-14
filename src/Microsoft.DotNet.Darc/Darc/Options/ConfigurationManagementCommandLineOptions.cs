@@ -26,6 +26,8 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
     private const string DefaultConfigurationBaseBranch = "production";
 
+    private string _generatedBranchName;
+
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
     public string ConfigurationRepository { get; set; }
 
@@ -53,16 +55,36 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
         return base.RegisterServices(services);
     }
 
+    /// <summary>
+    /// Gets the effective configuration branch: the user-provided one, or a newly generated one
+    /// (generated once and cached for reuse across multiple operations in the same command).
+    /// </summary>
+    public string GetOrGenerateConfigurationBranch()
+        => ConfigurationBranch ?? (_generatedBranchName ??= GenerateBatchBranchName());
+
     public ConfigurationRepositoryOperationParameters ToConfigurationRepositoryOperationParameters()
     {
         return new ConfigurationRepositoryOperationParameters
         {
             RepositoryUri = ConfigurationRepository,
-            ConfigurationBranch = ConfigurationBranch,
+            ConfigurationBranch = GetOrGenerateConfigurationBranch(),
             ConfigurationBaseBranch = ConfigurationBaseBranch,
             DontOpenPr = NoPr,
             ConfigurationFilePath = ConfigurationFilePath,
         }; 
+    }
+
+    /// <summary>
+    /// Prints a hint suggesting the user pass --configuration-branch to group further changes into the same PR.
+    /// Only printed when no configuration branch was explicitly supplied.
+    /// </summary>
+    public void PrintConfigurationBranchHintIfNeeded()
+    {
+        if (string.IsNullOrEmpty(ConfigurationBranch))
+        {
+            Console.WriteLine();
+            Console.WriteLine($"💡 Making more changes? Supply --configuration-branch {GetOrGenerateConfigurationBranch()} with the next darc command to clump the changes in one PR.");
+        }
     }
 
     /// <summary>
