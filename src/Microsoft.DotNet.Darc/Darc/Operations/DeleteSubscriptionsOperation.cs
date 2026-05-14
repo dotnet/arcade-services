@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteSubscriptionsOperation : Operation
+internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteSubscriptionsCommandLineOptions _options;
@@ -27,6 +27,7 @@ internal class DeleteSubscriptionsOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configRepositoryManager,
         ILogger<DeleteSubscriptionsOperation> logger)
+        : base(options)
     {
         _options = options;
         _barClient = barClient;
@@ -85,7 +86,7 @@ internal class DeleteSubscriptionsOperation : Operation
 
             Console.WriteLine("done");
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

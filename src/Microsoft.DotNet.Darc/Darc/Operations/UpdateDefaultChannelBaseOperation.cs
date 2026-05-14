@@ -13,12 +13,13 @@ using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class UpdateDefaultChannelBaseOperation : Operation
+internal abstract class UpdateDefaultChannelBaseOperation : ConfigurationManagementOperationBase
 {
     protected readonly IBarApiClient _barClient;
     private readonly IUpdateDefaultChannelBaseCommandLineOptions _options;
 
     public UpdateDefaultChannelBaseOperation(IUpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient)
+        : base(options)
     {
         _options = options;
         _barClient = barClient;

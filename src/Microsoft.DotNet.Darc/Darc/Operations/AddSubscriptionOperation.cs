@@ -34,7 +34,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configRepoManager)
-        : base(barClient, configRepoManager, logger)
+        : base(barClient, configRepoManager, logger, options)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -422,7 +422,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 _options.ToConfigurationRepositoryOperationParameters(),
                 subscriptionYamlParameters);
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteChannelOperation : Operation
+internal class DeleteChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteChannelCommandLineOptions _options;
@@ -26,6 +26,7 @@ internal class DeleteChannelOperation : Operation
         ILogger<DeleteChannelOperation> logger,
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager)
+        : base(options)
     {
         _options = options;
         _logger = logger;
@@ -52,7 +53,7 @@ internal class DeleteChannelOperation : Operation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         ChannelYaml.FromClientModel(existingChannel));
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

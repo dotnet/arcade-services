@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
@@ -12,14 +13,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class SubscriptionOperationBase : Operation
+internal abstract class SubscriptionOperationBase : ConfigurationManagementOperationBase
 {
     protected readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
 
     protected SubscriptionOperationBase(
-        IBarApiClient barClient, IConfigurationRepositoryManager configurationRepositoryManager, ILogger logger)
+        IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager,
+        ILogger logger,
+        IConfigurationManagementCommandLineOptions configOptions)
+        : base(configOptions)
     {
         _barClient = barClient;
         _configurationRepositoryManager = configurationRepositoryManager;

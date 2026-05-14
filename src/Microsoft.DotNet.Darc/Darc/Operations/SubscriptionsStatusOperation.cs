@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class SubscriptionsStatusOperation : Operation
+internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBase
 {
     private readonly SubscriptionsStatusCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -29,6 +29,7 @@ internal class SubscriptionsStatusOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SubscriptionsStatusOperation> logger)
+        : base(options)
     {
         _options = options;
         _barClient = barClient;
@@ -139,7 +140,7 @@ internal class SubscriptionsStatusOperation : Operation
             }
             Console.WriteLine("done");
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

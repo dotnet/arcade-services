@@ -16,6 +16,7 @@ internal interface IConfigurationManagementCommandLineOptions
     string ConfigurationRepository { get; set; }
     string ConfigurationFilePath { get; set; }
     bool NoPr { get; set; }
+    string GetOrGenerateConfigurationBranch();
 }
 
 /// <summary>
@@ -72,19 +73,6 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
             DontOpenPr = NoPr,
             ConfigurationFilePath = ConfigurationFilePath,
         }; 
-    }
-
-    /// <summary>
-    /// Prints a hint suggesting the user pass --configuration-branch to group further changes into the same PR.
-    /// Only printed when no configuration branch was explicitly supplied.
-    /// </summary>
-    public void PrintConfigurationBranchHintIfNeeded()
-    {
-        if (string.IsNullOrEmpty(ConfigurationBranch))
-        {
-            Console.WriteLine();
-            Console.WriteLine($"💡 Making more changes? Supply --configuration-branch {GetOrGenerateConfigurationBranch()} with the next darc command to clump the changes in one PR.");
-        }
     }
 
     /// <summary>

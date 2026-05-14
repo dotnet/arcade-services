@@ -30,7 +30,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         IBarApiClient barClient,
         DarcLib.IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configurationRepositoryManager,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger)
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger, options)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -334,7 +334,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                         _options.ToConfigurationRepositoryOperationParameters(),
                         updatedSubscriptionYaml);
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

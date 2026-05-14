@@ -47,7 +47,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         defaultChannelYaml);
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class UpdateChannelOperation : Operation
+internal class UpdateChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly UpdateChannelCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -24,6 +24,7 @@ internal class UpdateChannelOperation : Operation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<UpdateChannelOperation> logger)
+        : base(options)
     {
         _options = options;
         _barClient = barClient;
@@ -71,7 +72,7 @@ internal class UpdateChannelOperation : Operation
                 _options.ToConfigurationRepositoryOperationParameters(),
                 updatedChannelYaml);
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

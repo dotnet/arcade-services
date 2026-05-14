@@ -81,7 +81,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                         _options.ToConfigurationRepositoryOperationParameters(),
                         updatedDefaultChannelYaml);
 
-            _options.PrintConfigurationBranchHintIfNeeded();
+            PrintConfigurationBranchHintIfNeeded();
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
