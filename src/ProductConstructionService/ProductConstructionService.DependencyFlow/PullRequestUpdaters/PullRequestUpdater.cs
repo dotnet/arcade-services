@@ -411,7 +411,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     update.SubscriptionId,
                     update.BuildId,
                     pr.NextBuildsToProcess);
-                throw new NonRetriableException($"Skipping because an update with a newer build {pr.NextBuildsToProcess} has already been queued.");
+
+                return new SubscriptionUpdateResult(
+                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued."
+                     + (pr != null ? $"PR url: {pr.Url}" : ""),
+                    SubscriptionOutcomeType.NoUpdate);
             }
 
             (var status, prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
