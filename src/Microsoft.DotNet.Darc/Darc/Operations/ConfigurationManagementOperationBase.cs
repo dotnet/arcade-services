@@ -22,10 +22,11 @@ internal abstract class ConfigurationManagementOperationBase : Operation
     }
 
     /// <summary>
-    /// Executes the operation and, on success, prints a hint to reuse the configuration branch.
+    /// Prints an introductory message, executes the operation, and on success prints a hint to reuse the configuration branch.
     /// </summary>
     public sealed override async Task<int> ExecuteAsync()
     {
+        Console.WriteLine($"This command will make changes to the configuration repository '{_configOptions.ConfigurationRepository}' on branch '{_configOptions.GetOrGenerateConfigurationBranch()}'.");
         int exitCode = await ExecuteInternalAsync();
         if (exitCode == Constants.SuccessCode)
         {
