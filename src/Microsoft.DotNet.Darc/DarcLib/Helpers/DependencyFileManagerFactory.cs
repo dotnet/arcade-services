@@ -9,18 +9,20 @@ public interface IDependencyFileManagerFactory
 {
     IDependencyFileManager CreateDependencyFileManager(IGitRepo gitClient);
 
-    IDependencyFileManager CreateDependencyFileManager(IGitRepoFactory gitClientFactory);
+    IDependencyFileManager CreateDependencyFileManager();
 }
 
 public class DependencyFileManagerFactory(
     IVersionDetailsParser versionDetailsParser,
     IAssetLocationResolver resolver,
+    IGitRepoFactory gitRepoFactory,
     ILoggerFactory loggerFactory)
     : IDependencyFileManagerFactory
 {
 
     private readonly IAssetLocationResolver _assetLocationResolver = resolver;
     private readonly IVersionDetailsParser _versionDetailsParser = versionDetailsParser;
+    private readonly IGitRepoFactory _gitRepoFactory = gitRepoFactory;
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
 
@@ -33,10 +35,10 @@ public class DependencyFileManagerFactory(
             _loggerFactory.CreateLogger<DependencyFileManager>());
     }
 
-    public IDependencyFileManager CreateDependencyFileManager(IGitRepoFactory gitClientFactory)
+    public IDependencyFileManager CreateDependencyFileManager()
     {
         return new DependencyFileManager(
-            gitClientFactory,
+            _gitRepoFactory,
             _versionDetailsParser,
             _assetLocationResolver,
             _loggerFactory.CreateLogger<DependencyFileManager>());
