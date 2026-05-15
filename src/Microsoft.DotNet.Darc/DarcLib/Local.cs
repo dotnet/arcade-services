@@ -84,8 +84,6 @@ public class Local : ILocal
         var repoIsVmr = true;
         var arcadeRelativeBasePath = VmrInfo.ArcadeRepoDir;
 
-        IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-
         if (arcadeItem != null)
         {
             try
@@ -115,6 +113,7 @@ public class Local : ILocal
         {
             try
             {
+                IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
                 List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
                 // If we're updating arcade from a VMR build, the eng/common files will be in the src/arcade repo
                 // so we need to strip the src/arcade prefix from the file paths.
