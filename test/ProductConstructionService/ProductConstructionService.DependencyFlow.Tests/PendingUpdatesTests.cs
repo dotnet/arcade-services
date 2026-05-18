@@ -26,7 +26,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         AndPendingUpdates(b);
         using (WithExistingPullRequest(b, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Rescheduled));
         }
     }
 
@@ -48,7 +49,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Success));
 
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
@@ -75,7 +77,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Rescheduled));
 
             ThenShouldHaveInProgressPullRequestState(b1, b2.Id);
             ThenShouldHavePendingUpdateState(b2, isCodeFlow: false);
@@ -101,8 +104,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
         {
-            Assert.ThrowsAsync<NonRetriableException>(
-                async () => await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true));
+
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NoUpdate));
 
             ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             AndShouldHaveNoPendingUpdateState();
@@ -128,7 +132,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Success));
 
             ThenShouldHaveInProgressPullRequestState(b2);
             AndShouldHaveNoPendingUpdateState();
@@ -154,7 +159,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
+
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Success));
 
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
