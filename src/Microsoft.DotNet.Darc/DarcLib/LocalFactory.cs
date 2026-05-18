@@ -32,7 +32,7 @@ public class LocalFactory(
             new FileSystem(),
             _loggerFactory.CreateLogger<LocalLibGit2Client>());
 
-        var dependencyFileManager = _dependencyFileManagerFactory.CreateDependencyFileManager(gitClient);
+        var dependencyFileManager = _dependencyFileManagerFactory.CreateDependencyFileManager();
 
         return new Local(
             dependencyFileManager,

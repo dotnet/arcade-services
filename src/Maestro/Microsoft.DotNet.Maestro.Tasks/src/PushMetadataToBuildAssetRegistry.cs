@@ -778,6 +778,7 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
             buildAssetRegistryBaseUri: MaestroApiEndpoint));
         services.AddSingleton<IAssetLocationResolver, AssetLocationResolver>();
         services.AddSingleton<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
+        services.AddSingleton<IGitRepoFactory, GitRepoFactory>();
         services.AddSingleton<ILocalFactory, LocalFactory>();
 
         return services.BuildServiceProvider();
