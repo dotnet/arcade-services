@@ -83,7 +83,7 @@ internal class DependencyTestDriver
         loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(NullLogger.Instance);
 
         Mock<IDependencyFileManagerFactory> dfmFactory = new();
-        dfmFactory.Setup(d => d.CreateDependencyFileManager(It.IsAny<IGitRepo>())).Returns(DependencyFileManager);
+        dfmFactory.Setup(d => d.CreateDependencyFileManager()).Returns(DependencyFileManager);
 
         Mock<IRemoteTokenProvider> tokenProvider = new();
 

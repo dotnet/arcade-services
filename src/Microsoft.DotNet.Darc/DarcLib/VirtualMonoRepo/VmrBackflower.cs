@@ -405,14 +405,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (lastFlows.LastBackFlow != null)
         {
-            var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
             await RevertFalsePositiveAdditionsAndDeletionsAsync(
+                codeflowOptions.Mapping,
                 lastFlows,
                 targetRepo,
                 vmr,
-                file => vmrSourcesPath / file,
                 lastFlows.LastBackFlow.VmrSha,
                 codeflowOptions.CurrentFlow.VmrSha,
                 cancellationToken);
@@ -633,6 +632,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
+
+    protected override string ToSourceRepoPath(string targetPath, SourceMapping mapping)
+        => VmrInfo.GetRelativeRepoSourcesPath(mapping) / targetPath;
+
+    // Backflows ignore submodules at the patch level (see GetPatchExclusions), so submodule
+    // paths never make it into the diff being reverted here. Nothing to skip.
+    protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping) => false;
+
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
     protected virtual bool ShouldResetClones => false;
 }

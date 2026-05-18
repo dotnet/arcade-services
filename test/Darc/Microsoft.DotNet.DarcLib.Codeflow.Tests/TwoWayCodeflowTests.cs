@@ -1444,6 +1444,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         var fileAddedBackInFFPR = "fileee-added-back-in-pr.txt";
         var fileAddedBackInFFPRContent = "not important";
 
+        // Also test that new submodule files are not deleted after flowing to the VMR
+        var submoduleRelativePath = new NativePath("externals") / Constants.SecondRepoName;
+        await GitOperations.InitializeSubmodule(
+            ProductRepoPath, "second-repo", SecondRepoPath, submoduleRelativePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
+        var submoduleVmrPath = _productRepoVmrPath / submoduleRelativePath;
+
         // Add a file that we'll delete in the repo, but add back in the FF PR, flow it
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInFFPR, fileAddedBackInFFPRContent);
@@ -1479,6 +1486,16 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Delete and bring back file in FF");
         await GitOperations.MergePrBranch(VmrPath, ffBranchName);
 
+        // Update submodule, adding a new file
+        const string newSubmoduleFileName = "new-file-in-submodule.txt";
+        const string newSubmoduleFileContent = "Added inside the submodule";
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(SecondRepoPath / newSubmoduleFileName, newSubmoduleFileContent);
+        await GitOperations.CommitAll(SecondRepoPath, "Add file in submodule");
+        await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Bump submodule");
+        var newSubmoduleFileVmrPath = submoduleVmrPath / newSubmoduleFileName;
+
         // now do a second FF, the file we deleted in the PR shouldn't be there, while the file we added back should be there
         codeFlowResult = await ChangeRepoFileAndFlowIt("3", ffBranchName);
         codeFlowResult.ShouldHaveUpdates();
@@ -1487,6 +1504,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / fileDeletedInFFPR).Should().BeFalse();
         File.Exists(_productRepoVmrPath / fileAddedBackInFFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInFFPR).Should().Be(fileAddedBackInFFPRContent);
+
+        // The new submodule file should be in the VMR
+        File.Exists(newSubmoduleFileVmrPath).Should().BeTrue();
+        CheckFileContents(newSubmoduleFileVmrPath, newSubmoduleFileContent);
 
         // now backflow again, this should make the files equivalent
         codeFlowResult = await ChangeVmrFileAndFlowIt("4", bfBranchName);

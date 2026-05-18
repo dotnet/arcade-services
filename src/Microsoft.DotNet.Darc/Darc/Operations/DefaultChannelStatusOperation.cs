@@ -24,7 +24,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<DefaultChannelStatusOperation> logger)
-        : base(options, barClient)
+        : base(options, barClient, logger)
     {
         _options = options;
         _logger = logger;
@@ -34,7 +34,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
     /// <summary>
     /// Implements the default channel enable/disable operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))

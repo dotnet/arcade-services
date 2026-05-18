@@ -743,4 +743,79 @@ internal class ForwardFlowTests : CodeFlowTests
         var exception = await act.Should().ThrowAsync<NonLinearCodeflowException>();
         exception.Which.FlowingOldBuild.Should().BeTrue();
     }
+
+    [Test]
+    public async Task ReflowAfterRevertedForwardflowAppliesCleanlyTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string branchName = nameof(ReflowAfterRevertedForwardflowAppliesCleanlyTest);
+        const string vmrSideFileName = "vmr-side-file.txt";
+
+        // 1. Forward flow a first change and merge it
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("First change in the individual repo", branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(branchName);
+        CheckFileContents(_productRepoVmrFilePath, "First change in the individual repo");
+
+        // 2. Forward flow a second change and merge it - keep a reference to the build so we can re-flow it later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(_productRepoFilePath, "Second change in the individual repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Second change in the individual repo");
+        var secondBuild = await CreateNewRepoBuild([]);
+
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: secondBuild);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(branchName);
+        CheckFileContents(_productRepoVmrFilePath, "Second change in the individual repo");
+
+        // Capture the squash-merge commit for the second forward flow so we can revert it later
+        await GitOperations.Checkout(VmrPath, "main");
+        var secondFlowMergeCommit = await GitOperations.GetRepoLastCommit(VmrPath);
+
+        // 3. Backflow a VMR change to the product repo and merge it
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "backflowed-file.txt", "File added in the VMR to be backflowed");
+        await GitOperations.CommitAll(VmrPath, "Add a file in the VMR to be backflowed");
+
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(branchName);
+        CheckFileContents(ProductRepoPath / "backflowed-file.txt", "File added in the VMR to be backflowed");
+
+        // 4. Make an unrelated change in the VMR in the same product repo (must survive the revert + reflow)
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / vmrSideFileName, "VMR-only change in the product repo");
+        await GitOperations.CommitAll(VmrPath, "Direct VMR change in the product repo");
+
+        // 5. Revert the second codeflow's merge commit in the VMR
+        var revertResult = await GitOperations.ExecuteGitCommand(VmrPath, "revert", "--no-edit", secondFlowMergeCommit);
+        revertResult.ThrowIfFailed("Failed to revert the second forward flow merge commit");
+
+        // After the revert, the second forward flow's content should be gone, but the VMR-only change should remain
+        CheckFileContents(_productRepoVmrFilePath, "First change in the individual repo");
+        File.Exists(_productRepoVmrPath / vmrSideFileName).Should().BeTrue();
+        CheckFileContents(_productRepoVmrPath / vmrSideFileName, "VMR-only change in the product repo");
+
+        // 6. Backflow without merging - the product repo's file shouldn't be reverted back to the first state
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        CheckFileContents(_productRepoFilePath, "Second change in the individual repo");
+
+        // Reset the product repo back to main so the re-flow uses the latest repo commit
+        await GitOperations.Checkout(ProductRepoPath, "main");
+
+        // 7. Flow the same build again - it should cleanly apply just like the first time
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: secondBuild);
+        codeFlowResult.ShouldHaveUpdates();
+        codeFlowResult.ConflictedFiles.Should().BeEmpty(
+            "Re-flowing a build whose previous forward flow was reverted should apply cleanly without conflicts");
+
+        await FinalizeForwardFlow(branchName);
+
+        // The second change should be re-applied and the VMR-only change should still be present
+        CheckFileContents(_productRepoVmrFilePath, "Second change in the individual repo");
+        File.Exists(_productRepoVmrPath / vmrSideFileName).Should().BeTrue();
+        CheckFileContents(_productRepoVmrPath / vmrSideFileName, "VMR-only change in the product repo");
+    }
 }
