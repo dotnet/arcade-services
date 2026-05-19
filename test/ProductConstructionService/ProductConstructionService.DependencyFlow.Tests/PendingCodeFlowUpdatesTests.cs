@@ -26,8 +26,8 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
         {
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Rescheduled));
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Rescheduled, res.OutcomeType);
             AndShouldHaveInProgressPullRequestState(build, build.Id);
         }
     }
@@ -47,8 +47,8 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NoUpdate));
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.NoUpdate, res.OutcomeType);
             AndShouldHaveInProgressPullRequestState(build);
             AndShouldHavePullRequestCheckReminder();
         }
@@ -120,8 +120,8 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
-            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NoUpdate));
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.NoUpdate, res.OutcomeType);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(oldBuild);
@@ -147,8 +147,8 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ExpectPrMetadataToBeUpdated();
 
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true, forceUpdate: true);
-            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Success));
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Success, res.OutcomeType);
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();

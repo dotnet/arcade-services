@@ -640,6 +640,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(r => r.DeletePullRequestBranchAsync(oldPrUrl));
     }
 
+    protected void ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType expected, SubscriptionOutcomeType result)
+    {
+        SetExpectedSubscriptionUpdateResult<SubscriptionOutcomeType>(expected);
+        SetSubscriptionUpdateResult<SubscriptionOutcomeType>(expected);
+    }
+
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)
     {
         var prUrl = string.IsNullOrEmpty(url)
