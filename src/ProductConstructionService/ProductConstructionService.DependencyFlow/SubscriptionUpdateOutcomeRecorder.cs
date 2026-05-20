@@ -61,8 +61,8 @@ public class SubscriptionUpdateOutcomeRecorder(
         }
         catch (SubscriptionUpdateInputException e)
         {
-            _logger.LogError(e, "Encountered user error while processing subscription update for SubscriptionId: {SubscriptionId}, BuildId: {BuildId}. Message: {Message}",
-                subscriptionId, buildId, e.Message);
+            _logger.LogError("Encountered user error while processing subscription update for SubscriptionId: {SubscriptionId}, BuildId: {BuildId}. Error: {Error}",
+                subscriptionId, buildId, e);
             await RecordSubscriptionUpdateAsync(
                 e.Message,
                 SubscriptionOutcomeType.UserError,
