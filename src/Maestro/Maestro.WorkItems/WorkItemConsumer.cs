@@ -160,9 +160,9 @@ public class NonRetriableException(string message) : Exception(message)
 }
 
 /// <summary>
-/// Represents exceptions that happen in the subscription update process due to configuration issues that are fixable
-/// by the user.
+/// Represents cases where the subscription update process fails due to incorrect configurations in the
+/// subscription, build, or source/target repositories. Only for issues that can be fixed by the user.
 /// </summary>
-public class UserException(string message) : NonRetriableException(message)
+public class ConfigurationException(string message) : NonRetriableException(message)
 {
 }

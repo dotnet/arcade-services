@@ -73,7 +73,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ExpectPrMetadataToBeUpdated();
 
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
-            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Success));
+            Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.Updated));
 
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
@@ -148,7 +148,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
 
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true, forceUpdate: true);
 
-            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Success, res.OutcomeType);
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Updated, res.OutcomeType);
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();

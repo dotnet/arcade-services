@@ -211,7 +211,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             return new SubscriptionUpdateResult(
                 $"New codeflow PR created: {pr.Url}.",
-                Maestro.Data.Models.SubscriptionOutcomeType.Success);
+                Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
         else
         {
@@ -231,7 +231,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             return new SubscriptionUpdateResult(
                 $"Existing codeflow PR has been updated: {pr.Url}.",
-                Maestro.Data.Models.SubscriptionOutcomeType.Success);
+                Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
     }
 
@@ -266,7 +266,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             if (e.FlowingOldBuild)
             {
-                throw new NonRetriableException("The commit of the build being triggered is older than the already applied commit.");
+                throw new ConfigurationException("The commit of the build being triggered is older than the already applied commit.");
             }
 
             unsafeFlown = true;

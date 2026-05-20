@@ -63,7 +63,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
                 $"Dependencies successfully updated into existing PR: {pr.Url}",
-                SubscriptionOutcomeType.Success);
+                SubscriptionOutcomeType.Updated);
         }
 
         // Create a new (regular) dependency update PR
@@ -83,7 +83,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
                 $"Pull request created successfully: {newPr.Url}",
-                SubscriptionOutcomeType.Success);
+                SubscriptionOutcomeType.Updated);
         }
     }
 
