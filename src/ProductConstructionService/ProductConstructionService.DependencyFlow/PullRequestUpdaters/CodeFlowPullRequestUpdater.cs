@@ -108,7 +108,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
-            throw new NonRetriableException($"Subscription {update.SubscriptionId} was not found.");
+            throw new SubscriptionUpdateInputException($"Subscription {update.SubscriptionId} was not found.");
         }
 
         var isForwardFlow = subscription.IsForwardFlow();
@@ -266,7 +266,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             if (e.FlowingOldBuild)
             {
-                throw new ConfigurationException("The commit of the build being triggered is older than the already applied commit.");
+                throw new SubscriptionUpdateInputException("The commit of the build being triggered is older than the already applied commit.");
             }
 
             unsafeFlown = true;

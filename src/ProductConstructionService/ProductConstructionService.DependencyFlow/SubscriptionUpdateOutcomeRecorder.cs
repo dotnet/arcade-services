@@ -56,7 +56,7 @@ public class SubscriptionUpdateOutcomeRecorder(
             await RecordSubscriptionUpdateAsync(result.OutcomeMessage, result.OutcomeType, subscriptionId, buildId);
             return true;
         }
-        catch (ConfigurationException e)
+        catch (SubscriptionUpdateInputException e)
         {
             await RecordSubscriptionUpdateAsync(
                 e.Message,

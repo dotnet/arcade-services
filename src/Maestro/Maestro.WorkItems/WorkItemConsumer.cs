@@ -163,6 +163,6 @@ public class NonRetriableException(string message) : Exception(message)
 /// Represents cases where the subscription update process fails due to incorrect configurations in the
 /// subscription, build, or source/target repositories. Only for issues that can be fixed by the user.
 /// </summary>
-public class ConfigurationException(string message) : NonRetriableException(message)
+public class SubscriptionUpdateInputException(string message) : NonRetriableException(message)
 {
 }
