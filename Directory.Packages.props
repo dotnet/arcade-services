@@ -13,7 +13,7 @@
     <PackageVersion Include="Azure.Core" Version="1.56.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
-    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.1" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.3" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.0" />
@@ -97,7 +97,7 @@
     <PackageVersion Include="Verify.NUnit" Version="25.0.2" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <!-- Pinned to clear a CG alert (this package comes via Microsoft.TeamFoundationServer.Client) -->
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.6" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.7" />
     <!-- Pinned to clear a CG alert (this package comes via Microsoft.DotNet.Kusto but didn't get updated there yet) -->
     <PackageVersion Include="Microsoft.Azure.Kusto.Data" Version="14.0.3" />
     <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="14.0.3" />
