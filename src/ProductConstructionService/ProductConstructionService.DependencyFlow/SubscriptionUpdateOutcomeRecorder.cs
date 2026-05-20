@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.WorkItems;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
@@ -21,9 +22,11 @@ public interface ISubscriptionUpdateOutcomeRecorder
 }
 
 public class SubscriptionUpdateOutcomeRecorder(
-    BuildAssetRegistryContext context) : ISubscriptionUpdateOutcomeRecorder
+    BuildAssetRegistryContext context,
+    ILogger<SubscriptionUpdateOutcomeRecorder> logger) : ISubscriptionUpdateOutcomeRecorder
 {
     private readonly BuildAssetRegistryContext _context = context;
+    private readonly ILogger<SubscriptionUpdateOutcomeRecorder> _logger = logger;
 
     public Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionUpdateWorkItem workItem,
@@ -58,12 +61,14 @@ public class SubscriptionUpdateOutcomeRecorder(
         }
         catch (SubscriptionUpdateInputException e)
         {
+            _logger.LogError(e, "Encountered user error while processing subscription update for SubscriptionId: {SubscriptionId}, BuildId: {BuildId}. Message: {Message}",
+                subscriptionId, buildId, e.Message);
             await RecordSubscriptionUpdateAsync(
                 e.Message,
                 SubscriptionOutcomeType.UserError,
                 subscriptionId,
                 buildId);
-            throw;
+            return false;
         }
         catch (Exception e)
         {
