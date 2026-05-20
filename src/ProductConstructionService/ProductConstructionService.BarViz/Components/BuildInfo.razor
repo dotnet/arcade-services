@@ -79,6 +79,16 @@ else
 
             @* Source Information *@
             <div class="build-section">
+                <div class="repo-header">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Folder())" Color="Color.Neutral" />
+                    <div class="repo-header-text">
+                        <FluentLabel Typo="Typography.Body" class="section-label">
+                            Built from <a href="@_build.GetRepoUrl()" target="_blank" title="View source repository" class="commit-link repo-link">@GetRepositoryPath()</a>
+                        </FluentLabel>
+                    </div>
+                </div>
+                <FluentDivider Style="margin: 8px 0;" />
+
                 <div class="info-row">
                     <FluentIcon Value="@(new Icons.Regular.Size20.Branch())" Color="Color.Neutral" />
                     <FluentLabel Typo="Typography.Body" class="info-label">Source Branch:</FluentLabel>
@@ -86,31 +96,26 @@ else
                 </div>
 
                 <div class="info-row">
-                    <FluentIcon Value="@(new Icons.Regular.Size20.CodeText())" Color="Color.Neutral" />
-                    <FluentLabel Typo="Typography.Body" class="info-label">Source Commit:</FluentLabel>
+                    <FluentIcon Value="@(new Icons.Regular.Size20.TextDescription())" Color="Color.Neutral" />
+                    <FluentLabel Typo="Typography.Body" class="info-label">Commit Title:</FluentLabel>
                     @if (_commit == null)
                     {
-                        <a href="@GetCommitUri()" target="_blank" title="View source commit" class="commit-link">@_build.Commit</a>
-                        <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())"
-                                      Appearance="Appearance.Stealth"
-                                      OnClick="@(() => SetBarClipboard(_build.Commit))"
-                                      Title="Copy commit SHA" />
                         <FluentProgressRing style="width: 12px; height: 12px;" />
                     }
                     else
                     {
                         <a href="@GetCommitUri()" target="_blank" title="View source commit" class="commit-link">@GetShortCommitMessage()</a>
-                        <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())"
-                                      Appearance="Appearance.Stealth"
-                                      OnClick="@(() => SetBarClipboard(_build.Commit))"
-                                      Title="Copy commit SHA" />
                     }
                 </div>
 
                 <div class="info-row">
-                    <FluentIcon Value="@(new Icons.Regular.Size20.Folder())" Color="Color.Neutral" />
-                    <FluentLabel Typo="Typography.Body" class="info-label">Source Repository:</FluentLabel>
-                    <a href="@_build.GetRepoUrl()" target="_blank" title="View source repository" class="commit-link">@_build.GetRepoUrl()</a>
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CodeText())" Color="Color.Neutral" />
+                    <FluentLabel Typo="Typography.Body" class="info-label">Commit SHA:</FluentLabel>
+                    <FluentLabel Typo="Typography.Body">@_build.Commit</FluentLabel>
+                    <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())"
+                                  Appearance="Appearance.Stealth"
+                                  OnClick="@(() => SetBarClipboard(_build.Commit))"
+                                  Title="Copy commit SHA" />
                 </div>
             </div>
 
@@ -264,6 +269,24 @@ else
             min-width: 140px;
         }
 
+        .repo-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .repo-header-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .repo-link {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 28px;
+        }
+
         .build-section {
             padding: 14px;
             border-top: 1px solid var(--neutral-stroke-divider);
@@ -364,6 +387,8 @@ else
     }
 
     private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
+
+    private string GetRepositoryPath() => _build!.GetShortRepository().Trim('/');
 
     private async Task GetCommitInfo()
     {
