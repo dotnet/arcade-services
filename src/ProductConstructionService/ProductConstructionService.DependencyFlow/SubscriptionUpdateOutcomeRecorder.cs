@@ -93,7 +93,7 @@ public class SubscriptionUpdateOutcomeRecorder(
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
         {
             Message = message,
-            OperationId = Guid.NewGuid().ToString(),
+            OperationId = Guid.NewGuid().ToString("N"),
             SubscriptionId = subscriptionId,
             BuildId = buildId ?? -1,
             Type = type,
