@@ -50,6 +50,13 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             TenantId = _options.TenantId,
             ClientId = _options.ClientId,
             TokenCachePersistenceOptions = _options.TokenCachePersistenceOptions,
+            DeviceCodeCallback = (info, _) =>
+            {
+                // Surface the device code through the same logger the rest of the auth flow uses;
+                // the default callback writes to AzureEventSource which is not visible in CLI/MCP hosts.
+                _logger.LogInformation("{Message}", info.Message);
+                return Task.CompletedTask;
+            },
         });
     }
 
@@ -211,6 +218,13 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         {
             TenantId = _options.TenantId,
             ClientId = _options.ClientId,
+            DeviceCodeCallback = (info, _) =>
+            {
+                // Surface the device code through the same logger the rest of the auth flow uses;
+                // the default callback writes to AzureEventSource which is not visible in CLI/MCP hosts.
+                _logger.LogInformation("{Message}", info.Message);
+                return Task.CompletedTask;
+            },
         });
     }
 
