@@ -184,7 +184,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["add", ..pathsToStage], cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["add", "-f", ..pathsToStage], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoPath}");
     }
 
@@ -668,7 +668,7 @@ public class LocalGitClient : ILocalGitClient
         else if (!otherHasBlob)
         {
             // Only the chosen side has content
-            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result = await _processManager.ExecuteGit(repoPath, "add", "-f", "--", file);
             result.ThrowIfFailed($"Failed to stage {file} in {repoPath}");
         }
         else
@@ -677,7 +677,7 @@ public class LocalGitClient : ILocalGitClient
             result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", "--", file);
             result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
 
-            result = await _processManager.ExecuteGit(repoPath, "add", "--", file);
+            result = await _processManager.ExecuteGit(repoPath, "add", "-f", "--", file);
             result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
         }
     }
