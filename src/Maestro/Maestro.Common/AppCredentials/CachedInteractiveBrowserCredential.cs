@@ -58,6 +58,77 @@ public class CachedInteractiveBrowserCredential: TokenCredential
                 return Task.CompletedTask;
             },
         });
+
+        // On WSL the interactive browser flow only succeeds when a Windows-side browser
+        // launcher (wslu's `wslview`) is installed AND WSL2 localhost forwarding can route
+        // the OAuth redirect back into the WSL network namespace. With wslu present that
+        // path works on default NAT-mode WSL2. Without wslu, xdg-open silently does nothing
+        // and `_browserCredential.Authenticate()` blocks forever waiting for a redirect
+        // that will never arrive. In that specific case, skip straight to device code so
+        // the user at least sees a code rather than an indefinite hang.
+        if (IsWslWithoutBrowserLauncher())
+        {
+            Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
+        }
+    }
+
+    private static bool IsWslWithoutBrowserLauncher()
+    {
+        // Opt-out: user knows their setup supports browser auth even if we don't detect it.
+        if (string.Equals(Environment.GetEnvironmentVariable("DARC_FORCE_BROWSER_AUTH"), "1", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Opt-in: user explicitly wants device code regardless of environment.
+        if (string.Equals(Environment.GetEnvironmentVariable("DARC_USE_DEVICE_CODE"), "1", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        bool isWsl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_INTEROP"));
+        if (!isWsl)
+        {
+            return false;
+        }
+
+        // On WSL: only skip browser flow if no usable launcher is on PATH.
+        // wslview (from the wslu package) is the canonical Windows-browser bridge.
+        // BROWSER env var override is also respected by Azure.Identity's launcher.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROWSER")))
+        {
+            return false;
+        }
+        return !ExistsOnPath("wslview");
+    }
+
+    private static bool ExistsOnPath(string executable)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+        foreach (var dir in path.Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrEmpty(dir))
+            {
+                continue;
+            }
+            try
+            {
+                if (File.Exists(Path.Combine(dir, executable)))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Ignore inaccessible PATH entries.
+            }
+        }
+        return false;
     }
 
     public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
