@@ -7,8 +7,6 @@ This file should be imported by eng/Versions.props
   <PropertyGroup>
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26257.4</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26257.4</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26257.4</MicrosoftDotNetSignToolPackageVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26257.4</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
@@ -35,8 +33,6 @@ This file should be imported by eng/Versions.props
   <PropertyGroup>
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>$(MicrosoftDotNetBuildTasksFeedPackageVersion)</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSignToolVersion>$(MicrosoftDotNetSignToolPackageVersion)</MicrosoftDotNetSignToolVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>$(MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion)</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
     <MicrosoftDotNetVersionToolsVersion>$(MicrosoftDotNetVersionToolsPackageVersion)</MicrosoftDotNetVersionToolsVersion>
     <!-- dotnet-dnceng dependencies -->
