@@ -192,6 +192,16 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private AuthenticationRecord Authenticate(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
+        // If a previous attempt already proved the browser flow is unavailable in this
+        // environment (e.g. headless WSL / no GUI), skip straight to device code. Without
+        // this, the retry after RecreateCredentialsWithoutPersistence() would re-enter the
+        // browser path and hang waiting for an OAuth redirect that will never arrive.
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
+        {
+            _logger.LogInformation("Using device code authentication (browser flow previously unavailable)...");
+            return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
+        }
+
         try
         {
             _logger.LogInformation("Waiting for authentication in the browser...");
