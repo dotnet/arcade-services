@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.WorkItems;
@@ -90,10 +91,13 @@ public class SubscriptionUpdateOutcomeRecorder(
         Guid subscriptionId,
         int? buildId)
     {
+        // Fall back to a generated id if there's no current Activity (e.g. tests).
+        var operationId = Activity.Current?.RootId ?? Guid.NewGuid().ToString("N");
+
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
         {
             Message = message,
-            OperationId = Guid.NewGuid().ToString("N"),
+            OperationId = operationId,
             SubscriptionId = subscriptionId,
             BuildId = buildId ?? -1,
             Type = type,
