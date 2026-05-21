@@ -15,7 +15,7 @@ using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Cl
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddDefaultChannelOperation : Operation
+internal class AddDefaultChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly AddDefaultChannelCommandLineOptions _options;
     private readonly ILogger<AddDefaultChannelOperation> _logger;
@@ -31,6 +31,7 @@ internal class AddDefaultChannelOperation : Operation
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configurationRepositoryManager)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;
@@ -40,7 +41,7 @@ internal class AddDefaultChannelOperation : Operation
         _configurationRepositoryManager = configurationRepositoryManager;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {

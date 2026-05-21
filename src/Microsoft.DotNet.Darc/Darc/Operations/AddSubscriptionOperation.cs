@@ -34,7 +34,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configRepoManager)
-        : base(barClient, configRepoManager, logger)
+        : base(barClient, configRepoManager, logger, options)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -44,7 +44,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'add-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
         {

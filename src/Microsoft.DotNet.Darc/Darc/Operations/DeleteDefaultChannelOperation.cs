@@ -24,14 +24,14 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
         IBarApiClient barClient,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<DeleteDefaultChannelOperation> logger)
-        : base(options, barClient)
+        : base(options, barClient, logger)
     {
         _options = options;
         _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {

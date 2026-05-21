@@ -22,7 +22,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class SetRepositoryMergePoliciesOperation : Operation
+internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOperationBase
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -36,6 +36,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         IRemoteFactory remoteFactory,
         IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -44,7 +45,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
