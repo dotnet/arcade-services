@@ -76,9 +76,9 @@
       <Uri>https://github.com/dotnet/dnceng</Uri>
       <Sha>dddb51e32c2be5c13c5cda35dc059efa1a5ad706</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26265.1">
+    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26271.1">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
-      <Sha>9f9df8c34ebbe822f517e1ae9999c48af482ecaa</Sha>
+      <Sha>64f36914c6398baa958b51ff89527e5ea20c70fc</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
