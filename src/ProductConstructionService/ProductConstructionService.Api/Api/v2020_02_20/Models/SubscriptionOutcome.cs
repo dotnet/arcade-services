@@ -25,7 +25,7 @@ public class SubscriptionOutcome
 
     public int BuildId { get; }
 
-    public DateTime Date { get; }
+    public DateTimeOffset Date { get; }
 
     public string Message { get; }
 
@@ -39,4 +39,6 @@ public enum SubscriptionOutcomeType
     NotUpdatable,
     Failure,
     UserError,
+    HasConflict,
+    Rescheduled,
 }

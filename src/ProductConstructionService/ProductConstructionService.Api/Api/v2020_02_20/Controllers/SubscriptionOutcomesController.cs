@@ -35,8 +35,8 @@ public class SubscriptionOutcomesController : ControllerBase
     /// </summary>
     /// <param name="subscriptionId">Filter by subscription id.</param>
     /// <param name="buildId">Filter by build id.</param>
-    /// <param name="date">Return only outcomes on or before this date (UTC).</param>
-    /// <param name="type">Filter by outcome type.</param>
+    /// <param name="date">Return only outcomes on or before this date. Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
+    /// <param name="subscriptionOutcomeType">Filter by outcome type (e.g. "Updated", "NoUpdate", "Failure").</param>
     /// <param name="operationId">Filter by operation id.</param>
     /// <param name="limit">Maximum number of results to return.</param>
     [HttpGet]
@@ -45,8 +45,8 @@ public class SubscriptionOutcomesController : ControllerBase
     public async Task<IActionResult> ListSubscriptionOutcomes(
         string? subscriptionId = null,
         int? buildId = null,
-        DateTime? date = null,
-        SubscriptionOutcomeType? type = null,
+        DateTimeOffset? date = null,
+        string? subscriptionOutcomeType = null,
         string? operationId = null,
         [Range(1, MaxResultLimit)] int limit = DefaultResultLimit)
     {
@@ -68,6 +68,21 @@ public class SubscriptionOutcomesController : ControllerBase
             }
         }
 
+        SubscriptionOutcomeType? parsedType = null;
+        if (!string.IsNullOrEmpty(subscriptionOutcomeType))
+        {
+            if (!Enum.TryParse<SubscriptionOutcomeType>(subscriptionOutcomeType, ignoreCase: true, out var typeValue)
+                || !Enum.IsDefined(typeof(SubscriptionOutcomeType), typeValue))
+            {
+                return BadRequest(new
+                {
+                    message = $"subscriptionOutcomeType must be one of: {string.Join(", ", Enum.GetNames(typeof(SubscriptionOutcomeType)))}."
+                });
+            }
+
+            parsedType = typeValue;
+        }
+
         if (subId.HasValue)
         {
             query = query.Where(o => o.SubscriptionId == subId.Value);
@@ -83,9 +98,9 @@ public class SubscriptionOutcomesController : ControllerBase
             query = query.Where(o => o.Date <= date.Value);
         }
 
-        if (type.HasValue)
+        if (parsedType.HasValue)
         {
-            var mappedType = (DataModels.SubscriptionOutcomeType)type.Value;
+            var mappedType = (DataModels.SubscriptionOutcomeType)parsedType.Value;
             query = query.Where(o => o.Type == mappedType);
         }
 

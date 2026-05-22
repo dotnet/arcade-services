@@ -19,8 +19,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             int? buildId = default,
             DateTimeOffset? date = default,
             string operationId = default,
-            Guid? subscriptionId = default,
-            Models.SubscriptionOutcomeType type = default,
+            string subscriptionId = default,
+            string subscriptionOutcomeType = default,
             CancellationToken cancellationToken = default
         );
 
@@ -49,8 +49,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             int? buildId = default,
             DateTimeOffset? date = default,
             string operationId = default,
-            Guid? subscriptionId = default,
-            Models.SubscriptionOutcomeType type = default,
+            string subscriptionId = default,
+            string subscriptionOutcomeType = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 "/api/subscription-outcomes",
                 false);
 
-            if (subscriptionId != default(Guid?))
+            if (!string.IsNullOrEmpty(subscriptionId))
             {
                 _url.AppendQuery("subscriptionId", Client.Serialize(subscriptionId));
             }
@@ -76,9 +76,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             {
                 _url.AppendQuery("date", Client.Serialize(date));
             }
-            if (type != default(Models.SubscriptionOutcomeType))
+            if (!string.IsNullOrEmpty(subscriptionOutcomeType))
             {
-                _url.AppendQuery("type", Client.Serialize(type));
+                _url.AppendQuery("subscriptionOutcomeType", Client.Serialize(subscriptionOutcomeType));
             }
             if (!string.IsNullOrEmpty(operationId))
             {
