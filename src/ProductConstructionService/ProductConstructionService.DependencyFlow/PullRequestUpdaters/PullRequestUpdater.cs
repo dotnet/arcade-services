@@ -6,6 +6,7 @@ using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
+using Maestro.WorkItems;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger = logger;
     }
 
-    protected abstract Task ProcessSubscriptionUpdateAsync(
+    protected abstract Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         PullRequest? prInfo,
@@ -356,7 +357,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
     ///     to pushing additional commits.
     /// </remarks>
-    public async Task UpdateAssetsAsync(
+    public async Task<SubscriptionUpdateResult> UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
@@ -366,7 +367,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var build = await _sqlClient.GetBuildAsync(buildId)
             ?? throw new InvalidOperationException($"Build with buildId {buildId} not found in the DB.");
 
-        await ProcessPendingUpdatesAsync(
+        return await ProcessPendingUpdatesAsync(
             new()
             {
                 UpdaterId = _target.UpdaterId,
@@ -387,7 +388,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// </summary>
     /// <param name="applyNewestOnly">If true, we will check if this build is the latest one we have queued. If it's not we will skip this update.</param>
     /// <param name="forceUpdate">If true, force update even for PRs with pending or successful checks.</param>
-    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool applyNewestOnly, bool forceUpdate, BuildDTO build)
+    public async Task<SubscriptionUpdateResult> ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool applyNewestOnly, bool forceUpdate, BuildDTO build)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
@@ -410,7 +411,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     update.SubscriptionId,
                     update.BuildId,
                     pr.NextBuildsToProcess);
-                return;
+
+                return new SubscriptionUpdateResult(
+                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued."
+                     + (pr != null ? $"PR url: {pr.Url}" : ""),
+                    SubscriptionOutcomeType.NoUpdate);
             }
 
             (var status, prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
@@ -436,13 +441,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     }
                     _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
                     await _stateManager.ScheduleUpdateForLater(pr, update, isCodeFlow);
-                    return;
+                    return new SubscriptionUpdateResult(
+                        $"The existing PR cannot be updated at this time due to pending checks, and will be retried periodically. Pr url: {pr.Url}",
+                        SubscriptionOutcomeType.Rescheduled);
                 default:
                     throw new NotImplementedException($"Unknown PR status {status}");
             }
         }
 
-        await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
+        var result = await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
 
         pr = await _stateManager.GetInProgressPullRequestAsync();
         if (pr != null)
@@ -452,6 +459,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 (await _target.GetTargetAsync()).Repository,
                 [("<subscriptionId>", update.SubscriptionId.ToString())]);
         }
+
+        return result;
     }
 
     #endregion

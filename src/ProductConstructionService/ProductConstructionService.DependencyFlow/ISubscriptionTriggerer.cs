@@ -2,12 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
+using Maestro.Data.Models;
 
 namespace ProductConstructionService.DependencyFlow;
 
 public interface ISubscriptionTriggerer
 {
-    Task UpdateSubscriptionAsync(int buildId, bool force = false);
+    Task<SubscriptionUpdateResult> UpdateSubscriptionAsync(Subscription subscription, Build build, bool force = false);
 
     Task<bool> AddDependencyFlowEventAsync(
         int updateBuildId,

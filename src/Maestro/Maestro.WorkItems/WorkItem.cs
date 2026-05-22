@@ -12,9 +12,23 @@ public abstract class WorkItem
     /// </summary>
     public string Type => GetType().Name;
 
+    [JsonIgnore]
+    public long AttemptNumber { get; set; }
+
+    [JsonIgnore]
+    public int MaxAttempts { get; set; }
+
     /// <summary>
     /// Period of time before the WorkItem becomes visible in the queue.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull)]
     public int? Delay { get; internal set; }
+
+    public bool IsFinalAttempt() => AttemptNumber >= MaxAttempts;
+
+    internal void SetAttemptInfo(long attemptNumber, int maxAttempts)
+    {
+        AttemptNumber = attemptNumber;
+        MaxAttempts = maxAttempts;
+    }
 }
