@@ -43,7 +43,7 @@ public class SubscriptionOutcomesController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionOutcome>), Description = "The list of subscription outcomes")]
     [ValidateModelState]
     public async Task<IActionResult> ListSubscriptionOutcomes(
-        Guid? subscriptionId = null,
+        string? subscriptionId = null,
         int? buildId = null,
         DateTime? date = null,
         SubscriptionOutcomeType? type = null,
@@ -52,9 +52,25 @@ public class SubscriptionOutcomesController : ControllerBase
     {
         IQueryable<DataModels.SubscriptionOutcome> query = _context.SubscriptionOutcomes;
 
-        if (subscriptionId.HasValue)
+        Guid? subId = null;
+        if (!string.IsNullOrEmpty(subscriptionId))
         {
-            query = query.Where(o => o.SubscriptionId == subscriptionId.Value);
+            try
+            {
+                subId = Guid.Parse(subscriptionId);
+            }
+            catch (FormatException)
+            {
+                return BadRequest(new
+                {
+                    message = "subscriptionId must be a valid GUID."
+                });
+            }
+        }
+
+        if (subId.HasValue)
+        {
+            query = query.Where(o => o.SubscriptionId == subId.Value);
         }
 
         if (buildId.HasValue)
@@ -69,7 +85,7 @@ public class SubscriptionOutcomesController : ControllerBase
 
         if (type.HasValue)
         {
-            var mappedType = (DataModels.OutcomeType)type.Value;
+            var mappedType = (DataModels.SubscriptionOutcomeType)type.Value;
             query = query.Where(o => o.Type == mappedType);
         }
 
