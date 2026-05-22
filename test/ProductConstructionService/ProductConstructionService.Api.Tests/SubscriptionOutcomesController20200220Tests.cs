@@ -33,10 +33,9 @@ public partial class SubscriptionOutcomesController20200220Tests
         // Use unique IDs per call because the test database is shared across tests in this assembly.
         var subscriptionAId = Guid.NewGuid();
         var subscriptionBId = Guid.NewGuid();
-        var testPrefix = Guid.NewGuid().ToString("N");
-        var operationIdA1 = $"{testPrefix}-a-1";
-        var operationIdA2 = $"{testPrefix}-a-2";
-        var operationIdB1 = $"{testPrefix}-b-1";
+        var operationIdA1 = Guid.NewGuid().ToString("N");
+        var operationIdA2 = Guid.NewGuid().ToString("N");
+        var operationIdB1 = Guid.NewGuid().ToString("N");
 
         await context.SubscriptionOutcomes.AddRangeAsync(
             new DataModels.SubscriptionOutcome
