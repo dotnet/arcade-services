@@ -4,9 +4,9 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
-    public partial class SubscriptionOutcome
+    public partial class SubscriptionTriggerOutcome
     {
-        public SubscriptionOutcome(Guid subscriptionId, int buildId, DateTimeOffset date, Models.SubscriptionOutcomeType type, string operationId, string message)
+        public SubscriptionTriggerOutcome(Guid subscriptionId, int buildId, DateTimeOffset date, Models.OutcomeType type, string operationId, string message)
         {
             SubscriptionId = subscriptionId;
             BuildId = buildId;
@@ -32,14 +32,14 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string Message { get; }
 
         [JsonProperty("type")]
-        public Models.SubscriptionOutcomeType Type { get; set; }
+        public Models.OutcomeType Type { get; set; }
 
         [JsonIgnore]
         public bool IsValid
         {
             get
             {
-                if (Type == default(Models.SubscriptionOutcomeType))
+                if (Type == default(Models.OutcomeType))
                 {
                     return false;
                 }

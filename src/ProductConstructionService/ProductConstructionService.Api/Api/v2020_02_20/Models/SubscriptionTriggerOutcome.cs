@@ -5,9 +5,9 @@
 
 namespace ProductConstructionService.Api.v2020_02_20.Models;
 
-public class SubscriptionOutcome
+public class SubscriptionTriggerOutcome
 {
-    public SubscriptionOutcome(Maestro.Data.Models.SubscriptionOutcome other)
+    public SubscriptionTriggerOutcome(Maestro.Data.Models.SubscriptionOutcome other)
     {
         ArgumentNullException.ThrowIfNull(other);
 
@@ -16,7 +16,7 @@ public class SubscriptionOutcome
         BuildId = other.BuildId;
         Date = other.Date;
         Message = other.Message;
-        Type = (SubscriptionOutcomeType)other.Type;
+        Type = (OutcomeType)other.Type;
     }
 
     public string OperationId { get; }
@@ -29,10 +29,10 @@ public class SubscriptionOutcome
 
     public string Message { get; }
 
-    public SubscriptionOutcomeType Type { get; }
+    public OutcomeType Type { get; }
 }
 
-public enum SubscriptionOutcomeType
+public enum OutcomeType
 {
     Updated,
     NoUpdate,

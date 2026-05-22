@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
-    public enum SubscriptionOutcomeType
+    public enum OutcomeType
     {
         [EnumMember(Value = "updated")]
         Updated,
@@ -17,5 +17,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         Failure,
         [EnumMember(Value = "userError")]
         UserError,
+        [EnumMember(Value = "hasConflict")]
+        HasConflict,
+        [EnumMember(Value = "rescheduled")]
+        Rescheduled,
     }
 }

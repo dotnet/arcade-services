@@ -14,24 +14,24 @@ using DataModels = Maestro.Data.Models;
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Read <see cref="SubscriptionOutcome"/>s.
+///   Exposes methods to Read <see cref="SubscriptionTriggerOutcome"/>s.
 /// </summary>
-[Route("subscription-outcomes")]
+[Route("subscription-trigger-outcomes")]
 [ApiVersion("2020-02-20")]
-public class SubscriptionOutcomesController : ControllerBase
+public class SubscriptionTriggerOutcomesController : ControllerBase
 {
     private const int DefaultResultLimit = 100;
     private const int MaxResultLimit = 1000;
 
     private readonly BuildAssetRegistryContext _context;
 
-    public SubscriptionOutcomesController(BuildAssetRegistryContext context)
+    public SubscriptionTriggerOutcomesController(BuildAssetRegistryContext context)
     {
         _context = context;
     }
 
     /// <summary>
-    ///   Gets the N latest <see cref="SubscriptionOutcome"/>s that match the given filters, ordered by date descending.
+    ///   Gets the N latest <see cref="SubscriptionTriggerOutcome"/>s that match the given filters, ordered by date descending.
     /// </summary>
     /// <param name="subscriptionId">Filter by subscription id.</param>
     /// <param name="buildId">Filter by build id.</param>
@@ -40,7 +40,7 @@ public class SubscriptionOutcomesController : ControllerBase
     /// <param name="operationId">Filter by operation id.</param>
     /// <param name="limit">Maximum number of results to return.</param>
     [HttpGet]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionOutcome>), Description = "The list of subscription outcomes")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionTriggerOutcome>), Description = "The list of subscription outcomes")]
     [ValidateModelState]
     public async Task<IActionResult> ListSubscriptionOutcomes(
         string? subscriptionId = null,
@@ -68,15 +68,15 @@ public class SubscriptionOutcomesController : ControllerBase
             }
         }
 
-        SubscriptionOutcomeType? parsedType = null;
+        OutcomeType? parsedType = null;
         if (!string.IsNullOrEmpty(subscriptionOutcomeType))
         {
-            if (!Enum.TryParse<SubscriptionOutcomeType>(subscriptionOutcomeType, ignoreCase: true, out var typeValue)
-                || !Enum.IsDefined(typeof(SubscriptionOutcomeType), typeValue))
+            if (!Enum.TryParse<OutcomeType>(subscriptionOutcomeType, ignoreCase: true, out var typeValue)
+                || !Enum.IsDefined(typeof(OutcomeType), typeValue))
             {
                 return BadRequest(new
                 {
-                    message = $"subscriptionOutcomeType must be one of: {string.Join(", ", Enum.GetNames(typeof(SubscriptionOutcomeType)))}."
+                    message = $"subscriptionOutcomeType must be one of: {string.Join(", ", Enum.GetNames(typeof(OutcomeType)))}."
                 });
             }
 
@@ -114,15 +114,15 @@ public class SubscriptionOutcomesController : ControllerBase
             .Take(limit)
             .ToListAsync();
 
-        return Ok(results.Select(o => new SubscriptionOutcome(o)).ToList());
+        return Ok(results.Select(o => new SubscriptionTriggerOutcome(o)).ToList());
     }
 
     /// <summary>
-    ///   Gets a single <see cref="SubscriptionOutcome"/> by its operation id.
+    ///   Gets a single <see cref="SubscriptionTriggerOutcome"/> by its operation id.
     /// </summary>
-    /// <param name="operationId">The operation id of the <see cref="SubscriptionOutcome"/>.</param>
+    /// <param name="operationId">The operation id of the <see cref="SubscriptionTriggerOutcome"/>.</param>
     [HttpGet("{operationId}")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(SubscriptionOutcome), Description = "The requested SubscriptionOutcome")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(SubscriptionTriggerOutcome), Description = "The requested SubscriptionTriggerOutcome")]
     [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "No subscription outcome was found for the supplied operation id")]
     [ValidateModelState]
     public async Task<IActionResult> GetSubscriptionOutcome([FromRoute][Required] string operationId)
@@ -135,6 +135,6 @@ public class SubscriptionOutcomesController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new SubscriptionOutcome(outcome));
+        return Ok(new SubscriptionTriggerOutcome(outcome));
     }
 }

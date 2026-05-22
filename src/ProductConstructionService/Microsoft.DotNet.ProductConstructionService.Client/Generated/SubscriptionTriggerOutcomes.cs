@@ -12,9 +12,9 @@ using Azure.Core;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
-    public partial interface ISubscriptionOutcomes
+    public partial interface ISubscriptionTriggerOutcomes
     {
-        Task<IImmutableList<Models.SubscriptionOutcome>> ListSubscriptionOutcomesAsync(
+        Task<IImmutableList<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
             int limit,
             int? buildId = default,
             DateTimeOffset? date = default,
@@ -24,16 +24,16 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Models.SubscriptionOutcome> GetSubscriptionOutcomeAsync(
+        Task<Models.SubscriptionTriggerOutcome> GetSubscriptionOutcomeAsync(
             string operationId,
             CancellationToken cancellationToken = default
         );
 
     }
 
-    internal partial class SubscriptionOutcomes : IServiceOperations<ProductConstructionServiceApi>, ISubscriptionOutcomes
+    internal partial class SubscriptionTriggerOutcomes : IServiceOperations<ProductConstructionServiceApi>, ISubscriptionTriggerOutcomes
     {
-        public SubscriptionOutcomes(ProductConstructionServiceApi client)
+        public SubscriptionTriggerOutcomes(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedListSubscriptionOutcomesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.SubscriptionOutcome>> ListSubscriptionOutcomesAsync(
+        public async Task<IImmutableList<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
             int limit,
             int? buildId = default,
             DateTimeOffset? date = default,
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/subscription-outcomes",
+                "/api/subscription-trigger-outcomes",
                 false);
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -111,7 +111,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.SubscriptionOutcome>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.SubscriptionTriggerOutcome>>(_content);
                         return _body;
                     }
                 }
@@ -143,7 +143,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedGetSubscriptionOutcomeRequest(RestApiException ex);
 
-        public async Task<Models.SubscriptionOutcome> GetSubscriptionOutcomeAsync(
+        public async Task<Models.SubscriptionTriggerOutcome> GetSubscriptionOutcomeAsync(
             string operationId,
             CancellationToken cancellationToken = default
         )
@@ -160,7 +160,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/subscription-outcomes/{operationId}".Replace("{operationId}", Uri.EscapeDataString(Client.Serialize(operationId))),
+                "/api/subscription-trigger-outcomes/{operationId}".Replace("{operationId}", Uri.EscapeDataString(Client.Serialize(operationId))),
                 false);
 
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
@@ -186,7 +186,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.SubscriptionOutcome>(_content);
+                        var _body = Client.Deserialize<Models.SubscriptionTriggerOutcome>(_content);
                         return _body;
                     }
                 }
