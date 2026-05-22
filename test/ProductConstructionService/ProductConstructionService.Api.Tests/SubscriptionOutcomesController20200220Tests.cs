@@ -82,7 +82,7 @@ public partial class SubscriptionOutcomesController20200220Tests
         result.Should().BeAssignableTo<ObjectResult>();
         var objResult = (ObjectResult)result;
         objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-        var outcomes = (List<SubscriptionOutcome>)objResult.Value!;
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
         outcomes.Should().HaveCount(2);
         outcomes.Should().OnlyContain(o => o.SubscriptionId == seeded.SubscriptionAId);
         // Ordered by date descending: A2 (Feb) before A1 (Jan).
@@ -102,7 +102,7 @@ public partial class SubscriptionOutcomesController20200220Tests
 
         var objResult = (ObjectResult)result;
         objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-        var outcomes = (List<SubscriptionOutcome>)objResult.Value!;
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
         outcomes.Should().ContainSingle()
             .Which.OperationId.Should().Be(seeded.OperationIdA1);
     }
@@ -140,10 +140,10 @@ public partial class SubscriptionOutcomesController20200220Tests
         result.Should().BeAssignableTo<ObjectResult>();
         var objResult = (ObjectResult)result;
         objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-        var outcome = (SubscriptionOutcome)objResult.Value!;
+        var outcome = (SubscriptionTriggerOutcome)objResult.Value!;
         outcome.OperationId.Should().Be(seeded.OperationIdA1);
         outcome.SubscriptionId.Should().Be(seeded.SubscriptionAId);
-        outcome.Type.Should().Be(SubscriptionOutcomeType.Updated);
+        outcome.Type.Should().Be(OutcomeType.Updated);
     }
 
     [Test]
@@ -180,10 +180,10 @@ public partial class SubscriptionOutcomesController20200220Tests
             return s => s.GetRequiredService<BuildAssetRegistryContext>();
         }
 
-        public static Func<IServiceProvider, SubscriptionOutcomesController> SubscriptionOutcomesController(IServiceCollection collection)
+        public static Func<IServiceProvider, SubscriptionTriggerOutcomesController> SubscriptionOutcomesController(IServiceCollection collection)
         {
-            collection.AddSingleton<SubscriptionOutcomesController>();
-            return s => s.GetRequiredService<SubscriptionOutcomesController>();
+            collection.AddSingleton<SubscriptionTriggerOutcomesController>();
+            return s => s.GetRequiredService<SubscriptionTriggerOutcomesController>();
         }
     }
 }
