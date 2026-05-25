@@ -100,7 +100,7 @@ dotnet-install: Installation finished
 Tool 'microsoft.dotnet.darc' (version '1.1.0-beta.24304.4') was successfully uninstalled.
 Installing Darc CLI version 1.1.0-beta.24306.2...
 You may need to restart your command window if this is the first dotnet tool you have installed.
-'D:\repos\arcade\.dotnet\dotnet.exe' tool install microsoft.dotnet.darc --version 1.1.0-beta.24306.2 --add-source 'https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json' -v minimal -g
+'D:\repos\arcade\.dotnet\dotnet.exe' tool install microsoft.dotnet.darc --version 1.1.0-beta.24306.2 --source 'https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json' -v minimal -g
 You can invoke the tool using the following command: darc
 Tool 'microsoft.dotnet.darc' (version '1.1.0-beta.24306.2') was successfully installed.
 ```
@@ -135,7 +135,7 @@ You should see `microsoft.dotnet.darc` in the list. If it's there but still not 
 If the PowerShell script doesn't work for your environment, you can install darc directly using the .NET CLI:
 
 ```
-dotnet tool install --global Microsoft.DotNet.Darc --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+dotnet tool install --global Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
 ```
 
 **DNX Alternative Installation:**
@@ -143,7 +143,7 @@ dotnet tool install --global Microsoft.DotNet.Darc --add-source https://pkgs.dev
 For environments where the standard installation doesn't work, you can use DNX (dotnet execute) to run darc without a global installation:
 
 ```
-dnx tool install Microsoft.DotNet.Darc --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+dnx tool install Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
 ```
 
 After installation with DNX, you can run darc commands using:
