@@ -1,16 +1,16 @@
 {
   "sdk": {
-    "version": "10.0.203",
+    "version": "10.0.300",
     "rollForward": "minor"
   },
   "tools": {
-    "dotnet": "10.0.203",
+    "dotnet": "10.0.300",
     "runtimes": {
       "dotnet": [
-        "10.0.7"
+        "10.0.8"
       ],
       "aspnetcore": [
-        "10.0.7"
+        "10.0.8"
       ]
     }
   },
