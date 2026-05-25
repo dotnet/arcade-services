@@ -47,7 +47,10 @@ public abstract class VmrScanner : IVmrScanner
 
         foreach (var sourceMapping in _dependencyTracker.Mappings.Where(mapping => mapping.Exclude.Count > 0))
         {
-            taskList.Add(ScanSubRepository(sourceMapping, baselineFilePath, cancellationToken));
+            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(sourceMapping)))
+            {
+                taskList.Add(ScanSubRepository(sourceMapping, baselineFilePath, cancellationToken));
+            }
         }
         taskList.Add(ScanBaseRepository(baselineFilePath, cancellationToken));
 
