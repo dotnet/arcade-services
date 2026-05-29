@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -17,6 +18,9 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class TriggerSubscriptionsOperation : Operation
 {
+    private static readonly TimeSpan OutcomePollInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan OutcomeWaitTimeout = TimeSpan.FromMinutes(5);
+
     private readonly TriggerSubscriptionsCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly ILogger<TriggerSubscriptionsOperation> _logger;
@@ -130,6 +134,7 @@ internal class TriggerSubscriptionsOperation : Operation
             }
 
             Console.Write($"Triggering {subscriptionsToTrigger.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+            var triggerTime = DateTime.UtcNow;
             foreach (var subscription in subscriptionsToTrigger)
             {
                 // If noConfirm was passed, print out the subscriptions as we go
@@ -148,6 +153,11 @@ internal class TriggerSubscriptionsOperation : Operation
             }
             Console.WriteLine("done");
 
+            if (!_options.NoOutcome)
+            {
+                await WaitForOutcomesAsync(subscriptionsToTrigger, triggerTime);
+            }
+
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
@@ -159,6 +169,59 @@ internal class TriggerSubscriptionsOperation : Operation
         {
             _logger.LogError(e, "Unexpected error while triggering subscriptions.");
             return Constants.ErrorCode;
+        }
+    }
+
+    /// <summary>
+    /// Polls for a new trigger outcome (dated after the trigger time) per subscription in parallel
+    /// and prints each as it arrives.
+    /// </summary>
+    private async Task WaitForOutcomesAsync(IReadOnlyList<Subscription> subscriptions, DateTime triggerTime)
+    {
+        Console.WriteLine($"Waiting up to {OutcomeWaitTimeout.TotalMinutes:0} minute(s) for outcome(s)... (pass --no-outcome to skip)");
+        using var cts = new CancellationTokenSource(OutcomeWaitTimeout);
+        await Task.WhenAll(subscriptions.Select(s => WaitForNewOutcomeAsync(s, triggerTime, cts.Token)));
+    }
+
+    private async Task WaitForNewOutcomeAsync(Subscription subscription, DateTime triggerTime, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(OutcomePollInterval, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+
+            try
+            {
+                var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(subscriptionId: subscription.Id, limit: 1);
+                var latest = outcomes.FirstOrDefault();
+                if (latest != null && latest.Date.UtcDateTime >= triggerTime)
+                {
+                    PrintOutcome(subscription, latest);
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Failed to fetch trigger outcome for subscription {SubscriptionId}", subscription.Id);
+            }
+        }
+
+        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+        Console.WriteLine("    (timed out waiting for outcome)");
+    }
+
+    private static void PrintOutcome(Subscription subscription, SubscriptionTriggerOutcome outcome)
+    {
+        Console.WriteLine($"  Outcome: {outcome.Type} (build {outcome.BuildId}, {outcome.Date:u})");
+        if (!string.IsNullOrWhiteSpace(outcome.Message))
+        {
+            Console.WriteLine($"  {outcome.Message}");
         }
     }
 }

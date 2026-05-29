@@ -50,6 +50,18 @@ public interface IBarApiClient : IBasicBarClient
     /// <returns>Subscription just triggered.</returns>
     Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false);
 
+    /// <summary>
+    ///     Get the most recent subscription trigger outcomes matching the given filters.
+    /// </summary>
+    /// <param name="subscriptionId">Optional subscription id to filter by.</param>
+    /// <param name="buildId">Optional build id to filter by.</param>
+    /// <param name="limit">Maximum number of outcomes to return.</param>
+    /// <returns>List of subscription trigger outcomes ordered by date descending.</returns>
+    Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
+        Guid? subscriptionId = null,
+        int? buildId = null,
+        int limit = 100);
+
     #endregion
 
     #region Pull Request Operations
