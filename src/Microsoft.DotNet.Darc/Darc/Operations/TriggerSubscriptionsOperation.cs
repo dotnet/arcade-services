@@ -187,6 +187,10 @@ internal class TriggerSubscriptionsOperation : Operation
 
     private async Task WaitForNewOutcomeAsync(Subscription subscription, int? build, DateTime triggerTime, CancellationToken cancellationToken)
     {
+        // A single trigger can produce multiple outcomes recorded close together (parallel checks).
+        // Poll until the first non-empty batch of post-trigger outcomes appears, then interpret that
+        // batch: prefer an Updated outcome, then any other meaningful (non-NoUpdate) outcome, and only
+        // fall back to a NoUpdate so a trailing NoUpdate never masks a real result in the same batch.
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -200,13 +204,26 @@ internal class TriggerSubscriptionsOperation : Operation
 
             try
             {
-                var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(subscriptionId: subscription.Id, buildId: build, limit: 1);
-                var latest = outcomes.FirstOrDefault();
-                if (latest != null && latest.Date.UtcDateTime >= triggerTime)
+                // Outcomes are ordered by date descending and already filtered to those since the trigger.
+                var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(
+                    subscriptionId: subscription.Id,
+                    buildId: build,
+                    date: triggerTime);
+
+                if (outcomes.Count == 0)
                 {
-                    PrintOutcome(subscription, latest);
-                    return;
+                    continue;
                 }
+
+                // A trigger can produce several outcomes at once (parallel checks). Prefer an Updated outcome,
+                // then any other meaningful (non-NoUpdate) outcome, and only fall back to the latest NoUpdate.
+                var outcome =
+                    outcomes.FirstOrDefault(o => o.Type == OutcomeType.Updated)
+                    ?? outcomes.FirstOrDefault(o => IsMeaningfulOutcome(o.Type))
+                    ?? outcomes[0];
+
+                PrintOutcome(subscription, outcome);
+                return;
             }
             catch (Exception e)
             {
@@ -218,12 +235,15 @@ internal class TriggerSubscriptionsOperation : Operation
         Console.WriteLine("    (timed out waiting for outcome)");
     }
 
+    private static bool IsMeaningfulOutcome(OutcomeType type) => type != OutcomeType.NoUpdate;
+
     private static void PrintOutcome(Subscription subscription, SubscriptionTriggerOutcome outcome)
     {
-        Console.WriteLine($"  Outcome: {outcome.Type} (build {outcome.BuildId})");
+        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+        Console.WriteLine($"    Outcome: {outcome.Type} (build {outcome.BuildId})");
         if (!string.IsNullOrWhiteSpace(outcome.Message))
         {
-            Console.WriteLine($"  {outcome.Message}");
+            Console.WriteLine($"    {outcome.Message}");
         }
     }
 }

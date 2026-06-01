@@ -186,7 +186,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
 
         return new SubscriptionUpdateResult(
-            $"Dependencies successfully updated into existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
+            $"Dependencies successfully updated in an existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
             SubscriptionOutcomeType.Updated);
     }
 
