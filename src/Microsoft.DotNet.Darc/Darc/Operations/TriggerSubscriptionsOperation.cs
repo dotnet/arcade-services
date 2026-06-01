@@ -182,10 +182,10 @@ internal class TriggerSubscriptionsOperation : Operation
         using var cts = new CancellationTokenSource(OutcomeWaitTimeout);
 
         int? expectedBuildId = _options.Build > 0 ? _options.Build : null;
-        await Task.WhenAll(subscriptions.Select(s => WaitForNewOutcomeAsync(s, triggerTime, expectedBuildId, cts.Token)));
+        await Task.WhenAll(subscriptions.Select(s => WaitForNewOutcomeAsync(s, expectedBuildId, triggerTime, cts.Token)));
     }
 
-    private async Task WaitForNewOutcomeAsync(Subscription subscription, DateTime triggerTime, CancellationToken cancellationToken)
+    private async Task WaitForNewOutcomeAsync(Subscription subscription, int? build, DateTime triggerTime, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -200,7 +200,7 @@ internal class TriggerSubscriptionsOperation : Operation
 
             try
             {
-                var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(subscriptionId: subscription.Id, limit: 1);
+                var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(subscriptionId: subscription.Id, buildId: build, limit: 1);
                 var latest = outcomes.FirstOrDefault();
                 if (latest != null && latest.Date.UtcDateTime >= triggerTime)
                 {
