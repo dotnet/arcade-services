@@ -28,7 +28,6 @@ stages:
           image: 1es-windows-2022
           os: windows
         variables:
-        - group: DotNet-Symbol-Server-Pats
         - group: Publish-Build-Assets
         - _InternalBuildArgs: >
             /p:DotNetSignType=$(_SignType)
