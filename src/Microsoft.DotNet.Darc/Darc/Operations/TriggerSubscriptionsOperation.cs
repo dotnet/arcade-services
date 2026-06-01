@@ -178,9 +178,11 @@ internal class TriggerSubscriptionsOperation : Operation
     /// </summary>
     private async Task WaitForOutcomesAsync(IReadOnlyList<Subscription> subscriptions, DateTime triggerTime)
     {
-        Console.WriteLine($"Waiting up to {OutcomeWaitTimeout.TotalMinutes:0} minute(s) for outcome(s)... (pass --no-outcome to skip)");
+        Console.WriteLine($"Waiting up to {OutcomeWaitTimeout.TotalMinutes:0} minute(s) for outcome(s)... (pass --no-wait to skip)");
         using var cts = new CancellationTokenSource(OutcomeWaitTimeout);
-        await Task.WhenAll(subscriptions.Select(s => WaitForNewOutcomeAsync(s, triggerTime, cts.Token)));
+
+        int? expectedBuildId = _options.Build > 0 ? _options.Build : null;
+        await Task.WhenAll(subscriptions.Select(s => WaitForNewOutcomeAsync(s, triggerTime, expectedBuildId, cts.Token)));
     }
 
     private async Task WaitForNewOutcomeAsync(Subscription subscription, DateTime triggerTime, CancellationToken cancellationToken)
