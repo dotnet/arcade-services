@@ -1,18 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
 using AwesomeAssertions;
 using Maestro.Common;
-using Microsoft.DotNet.DarcLib.Helpers;
-using NUnit.Framework;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
+namespace Maestro.Common.Tests;
 
 [TestFixture]
-public class GitRepoUrlParserTest
+public class GitRepoUrlUtilsTests
 {
     [Test]
     public void ParseGitHubUrlTest()
@@ -58,7 +53,7 @@ public class GitRepoUrlParserTest
             ("azdo", "https://dev.azure.com/dnceng/internal/_git/test-repo"),
             ("github1", "https://github.com/dotnet/test-repo"),
             ("github2", "https://github.com/dotnet/test-repo"),
-            ("local", new NativePath("/var/test-repo")),
+            ("local", "/var/test-repo"),
         };
 
         var sorted = repos
