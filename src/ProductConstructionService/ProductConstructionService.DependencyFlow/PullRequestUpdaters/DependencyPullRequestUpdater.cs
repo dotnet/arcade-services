@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -62,7 +63,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             await UpdatePullRequestAsync(update, pr, prInfo, build);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                $"Dependencies successfully updated into existing PR: {pr.Url}",
+                $"Dependencies successfully updated into existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
                 SubscriptionOutcomeType.Updated);
         }
 
@@ -82,7 +83,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                $"Pull request created successfully: {newPr.Url}",
+                $"Pull request created successfully: {GitRepoUrlUtils.TurnApiUrlToWebsite(newPr.Url)}",
                 SubscriptionOutcomeType.Updated);
         }
     }

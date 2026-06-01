@@ -99,7 +99,7 @@ public class GitRepoUrlUtilsTests
     [TestCase("https://api.github.com/repos/microsoft/CsWinRT/pulls/999", "https://github.com/microsoft/CsWinRT/pull/999")]
     public void TurnApiUrlToWebsite_ConvertsGitHubApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
     {
-        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl, null, null);
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl);
         result.Should().Be(expectedWebUrl);
     }
 
@@ -108,7 +108,7 @@ public class GitRepoUrlUtilsTests
               "https://dev.azure.com/dnceng/internal/_git/test-repo-guid/pullrequest/123")]
     public void TurnApiUrlToWebsite_ConvertsAzureDevOpsApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
     {
-        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl, null, null);
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl);
         result.Should().Be(expectedWebUrl);
     }
 
@@ -118,7 +118,7 @@ public class GitRepoUrlUtilsTests
     [TestCase("not-a-url")]
     public void TurnApiUrlToWebsite_ReturnsOriginalUrlWhenNotApiUrl(string url)
     {
-        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(url, null, null);
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(url);
         result.Should().Be(url);
     }
 }

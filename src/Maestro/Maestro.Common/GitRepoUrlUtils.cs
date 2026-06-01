@@ -49,7 +49,7 @@ public static partial class GitRepoUrlUtils
     /// Converts a GitHub or Azure DevOps API pull request URL to its corresponding web URL.
     /// If the URL does not match a known API format, it is returned unchanged.
     /// </summary>
-    public static string TurnApiUrlToWebsite(string url, string? orgName, string? repoName)
+    public static string TurnApiUrlToWebsite(string url, string? orgName = null, string? repoName = null)
     {
         var match = GitHubApiPrUrlRegex().Match(url);
         if (match.Success)

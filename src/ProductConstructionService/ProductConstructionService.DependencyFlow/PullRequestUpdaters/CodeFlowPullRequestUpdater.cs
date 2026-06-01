@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
 using Maestro.Common.Telemetry;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -86,7 +87,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
-                $"The existing PR ({pr.Url}) is already up to date with source commit {update.SourceSha}",
+                $"The existing PR ({GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}) is already up to date with source commit {update.SourceSha}",
                 Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
         }
 
@@ -99,7 +100,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
-                $"The existing codeflow PR ({pr.Url}) was not updated because it is currently blocked from future updates.",
+                $"The existing codeflow PR ({GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}) was not updated because it is currently blocked from future updates.",
                 Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable);
         }
 
@@ -141,7 +142,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (!codeFlowRes.HadUpdates)
         {
             var msg = pr !=  null
-                ? $"There were no codeflow updates for the existing PR {pr.Url}"
+                ? $"There were no codeflow updates for the existing PR {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}"
                 : "Codeflow PR not created: there were no updates for this subscription";
             return new SubscriptionUpdateResult(msg, Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
         }
@@ -180,7 +181,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 upstreamRepoDiffs,
                 isUnsafeFlow);
             return new SubscriptionUpdateResult(
-                $"Conflict resolution is required by user for PR {prUrl}",
+                $"Conflict resolution is required by user for PR {GitRepoUrlUtils.TurnApiUrlToWebsite(prUrl)}",
                 Maestro.Data.Models.SubscriptionOutcomeType.HasConflict);
         }
 
@@ -210,7 +211,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
 
             return new SubscriptionUpdateResult(
-                $"New codeflow PR created: {pr.Url}.",
+                $"New codeflow PR created: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
                 Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
         else
@@ -230,7 +231,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 upstreamRepoDiffs);
 
             return new SubscriptionUpdateResult(
-                $"Existing codeflow PR has been updated: {pr.Url}.",
+                $"Existing codeflow PR has been updated: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
                 Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
     }
