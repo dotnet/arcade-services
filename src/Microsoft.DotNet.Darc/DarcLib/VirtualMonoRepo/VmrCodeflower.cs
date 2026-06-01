@@ -181,7 +181,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they haven't,
     /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
     /// </summary>
-    protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
+    protected async Task RevertFalsePositiveChangesAsync(
         SourceMapping mapping,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -236,7 +236,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
     /// <summary>
     /// Returns true if the given target-repo-relative path should be skipped by
-    /// <see cref="RevertFalsePositiveAdditionsAndDeletionsAsync"/> (e.g. because it lives
+    /// <see cref="RevertFalsePositiveChangesAsync"/> (e.g. because it lives
     /// inside a submodule whose contents are not stored in the source repo).
     /// </summary>
     protected abstract bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping);
