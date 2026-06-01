@@ -34,8 +34,6 @@ stages:
             /p:TeamName=$(_TeamName)
             /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
             /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-            /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-            /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         - _BuildConfig: Release
         - _PublishType: blob
