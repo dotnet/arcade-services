@@ -28,15 +28,12 @@ stages:
           image: 1es-windows-2022
           os: windows
         variables:
-        - group: DotNet-Symbol-Server-Pats
         - group: Publish-Build-Assets
         - _InternalBuildArgs: >
             /p:DotNetSignType=$(_SignType)
             /p:TeamName=$(_TeamName)
             /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
             /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-            /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-            /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         - _BuildConfig: Release
         - _PublishType: blob
