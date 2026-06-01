@@ -1530,21 +1530,26 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         var fileDeletedInBFPR = "fileee-deleted-in-pr.txt";
         var fileAddedBackInBFPR = "fileee-added-back-in-pr.txt";
         var fileAddedBackInBFPRContent = "not important";
+        var fileModifiedInBFPR = "fileee-modified-in-pr.txt";
+        var fileModifiedInBFPROriginalContent = "original content";
 
-        // Add a file that we'll delete in the repo, but add back in the BF PR, flow it
+        // Add a file that we'll delete in the repo, but add back in the BF PR,
+        // and a file that we'll modify in the repo, but revert the modification in the BF PR
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
-        await GitOperations.CommitAll(VmrPath, "Add fileee-added-back-in-pr.txt");
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileModifiedInBFPR, fileModifiedInBFPROriginalContent);
+        await GitOperations.CommitAll(VmrPath, "Add fileee-added-back-in-pr.txt and fileee-modified-in-pr.txt");
         var codeFlowResult = await ChangeVmrFileAndFlowIt("1", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeBackFlow(bfBranchName);
 
-        // Add a file that will later delete in the BF
-        // and delete the file we added above
+        // Add a file that will later delete in the BF, delete the file we added above,
+        // and modify the file we added above
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / fileDeletedInBFPR, "text");
         File.Delete(_productRepoVmrPath / fileAddedBackInBFPR);
-        await GitOperations.CommitAll(VmrPath, "Add and delete a file");
+        await File.WriteAllTextAsync(_productRepoVmrPath / fileModifiedInBFPR, "modified in the vmr");
+        await GitOperations.CommitAll(VmrPath, "Add, delete, and modify a file");
 
         // now open up a bf, but don't merge it yet
         codeFlowResult = await ChangeVmrFileAndFlowIt("2", bfBranchName);
@@ -1559,14 +1564,17 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeForwardFlow(ffBranchName);
 
-        // now checkout the BF branch in the repo, delete and bring back a file and merge the PR
+        // now checkout the BF branch in the repo, delete and bring back a file,
+        // revert the modification (deny the change in the PR), and merge the PR
         await GitOperations.Checkout(ProductRepoPath, bfBranchName);
         File.Delete(ProductRepoPath / fileDeletedInBFPR);
         await File.WriteAllTextAsync(ProductRepoPath / fileAddedBackInBFPR, fileAddedBackInBFPRContent);
-        await GitOperations.CommitAll(ProductRepoPath, "Delete and bring back file in BF");
+        await File.WriteAllTextAsync(ProductRepoPath / fileModifiedInBFPR, fileModifiedInBFPROriginalContent);
+        await GitOperations.CommitAll(ProductRepoPath, "Delete, bring back, and revert modified file in BF");
         await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
 
-        // now do a second BF, the file we deleted in the PR shouldn't be there, while the file we added back should be there
+        // now do a second BF, the file we deleted in the PR shouldn't be there, the file we added back should be there,
+        // and the file whose modification we reverted should keep the original content
         codeFlowResult = await ChangeVmrFileAndFlowIt("3", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
         await FinalizeBackFlow(bfBranchName);
@@ -1574,6 +1582,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(ProductRepoPath / fileDeletedInBFPR).Should().BeFalse();
         File.Exists(ProductRepoPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(ProductRepoPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
+        File.ReadAllText(ProductRepoPath / fileModifiedInBFPR).Should().Be(fileModifiedInBFPROriginalContent);
 
         // forward flow to make sure the files stay the same as in the repo
         codeFlowResult = await ChangeRepoFileAndFlowIt("4", ffBranchName);
@@ -1583,6 +1592,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / fileDeletedInBFPR).Should().BeFalse();
         File.Exists(_productRepoVmrPath / fileAddedBackInBFPR).Should().BeTrue();
         File.ReadAllText(_productRepoVmrPath / fileAddedBackInBFPR).Should().Be(fileAddedBackInBFPRContent);
+        File.ReadAllText(_productRepoVmrPath / fileModifiedInBFPR).Should().Be(fileModifiedInBFPROriginalContent);
     }
 
     [Test]

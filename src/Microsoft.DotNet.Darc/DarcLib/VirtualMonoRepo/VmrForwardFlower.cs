@@ -403,7 +403,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
-        await RevertFalsePositiveAdditionsAndDeletionsAsync(
+        await RevertFalsePositiveChangesAsync(
             codeflowOptions.Mapping,
             lastFlows,
             vmr,

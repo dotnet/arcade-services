@@ -177,11 +177,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// If the last flow was adding or deleting a file, and this change was reverted in PR, the next opposite direction flow
+    /// If the last flow was adding, deleting or modifying a file, and this change was reverted in PR, the next opposite direction flow
     /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they haven't,
     /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
     /// </summary>
-    protected async Task RevertFalsePositiveAdditionsAndDeletionsAsync(
+    protected async Task RevertFalsePositiveChangesAsync(
         SourceMapping mapping,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -211,32 +211,32 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
 
-        var deletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=D"], cancellationToken)).GetOutputLines();
+        var modifiedOrDeletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=MD"], cancellationToken)).GetOutputLines();
 
-        foreach (var deletedFile in deletedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
+        foreach (var file in modifiedOrDeletedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
         {
-            var sourcePath = ToSourceRepoPath(deletedFile, mapping);
+            var sourcePath = ToSourceRepoPath(file, mapping);
             var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
             var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
 
             if (lastContent == currentContent)
             {
-                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", deletedFile], cancellationToken);
-                _logger.LogInformation("File {file} was attempted to be deleted in the last flow, but got added back in the PR, adding it back in this flow", deletedFile);
+                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", file], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be deleted or modified in the last flow, but the change got reverted in the PR, restoring it in this flow", file);
             }
         }
     }
 
     /// <summary>
     /// Maps a path that is relative to the target repo of the current flow to a path that is
-    /// relative to the source repo. Used by RevertFalsePositiveAdditionsAndDeletionsAsync to
+    /// relative to the source repo. Used by RevertFalsePositiveChangesAsync to
     /// look up the equivalent file in the source repo.
     /// </summary>
     protected abstract string ToSourceRepoPath(string targetPath, SourceMapping mapping);
 
     /// <summary>
     /// Returns true if the given target-repo-relative path should be skipped by
-    /// <see cref="RevertFalsePositiveAdditionsAndDeletionsAsync"/> (e.g. because it lives
+    /// <see cref="RevertFalsePositiveChangesAsync"/> (e.g. because it lives
     /// inside a submodule whose contents are not stored in the source repo).
     /// </summary>
     protected abstract bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping);
