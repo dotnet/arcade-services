@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+
 namespace Maestro.Common;
 
 public enum GitRepoType
@@ -11,8 +14,67 @@ public enum GitRepoType
     None
 }
 
-public static class GitRepoUrlUtils
+public static partial class GitRepoUrlUtils
 {
+    [GeneratedRegex(@"https://api.github.com/repos/(?<org>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>[0-9]+)/?")]
+    private static partial Regex GitHubApiPrUrlRegex();
+
+    [GeneratedRegex(@"https://dev.azure.com/(?<org>[^/]+)/(?<project>[^/]+)/_apis/git/repositories/(?<repo>[^/]+)/pullRequests/(?<id>[0-9]+)/?")]
+    private static partial Regex AzdoApiPrUrlRegex();
+
+    private static readonly ConcurrentDictionary<string, string> WellKnownIds = new(
+        new Dictionary<string, string>
+        {
+            ["7ea9116e-9fac-403d-b258-b31fcf1bb293"] = "internal", // https://dev.azure.com/dnceng/internal
+            ["0bdbc590-a062-4c3f-b0f6-9383f67865ee"] = "DevDiv", // https://dev.azure.com/devdiv/DevDiv
+            ["55e8140e-57ac-4e5f-8f9c-c7c15b51929d"] = "ProjectReunion", // https://dev.azure.com/microsoft/ProjectReunion
+        });
+
+    private static string ResolveWellKnownIds(string str)
+    {
+        foreach (var pair in WellKnownIds)
+        {
+            str = str.Replace(pair.Key, pair.Value);
+        }
+
+        return str;
+    }
+
+    /// <summary>
+    /// Returns true if the given URL matches the Azure DevOps API pull request URL format.
+    /// </summary>
+    public static bool IsAzdoApiPrUrl(string url) => AzdoApiPrUrlRegex().IsMatch(url);
+
+    /// <summary>
+    /// Converts a GitHub or Azure DevOps API pull request URL to its corresponding web URL.
+    /// If the URL does not match a known API format, it is returned unchanged.
+    /// </summary>
+    public static string TurnApiUrlToWebsite(string url, string? orgName, string? repoName)
+    {
+        var match = GitHubApiPrUrlRegex().Match(url);
+        if (match.Success)
+        {
+            return $"https://github.com/{match.Groups["org"]}/{match.Groups["repo"]}/pull/{match.Groups["id"]}";
+        }
+
+        match = AzdoApiPrUrlRegex().Match(url);
+        if (match.Success)
+        {
+            // If we have the repo name, use it to replace the repo GUID in the URL
+            if (repoName != null)
+            {
+                WellKnownIds[match.Groups["repo"].Value] = orgName + "-" + repoName;
+            }
+
+            var org = ResolveWellKnownIds(match.Groups["org"].Value);
+            var project = ResolveWellKnownIds(match.Groups["project"].Value);
+            var repo = ResolveWellKnownIds(match.Groups["repo"].Value);
+            return $"https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{match.Groups["id"]}";
+        }
+
+        return url;
+    }
+
     private const string GitHubComString = "github.com";
     private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
