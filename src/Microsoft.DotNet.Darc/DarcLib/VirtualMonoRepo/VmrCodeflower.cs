@@ -229,7 +229,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
     /// <summary>
     /// Maps a path that is relative to the target repo of the current flow to a path that is
-    /// relative to the source repo. Used by RevertFalsePositiveAdditionsAndDeletionsAsync to
+    /// relative to the source repo. Used by RevertFalsePositiveChangesAsync to
     /// look up the equivalent file in the source repo.
     /// </summary>
     protected abstract string ToSourceRepoPath(string targetPath, SourceMapping mapping);
