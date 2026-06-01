@@ -153,7 +153,7 @@ internal class TriggerSubscriptionsOperation : Operation
             }
             Console.WriteLine("done");
 
-            if (!_options.NoOutcome)
+            if (!_options.NoWait)
             {
                 await WaitForOutcomesAsync(subscriptionsToTrigger, triggerTime);
             }
@@ -218,7 +218,7 @@ internal class TriggerSubscriptionsOperation : Operation
 
     private static void PrintOutcome(Subscription subscription, SubscriptionTriggerOutcome outcome)
     {
-        Console.WriteLine($"  Outcome: {outcome.Type} (build {outcome.BuildId}, {outcome.Date:u})");
+        Console.WriteLine($"  Outcome: {outcome.Type} (build {outcome.BuildId})");
         if (!string.IsNullOrWhiteSpace(outcome.Message))
         {
             Console.WriteLine($"  {outcome.Message}");
