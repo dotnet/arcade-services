@@ -31,14 +31,7 @@ public static partial class GitRepoUrlUtils
         });
 
     private static string ResolveWellKnownIds(string str)
-    {
-        foreach (var pair in WellKnownIds)
-        {
-            str = str.Replace(pair.Key, pair.Value);
-        }
-
-        return str;
-    }
+        => WellKnownIds.TryGetValue(str, out var resolved) ? resolved : str;
 
     /// <summary>
     /// Returns true if the given URL matches the Azure DevOps API pull request URL format.

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -21,6 +22,25 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
     public partial class ProductConstructionServiceApi
     {
+        // Overload to ensure DateTimeOffset values are serialized into query strings as a plain
+        // ISO 8601 string. The generated generic Serialize<T>(T) falls back to JsonConvert.SerializeObject,
+        // which wraps the value in quotes and produces a URL like ?date=%222026-06-02T...%22, which the
+        // server's model binder cannot parse.
+        public string Serialize(DateTimeOffset? value)
+        {
+            if (value == null)
+            {
+                return string.Empty;
+            }
+
+            return value.Value.ToString("o", CultureInfo.InvariantCulture);
+        }
+
+        public string Serialize(DateTimeOffset value)
+        {
+            return value.ToString("o", CultureInfo.InvariantCulture);
+        }
+
         // Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         // then a generic RestApiException is thrown.
         partial void HandleFailedRequest(RestApiException ex)
