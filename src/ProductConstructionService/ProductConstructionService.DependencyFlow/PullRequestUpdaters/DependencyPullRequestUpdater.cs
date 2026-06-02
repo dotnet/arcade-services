@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -59,11 +60,9 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     {
         if (pr != null && prInfo != null)
         {
-            await UpdatePullRequestAsync(update, pr, prInfo, build);
+            var result = await UpdatePullRequestAsync(update, pr, prInfo, build);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
-            return new SubscriptionUpdateResult(
-                $"Dependencies successfully updated into existing PR: {pr.Url}",
-                SubscriptionOutcomeType.Updated);
+            return result;
         }
 
         // Create a new (regular) dependency update PR
@@ -82,12 +81,12 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                $"Pull request created successfully: {newPr.Url}",
+                $"Pull request created successfully: {GitRepoUrlUtils.TurnApiUrlToWebsite(newPr.Url)}",
                 SubscriptionOutcomeType.Updated);
         }
     }
 
-    private async Task UpdatePullRequestAsync(
+    private async Task<SubscriptionUpdateResult> UpdatePullRequestAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest pr,
         PullRequest prInfo,
@@ -109,7 +108,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
                 || update.CoherencyUpdates.Count == 0)))
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
-            return;
+            return new SubscriptionUpdateResult($"No new updates found for existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}", SubscriptionOutcomeType.NoUpdate);
         }
 
         pr.RequiredUpdates = MergeExistingWithIncomingUpdates(
@@ -124,7 +123,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         if (pr.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
-            return;
+            return new SubscriptionUpdateResult($"No new updates found for existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}", SubscriptionOutcomeType.NoUpdate);
         }
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
@@ -185,6 +184,10 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
+
+        return new SubscriptionUpdateResult(
+            $"Dependencies successfully updated in an existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
+            SubscriptionOutcomeType.Updated);
     }
 
     /// <summary>

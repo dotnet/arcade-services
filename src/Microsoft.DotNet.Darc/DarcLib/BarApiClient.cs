@@ -179,6 +179,19 @@ public class BarApiClient : IBarApiClient
         return _barClient.Subscriptions.TriggerSubscriptionAsync(sourceBuildId, force, subscriptionId);
     }
 
+    public async Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
+        Guid? subscriptionId = null,
+        int? buildId = null,
+        DateTimeOffset? date = null,
+        int limit = 100)
+    {
+        return await _barClient.SubscriptionTriggerOutcomes.ListSubscriptionOutcomesAsync(
+            limit: limit,
+            buildId: buildId,
+            after: date,
+            subscriptionId: subscriptionId?.ToString());
+    }
+
     /// <summary>
     ///     Retrieve a subscription by ID
     /// </summary>
