@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.WorkItems;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -25,7 +26,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         AndPendingUpdates(b);
         using (WithExistingPullRequest(b, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b);
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Rescheduled, res.OutcomeType);
         }
     }
 
@@ -47,8 +49,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Updated, res.OutcomeType);
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
@@ -74,8 +77,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2);
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Rescheduled, res.OutcomeType);
             ThenShouldHaveInProgressPullRequestState(b1, b2.Id);
             ThenShouldHavePendingUpdateState(b2, isCodeFlow: false);
             AndShouldNotHavePullRequestCheckReminder();
@@ -100,8 +104,10 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
 
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
+
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.NoUpdate, res.OutcomeType);
             ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             AndShouldHaveNoPendingUpdateState();
             AndShouldNotHavePullRequestCheckReminder();
@@ -126,8 +132,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
 
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Updated, res.OutcomeType);
             ThenShouldHaveInProgressPullRequestState(b2);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
@@ -152,8 +159,10 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
 
+            var res = await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
+
+            ShouldHaveSubscriptionUpdateResult(SubscriptionOutcomeType.Updated, res.OutcomeType);
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();

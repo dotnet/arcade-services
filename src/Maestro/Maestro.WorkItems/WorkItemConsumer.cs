@@ -120,6 +120,8 @@ internal class WorkItemConsumer(
                 _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
                 await workItemScope.RunWorkItemAsync(
                     node,
+                    message.DequeueCount,
+                    _options.Value.MaxWorkItemRetries,
                     telemetryScope,
                     // We record the delay between the message being queued and the processing start time
                     // We must only measure that once we actually start processing the work item which might mean waiting for lock
@@ -153,6 +155,14 @@ internal class WorkItemConsumer(
     }
 }
 
-internal class NonRetriableException(string message) : Exception(message)
+public class NonRetriableException(string message) : Exception(message)
+{
+}
+
+/// <summary>
+/// Represents cases where the subscription update process fails due to incorrect configurations in the
+/// subscription, build, or source/target repositories. Only for issues that can be fixed by the user.
+/// </summary>
+public class SubscriptionUpdateInputException(string message) : NonRetriableException(message)
 {
 }

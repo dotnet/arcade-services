@@ -42,6 +42,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IRepository Repository { get; }
         IStatus Status { get; }
         ISubscriptions Subscriptions { get; }
+        ISubscriptionTriggerOutcomes SubscriptionTriggerOutcomes { get; }
     }
 
     public partial interface IServiceOperations<T>
@@ -151,6 +152,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public ISubscriptions Subscriptions { get; }
 
+        public ISubscriptionTriggerOutcomes SubscriptionTriggerOutcomes { get; }
 
         public ProductConstructionServiceApi()
             :this(new ProductConstructionServiceApiOptions())

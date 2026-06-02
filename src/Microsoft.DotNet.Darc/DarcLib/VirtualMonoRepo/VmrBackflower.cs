@@ -407,7 +407,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-            await RevertFalsePositiveAdditionsAndDeletionsAsync(
+            await RevertFalsePositiveChangesAsync(
                 codeflowOptions.Mapping,
                 lastFlows,
                 targetRepo,

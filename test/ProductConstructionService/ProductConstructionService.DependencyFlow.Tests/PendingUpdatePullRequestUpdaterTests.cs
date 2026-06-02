@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -19,14 +20,14 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
         services.AddSingleton(MergePolicyEvaluator.Object);
     }
 
-    protected async Task WhenProcessPendingUpdatesAsyncIsCalled(
+    protected async Task<SubscriptionUpdateResult> WhenProcessPendingUpdatesAsyncIsCalled(
         Build forBuild,
         bool isCodeFlow = false,
         bool applyNewestOnly = false,
         bool forceUpdate = false,
         bool shouldGetUpdates = false)
     {
-        await Execute(
+        SubscriptionUpdateResult res = await Execute(
             async context =>
             {
                 if (shouldGetUpdates)
@@ -36,8 +37,10 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
                 }
                 BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
                 IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeFlow);
-                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), applyNewestOnly, forceUpdate, buildDTO);
+                return await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), applyNewestOnly, forceUpdate, buildDTO);
             });
+
+        return res;
     }
 
     protected void GivenAPendingUpdateReminder(Build forBuild, bool isCodeFlow = false)

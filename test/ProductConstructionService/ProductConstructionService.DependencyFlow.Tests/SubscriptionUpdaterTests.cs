@@ -48,7 +48,7 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
             async provider =>
             {
                 var updater = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(provider, forSubscription.Id);
-                await updater.UpdateSubscriptionAsync(andForBuild.Id);
+                await updater.UpdateSubscriptionAsync(forSubscription, andForBuild);
             });
     }
 

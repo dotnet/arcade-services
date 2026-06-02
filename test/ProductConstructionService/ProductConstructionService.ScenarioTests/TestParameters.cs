@@ -158,7 +158,7 @@ public class TestParameters : IDisposable
 
         if (!string.IsNullOrEmpty(_darcPackageSource))
         {
-            toolInstallArgs.Add("--add-source");
+            toolInstallArgs.Add("--source");
             toolInstallArgs.Add(_darcPackageSource);
         }
 

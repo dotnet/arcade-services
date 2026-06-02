@@ -37,9 +37,12 @@ internal abstract class UpdaterTests : TestsWithServices
     protected Dictionary<string, object> ExpectedPRCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedEvaluationResultCacheState { get; private set; } = null!;
+    protected SubscriptionOutcomeType ExpectedSubscriptionUpdateResult;
 
     protected MockReminderManagerFactory Reminders { get; private set; } = null!;
     protected MockRedisCacheFactory Cache { get; private set; } = null!;
+    protected SubscriptionOutcomeType SubscriptionUpdateResult;
+
 
     protected Mock<IRemoteFactory> RemoteFactory { get; private set; } = null!;
     protected Dictionary<string, Mock<IRemote>> DarcRemotes { get; private set; } = null!;
@@ -102,6 +105,7 @@ internal abstract class UpdaterTests : TestsWithServices
         }
         Cache.Data.Where(pair => pair.Value is InProgressPullRequest).Should().BeEquivalentTo(ExpectedPRCacheState);
         Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
+        ExpectedSubscriptionUpdateResult.Should().Be(SubscriptionUpdateResult);
     }
 
     protected void SetState<T>(Subscription subscription, T state) where T : class
@@ -143,6 +147,17 @@ internal abstract class UpdaterTests : TestsWithServices
     {
         ExpectedEvaluationResultCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
+
+    protected void SetExpectedSubscriptionUpdateResult<T>(SubscriptionOutcomeType expected)
+    {
+        ExpectedSubscriptionUpdateResult = expected;
+    }
+
+    protected void SetSubscriptionUpdateResult<T>(SubscriptionOutcomeType result)
+    {
+        SubscriptionUpdateResult = result;
+    }
+
     protected static PullRequestUpdaterId GetPullRequestUpdaterId(Subscription subscription)
     {
         return subscription.PolicyObject.Batchable

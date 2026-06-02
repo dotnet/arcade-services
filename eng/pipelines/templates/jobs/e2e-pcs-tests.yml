@@ -41,7 +41,7 @@ jobs:
       $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
       $darcVersion = $Matches[1]
       mkdir darc
-      .\eng\common\dotnet.ps1 tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
+      .\eng\common\dotnet.ps1 tool install Microsoft.DotNet.Darc --tool-path .\darc --source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
     displayName: Install Darc
 
   - template: /eng/common/templates-official/steps/get-federated-access-token.yml

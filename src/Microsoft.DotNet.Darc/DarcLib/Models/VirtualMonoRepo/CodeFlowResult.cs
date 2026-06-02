@@ -12,7 +12,8 @@ public record CodeFlowResult(
     bool HadUpdates,
     IReadOnlyCollection<UnixPath> ConflictedFiles,
     NativePath RepoPath,
-    List<DependencyUpdate> DependencyUpdates)
+    List<DependencyUpdate> DependencyUpdates,
+    bool FlowIsBlocked = false)
 {
     public bool HadConflicts => ConflictedFiles.Count > 0;
 

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -49,7 +50,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _subscriptionEventRecorder = subscriptionEventRecorder;
     }
 
-    protected override async Task ProcessSubscriptionUpdateAsync(
+    protected override async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         PullRequest? prInfo,
@@ -60,21 +61,30 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         {
             await UpdatePullRequestAsync(update, pr, prInfo, build);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
-            return;
+            return new SubscriptionUpdateResult(
+                $"Dependencies successfully updated into existing PR: {pr.Url}",
+                SubscriptionOutcomeType.Updated);
         }
 
         // Create a new (regular) dependency update PR
-        var prUrl = await CreatePullRequestAsync(update, build);
-        if (prUrl == null)
+        var newPr = await CreatePullRequestAsync(update, build);
+        if (newPr == null)
         {
             _logger.LogInformation("No changes required for subscription {subscriptionId}, no pull request created", update.SubscriptionId);
+
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
+            return new SubscriptionUpdateResult(
+                "",
+                SubscriptionOutcomeType.NoUpdate);
         }
         else
         {
-            _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
+            _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
+            await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
+            return new SubscriptionUpdateResult(
+                $"Pull request created successfully: {newPr.Url}",
+                SubscriptionOutcomeType.Updated);
         }
-
-        await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
     }
 
     private async Task UpdatePullRequestAsync(
