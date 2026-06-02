@@ -208,7 +208,7 @@ internal class TriggerSubscriptionsOperation : Operation
                 var outcomes = await _barClient.GetSubscriptionTriggerOutcomesAsync(
                     subscriptionId: subscription.Id,
                     buildId: build,
-                    date: triggerTime);
+                    after: triggerTime);
 
                 if (outcomes.Count == 0)
                 {

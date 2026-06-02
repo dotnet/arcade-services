@@ -35,7 +35,8 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     /// </summary>
     /// <param name="subscriptionId">Filter by subscription id.</param>
     /// <param name="buildId">Filter by build id.</param>
-    /// <param name="date">Return only outcomes on or after this date. Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
+    /// <param name="after">Return only outcomes on or after this date (inclusive lower bound). Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
+    /// <param name="before">Return only outcomes on or before this date (inclusive upper bound). Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
     /// <param name="subscriptionOutcomeType">Filter by outcome type (e.g. "Updated", "NoUpdate", "Failure").</param>
     /// <param name="operationId">Filter by operation id.</param>
     /// <param name="limit">Maximum number of results to return.</param>
@@ -45,7 +46,8 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     public async Task<IActionResult> ListSubscriptionOutcomes(
         string? subscriptionId = null,
         int? buildId = null,
-        DateTimeOffset? date = null,
+        DateTimeOffset? after = null,
+        DateTimeOffset? before = null,
         string? subscriptionOutcomeType = null,
         string? operationId = null,
         [Range(1, MaxResultLimit)] int limit = DefaultResultLimit)
@@ -93,9 +95,14 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             query = query.Where(o => o.BuildId == buildId.Value);
         }
 
-        if (date.HasValue)
+        if (after.HasValue)
         {
-            query = query.Where(o => o.Date >= date.Value);
+            query = query.Where(o => o.Date >= after.Value);
+        }
+
+        if (before.HasValue)
+        {
+            query = query.Where(o => o.Date <= before.Value);
         }
 
         if (parsedType.HasValue)

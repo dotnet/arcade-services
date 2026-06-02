@@ -55,13 +55,13 @@ public interface IBarApiClient : IBasicBarClient
     /// </summary>
     /// <param name="subscriptionId">Optional subscription id to filter by.</param>
     /// <param name="buildId">Optional build id to filter by.</param>
-    /// <param name="date">Optional lower bound; only outcomes on or after this date are returned.</param>
+    /// <param name="after">Optional lower bound; only outcomes on or after this date are returned.</param>
     /// <param name="limit">Maximum number of outcomes to return.</param>
     /// <returns>List of subscription trigger outcomes ordered by date descending.</returns>
     Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
         Guid? subscriptionId = null,
         int? buildId = null,
-        DateTimeOffset? date = null,
+        DateTimeOffset? after = null,
         int limit = 100);
 
     #endregion

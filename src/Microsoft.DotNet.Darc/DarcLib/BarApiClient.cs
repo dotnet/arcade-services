@@ -188,7 +188,7 @@ public class BarApiClient : IBarApiClient
         return await _barClient.SubscriptionTriggerOutcomes.ListSubscriptionOutcomesAsync(
             limit: limit,
             buildId: buildId,
-            date: date,
+            after: date,
             subscriptionId: subscriptionId?.ToString());
     }
 
