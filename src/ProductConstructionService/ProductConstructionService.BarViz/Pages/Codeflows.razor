@@ -84,6 +84,7 @@
         </FluentSelect>
     </Header>
     <Content>
+        <SubscriptionErrorBanner Errors="@SubscriptionErrors" />
         <FluentDataGrid Items="@CodeFlowRows"
                         AutoFit="true"
                         TGridItem=CodeflowRow
@@ -96,7 +97,12 @@
             </EmptyContent>
             <ChildContent>
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="RowSortBy(r => r.MappingName)" Align="Align.Start">
-                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                    <div style="display: flex; align-items: center;">
+                        <span style="width: 20px; display: inline-flex; justify-content: center; flex: 0 0 auto;">
+                            <SubscriptionOutcomeAlertIcon ForwardFlowOutcome="@context.ForwardFlow?.LatestOutcome" BackflowOutcome="@context.Backflow?.LatestOutcome" />
+                        </span>
+                        <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                    </div>
                 </TemplateColumn>
                 <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="RowSortBy(r => r.ForwardFlowChannel)" Align="Align.Start">
                     <FluentLabel Title="The channel on which the subscription flows into the VMR.">@(context.ForwardFlowChannel ?? "—")</FluentLabel>
@@ -106,7 +112,6 @@
                                 SortBy="@RowSortByDescending(r => r.ForwardFlow != null && r.ForwardFlow.Subscription != null && r.ForwardFlow.Subscription.LastAppliedBuild != null ? r.ForwardFlow.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Start">
                     <FluentLabel Title="@(context.ForwardFlow?.Subscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        <span class="status-dot @GetBuildStatusClass(context.ForwardFlow)"></span>
                         @if (context.ForwardFlow?.Subscription?.LastAppliedBuild != null)
                         {
                             @(GetLastAppliedBuildTimeAgo(context.ForwardFlow.Subscription))
@@ -148,7 +153,6 @@
                                 SortBy="@RowSortByDescending(r => r.Backflow != null && r.Backflow.Subscription != null && r.Backflow.Subscription.LastAppliedBuild != null ? r.Backflow.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Start">
                     <FluentLabel Title="@(context.Backflow?.Subscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        <span class="status-dot @GetBuildStatusClass(context.Backflow)"></span>
                         @if (context.Backflow?.Subscription?.LastAppliedBuild != null)
                         {
                             @(GetLastAppliedBuildTimeAgo(context.Backflow.Subscription))
@@ -192,26 +196,28 @@
 
 
 @code {
-[SupplyParameterFromQuery(Name = "branch")]
-private string? branchQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "branch")]
+    private string? branchQuery { get; set; }
 
-IQueryable<CodeflowRow>? CodeFlowRows;
+    IQueryable<CodeflowRow>? CodeFlowRows;
 
-private DefaultChannel? _defaultChannel = null;
+    private IReadOnlyList<SubscriptionOutcomeError> SubscriptionErrors = [];
 
-private string _branch = "main";
+    private DefaultChannel? _defaultChannel = null;
 
-private List<DefaultChannel> DefaultChannels = [];
+    private string _branch = "main";
 
-GridSort<CodeflowRow> RowSortBy(Expression<Func<CodeflowRow, string?>> sorter)
-    => GridSort<CodeflowRow>.ByAscending(sorter);
+    private List<DefaultChannel> DefaultChannels = [];
 
-GridSort<CodeflowRow> RowSortByDescending(Expression<Func<CodeflowRow, string?>> sorter)
-    => GridSort<CodeflowRow>.ByDescending(sorter);
+    GridSort<CodeflowRow> RowSortBy(Expression<Func<CodeflowRow, string?>> sorter)
+        => GridSort<CodeflowRow>.ByAscending(sorter);
 
-private const string DefaultVmrUrl = "https://github.com/dotnet/dotnet";
+    GridSort<CodeflowRow> RowSortByDescending(Expression<Func<CodeflowRow, string?>> sorter)
+        => GridSort<CodeflowRow>.ByDescending(sorter);
 
-protected override async Task OnInitializedAsync()
+    private const string DefaultVmrUrl = "https://github.com/dotnet/dotnet";
+
+    protected override async Task OnInitializedAsync()
     {
         CodeFlowRows = null;
         _branch = branchQuery ?? "main";
@@ -236,8 +242,7 @@ protected override async Task OnInitializedAsync()
 
         if (optimisticStatuses != null)
         {
-            CodeFlowRows = ToRows(optimisticStatuses)
-                .AsQueryable();
+            SetRows(optimisticStatuses);
         }
         else
         {
@@ -265,6 +270,7 @@ protected override async Task OnInitializedAsync()
         if (_defaultChannel == null)
         {
             CodeFlowRows = Array.Empty<CodeflowRow>().AsQueryable();
+            SubscriptionErrors = [];
             return;
         }
 
@@ -272,8 +278,15 @@ protected override async Task OnInitializedAsync()
             branch: _branch,
             repositoryUrl: _defaultChannel.Repository);
 
-        CodeFlowRows = ToRows(statuses)
-            .AsQueryable();
+        SetRows(statuses);
+    }
+
+    void SetRows(IList<CodeflowStatus> statuses)
+    {
+        var rows = ToRows(statuses);
+        CodeFlowRows = rows.AsQueryable();
+        SubscriptionErrors = SubscriptionOutcomeHelper.GetErroredSubscriptions(
+            rows.SelectMany(r => new CodeflowSubscriptionStatus?[] { r.ForwardFlow, r.Backflow }));
     }
 
     async Task OnDefaultChannelSelected(DefaultChannel channel)
@@ -439,35 +452,6 @@ protected override async Task OnInitializedAsync()
     }
 
     /// <summary>
-    /// Returns a CSS class for the build status traffic light.
-    /// Green: up to date or ≤5 builds behind and ≤3 days behind.
-    /// Yellow: ≤15 builds behind and ≤7 days behind.
-    /// Red: more than 15 builds behind or more than 7 days behind.
-    /// </summary>
-    static string GetBuildStatusClass(CodeflowSubscriptionStatus? status)
-    {
-        if (status?.Subscription?.LastAppliedBuild == null)
-        {
-            return "";
-        }
-
-        int staleness = status.Subscription.LastAppliedBuild.Staleness;
-        double daysBehind = GetDaysBehindNewest(status);
-
-        if (staleness <= 5 && daysBehind <= 3)
-        {
-            return "status-green";
-        }
-
-        if (staleness <= 15 && daysBehind <= 7)
-        {
-            return "status-yellow";
-        }
-
-        return "status-red";
-    }
-
-    /// <summary>
     /// Returns a CSS class for the PR age traffic light.
     /// Green: less than 3 days old.
     /// Yellow: less than 7 days old.
@@ -493,18 +477,6 @@ protected override async Task OnInitializedAsync()
         }
 
         return "status-red";
-    }
-
-    static double GetDaysBehindNewest(CodeflowSubscriptionStatus status)
-    {
-        if (status.NewestBuildDate == null
-            || status.NewestBuildDate < DateTimeOffset.UnixEpoch
-            || status.Subscription?.LastAppliedBuild?.DateProduced == null)
-        {
-            return 0;
-        }
-
-        return ((DateTimeOffset)status.NewestBuildDate - status.Subscription.LastAppliedBuild.DateProduced).TotalDays;
     }
 
     record CodeflowRow(

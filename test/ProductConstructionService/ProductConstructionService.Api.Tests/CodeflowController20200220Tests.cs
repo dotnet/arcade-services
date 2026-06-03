@@ -17,6 +17,7 @@ using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
+using DataModels = Maestro.Data.Models;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -461,6 +462,131 @@ public partial class CodeflowController20200220Tests
         statuses[0].MappingName.Should().Be(sourceDirectory);
     }
 
+    [Test]
+    public async Task GetCodeflowStatuses_PopulatesLatestOutcome_WithMostRecentOutcome()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+
+        var testId = Guid.NewGuid();
+        var vmrRepo = $"https://github.com/dotnet/dotnet-{testId}";
+        var vmrBranch = "main";
+        var sourceRepo = $"https://github.com/dotnet/runtime-{testId}";
+        var targetDirectory = "src/runtime";
+
+        var channel = await CreateChannel(data, $"test-channel-{Guid.NewGuid()}");
+        var subscription = await CreateForwardFlowSubscription(
+            data,
+            sourceRepo,
+            vmrRepo,
+            vmrBranch,
+            channel.Id,
+            targetDirectory);
+
+        await CreateSubscriptionOutcome(data, subscription.Id, DataModels.SubscriptionOutcomeType.Updated, DateTime.UtcNow.AddDays(-2), "old outcome");
+        await CreateSubscriptionOutcome(data, subscription.Id, DataModels.SubscriptionOutcomeType.Failure, DateTime.UtcNow.AddDays(-1), "latest failure");
+
+        var result = await data.Controller.GetCodeflowStatuses(vmrRepo, vmrBranch);
+
+        var statuses = (List<CodeflowStatus>)((OkObjectResult)result).Value!;
+
+        statuses.Should().HaveCount(1);
+        var latestOutcome = statuses[0].ForwardFlow!.LatestOutcome;
+        latestOutcome.Should().NotBeNull();
+        latestOutcome!.SubscriptionId.Should().Be(subscription.Id);
+        latestOutcome.Type.Should().Be(OutcomeType.Failure);
+        latestOutcome.Message.Should().Be("latest failure");
+    }
+
+    [Test]
+    public async Task GetCodeflowStatuses_PopulatesLatestOutcome_EvenWhenItIsNotAnError()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+
+        var testId = Guid.NewGuid();
+        var vmrRepo = $"https://github.com/dotnet/dotnet-{testId}";
+        var vmrBranch = "main";
+        var sourceRepo = $"https://github.com/dotnet/runtime-{testId}";
+        var targetDirectory = "src/runtime";
+
+        var channel = await CreateChannel(data, $"test-channel-{Guid.NewGuid()}");
+        var subscription = await CreateForwardFlowSubscription(
+            data,
+            sourceRepo,
+            vmrRepo,
+            vmrBranch,
+            channel.Id,
+            targetDirectory);
+
+        await CreateSubscriptionOutcome(data, subscription.Id, DataModels.SubscriptionOutcomeType.Failure, DateTime.UtcNow.AddDays(-2), "old failure");
+        await CreateSubscriptionOutcome(data, subscription.Id, DataModels.SubscriptionOutcomeType.Updated, DateTime.UtcNow.AddDays(-1), "latest update");
+
+        var result = await data.Controller.GetCodeflowStatuses(vmrRepo, vmrBranch);
+
+        var statuses = (List<CodeflowStatus>)((OkObjectResult)result).Value!;
+
+        statuses.Should().HaveCount(1);
+        var latestOutcome = statuses[0].ForwardFlow!.LatestOutcome;
+        latestOutcome.Should().NotBeNull();
+        latestOutcome!.Type.Should().Be(OutcomeType.Updated);
+        latestOutcome.Message.Should().Be("latest update");
+    }
+
+    [Test]
+    public async Task GetCodeflowStatuses_LeavesLatestOutcomeNull_WhenNoOutcomesExist()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+
+        var testId = Guid.NewGuid();
+        var vmrRepo = $"https://github.com/dotnet/dotnet-{testId}";
+        var vmrBranch = "main";
+        var sourceRepo = $"https://github.com/dotnet/runtime-{testId}";
+        var targetDirectory = "src/runtime";
+
+        var channel = await CreateChannel(data, $"test-channel-{Guid.NewGuid()}");
+        await CreateForwardFlowSubscription(
+            data,
+            sourceRepo,
+            vmrRepo,
+            vmrBranch,
+            channel.Id,
+            targetDirectory);
+
+        var result = await data.Controller.GetCodeflowStatuses(vmrRepo, vmrBranch);
+
+        var statuses = (List<CodeflowStatus>)((OkObjectResult)result).Value!;
+
+        statuses.Should().HaveCount(1);
+        statuses[0].ForwardFlow!.LatestOutcome.Should().BeNull();
+    }
+
+    [Test]
+    public async Task GetCodeflowStatuses_PopulatesLatestOutcomePerSubscription()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+
+        var testId = Guid.NewGuid();
+        var vmrRepo = $"https://github.com/dotnet/dotnet-{testId}";
+        var vmrBranch = "main";
+        var runtimeRepo = $"https://github.com/dotnet/runtime-{testId}";
+        var aspnetRepo = $"https://github.com/dotnet/aspnetcore-{testId}";
+
+        var channel = await CreateChannel(data, $"test-channel-{Guid.NewGuid()}");
+
+        var runtimeSub = await CreateForwardFlowSubscription(data, runtimeRepo, vmrRepo, vmrBranch, channel.Id, "src/runtime");
+        var aspnetSub = await CreateForwardFlowSubscription(data, aspnetRepo, vmrRepo, vmrBranch, channel.Id, "src/aspnetcore");
+
+        await CreateSubscriptionOutcome(data, runtimeSub.Id, DataModels.SubscriptionOutcomeType.Failure, DateTime.UtcNow.AddDays(-1), "runtime failure");
+        await CreateSubscriptionOutcome(data, aspnetSub.Id, DataModels.SubscriptionOutcomeType.UserError, DateTime.UtcNow.AddDays(-1), "aspnet user error");
+
+        var result = await data.Controller.GetCodeflowStatuses(vmrRepo, vmrBranch);
+
+        var statuses = (List<CodeflowStatus>)((OkObjectResult)result).Value!;
+
+        statuses.Should().HaveCount(2);
+        statuses.First(s => s.MappingName == "src/runtime").ForwardFlow!.LatestOutcome!.Message.Should().Be("runtime failure");
+        statuses.First(s => s.MappingName == "src/aspnetcore").ForwardFlow!.LatestOutcome!.Message.Should().Be("aspnet user error");
+    }
+
     [TestDependencyInjectionSetup]
     private static class TestDataConfiguration
     {
@@ -669,6 +795,26 @@ public partial class CodeflowController20200220Tests
             subscription.LastAppliedBuildId = buildId;
             await testData.Context.SaveChangesAsync();
         }
+    }
+
+    private static async Task CreateSubscriptionOutcome(
+        TestData testData,
+        Guid subscriptionId,
+        DataModels.SubscriptionOutcomeType type,
+        DateTime date,
+        string message)
+    {
+        var outcome = new DataModels.SubscriptionOutcome
+        {
+            OperationId = Guid.NewGuid().ToString("N"),
+            SubscriptionId = subscriptionId,
+            BuildId = 1,
+            Date = date,
+            Message = message,
+            Type = type,
+        };
+        testData.Context.SubscriptionOutcomes.Add(outcome);
+        await testData.Context.SaveChangesAsync();
     }
 
     private static void AddInProgressPullRequest(TestData testData, Guid subscriptionId, string prUrl)

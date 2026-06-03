@@ -38,4 +38,7 @@ public class CodeflowSubscriptionStatus
 
     [JsonProperty("newestBuildDate")]
     public DateTimeOffset? NewestBuildDate { get; set; }
+
+    [JsonProperty("latestOutcome")]
+    public SubscriptionTriggerOutcome LatestOutcome { get; set; }
 }
