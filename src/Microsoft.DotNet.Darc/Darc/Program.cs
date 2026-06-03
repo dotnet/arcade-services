@@ -55,10 +55,9 @@ internal static class Program
                         using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        if (!await DarcVersionValidator.ValidateAsync(
+                        if (!opts.IsCi && !await DarcVersionValidator.ValidateAsync(
                                 opts.BuildAssetRegistryBaseUri,
-                                provider.GetRequiredService<ILogger>(),
-                                opts.IsCi))
+                                provider.GetRequiredService<ILogger>()))
                         {
                             return Constants.ErrorCode;
                         }
