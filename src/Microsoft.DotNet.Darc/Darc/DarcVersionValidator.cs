@@ -14,8 +14,14 @@ internal static class DarcVersionValidator
 {
     private const string DevVersionSuffix = "-dev";
 
-    public static async Task<bool> ValidateAsync(string baseUri, ILogger logger)
+    public static async Task<bool> ValidateAsync(string baseUri, ILogger logger, bool isCi = false)
     {
+        // CI pipelines don't flow code and are not subject to the minimum version requirement.
+        if (isCi)
+        {
+            return true;
+        }
+
         var darcVersionString = GetDarcVersion();
 
         // Dev builds bypass enforcement, no need to call the service.

@@ -57,7 +57,8 @@ internal static class Program
 
                         if (!await DarcVersionValidator.ValidateAsync(
                                 opts.BuildAssetRegistryBaseUri,
-                                provider.GetRequiredService<ILogger>()))
+                                provider.GetRequiredService<ILogger>(),
+                                opts.IsCi))
                         {
                             return Constants.ErrorCode;
                         }
