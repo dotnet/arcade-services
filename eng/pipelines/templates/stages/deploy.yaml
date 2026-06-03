@@ -160,6 +160,34 @@ stages:
           GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
         continueOnError: true
 
+      - task: AzureCLI@2
+        displayName: Bump minimum darc version if breaking-darc-change label is present
+        inputs:
+          azureSubscription: "Darc: Maestro Production"
+          scriptType: pscore
+          scriptLocation: inlineScript
+          inlineScript: |
+            $PSNativeCommandUseErrorActionPreference = $true
+            $labels = gh api "repos/dotnet/arcade-services/commits/$(Build.SourceVersion)/pulls" --jq '.[].labels[].name'
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "FAILED to query labels for commit $(Build.SourceVersion) (gh exited with code $LASTEXITCODE). This is NOT the same as the label being absent. The minimum darc version was NOT bumped and must be verified manually."
+              exit 1
+            }
+            if ($labels -contains 'breaking-darc-change') {
+              $darcVersion = Invoke-RestMethod "https://maestro.dot.net/api/darc-version?api-version=2020-02-20"
+              if ([string]::IsNullOrWhiteSpace($darcVersion)) {
+                Write-Warning "Empty darc version returned from maestro.dot.net; skipping minimum darc version bump."
+                exit 1
+              }
+              Write-Host "Found 'breaking-darc-change' label. Bumping minimum darc version to $darcVersion..."
+              $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe set-min-darc-version $darcVersion --isCi
+            } else {
+              Write-Host "No 'breaking-darc-change' label found. Skipping minimum darc version bump."
+            }
+        env:
+          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+        continueOnError: true
+
 - stage: E2ETests
   displayName: Run E2E Tests
   dependsOn:
