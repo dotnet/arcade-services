@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class TriggerSubscriptionsOperation : Operation
 {
     private static readonly TimeSpan OutcomePollInterval = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan OutcomeWaitTimeout = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan OutcomeWaitTimeout = TimeSpan.FromMinutes(15);
 
     private readonly TriggerSubscriptionsCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
@@ -179,6 +179,7 @@ internal class TriggerSubscriptionsOperation : Operation
     private async Task WaitForOutcomesAsync(IReadOnlyList<Subscription> subscriptions, DateTime triggerTime)
     {
         Console.WriteLine($"Waiting up to {OutcomeWaitTimeout.TotalMinutes:0} minute(s) for outcome(s)... (pass --no-wait to skip)");
+        Console.WriteLine("Cancelling the wait will not cancel the subscription(s) - they will still go through.");
         using var cts = new CancellationTokenSource(OutcomeWaitTimeout);
 
         int? expectedBuildId = _options.Build > 0 ? _options.Build : null;
