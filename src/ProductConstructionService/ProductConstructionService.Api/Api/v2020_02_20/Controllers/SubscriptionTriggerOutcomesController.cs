@@ -125,6 +125,33 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     }
 
     /// <summary>
+    ///   Gets the latest <see cref="SubscriptionTriggerOutcome"/> for each of the requested subscriptions.
+    /// </summary>
+    /// <param name="subscriptionIds">The subscription ids to fetch the latest outcome for.</param>
+    [HttpGet("latest")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionTriggerOutcome>), Description = "The latest outcome for each of the requested subscriptions")]
+    [ValidateModelState]
+    public async Task<IActionResult> GetLatestSubscriptionOutcomes([FromQuery] Guid[] subscriptionIds)
+    {
+        if (subscriptionIds == null || subscriptionIds.Length == 0)
+        {
+            return Ok(new List<SubscriptionTriggerOutcome>());
+        }
+
+        var ids = subscriptionIds.Distinct().ToList();
+
+        var latestOutcomes = await _context.SubscriptionOutcomes
+            .AsNoTracking()
+            .Where(o => ids.Contains(o.SubscriptionId)
+                && o.Date == _context.SubscriptionOutcomes
+                    .Where(o2 => o2.SubscriptionId == o.SubscriptionId)
+                    .Max(o2 => o2.Date))
+            .ToListAsync();
+
+        return Ok(latestOutcomes.Select(o => new SubscriptionTriggerOutcome(o)).ToList());
+    }
+
+    /// <summary>
     ///   Gets a single <see cref="SubscriptionTriggerOutcome"/> by its operation id.
     /// </summary>
     /// <param name="operationId">The operation id of the <see cref="SubscriptionTriggerOutcome"/>.</param>

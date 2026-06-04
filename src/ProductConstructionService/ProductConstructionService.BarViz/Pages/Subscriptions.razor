@@ -2,6 +2,7 @@
 
 @using System.Linq.Expressions
 @using System.Text
+@using System.Collections.Immutable
 @using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
@@ -100,6 +101,7 @@
         </div>
     </Header>
     <Content>
+        <SubscriptionErrorBanner Errors="@SubscriptionErrors" />
         <FluentDataGrid Id="pullRequestsGrid"
                         Items="@FilteredSubscriptions"
                         AutoFit="true"
@@ -115,6 +117,8 @@
             </EmptyContent>
             <ChildContent>
                 <TemplateColumn Title="Source repository" Sortable="true" SortBy="SortBy(sub => sub.SourceRepository)" Align="Align.Start">
+                    @{ LatestOutcomes.TryGetValue(context.Id, out var latestOutcome); }
+                    <SubscriptionOutcomeAlertIcon Tooltip="@SubscriptionOutcomeHelper.GetSubscriptionTooltip(latestOutcome)" />
                     <FluentAnchor Href="@context.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.SourceRepository.Replace("https://", null)</FluentAnchor>
                     @if (context.SourceEnabled)
                     {
@@ -172,6 +176,8 @@
     private string? showDisabledQuery { get; set; }
 
     Dictionary<Guid, string> PullRequests = [];
+    Dictionary<Guid, SubscriptionTriggerOutcome> LatestOutcomes = [];
+    IReadOnlyList<SubscriptionOutcomeError> SubscriptionErrors = [];
     List<Subscription>? AllSubscriptions = null;
     IQueryable<Subscription>? FilteredSubscriptions;
     PaginationState Pagination = new() { ItemsPerPage = 25 };
@@ -208,7 +214,34 @@
 
         AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
 
+        await TryLoadLatestOutcomesAsync();
+
         FilterSubscriptions();
+    }
+
+    async Task TryLoadLatestOutcomesAsync()
+    {
+        LatestOutcomes = [];
+        SubscriptionErrors = [];
+
+        if (AllSubscriptions is not { Count: > 0 })
+        {
+            return;
+        }
+
+        try
+        {
+            var subscriptionIds = AllSubscriptions.Select(s => s.Id).ToImmutableList();
+            var outcomes = await PcsApi.SubscriptionTriggerOutcomes.GetLatestSubscriptionOutcomesAsync(subscriptionIds);
+            LatestOutcomes = outcomes.ToDictionary(o => o.SubscriptionId);
+            SubscriptionErrors = SubscriptionOutcomeHelper.GetErroredSubscriptions(AllSubscriptions, LatestOutcomes);
+        }
+        catch
+        {
+            // Latest trigger outcomes are supplementary; failing to load them must not break the page.
+            LatestOutcomes = [];
+            SubscriptionErrors = [];
+        }
     }
 
     void HandleSearchInput()

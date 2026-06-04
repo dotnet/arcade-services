@@ -99,7 +99,7 @@
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="RowSortBy(r => r.MappingName)" Align="Align.Start">
                     <div style="display: flex; align-items: center;">
                         <span style="width: 20px; display: inline-flex; justify-content: center; flex: 0 0 auto;">
-                            <SubscriptionOutcomeAlertIcon ForwardFlowOutcome="@context.ForwardFlow?.LatestOutcome" BackflowOutcome="@context.Backflow?.LatestOutcome" />
+                            <SubscriptionOutcomeAlertIcon Tooltip="@SubscriptionOutcomeHelper.GetCodeflowTooltip(context.ForwardFlow?.LatestOutcome, context.Backflow?.LatestOutcome)" />
                         </span>
                         <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                     </div>

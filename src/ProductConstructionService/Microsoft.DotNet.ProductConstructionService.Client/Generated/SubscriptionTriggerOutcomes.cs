@@ -27,6 +27,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<List<Models.SubscriptionTriggerOutcome>> GetLatestSubscriptionOutcomesAsync(
+            IImmutableList<Guid> subscriptionIds,
+            CancellationToken cancellationToken = default
+        );
+
         Task<Models.SubscriptionTriggerOutcome> GetSubscriptionOutcomeAsync(
             string operationId,
             CancellationToken cancellationToken = default
@@ -144,6 +149,88 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListSubscriptionOutcomesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedGetLatestSubscriptionOutcomesRequest(RestApiException ex);
+
+        public async Task<List<Models.SubscriptionTriggerOutcome>> GetLatestSubscriptionOutcomesAsync(
+            IImmutableList<Guid> subscriptionIds,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            if (subscriptionIds == default(IImmutableList<Guid>))
+            {
+                throw new ArgumentNullException(nameof(subscriptionIds));
+            }
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/subscription-trigger-outcomes/latest",
+                false);
+
+            if (subscriptionIds != default(IImmutableList<Guid>))
+            {
+                foreach (var _item in subscriptionIds)
+                {
+                    _url.AppendQuery("subscriptionIds", Client.Serialize(_item));
+                }
+            }
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetLatestSubscriptionOutcomesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetLatestSubscriptionOutcomesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<List<Models.SubscriptionTriggerOutcome>>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnGetLatestSubscriptionOutcomesFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetLatestSubscriptionOutcomesRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

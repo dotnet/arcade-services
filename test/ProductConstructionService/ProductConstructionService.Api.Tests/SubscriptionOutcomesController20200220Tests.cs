@@ -157,6 +157,72 @@ public partial class SubscriptionOutcomesController20200220Tests
         result.Should().BeAssignableTo<NotFoundResult>();
     }
 
+    [Test]
+    public async Task GetLatestSubscriptionOutcomes_ReturnsLatestPerSubscription()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        var seeded = await SeedOutcomesAsync(data.Context);
+
+        IActionResult result = await data.SubscriptionOutcomesController.GetLatestSubscriptionOutcomes(
+            [seeded.SubscriptionAId, seeded.SubscriptionBId]);
+
+        result.Should().BeAssignableTo<ObjectResult>();
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        outcomes.Should().HaveCount(2);
+        // A's latest is the Feb "Failure" outcome (A2), B's only outcome is the Mar one (B1).
+        outcomes.Should().ContainSingle(o => o.SubscriptionId == seeded.SubscriptionAId)
+            .Which.OperationId.Should().Be(seeded.OperationIdA2);
+        outcomes.Should().ContainSingle(o => o.SubscriptionId == seeded.SubscriptionBId)
+            .Which.OperationId.Should().Be(seeded.OperationIdB1);
+    }
+
+    [Test]
+    public async Task GetLatestSubscriptionOutcomes_FiltersToRequestedIds()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        var seeded = await SeedOutcomesAsync(data.Context);
+
+        IActionResult result = await data.SubscriptionOutcomesController.GetLatestSubscriptionOutcomes(
+            [seeded.SubscriptionAId]);
+
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        outcomes.Should().ContainSingle()
+            .Which.SubscriptionId.Should().Be(seeded.SubscriptionAId);
+    }
+
+    [Test]
+    public async Task GetLatestSubscriptionOutcomes_ReturnsEmpty_WhenNoIdsRequested()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        await SeedOutcomesAsync(data.Context);
+
+        IActionResult result = await data.SubscriptionOutcomesController.GetLatestSubscriptionOutcomes([]);
+
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        outcomes.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task GetLatestSubscriptionOutcomes_ReturnsEmpty_WhenSubscriptionHasNoOutcomes()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        await SeedOutcomesAsync(data.Context);
+
+        IActionResult result = await data.SubscriptionOutcomesController.GetLatestSubscriptionOutcomes(
+            [Guid.NewGuid()]);
+
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        outcomes.Should().BeEmpty();
+    }
+
     [TestDependencyInjectionSetup]
     private static class TestDataConfiguration
     {
