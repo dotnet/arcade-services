@@ -92,7 +92,7 @@ public class NonLinearCodeflowException(bool flowingOldBuild = false) : DarcExce
 }
 
 public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrSha, string lastFFRepoSha, string currentRepoSha)
-    : DarcException($"Cannot unsafe backflow commit {currentVmrSha} because the current repo SHA {currentRepoSha} is not a descendant of the last fast-forwarded repo SHA {lastFFRepoSha}. "
+    : DarcException($"Cannot unsafe backflow commit {currentVmrSha} because the last forward flown repo SHA {lastFFRepoSha} is not a descendant of the current repo SHA {currentRepoSha}. "
         + "Doing so would attempt to 'reset' the repo branch to a different branch")
 {
 }
