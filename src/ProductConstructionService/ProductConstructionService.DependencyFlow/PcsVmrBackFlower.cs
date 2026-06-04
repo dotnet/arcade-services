@@ -69,6 +69,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             targetRepoPath: null,
+            additionalTargetRemotes: [subscription.TargetRepository],
             unsafeFlow,
             cancellationToken);
 

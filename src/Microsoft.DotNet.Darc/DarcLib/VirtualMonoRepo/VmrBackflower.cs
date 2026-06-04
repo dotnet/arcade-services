@@ -105,6 +105,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             targetRepoPath,
+            additionalTargetRemotes: [],
             unsafeFlow,
             cancellationToken);
 
@@ -442,6 +443,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         NativePath? targetRepoPath,
+        IReadOnlyList<string> additionalTargetRemotes,
         bool unsafeFlow,
         CancellationToken cancellationToken)
     {
@@ -450,7 +452,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
 
-        var remotes = new[] { mapping.DefaultRemote, repoInfo.RemoteUri }
+        string[] remotes = [.. additionalTargetRemotes, mapping.DefaultRemote, repoInfo.RemoteUri];
+        remotes = remotes 
             .Distinct()
             .OrderRemotesByLocalPublicOther()
             .ToArray();
