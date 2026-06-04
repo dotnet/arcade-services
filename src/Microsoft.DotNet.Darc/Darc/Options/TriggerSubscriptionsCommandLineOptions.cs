@@ -20,4 +20,7 @@ internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLine
 
     [Option('f', "force", HelpText = "Force update of existing pull requests even if they have pending or successful checks.")]
     public bool Force { get; set; }
+
+    [Option("no-wait", HelpText = "Do not wait for the latest trigger outcome after triggering.")]
+    public bool NoWait { get; set; }
 }

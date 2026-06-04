@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -17,10 +16,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface ISubscriptionTriggerOutcomes
     {
-        Task<IImmutableList<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
+        Task<List<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
             int limit,
+            DateTimeOffset? after = default,
+            DateTimeOffset? before = default,
             int? buildId = default,
-            DateTimeOffset? date = default,
             string operationId = default,
             string subscriptionId = default,
             string subscriptionOutcomeType = default,
@@ -47,10 +47,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedListSubscriptionOutcomesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
+        public async Task<List<Models.SubscriptionTriggerOutcome>> ListSubscriptionOutcomesAsync(
             int limit,
+            DateTimeOffset? after = default,
+            DateTimeOffset? before = default,
             int? buildId = default,
-            DateTimeOffset? date = default,
             string operationId = default,
             string subscriptionId = default,
             string subscriptionOutcomeType = default,
@@ -75,9 +76,13 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             {
                 _url.AppendQuery("buildId", Client.Serialize(buildId));
             }
-            if (date != default(DateTimeOffset?))
+            if (after != default(DateTimeOffset?))
             {
-                _url.AppendQuery("date", Client.Serialize(date));
+                _url.AppendQuery("after", Client.Serialize(after));
+            }
+            if (before != default(DateTimeOffset?))
+            {
+                _url.AppendQuery("before", Client.Serialize(before));
             }
             if (!string.IsNullOrEmpty(subscriptionOutcomeType))
             {
@@ -114,7 +119,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.SubscriptionTriggerOutcome>>(_content);
+                        var _body = Client.Deserialize<List<Models.SubscriptionTriggerOutcome>>(_content);
                         return _body;
                     }
                 }

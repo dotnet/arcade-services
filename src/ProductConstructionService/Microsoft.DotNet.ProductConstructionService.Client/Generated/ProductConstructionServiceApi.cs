@@ -179,6 +179,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Repository = new Repository(this);
             Status = new Status(this);
             Subscriptions = new Subscriptions(this);
+            SubscriptionTriggerOutcomes = new SubscriptionTriggerOutcomes(this);
             SerializerSettings = new JsonSerializerSettings
             {
                 Converters =

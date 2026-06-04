@@ -254,11 +254,18 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             // Operation IDs are 32-char hex strings (e.g. "dbd48626590fcd10d5685a27baecbca5").
             b.Property(o => o.OperationId).HasMaxLength(32).IsFixedLength();
             b.Property(o => o.Type).HasConversion<string>();
+            // SQL Server datetime2 doesn't preserve DateTimeKind. The recorder writes
+            // DateTime.UtcNow, so re-stamp the value as Utc on read so that downstream
+            // conversions to DateTimeOffset produce the correct +00:00 offset.
+            b.Property(o => o.Date).HasConversion(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             b.HasIndex(o => o.BuildId);
             b.HasIndex(o => o.Date).IsDescending();
             b.HasIndex(nameof(SubscriptionOutcome.SubscriptionId), nameof(SubscriptionOutcome.Date))
                 .IsDescending(false, true);
         });
+
     }
 
     public virtual Task<long> GetInstallationId(string repositoryUrl)

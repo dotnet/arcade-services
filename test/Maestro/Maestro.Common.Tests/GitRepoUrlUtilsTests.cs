@@ -1,18 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
 using AwesomeAssertions;
 using Maestro.Common;
-using Microsoft.DotNet.DarcLib.Helpers;
-using NUnit.Framework;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
+namespace Maestro.Common.Tests;
 
 [TestFixture]
-public class GitRepoUrlParserTest
+public class GitRepoUrlUtilsTests
 {
     [Test]
     public void ParseGitHubUrlTest()
@@ -58,7 +53,7 @@ public class GitRepoUrlParserTest
             ("azdo", "https://dev.azure.com/dnceng/internal/_git/test-repo"),
             ("github1", "https://github.com/dotnet/test-repo"),
             ("github2", "https://github.com/dotnet/test-repo"),
-            ("local", new NativePath("/var/test-repo")),
+            ("local", "/var/test-repo"),
         };
 
         var sorted = repos
@@ -96,5 +91,34 @@ public class GitRepoUrlParserTest
     public void GetCommitLinkUriTest(string repoUri, string commit, string expectedUri)
     {
         GitRepoUrlUtils.GetCommitUri(repoUri, commit).Should().Be(expectedUri);
+    }
+
+    [Test]
+    [TestCase("https://api.github.com/repos/dotnet/dotnet/pulls/3205", "https://github.com/dotnet/dotnet/pull/3205")]
+    [TestCase("https://api.github.com/repos/dotnet/runtime/pulls/12345", "https://github.com/dotnet/runtime/pull/12345")]
+    [TestCase("https://api.github.com/repos/microsoft/CsWinRT/pulls/999", "https://github.com/microsoft/CsWinRT/pull/999")]
+    public void TurnApiUrlToWebsite_ConvertsGitHubApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
+    {
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl);
+        result.Should().Be(expectedWebUrl);
+    }
+
+    [Test]
+    [TestCase("https://dev.azure.com/dnceng/7ea9116e-9fac-403d-b258-b31fcf1bb293/_apis/git/repositories/test-repo-guid/pullRequests/123",
+              "https://dev.azure.com/dnceng/internal/_git/test-repo-guid/pullrequest/123")]
+    public void TurnApiUrlToWebsite_ConvertsAzureDevOpsApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
+    {
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(apiUrl);
+        result.Should().Be(expectedWebUrl);
+    }
+
+    [Test]
+    [TestCase("https://github.com/dotnet/dotnet/pull/3205")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-wpf/pullrequest/123")]
+    [TestCase("not-a-url")]
+    public void TurnApiUrlToWebsite_ReturnsOriginalUrlWhenNotApiUrl(string url)
+    {
+        var result = GitRepoUrlUtils.TurnApiUrlToWebsite(url);
+        result.Should().Be(url);
     }
 }

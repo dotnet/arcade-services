@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Maestro\Maestro.Common\Maestro.Common.csproj" />
+  </ItemGroup>
+</Project>
