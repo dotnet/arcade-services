@@ -41,13 +41,13 @@
         var userErrors = Errors.Where(e => SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
         if (userErrors.Count > 0)
         {
-            yield return new ErrorSection("Problems in repositories or subscription configuration", userErrors);
+            yield return new ErrorSection("User errors", userErrors);
         }
 
         var serviceErrors = Errors.Where(e => !SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
         if (serviceErrors.Count > 0)
         {
-            yield return new ErrorSection("Internal problems in Maestro", serviceErrors);
+            yield return new ErrorSection("Service errors", serviceErrors);
         }
     }
 
