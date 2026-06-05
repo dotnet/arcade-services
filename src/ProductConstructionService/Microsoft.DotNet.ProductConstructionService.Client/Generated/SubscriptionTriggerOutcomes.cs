@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -29,7 +28,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         );
 
         Task<List<Models.SubscriptionTriggerOutcome>> GetLatestSubscriptionOutcomesAsync(
-            IImmutableList<Guid> body = default,
+            IImmutableList<Guid> subscriptionIds,
             CancellationToken cancellationToken = default
         );
 
@@ -158,10 +157,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         partial void HandleFailedGetLatestSubscriptionOutcomesRequest(RestApiException ex);
 
         public async Task<List<Models.SubscriptionTriggerOutcome>> GetLatestSubscriptionOutcomesAsync(
-            IImmutableList<Guid> body = default,
+            IImmutableList<Guid> subscriptionIds,
             CancellationToken cancellationToken = default
         )
         {
+
+            if (subscriptionIds == default(IImmutableList<Guid>))
+            {
+                throw new ArgumentNullException(nameof(subscriptionIds));
+            }
 
             const string apiVersion = "2020-02-20";
 
@@ -172,19 +176,20 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 "/api/subscription-trigger-outcomes/latest",
                 false);
 
+            if (subscriptionIds != default(IImmutableList<Guid>))
+            {
+                foreach (var _item in subscriptionIds)
+                {
+                    _url.AppendQuery("subscriptionIds", Client.Serialize(_item));
+                }
+            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
             {
                 _req.Uri = _url;
-                _req.Method = RequestMethod.Post;
-
-                if (body != default(IImmutableList<Guid>))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
+                _req.Method = RequestMethod.Get;
 
                 using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {

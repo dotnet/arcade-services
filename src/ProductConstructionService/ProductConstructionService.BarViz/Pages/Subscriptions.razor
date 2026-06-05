@@ -214,9 +214,9 @@
 
         AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
 
-        FilterSubscriptions();
-
         await TryLoadLatestOutcomesAsync();
+
+        FilterSubscriptions();
     }
 
     async Task TryLoadLatestOutcomesAsync()
@@ -224,19 +224,17 @@
         LatestOutcomes = [];
         SubscriptionErrors = [];
 
-        if (FilteredSubscriptions is null || !FilteredSubscriptions.Any())
+        if (AllSubscriptions is not { Count: > 0 })
         {
             return;
         }
 
-        var filteredSubscriptions = FilteredSubscriptions.ToList();
-
         try
         {
-            var subscriptionIds = filteredSubscriptions.Select(s => s.Id).ToImmutableList();
+            var subscriptionIds = AllSubscriptions.Select(s => s.Id).ToImmutableList();
             var outcomes = await PcsApi.SubscriptionTriggerOutcomes.GetLatestSubscriptionOutcomesAsync(subscriptionIds);
             LatestOutcomes = outcomes.ToDictionary(o => o.SubscriptionId);
-            SubscriptionErrors = SubscriptionOutcomeHelper.GetErroredSubscriptions(filteredSubscriptions, LatestOutcomes);
+            SubscriptionErrors = SubscriptionOutcomeHelper.GetErroredSubscriptions(AllSubscriptions, LatestOutcomes);
         }
         catch
         {

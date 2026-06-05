@@ -128,10 +128,10 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     ///   Gets the latest <see cref="SubscriptionTriggerOutcome"/> for each of the requested subscriptions.
     /// </summary>
     /// <param name="subscriptionIds">The subscription ids to fetch the latest outcome for.</param>
-    [HttpPost("latest")]
+    [HttpGet("latest")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionTriggerOutcome>), Description = "The latest outcome for each of the requested subscriptions")]
     [ValidateModelState]
-    public async Task<IActionResult> GetLatestSubscriptionOutcomes([FromBody] Guid[] subscriptionIds)
+    public async Task<IActionResult> GetLatestSubscriptionOutcomes([FromQuery] Guid[] subscriptionIds)
     {
         if (subscriptionIds == null || subscriptionIds.Length == 0)
         {
