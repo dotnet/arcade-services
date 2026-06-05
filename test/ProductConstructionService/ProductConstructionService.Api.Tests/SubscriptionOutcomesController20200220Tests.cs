@@ -208,6 +208,21 @@ public partial class SubscriptionOutcomesController20200220Tests
         outcomes.Should().BeEmpty();
     }
 
+    [Test]
+    public async Task GetLatestSubscriptionOutcomes_ReturnsEmpty_WhenSubscriptionHasNoOutcomes()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        await SeedOutcomesAsync(data.Context);
+
+        IActionResult result = await data.SubscriptionOutcomesController.GetLatestSubscriptionOutcomes(
+            [Guid.NewGuid()]);
+
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        outcomes.Should().BeEmpty();
+    }
+
     [TestDependencyInjectionSetup]
     private static class TestDataConfiguration
     {
