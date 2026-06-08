@@ -23,6 +23,8 @@ public class AuthenticationConfigurationTests
     [TestCase(null)]
     [TestCase("//evil.example/phish")]
     [TestCase("///evil.example/phish")]
+    [TestCase("/%2Fevil.example/phish")]
+    [TestCase("/%5Cevil.example/phish")]
     [TestCase(@"/\evil.example/phish")]
     [TestCase(@"/\\evil.example/phish")]
     [TestCase("http://evil.example/phish")]
