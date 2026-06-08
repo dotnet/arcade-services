@@ -71,6 +71,15 @@ internal static class AuthenticationConfiguration
                     options.Events.OnRedirectToIdentityProvider += context =>
                     {
                         var returnUrl = context.Request.Path + context.Request.QueryString;
+
+                        // Only round-trip the return URL when it's a safe local path. This prevents an attacker
+                        // who controls the initial request target (e.g. //evil.example/phish) from getting their
+                        // value placed verbatim into the OIDC state and later honored by OnMessageReceived.
+                        if (!IsLocalReturnUrl(returnUrl))
+                        {
+                            returnUrl = "/";
+                        }
+
                         context.ProtocolMessage.RedirectUri = redirectUri;
                         context.ProtocolMessage.State = Convert.ToBase64String(Encoding.UTF8.GetBytes(returnUrl));
                         return Task.CompletedTask;
@@ -80,26 +89,28 @@ internal static class AuthenticationConfiguration
                     {
                         // The redirect_uri is set to the one we have in the configuration, but we need to
                         // redirect to the one that was used to authenticate.
+                        var returnUrl = "/";
                         if (!string.IsNullOrEmpty(context.ProtocolMessage.State))
                         {
                             try
                             {
-                                var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
-                                context.Response.Redirect(returnUrl);
+                                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
+
+                                // Guard against open redirect (CWE-601): only honor decoded values that resolve
+                                // to a local URL. Off-host URLs, protocol-relative URLs (//host) and the
+                                // backslash variant (/\host) all resolve off-origin in browsers.
+                                if (IsLocalReturnUrl(decoded))
+                                {
+                                    returnUrl = decoded;
+                                }
                             }
                             catch (FormatException)
                             {
-                                // Handle malformed state value gracefully, e.g., redirect to a safe default or log the error
-                                // For now, redirect to root
-                                context.Response.Redirect("/");
+                                // Malformed state value; fall back to the safe default.
                             }
                         }
-                        else
-                        {
-                            // If no state is provided, redirect to the root
-                            context.Response.Redirect("/");
-                        }
 
+                        context.Response.Redirect(returnUrl);
                         return Task.CompletedTask;
                     };
                 }
@@ -141,5 +152,28 @@ internal static class AuthenticationConfiguration
                     policy.RequireAuthenticatedUser();
                     policy.RequireRole(adminRole);
                 });
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="url"/> is a safe, same-origin path that
+    /// <see cref="HttpResponse.Redirect(string)"/> can be invoked with without enabling an
+    /// open redirect (CWE-601). The URL must start with a single forward slash and must not
+    /// be a protocol-relative URL ("//host") or the backslash variant ("/\\host"), both of
+    /// which browsers resolve off-origin.
+    /// </summary>
+    internal static bool IsLocalReturnUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url) || url[0] != '/')
+        {
+            return false;
+        }
+
+        if (url.Length == 1)
+        {
+            return true;
+        }
+
+        // Reject "//host..." and "/\host..." which resolve off-origin.
+        return url[1] != '/' && url[1] != '\\';
     }
 }
