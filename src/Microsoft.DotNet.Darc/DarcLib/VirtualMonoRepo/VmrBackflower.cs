@@ -159,7 +159,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             codeflowOptions.Build.Commit,
             codeflowOptions.Build.GetRepository(),
             "VMR PRs included in this codeflow update:",
-            VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name),
+            pathFilter: VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name),
             cancellationToken);
 
         // When we recreated a previous flow, it becomes the crossing flow as it was another flow
