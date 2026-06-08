@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -50,6 +52,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IFileSystem _fileSystem;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public const string FileToBeRemovedContent =
@@ -70,6 +73,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -79,7 +83,67 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
+        _commentCollector = commentCollector;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Posts a comment listing the PRs that were ingested into this codeflow update.
+    /// PR numbers are extracted from the titles of the commits between <paramref name="lastCommit"/>
+    /// and <paramref name="currentCommit"/> in <paramref name="repo"/>.
+    /// </summary>
+    /// <param name="repo">Repository to read the commit history from.</param>
+    /// <param name="lastCommit">Lower bound commit (exclusive) of the range to inspect.</param>
+    /// <param name="currentCommit">Upper bound commit of the range to inspect.</param>
+    /// <param name="repoUri">URI of the repository the PRs belong to; also used to skip local-only codeflow tests.</param>
+    /// <param name="commentHeader">Header line of the posted comment.</param>
+    /// <param name="pathFilter">Optional git pathspec to restrict the commit history to a subfolder.</param>
+    protected async Task CommentIncludedPRs(
+        ILocalGitRepo repo,
+        string lastCommit,
+        string currentCommit,
+        string repoUri,
+        string commentHeader,
+        string? pathFilter,
+        CancellationToken cancellationToken)
+    {
+        var gitRepoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
+        // codeflow tests set the remote to a local path, we have to skip those
+        if (gitRepoType == GitRepoType.Local)
+        {
+            return;
+        }
+
+        List<string> args = ["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"];
+        if (pathFilter != null)
+        {
+            args.Add("--");
+            args.Add(pathFilter);
+        }
+
+        var result = await repo.ExecuteGitCommand(args.ToArray(), cancellationToken);
+        result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {repo.Path}");
+
+        var commitMessages = result.GetOutputLines();
+        var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
+
+        if (prsInfo.Count == 0)
+        {
+            _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
+            return;
+        }
+        else
+        {
+            StringBuilder str = new(commentHeader);
+            foreach (var prInfo in prsInfo.Distinct().Reverse())
+            {
+                string format = $"- {{0}}";
+                str.AppendLine();
+                str.AppendFormat(format, prInfo.prUri);
+            }
+
+            _commentCollector.AddComment(str.ToString(), CommentType.Information);
+        }
     }
 
     /// <summary>
