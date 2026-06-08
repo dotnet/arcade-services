@@ -122,6 +122,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var branchName = GetTestBranchName();
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo2Name);
         var targetBranchName = GetTestBranchName();
+        var includedPrNumber = 24;
+        var excludedPrNumber = 25;
 
         await CreateTestChannelAsync(channelName);
 
@@ -186,7 +188,13 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         File.WriteAllText(newFilePath, TestFilesContent[TestFile1Name]);
 
                         await GitAddAllAsync();
-                        await GitCommitAsync("Add new file");
+                        await GitCommitAsync($"Change that would have been made in a pr (#{includedPrNumber})");
+
+                        // A change outside of src/<repo> in the VMR - must NOT be linked in the backflow PR comment
+                        var outsideRepoFilePath = Path.Combine(vmrFolder.Directory, "outsideRepoFile.txt");
+                        await File.WriteAllTextAsync(outsideRepoFilePath, "test");
+                        await GitAddAllAsync();
+                        await GitCommitAsync($"Change outside the repo folder (#{excludedPrNumber})");
 
                         // Push it to github
                         await using (await PushGitBranchAsync("origin", branchName))
@@ -214,7 +222,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 .Concat(vmrSideAssets)
                                 .Concat(source1AssetsUpdated)
                                 .Select(a => new DependencyDetail() { Name = a.Name, Version = a.Version}).ToList();
-                            await CheckBackwardFlowGitHubPullRequest(
+                            var pr = await CheckBackwardFlowGitHubPullRequest(
                                 TestRepository.VmrTestRepoName,
                                 TestRepository.TestRepo2Name,
                                 targetBranchName,
@@ -224,6 +232,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 repoSha,
                                 build.Id,
                                 [repoSidePackageLocation, vmrSidePackageLocation, buildPackageLocation]);
+
+                            var vmrRepoUrl = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
+                            await CheckIfPullRequestCommentExists(
+                                TestRepository.TestRepo2Name,
+                                pr,
+                                [$"{vmrRepoUrl}/pull/{includedPrNumber}"]);
+
+                            await CheckThatPullRequestCommentDoesNotContain(
+                                TestRepository.TestRepo2Name,
+                                pr,
+                                [$"{vmrRepoUrl}/pull/{excludedPrNumber}"]);
                         }
                     }
                 }

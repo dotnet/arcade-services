@@ -4,11 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -63,7 +61,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IForwardFlowConflictResolver _conflictResolver;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
-    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -83,7 +80,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IFileSystem fileSystem,
             ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -96,7 +93,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _conflictResolver = conflictResolver;
         _workBranchFactory = workBranchFactory;
         _processManager = processManager;
-        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -438,6 +434,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             lastFlows.LastForwardFlow.RepoSha,
             codeflowOptions.Build.Commit,
             codeflowOptions.Mapping.DefaultRemote,
+            "PRs from original repository included in this codeflow update:",
+            pathFilter: null,
             cancellationToken);
 
         return result with
@@ -452,45 +450,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranchExisted,
                 cancellationToken)
         };
-    }
-
-    private async Task CommentIncludedPRs(
-        ILocalGitRepo sourceRepo,
-        string lastCommit,
-        string currentCommit,
-        string repoUri,
-        CancellationToken cancellationToken)
-    {
-        var gitRepoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
-        // codeflow tests set the defaultRemote to a local path, we have to skip those
-        if (gitRepoType == GitRepoType.Local)
-        {
-            return;
-        }
-
-        var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
-        result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
-
-        var commitMessages = result.GetOutputLines();
-        var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
-
-        if (prsInfo.Count == 0)
-        {
-            _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
-            return;
-        }
-        else
-        {
-            StringBuilder str = new("PRs from original repository included in this codeflow update:");
-            foreach (var prInfo in prsInfo.Distinct().Reverse())
-            {
-                string format = $"- {{0}}";
-                str.AppendLine();
-                str.AppendFormat(format, prInfo.prUri);
-            }
-
-            _commentCollector.AddComment(str.ToString(), CommentType.Information);
-        }
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(

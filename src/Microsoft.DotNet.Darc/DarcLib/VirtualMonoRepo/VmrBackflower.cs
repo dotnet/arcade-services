@@ -71,8 +71,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
+            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -150,6 +151,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlows,
             targetRepo,
             headBranchExisted,
+            cancellationToken);
+
+        await CommentIncludedPRs(
+            _localGitRepoFactory.Create(_vmrInfo.VmrPath),
+            lastFlows.LastBackFlow?.VmrSha ?? Constants.EmptyGitObject,
+            codeflowOptions.Build.Commit,
+            codeflowOptions.Build.GetRepository(),
+            "VMR PRs included in this codeflow update:",
+            VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name),
             cancellationToken);
 
         // When we recreated a previous flow, it becomes the crossing flow as it was another flow
