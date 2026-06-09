@@ -322,7 +322,7 @@
             SecondaryAction = "Close",
         };
 
-        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(SubscriptionDetailData.FromSubscription(subscription), parameters);
     }
 
     async Task<List<DefaultChannel>> GetDefaultChannelsAsync()

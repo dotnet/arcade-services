@@ -7,6 +7,7 @@
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
 @using TextCopy
 @inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
@@ -325,7 +326,7 @@
             PreventScroll = true,
         };
 
-        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(SubscriptionDetailData.FromSubscription(subscription), parameters);
     }
 
     private void UpdateQueryParams()

@@ -5,10 +5,13 @@
 @using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
 @using TextCopy
 @inject IProductConstructionServiceApi PcsApi
 @inject IClipboard Clipboard
 @inject IToastService ToastService
+@inject IDialogService DialogService
 @inject NavigationManager NavManager
 
 <style>
@@ -41,41 +44,29 @@
         background-color: #0969da;
     }
 
-    .operation-id {
-        font-family: monospace;
-        color: var(--neutral-foreground-hint);
+    .subscription-link {
+        color: var(--accent-foreground-rest, #0969da);
+        cursor: pointer;
+        vertical-align: middle;
     }
 
-    .operation-id, .outcome-message {
+    .subscription-link:hover {
+        text-decoration: underline;
+    }
+
+    .outcome-message {
         display: inline-block;
         max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        vertical-align: middle;
-        cursor: pointer;
-    }
-
-    .operation-id.expanded, .outcome-message.expanded {
-        max-width: 100%;
-        overflow: visible;
-        text-overflow: clip;
         white-space: normal;
         word-break: break-word;
+        vertical-align: middle;
     }
 
-    /* The grid uses MultiLine="true" so cells are allowed to wrap and the row grows to
-       fit its tallest cell. By default the Message/Operation Id spans force a single
-       truncated line (nowrap + ellipsis above); when expanded they wrap and the cell/row
-       grows. Top-align the cells of a row that contains an expanded value so it stays tidy. */
-    #outcomesGrid td:has(.expanded) {
+    /* The grid uses MultiLine="true" so cells wrap and the row grows to fit its tallest
+       cell. Top-align cells and clip MultiLine mode's per-cell overflow:auto so multi-line
+       rows stay tidy without horizontal scrollbars. */
+    #outcomesGrid td {
         vertical-align: top;
-    }
-
-    /* MultiLine mode styles every cell as .multiline-text { overflow: auto }, which shows
-       a horizontal scrollbar whenever the (truncated) content is wider than the column.
-       Keep non-expanded cells clipped (no scrollbar); only expanded cells need to grow. */
-    #outcomesGrid td:not(:has(.expanded)) {
         overflow: hidden;
     }
 </style>
@@ -151,11 +142,6 @@
                     <TemplateColumn Title="Date" Width="0.35fr" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
                         <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
                     </TemplateColumn>
-                    <TemplateColumn Title="Outcome" Width="0.45fr" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
-                        <FluentLabel>
-                            <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
-                        </FluentLabel>
-                    </TemplateColumn>
                     <TemplateColumn Title="Subscription" Width="0.9fr" Sortable="true" SortBy="SortBy(o => o.SubscriptionId.ToString())" Align="Align.Start">
                         <FluentButton Appearance="Appearance.Lightweight"
                                       Class="copy-id-button"
@@ -163,20 +149,20 @@
                                       OnClick="@(() => CopySubscriptionIdAsync(context.SubscriptionId))">
                             <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="Color.Neutral" />
                         </FluentButton>
-                        <FluentAnchor Href="@($"/subscriptions?search={context.SubscriptionId}")" Appearance="Appearance.Hypertext">@context.SubscriptionId</FluentAnchor>
+                        <span class="subscription-link"
+                              title="Show subscription details"
+                              @onclick="@(() => ShowSubscriptionDetailsAsync(context.SubscriptionId))">@context.SubscriptionId</span>
                     </TemplateColumn>
-                    <TemplateColumn Title="Build" Width="0.2fr" Sortable="true" SortBy="SortBy(o => o.BuildId)" Align="Align.Start">
-                        <FluentLabel>@(context.BuildId > 0 ? context.BuildId.ToString() : "N/A")</FluentLabel>
+                    <TemplateColumn Title="Outcome" Width="0.45fr" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
+                        <FluentLabel>
+                            <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
+                        </FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Message" Width="2fr" Align="Align.Start">
-                        <span class="outcome-message expanded"
-                              title="@context.Message"
-                              @onclick="@(() => ToggleExpanded(context, _messageExpanded))">@context.Message</span>
+                        <span class="outcome-message" title="@context.Message">@context.Message</span>
                     </TemplateColumn>
-                    <TemplateColumn Title="Operation Id" Width="1fr" Align="Align.Start">
-                        <span class="operation-id @(IsExpanded(context, _operationIdExpanded) ? "expanded" : null)"
-                              title="@context.OperationId"
-                              @onclick="@(() => ToggleExpanded(context, _operationIdExpanded))">@context.OperationId</span>
+                    <TemplateColumn Width="0.1fr">
+                        <SubscriptionOutcomeContextMenu Outcome="@context" ShowDetails="@ShowSubscriptionDetailsAsync" />
                     </TemplateColumn>
                 </ChildContent>
             </FluentDataGrid>
@@ -230,9 +216,6 @@
     [SupplyParameterFromQuery(Name = "before")]
     private string? BeforeQuery { get; set; }
 
-    private readonly HashSet<SubscriptionTriggerOutcome> _messageExpanded = [];
-    private readonly HashSet<SubscriptionTriggerOutcome> _operationIdExpanded = [];
-
     private DateTimeOffset? BeforeFilter => _beforeDate.HasValue
         ? new DateTimeOffset(_beforeDate.Value.Date, TimeSpan.Zero).AddDays(1).AddTicks(-1)
         : null;
@@ -248,17 +231,6 @@
     private static GridSort<SubscriptionTriggerOutcome> SortBy<TProp>(Expression<Func<SubscriptionTriggerOutcome, TProp>> sorter)
         => GridSort<SubscriptionTriggerOutcome>.ByAscending(sorter);
 
-    private static bool IsExpanded(SubscriptionTriggerOutcome outcome, HashSet<SubscriptionTriggerOutcome> expanded)
-        => expanded.Contains(outcome);
-
-    private void ToggleExpanded(SubscriptionTriggerOutcome outcome, HashSet<SubscriptionTriggerOutcome> expanded)
-    {
-        if (!expanded.Add(outcome))
-        {
-            expanded.Remove(outcome);
-        }
-    }
-
     private async Task CopySubscriptionIdAsync(Guid subscriptionId)
     {
         try
@@ -270,6 +242,22 @@
         {
             ToastService.ShowError($"Failed to copy subscription ID: {ex.Message}");
         }
+    }
+
+    private async Task ShowSubscriptionDetailsAsync(Guid subscriptionId)
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscriptionId}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(SubscriptionDetailData.FromId(subscriptionId), parameters);
     }
 
     protected override async Task OnInitializedAsync()
@@ -322,8 +310,6 @@
         StateHasChanged();
 
         _seenOutcomes.Clear();
-        _messageExpanded.Clear();
-        _operationIdExpanded.Clear();
         _oldestDate = null;
         _outcomes = [];
 
