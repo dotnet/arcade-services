@@ -1,0 +1,73 @@
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using ProductConstructionService.BarViz.Code.Helpers
+
+@if (Errors.Count > 0)
+{
+    <div class="subscription-error-banner">
+        @foreach (var errorGroup in BuildSections())
+        {
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 8px;">
+                <FluentIcon Value="@(new Icons.Filled.Size20.Warning())" Color="Color.Warning" />
+                <FluentLabel Typo="Typography.H5">
+                    @errorGroup.Title (@errorGroup.Errors.Count)
+                </FluentLabel>
+            </FluentStack>
+
+            <FluentDataGrid Items="@errorGroup.Errors.AsQueryable()"
+                            TGridItem="SubscriptionOutcomeError"
+                            GridTemplateColumns="2fr 3fr"
+                            Style="width: 100%; margin-bottom: 16px;">
+                <PropertyColumn Title="Subscription" Property="@(e => SubscriptionDisplay(e.Subscription))" Align="Align.Start" />
+                <PropertyColumn Title="Message" Property="@(e => e.Outcome.Message)" Align="Align.Start" />
+            </FluentDataGrid>
+        }
+
+        <FluentDivider Style="margin: 16px 0;" />
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// The subscriptions whose latest trigger outcome was an error, paired with that outcome.
+    /// The banner groups them into user errors and service errors. When empty, the banner renders nothing.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<SubscriptionOutcomeError> Errors { get; set; }
+
+    private sealed record ErrorSection(string Title, IReadOnlyList<SubscriptionOutcomeError> Errors);
+
+    private IEnumerable<ErrorSection> BuildSections()
+    {
+        var userErrors = Errors.Where(e => SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
+        if (userErrors.Count > 0)
+        {
+            yield return new ErrorSection("Problems in repositories or subscription configuration", userErrors);
+        }
+
+        var serviceErrors = Errors.Where(e => !SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
+        if (serviceErrors.Count > 0)
+        {
+            yield return new ErrorSection("Internal problems in Maestro", serviceErrors);
+        }
+    }
+
+    private static string SubscriptionDisplay(Subscription subscription)
+    {
+        var source = RepoShortName(subscription.SourceRepository);
+        var target = RepoShortName(subscription.TargetRepository);
+        return $"{source} → {target}";
+    }
+
+    private static string RepoShortName(string repoUrl)
+    {
+        var slug = RepoUrlConverter.RepoUrlToSlug(repoUrl);
+        if (slug is null)
+        {
+            return repoUrl;
+        }
+
+        // Slugs look like "github:org:repo" or "azdo:org:project:repo"; drop the leading
+        // repo-type segment and join the rest as a readable "org/repo" path.
+        return string.Join('/', slug.Split(':').Skip(1));
+    }
+}

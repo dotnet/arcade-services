@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
@@ -35,14 +34,14 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string Message { get; }
 
         [JsonProperty("type")]
-        public Models.OutcomeType Type { get; set; }
+        public OutcomeType Type { get; }
 
         [JsonIgnore]
         public bool IsValid
         {
             get
             {
-                if (Type == default(Models.OutcomeType))
+                if (Type == default)
                 {
                     return false;
                 }
