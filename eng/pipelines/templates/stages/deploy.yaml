@@ -163,7 +163,7 @@ stages:
       - task: AzureCLI@2
         displayName: Bump minimum darc version if breaking-darc-change label is present
         inputs:
-          azureSubscription: "Darc: Maestro Production"
+          azureSubscription: $(pcsDeploymentServiceConnection)
           scriptType: pscore
           scriptLocation: inlineScript
           inlineScript: |
