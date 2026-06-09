@@ -67,7 +67,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         return pullRequest;
     }
 
-    protected async Task CheckBackwardFlowGitHubPullRequest(
+    protected async Task<PullRequest> CheckBackwardFlowGitHubPullRequest(
         string sourceRepoName,
         string targetRepoName,
         string targetBranch,
@@ -126,6 +126,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 }
             }
         }
+
+        return pullRequest;
     }
 
     protected async Task<string> CreateForwardFlowSubscriptionAsync(
@@ -242,6 +244,23 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             allCommentBodies.Should().Contain(
                 expected,
                 $"PR {pullRequest.HtmlUrl} should contain '{string.Join("', '", stringsExpectedInComment)}'");
+        }
+    }
+
+    public static async Task CheckThatPullRequestCommentDoesNotContain(
+        string targetRepo,
+        PullRequest pullRequest,
+        string[] stringsNotExpectedInComment)
+    {
+        IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+
+        var allCommentBodies = string.Join(Environment.NewLine, comments.Select(c => c.Body));
+
+        foreach (var notExpected in stringsNotExpectedInComment)
+        {
+            allCommentBodies.Should().NotContain(
+                notExpected,
+                $"PR {pullRequest.HtmlUrl} should NOT contain '{notExpected}'");
         }
     }
 }
