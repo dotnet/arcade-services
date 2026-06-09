@@ -5,6 +5,7 @@
 @using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.BarViz.Model
 @using TextCopy
@@ -159,9 +160,19 @@
                         </FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Message" Width="2fr" Align="Align.Start">
-                        <span class="outcome-message" title="@context.Message">@context.Message</span>
+                        <span class="outcome-message" title="@context.Message">@foreach (var segment in StringExtensions.SplitIntoTextAndUrls(context.Message))
+                            {
+                                if (segment.IsUrl)
+                                {
+                                    <FluentAnchor Href="@segment.Text" Target="_blank" Appearance="Appearance.Hypertext">@segment.Text</FluentAnchor>
+                                }
+                                else
+                                {
+                                    @segment.Text
+                                }
+                            }</span>
                     </TemplateColumn>
-                    <TemplateColumn Width="0.1fr">
+                    <TemplateColumn Width="60px">
                         <SubscriptionOutcomeContextMenu Outcome="@context" ShowDetails="@ShowSubscriptionDetailsAsync" />
                     </TemplateColumn>
                 </ChildContent>
