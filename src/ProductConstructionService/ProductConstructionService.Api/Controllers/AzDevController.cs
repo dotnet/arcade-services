@@ -8,6 +8,7 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("[controller]")]
 [Route("_/[controller]")]
+[Authorize]
 public class AzDevController(IAzureDevOpsClient azureDevOpsClient)
     : ControllerBase
 {
