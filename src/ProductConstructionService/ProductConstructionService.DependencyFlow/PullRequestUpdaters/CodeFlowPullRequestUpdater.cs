@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text;
 using Maestro.Common;
 using Maestro.Common.Telemetry;
 using Maestro.DataProviders;
@@ -34,6 +35,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
@@ -52,6 +54,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
+        ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
     {
@@ -67,6 +70,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _target = target;
     }
 
@@ -210,6 +214,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, pr.Url);
             }
 
+            if (isForwardFlow)
+            {
+                await PostSourceDiffVerificationCommentAsync(remote, subscription, build, previousSourceSha, prHeadBranch, pr.Url);
+            }
+
             return new SubscriptionUpdateResult(
                 $"New codeflow PR created: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
                 Maestro.Data.Models.SubscriptionOutcomeType.Updated);
@@ -229,6 +238,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs);
+
+            if (isForwardFlow)
+            {
+                await PostSourceDiffVerificationCommentAsync(remote, subscription, build, previousSourceSha, prHeadBranch, pr.Url);
+            }
 
             return new SubscriptionUpdateResult(
                 $"Existing codeflow PR has been updated: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
@@ -783,6 +797,72 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
         }
+    }
+
+    private async Task PostSourceDiffVerificationCommentAsync(
+        IRemote remote,
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        string? previousSourceSha,
+        string? prHeadBranch,
+        string prUrl)
+    {
+        // Best-effort confidence signal: never fail or slow down the codeflow push.
+        try
+        {
+            if (string.IsNullOrEmpty(previousSourceSha) || string.IsNullOrEmpty(prHeadBranch))
+            {
+                // Without a previous source SHA there is no compare range, so we skip silently
+                // (matching how the PR description's diff link is skipped).
+                return;
+            }
+
+            bool matches = await _codeflowChangeAnalyzer.VerifyForwardFlowAsync(
+                subscription.TargetDirectory,
+                subscription.SourceRepository,
+                previousSourceSha,
+                build.Commit,
+                subscription.TargetBranch,
+                prHeadBranch);
+
+            var comment = BuildSourceDiffVerificationComment(matches, subscription.SourceRepository, previousSourceSha, build.Commit);
+            await remote.CommentPullRequestAsync(prUrl, comment);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e,
+                "Failed to post source diff verification comment for PR {prUrl} of subscription {subscriptionId}",
+                prUrl,
+                subscription.Id);
+        }
+    }
+
+    private static string BuildSourceDiffVerificationComment(
+        bool matches,
+        string sourceRepo,
+        string oldSha,
+        string newSha)
+    {
+        var shortOld = Commit.GetShortSha(oldSha);
+        var shortNew = Commit.GetShortSha(newSha);
+
+        var builder = new StringBuilder();
+        builder.AppendLine("### Source diff verification");
+        builder.AppendLine();
+
+        if (matches)
+        {
+            builder.AppendLine($"✅ This PR matches the source diff `{shortOld}...{shortNew}` of `{sourceRepo}`.");
+        }
+        else
+        {
+            builder.AppendLine($"⚠️ Couldn't verify that this PR matches the source diff `{shortOld}...{shortNew}` of `{sourceRepo}`. Please review the changes manually.");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("> This is a best-effort confidence signal. It reuses the same source-mappings configuration the codeflow used, so it validates that the PR reflects the source diff under the current config — not that the config itself is correct.");
+
+        return builder.ToString();
     }
 
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
