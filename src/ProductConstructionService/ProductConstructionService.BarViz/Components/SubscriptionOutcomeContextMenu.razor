@@ -1,7 +1,11 @@
+@using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using ProductConstructionService.BarViz.Code.Helpers
 @using TextCopy
+@inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
 @inject IClipboard Clipboard
+@inject IJSRuntime JSRuntime
 
 <FluentButton Id="@_id"
               Appearance="Appearance.Lightweight"
@@ -23,6 +27,34 @@
         Copy operation ID
         <span slot="start">
             <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@CopySubscriptionIdAsync">
+        Copy subscription ID
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@(() => TriggerSubscriptionAsync(force: false))">
+        Trigger subscription
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@(() => TriggerSubscriptionAsync(force: true))">
+        Force-trigger subscription
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.FlashCheckmark())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem Disabled="@(Outcome.BuildId <= 0)" OnClick="@ShowBuildAsync">
+        Show build
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
         </span>
     </FluentMenuItem>
 
@@ -67,6 +99,54 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Failed to copy operation ID: {ex.Message}");
+        }
+    }
+
+    private async Task CopySubscriptionIdAsync()
+    {
+        try
+        {
+            await Clipboard.SetTextAsync(Outcome.SubscriptionId.ToString());
+            ToastService.ShowSuccess("Copied subscription ID to clipboard");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to copy subscription ID: {ex.Message}");
+        }
+    }
+
+    private async Task TriggerSubscriptionAsync(bool force)
+    {
+        try
+        {
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Outcome.SubscriptionId, force);
+            ToastService.ShowProgress(force ? "Subscription force-triggered" : "Subscription triggered");
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to trigger the subscription");
+        }
+    }
+
+    private async Task ShowBuildAsync()
+    {
+        try
+        {
+            var build = await PcsApi.Builds.GetBuildAsync(Outcome.BuildId);
+            var channelId = build.Channels?.FirstOrDefault()?.Id ?? 0;
+            var buildLink = build.GetLinkToBuildDetails(channelId);
+            if (buildLink != null)
+            {
+                await JSRuntime.OpenNewWindow(buildLink);
+            }
+            else
+            {
+                ToastService.ShowError("Could not determine the build details link");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to open build: {ex.Message}");
         }
     }
 }
