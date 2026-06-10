@@ -141,10 +141,10 @@
                     <FluentLabel>No subscription trigger outcomes found</FluentLabel>
                 </EmptyContent>
                 <ChildContent>
-                    <TemplateColumn Title="Date" Width="0.35fr" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
+                    <TemplateColumn Title="Date" Width="140px" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
                         <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
                     </TemplateColumn>
-                    <TemplateColumn Title="Subscription" Width="0.9fr" Sortable="true" SortBy="SortBy(o => o.SubscriptionId.ToString())" Align="Align.Start">
+                    <TemplateColumn Title="Subscription" Width="335px" Sortable="true" SortBy="SortBy(o => o.SubscriptionId.ToString())" Align="Align.Start">
                         <FluentButton Appearance="Appearance.Lightweight"
                                       Class="copy-id-button"
                                       Title="Copy subscription ID"
@@ -155,7 +155,7 @@
                               title="Show subscription details"
                               @onclick="@(() => ShowSubscriptionDetailsAsync(context.SubscriptionId))">@context.SubscriptionId</span>
                     </TemplateColumn>
-                    <TemplateColumn Title="Outcome" Width="0.45fr" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
+                    <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
                         <FluentLabel>
                             <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
                         </FluentLabel>
