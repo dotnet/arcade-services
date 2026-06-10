@@ -72,7 +72,7 @@
     }
 </style>
 
-<PageTitle>Subscription trigger outcomes – Maestro++</PageTitle>
+<PageTitle>Subscription trigger history – Maestro++</PageTitle>
 
 <GridViewTemplate ShowSkeleton="_outcomes == null">
     <Content>
@@ -85,7 +85,7 @@
                 <FluentTextField @bind-Value="_subscriptionIdFilter"
                                  @bind-Value:after="ApplyFiltersAsync"
                                  Label="Subscription ID"
-                                 Placeholder="Subscription GUID"
+                                 Placeholder="GUID"
                                  Style="min-width: 280px;" />
                 @if (_subscriptionIdError != null)
                 {
@@ -107,7 +107,8 @@
                                    @bind-Value="_buildIdFilter"
                                    @bind-Value:after="ApplyFiltersAsync"
                                    Label="Build ID"
-                                   Placeholder="Build ID" />
+                                   Placeholder="Build ID"
+                                   HideStep=true />
             </div>
             <div>
                 <FluentDatePicker @bind-Value="_beforeDate"
