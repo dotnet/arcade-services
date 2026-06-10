@@ -18,12 +18,30 @@
                             GridTemplateColumns="2fr 3fr"
                             Style="width: 100%; margin-bottom: 16px;">
                 <PropertyColumn Title="Subscription" Property="@(e => SubscriptionDisplay(e.Subscription))" Align="Align.Start" />
-                <PropertyColumn Title="Message" Property="@(e => e.Outcome.Message)" Align="Align.Start" />
+                <TemplateColumn Title="Message" Align="Align.Start">
+                    <div class="subscription-error-message" title="@context.Outcome.Message">
+                        @context.Outcome.Message
+                    </div>
+                </TemplateColumn>
             </FluentDataGrid>
         }
 
         <FluentDivider Style="margin: 16px 0;" />
     </div>
+
+    <style>
+        /* Keep the message inside its column: it stays on a single line but can
+           be scrolled horizontally, and the full text is shown on hover. */
+        .subscription-error-banner td {
+            overflow: hidden !important;
+        }
+
+        .subscription-error-banner .subscription-error-message {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+    </style>
 }
 
 @code {
