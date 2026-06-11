@@ -28,7 +28,7 @@ namespace Maestro.Common.AzureDevOpsTokens;
 public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 {
     private const string AzureDevOpsScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
-    private static readonly Regex AccountNameRegex = new(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
+    private static readonly Regex AccountNameRegex = new(@"^https://([^@/]+@)?dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
 
     private readonly Dictionary<string, TokenCredential> _accountCredentials;
 
