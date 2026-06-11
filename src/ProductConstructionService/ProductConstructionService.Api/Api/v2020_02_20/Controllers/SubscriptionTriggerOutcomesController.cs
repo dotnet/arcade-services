@@ -14,7 +14,7 @@ using DataModels = Maestro.Data.Models;
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Read <see cref="SubscriptionTriggerOutcome"/>s.
+///
 /// </summary>
 [Route("subscription-trigger-outcomes")]
 [ApiVersion("2020-02-20")]
@@ -121,7 +121,11 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             .Take(limit)
             .ToListAsync();
 
-        return Ok(results.Select(o => new SubscriptionTriggerOutcome(o)).ToList());
+        var subscriptions = await GetSubscriptionsAsync(results.Select(o => o.SubscriptionId));
+
+        return Ok(results
+            .Select(o => new SubscriptionTriggerOutcome(o, subscriptions.GetValueOrDefault(o.SubscriptionId)))
+            .ToList());
     }
 
     /// <summary>
@@ -142,6 +146,26 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new SubscriptionTriggerOutcome(outcome));
+        var subscriptions = await GetSubscriptionsAsync([outcome.SubscriptionId]);
+
+        return Ok(new SubscriptionTriggerOutcome(outcome, subscriptions.GetValueOrDefault(outcome.SubscriptionId)));
+    }
+
+    /// <summary>
+    ///   Fetches the <see cref="DataModels.Subscription"/>s for the given subscription ids, keyed by id.
+    /// </summary>
+    private async Task<Dictionary<Guid, DataModels.Subscription>> GetSubscriptionsAsync(IEnumerable<Guid> subscriptionIds)
+    {
+        var ids = subscriptionIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var subscriptions = await _context.Subscriptions
+            .Where(s => ids.Contains(s.Id))
+            .ToListAsync();
+
+        return subscriptions.ToDictionary(s => s.Id);
     }
 }

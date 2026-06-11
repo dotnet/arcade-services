@@ -8,7 +8,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class SubscriptionTriggerOutcome
     {
-        public SubscriptionTriggerOutcome(Guid subscriptionId, int buildId, DateTimeOffset date, Models.OutcomeType type, string operationId, string message)
+        public SubscriptionTriggerOutcome(Guid subscriptionId, int buildId, DateTimeOffset date, Models.OutcomeType type, string operationId, string message, string sourceRepository, string targetRepository, string targetBranch)
         {
             SubscriptionId = subscriptionId;
             BuildId = buildId;
@@ -16,6 +16,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             Type = type;
             OperationId = operationId;
             Message = message;
+            SourceRepository = sourceRepository;
+            TargetRepository = targetRepository;
+            TargetBranch = targetBranch;
         }
 
         [JsonProperty("operationId")]
@@ -35,6 +38,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("type")]
         public OutcomeType Type { get; }
+
+        [JsonProperty("sourceRepository")]
+        public string SourceRepository { get; }
+
+        [JsonProperty("targetRepository")]
+        public string TargetRepository { get; }
+
+        [JsonProperty("targetBranch")]
+        public string TargetBranch { get; }
 
         [JsonIgnore]
         public bool IsValid

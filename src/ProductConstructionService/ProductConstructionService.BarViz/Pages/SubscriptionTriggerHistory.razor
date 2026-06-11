@@ -144,16 +144,26 @@
                     <TemplateColumn Title="Date" Width="140px" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
                         <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
                     </TemplateColumn>
-                    <TemplateColumn Title="Subscription" Width="335px" Sortable="true" SortBy="SortBy(o => o.SubscriptionId.ToString())" Align="Align.Start">
+                    <TemplateColumn Title="Subscription" Width="440px" Sortable="true" SortBy="SortBy(o => GetSubscriptionBlurb(o) ?? o.SubscriptionId.ToString())" Align="Align.Start">
                         <FluentButton Appearance="Appearance.Lightweight"
                                       Class="copy-id-button"
                                       Title="Copy subscription ID"
                                       OnClick="@(() => CopySubscriptionIdAsync(context.SubscriptionId))">
                             <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="Color.Neutral" />
                         </FluentButton>
-                        <span class="subscription-link"
-                              title="Show subscription details"
-                              @onclick="@(() => ShowSubscriptionDetailsAsync(context.SubscriptionId))">@context.SubscriptionId</span>
+                        @{
+                            var blurb = GetSubscriptionBlurb(context);
+                        }
+                        @if (blurb != null)
+                        {
+                            <span class="subscription-link"
+                                  title="Show subscription details"
+                                  @onclick="@(() => ShowSubscriptionDetailsAsync(context.SubscriptionId))">@blurb</span>
+                        }
+                        else
+                        {
+                            <span title="@context.SubscriptionId">@context.SubscriptionId</span>
+                        }
                     </TemplateColumn>
                     <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
                         <FluentLabel>
@@ -242,6 +252,9 @@
 
     private static GridSort<SubscriptionTriggerOutcome> SortBy<TProp>(Expression<Func<SubscriptionTriggerOutcome, TProp>> sorter)
         => GridSort<SubscriptionTriggerOutcome>.ByAscending(sorter);
+
+    private static string? GetSubscriptionBlurb(SubscriptionTriggerOutcome outcome)
+        => SubscriptionOutcomeHelper.GetSubscriptionBlurb(outcome.SourceRepository, outcome.TargetRepository, outcome.TargetBranch);
 
     private async Task CopySubscriptionIdAsync(Guid subscriptionId)
     {
