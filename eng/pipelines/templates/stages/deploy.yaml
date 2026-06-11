@@ -144,16 +144,15 @@ stages:
       - download: current
         artifact: AssetManifests
 
-      # TODO: enable once the GitHub App is set up and has permissions to create releases in dotnet/arcade-services
-      # - template: /eng/pipelines/templates/steps/get-github-app-installation-token.yml
-      #   parameters:
-      #     azureSubscription: $(pcsDeploymentServiceConnection)
-      #     keyVaultName: $(keyVaultName)
-      #     keyName: maestro-ci-private-key
-      #     appClientId: $(ciGitHubAppClientId)
-      #     installationOwner: dotnet
-      #     outputVariableName: ArcadeServicesGitHubAppToken
-      #     displayName: Get GitHub App token for dotnet/arcade-services
+      - template: /eng/pipelines/templates/steps/get-github-app-installation-token.yml
+        parameters:
+          azureSubscription: $(pcsDeploymentServiceConnection)
+          keyVaultName: $(keyVaultName)
+          keyName: maestro-ci-private-key
+          appClientId: $(ciGitHubAppClientId)
+          installationOwner: dotnet
+          outputVariableName: ArcadeServicesGitHubAppToken
+          displayName: Get GitHub App token for dotnet/arcade-services
 
       - powershell: |
           $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
@@ -168,8 +167,7 @@ stages:
             --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
-          # GH_TOKEN: $(ArcadeServicesGitHubAppToken)
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
         continueOnError: true
 
       - task: AzureCLI@2
