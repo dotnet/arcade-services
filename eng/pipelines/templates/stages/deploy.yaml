@@ -144,7 +144,7 @@ stages:
       - download: current
         artifact: AssetManifests
 
-      - template: /eng/pipelines/templates/steps/get-github-app-installation-token.yml
+      - template: /eng/pipelines/templates/steps/get-github-app-token.yml
         parameters:
           azureSubscription: $(pcsDeploymentServiceConnection)
           keyVaultName: $(keyVaultName)
