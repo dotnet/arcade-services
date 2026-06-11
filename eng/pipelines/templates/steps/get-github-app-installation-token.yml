@@ -1,0 +1,133 @@
+# Mints a short-lived GitHub App installation access token by signing a JWT
+# with a private key stored in Azure Key Vault (RSA, RS256). The JWT is
+# exchanged with the GitHub API for a token scoped to a single installation.
+#
+# Requirements (per GitHub App you want to authenticate as):
+#   - A GitHub App with its private key uploaded into Key Vault as an RSA key
+#     (PEM converted to a key, NOT stored as a secret).
+#   - The Azure service connection passed via `azureSubscription` must be
+#     granted the `Key Vault Crypto User` role (or at minimum `Sign` action)
+#     on that key.
+#   - The App must be installed on the target organization/account
+#     (`installationOwner`) with the permissions/repositories you need.
+#
+# Output: a secret pipeline variable named ${{ parameters.outputVariableName }}
+# containing the installation access token. Token lifetime is ~1 hour and is
+# automatically scrubbed from logs.
+
+parameters:
+- name: azureSubscription
+  type: string
+  # Azure DevOps service connection (federated) that can call
+  # `az keyvault key sign` on the App's signing key.
+
+- name: keyVaultName
+  type: string
+  # Name of the Key Vault that holds the GitHub App's RSA signing key.
+
+- name: keyName
+  type: string
+  # Name of the RSA key inside the Key Vault (the App's private key).
+
+- name: appClientId
+  type: string
+  # The GitHub App's Client ID (the value to put in the `iss` JWT claim).
+  # Prefer this over the numeric App ID; GitHub accepts either, but Client ID
+  # is the documented form going forward.
+
+- name: installationOwner
+  type: string
+  # Login of the organization or user account whose installation we should
+  # mint the token for (e.g. `dotnet`, `maestro-auth-test`).
+
+- name: outputVariableName
+  type: string
+  # Name of the pipeline variable that will receive the installation token.
+
+- name: stepName
+  type: string
+  default: 'getGitHubAppInstallationToken'
+
+- name: condition
+  type: string
+  default: ''
+
+- name: displayName
+  type: string
+  default: 'Get GitHub App installation token'
+
+steps:
+- task: AzureCLI@2
+  displayName: ${{ parameters.displayName }}
+  name: ${{ parameters.stepName }}
+  ${{ if ne(parameters.condition, '') }}:
+    condition: ${{ parameters.condition }}
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      $ErrorActionPreference = 'Stop'
+      $PSNativeCommandUseErrorActionPreference = $true
+
+      function ConvertTo-Base64Url([byte[]] $bytes) {
+          return [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+      }
+
+      # Build JWT header and payload. Use [ordered] hashtables so JSON
+      # serialization is deterministic.
+      $jwtHeader = [ordered]@{
+          alg = 'RS256'
+          typ = 'JWT'
+      }
+      $now = [System.DateTimeOffset]::UtcNow
+      $jwtPayload = [ordered]@{
+          iat = $now.AddMinutes(-1).ToUnixTimeSeconds()
+          exp = $now.AddMinutes(5).ToUnixTimeSeconds()
+          iss = '${{ parameters.appClientId }}'
+      }
+
+      $headerEncoded  = ConvertTo-Base64Url ([System.Text.Encoding]::UTF8.GetBytes(($jwtHeader  | ConvertTo-Json -Compress)))
+      $payloadEncoded = ConvertTo-Base64Url ([System.Text.Encoding]::UTF8.GetBytes(($jwtPayload | ConvertTo-Json -Compress)))
+      $signingInput   = "$headerEncoded.$payloadEncoded"
+
+      # Key Vault `sign` expects the *digest* (base64), not the raw bytes.
+      $sha256       = [System.Security.Cryptography.SHA256]::Create()
+      $digestBytes  = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($signingInput))
+      $digestBase64 = [Convert]::ToBase64String($digestBytes)
+
+      Write-Host "Signing JWT with key '${{ parameters.keyName }}' in vault '${{ parameters.keyVaultName }}'..."
+      $signResponseJson = az keyvault key sign `
+          --vault-name '${{ parameters.keyVaultName }}' `
+          --name '${{ parameters.keyName }}' `
+          --algorithm RS256 `
+          --digest $digestBase64
+      $signResponse  = $signResponseJson | ConvertFrom-Json
+      $signatureUrl  = $signResponse.signature.TrimEnd('=').Replace('+', '-').Replace('/', '_')
+      $jwt           = "$signingInput.$signatureUrl"
+
+      $headers = @{
+          Authorization          = "Bearer $jwt"
+          'X-GitHub-Api-Version' = '2022-11-28'
+          Accept                 = 'application/vnd.github+json'
+          'User-Agent'           = 'arcade-services-pipeline'
+      }
+
+      Write-Host "Looking up installation for '${{ parameters.installationOwner }}'..."
+      $installations = Invoke-RestMethod -Uri 'https://api.github.com/app/installations' -Headers $headers -Method Get
+      $installation  = $installations | Where-Object { $_.account.login -eq '${{ parameters.installationOwner }}' }
+      if ($null -eq $installation) {
+          $found = ($installations | ForEach-Object { $_.account.login }) -join ', '
+          Write-Error "No installation found for '${{ parameters.installationOwner }}'. App is installed on: $found"
+          exit 1
+      }
+
+      $tokenResponse = Invoke-RestMethod `
+          -Uri "https://api.github.com/app/installations/$($installation.id)/access_tokens" `
+          -Headers $headers `
+          -Method Post `
+          -ContentType 'application/json'
+
+      Write-Host "Got installation token for '${{ parameters.installationOwner }}' (expires $($tokenResponse.expires_at))."
+      Write-Host "Setting pipeline variable '${{ parameters.outputVariableName }}'."
+      Write-Host "##vso[task.setvariable variable=${{ parameters.outputVariableName }};issecret=true]$($tokenResponse.token)"

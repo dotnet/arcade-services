@@ -144,6 +144,22 @@ stages:
       - download: current
         artifact: AssetManifests
 
+      # Mint a short-lived GitHub App installation token to replace the
+      # `dotnet-bot-arcade-services-content-rw` PAT below. The App must be
+      # installed on `dotnet` with at least `contents: write` (for releases)
+      # and `pull_requests: read` (for the label query).
+      # TODO: fill in keyVaultName / keyName / appClientId once the App is
+      # provisioned and its RSA private key has been imported into Key Vault.
+      - template: /eng/pipelines/templates/steps/get-github-app-installation-token.yml
+        parameters:
+          azureSubscription: $(pcsDeploymentServiceConnection)
+          keyVaultName: '<TODO_KEYVAULT_NAME>'
+          keyName: '<TODO_KEY_NAME>'
+          appClientId: '<TODO_GITHUB_APP_CLIENT_ID>'
+          installationOwner: dotnet
+          outputVariableName: ArcadeServicesGitHubAppToken
+          displayName: Get GitHub App token for dotnet/arcade-services
+
       - powershell: |
           $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
           $xml = [xml](Get-Content $xmlPaths[0].FullName)
@@ -157,7 +173,7 @@ stages:
             --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
         continueOnError: true
 
       - task: AzureCLI@2
@@ -185,7 +201,7 @@ stages:
               Write-Host "No 'breaking-darc-change' label found. Skipping minimum darc version bump."
             }
         env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
         continueOnError: true
 
 - stage: E2ETests

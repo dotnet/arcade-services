@@ -49,6 +49,23 @@ jobs:
       federatedServiceConnection: ArcadeServicesInternal
       outputVariableName: AzdoToken
 
+  # Mint a short-lived GitHub App installation token for the
+  # `maestro-auth-test` org used by the scenario tests, replacing the
+  # `dotnet-bot-maestro-auth-test-content-rw-pr-rw` PAT below. The App must
+  # be installed on `maestro-auth-test` with `contents: write`,
+  # `pull_requests: write`, and any other permissions the scenarios exercise.
+  # TODO: fill in keyVaultName / keyName / appClientId once the App is
+  # provisioned and its RSA private key has been imported into Key Vault.
+  - template: /eng/pipelines/templates/steps/get-github-app-installation-token.yml
+    parameters:
+      azureSubscription: $(pcsDeploymentServiceConnection)
+      keyVaultName: '<TODO_KEYVAULT_NAME>'
+      keyName: '<TODO_KEY_NAME>'
+      appClientId: '<TODO_GITHUB_APP_CLIENT_ID>'
+      installationOwner: maestro-auth-test
+      outputVariableName: MaestroAuthTestGitHubAppToken
+      displayName: Get GitHub App token for maestro-auth-test
+
   - task: AzureCLI@2
     displayName: Run E2E tests
     inputs:
@@ -67,7 +84,7 @@ jobs:
         RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
-      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
+      GITHUB_TOKEN: $(MaestroAuthTestGitHubAppToken)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc
