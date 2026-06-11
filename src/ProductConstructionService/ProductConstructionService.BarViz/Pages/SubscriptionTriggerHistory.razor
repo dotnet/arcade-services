@@ -171,6 +171,11 @@
                             <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
                         </FluentLabel>
                     </TemplateColumn>
+                    <TemplateColumn Title="Pull Request" Width="200px" Sortable="true" Align="Align.Start">
+                        <FluentLabel>
+                            <FluentAnchor Href="@context.PrUrl" Target="_blank" Appearance="Appearance.Hypertext">View Pull Request</FluentAnchor>
+                        </FluentLabel>
+                    </TemplateColumn>
                     <TemplateColumn Title="Message" Width="2fr" Align="Align.Start">
                         <span class="outcome-message" title="@context.Message">@foreach (var segment in StringExtensions.SplitIntoTextAndUrls(context.Message))
                             {

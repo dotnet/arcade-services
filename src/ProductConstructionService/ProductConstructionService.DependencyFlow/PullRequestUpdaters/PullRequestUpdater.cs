@@ -414,8 +414,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.NextBuildsToProcess);
 
                 return new SubscriptionUpdateResult(
-                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued."
-                     + (pr != null ? $"PR url: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}" : ""),
+                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued",
                     SubscriptionOutcomeType.NoUpdate);
             }
 
@@ -443,7 +442,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
                     await _stateManager.ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return new SubscriptionUpdateResult(
-                        $"The existing PR cannot be updated at this time due to pending checks, and will be retried periodically. Pr url: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
+                        "The existing PR cannot be updated due to pending checks - retrying periodically until success",
                         SubscriptionOutcomeType.Rescheduled);
                 default:
                     throw new NotImplementedException($"Unknown PR status {status}");

@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
+using Maestro.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.Services.Common.Cache;
 using Maestro.WorkItems;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
@@ -24,9 +27,11 @@ public interface ISubscriptionUpdateOutcomeRecorder
 
 public class SubscriptionUpdateOutcomeRecorder(
     BuildAssetRegistryContext context,
+    IRedisCacheFactory cacheFactory,
     ILogger<SubscriptionUpdateOutcomeRecorder> logger) : ISubscriptionUpdateOutcomeRecorder
 {
     private readonly BuildAssetRegistryContext _context = context;
+    private readonly IRedisCacheFactory _cacheFactory = cacheFactory;
     private readonly ILogger<SubscriptionUpdateOutcomeRecorder> _logger = logger;
 
     public Task<bool> RunUpdateWithOutcomePersistenceAsync(
@@ -94,6 +99,8 @@ public class SubscriptionUpdateOutcomeRecorder(
         // Fall back to a generated id if there's no current Activity (e.g. tests).
         var operationId = Activity.Current?.RootId ?? Guid.NewGuid().ToString("N");
 
+        var prUrl = await TryGetPullRequestUrlAsync(subscriptionId);
+
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
         {
             Message = message,
@@ -101,8 +108,37 @@ public class SubscriptionUpdateOutcomeRecorder(
             SubscriptionId = subscriptionId,
             BuildId = buildId ?? -1,
             Type = type,
-            Date = DateTime.UtcNow
+            Date = DateTime.UtcNow,
+            PrUrl = prUrl,
         });
         await _context.SaveChangesAsync();
+    }
+
+    private async Task<string?> TryGetPullRequestUrlAsync(Guid subscriptionId)
+    {
+        try
+        {
+            var subscription = _context.Subscriptions.First(s => s.Id == subscriptionId);
+
+            string prRedisKey = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
+
+            var pullRequest = await _cacheFactory
+                .Create<InProgressPullRequest>(prRedisKey)
+                .TryGetStateAsync();
+
+            if (pullRequest == null)
+            {
+                return null;
+            }
+
+            return GitRepoUrlUtils.TurnApiUrlToWebsite(pullRequest.Url);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e,
+                "Failed to retrieve the in-progress pull request for SubscriptionId: {SubscriptionId} while recording the subscription outcome.",
+                subscriptionId);
+            return null;
+        }
     }
 }

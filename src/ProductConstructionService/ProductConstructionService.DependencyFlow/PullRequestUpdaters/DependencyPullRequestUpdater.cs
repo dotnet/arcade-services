@@ -73,7 +73,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                "",
+                string.Empty,
                 SubscriptionOutcomeType.NoUpdate);
         }
         else
@@ -81,7 +81,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", newPr.Url, update.SubscriptionId);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                $"Pull request created successfully: {GitRepoUrlUtils.TurnApiUrlToWebsite(newPr.Url)}",
+                "New pull request created",
                 SubscriptionOutcomeType.Updated);
         }
     }
@@ -108,7 +108,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
                 || update.CoherencyUpdates.Count == 0)))
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
-            return new SubscriptionUpdateResult($"No new updates found for existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}", SubscriptionOutcomeType.NoUpdate);
+            return new SubscriptionUpdateResult("No new dependency updates", SubscriptionOutcomeType.NoUpdate);
         }
 
         pr.RequiredUpdates = MergeExistingWithIncomingUpdates(
@@ -123,7 +123,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         if (pr.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
-            return new SubscriptionUpdateResult($"No new updates found for existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}", SubscriptionOutcomeType.NoUpdate);
+            return new SubscriptionUpdateResult("No new dependency updates", SubscriptionOutcomeType.NoUpdate);
         }
 
         await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
@@ -186,7 +186,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
 
         return new SubscriptionUpdateResult(
-            $"Dependencies successfully updated in an existing PR: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
+            string.Empty,
             SubscriptionOutcomeType.Updated);
     }
 
