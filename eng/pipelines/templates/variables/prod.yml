@@ -5,3 +5,7 @@ variables:
   value: productconstructionprod
 - name: pcsDeploymentServiceConnection
   value: ProductConstructionServiceDeploymentProd
+- name: keyVaultName
+  value: ProductConstructionProd
+- name: ciGitHubAppClientId
+  value: Iv23lirMWEG8ISMvxF43

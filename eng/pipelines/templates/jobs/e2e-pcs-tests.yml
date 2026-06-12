@@ -49,6 +49,16 @@ jobs:
       federatedServiceConnection: ArcadeServicesInternal
       outputVariableName: AzdoToken
 
+  - template: /eng/pipelines/templates/steps/get-github-app-token.yml
+    parameters:
+      azureSubscription: $(pcsDeploymentServiceConnection)
+      keyVaultName: $(keyVaultName)
+      keyName: maestro-ci-private-key
+      appClientId: $(ciGitHubAppClientId)
+      installationOwner: maestro-auth-test
+      outputVariableName: MaestroAuthTestGitHubAppToken
+      displayName: Get GitHub App token for maestro-auth-test
+
   - task: AzureCLI@2
     displayName: Run E2E tests
     inputs:
@@ -67,7 +77,7 @@ jobs:
         RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
-      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
+      GITHUB_TOKEN: $(MaestroAuthTestGitHubAppToken)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc
