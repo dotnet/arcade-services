@@ -8,6 +8,11 @@ namespace ProductConstructionService.Api.v2020_02_20.Models;
 public class SubscriptionTriggerOutcome
 {
     public SubscriptionTriggerOutcome(Maestro.Data.Models.SubscriptionOutcome other, Maestro.Data.Models.Subscription subscription = null)
+        : this(other, subscription?.SourceRepository, subscription?.TargetRepository, subscription?.TargetBranch)
+    {
+    }
+
+    public SubscriptionTriggerOutcome(Maestro.Data.Models.SubscriptionOutcome other, string sourceRepository, string targetRepository, string targetBranch)
     {
         ArgumentNullException.ThrowIfNull(other);
 
@@ -17,9 +22,9 @@ public class SubscriptionTriggerOutcome
         Date = other.Date;
         Message = other.Message;
         Type = (OutcomeType)other.Type;
-        SourceRepository = subscription?.SourceRepository;
-        TargetRepository = subscription?.TargetRepository;
-        TargetBranch = subscription?.TargetBranch;
+        SourceRepository = sourceRepository;
+        TargetRepository = targetRepository;
+        TargetBranch = targetBranch;
     }
 
     public string OperationId { get; }

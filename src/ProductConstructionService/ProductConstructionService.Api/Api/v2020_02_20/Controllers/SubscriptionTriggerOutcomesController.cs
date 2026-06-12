@@ -119,12 +119,25 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
         var results = await query
             .OrderByDescending(o => o.Date)
             .Take(limit)
+            .GroupJoin(
+                _context.Subscriptions,
+                outcome => outcome.SubscriptionId,
+                subscription => subscription.Id,
+                (outcome, subscriptions) => new { outcome, subscriptions })
+            .SelectMany(
+                joined => joined.subscriptions.DefaultIfEmpty(),
+                (joined, subscription) => new
+                {
+                    Outcome = joined.outcome,
+                    subscription!.SourceRepository,
+                    subscription!.TargetRepository,
+                    subscription!.TargetBranch,
+                })
+            .OrderByDescending(x => x.Outcome.Date)
             .ToListAsync();
 
-        var subscriptions = await GetSubscriptionsAsync(results.Select(o => o.SubscriptionId));
-
         return Ok(results
-            .Select(o => new SubscriptionTriggerOutcome(o, subscriptions.GetValueOrDefault(o.SubscriptionId)))
+            .Select(x => new SubscriptionTriggerOutcome(x.Outcome, x.SourceRepository, x.TargetRepository, x.TargetBranch))
             .ToList());
     }
 
