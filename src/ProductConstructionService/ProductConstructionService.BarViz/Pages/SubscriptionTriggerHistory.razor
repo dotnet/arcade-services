@@ -145,12 +145,6 @@
                         <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Subscription" Width="440px" Sortable="true" SortBy="SortBy(o => GetSubscriptionBlurb(o) ?? o.SubscriptionId.ToString())" Align="Align.Start">
-                        <FluentButton Appearance="Appearance.Lightweight"
-                                      Class="copy-id-button"
-                                      Title="Copy subscription ID"
-                                      OnClick="@(() => CopySubscriptionIdAsync(context.SubscriptionId))">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="Color.Neutral" />
-                        </FluentButton>
                         @{
                             var blurb = GetSubscriptionBlurb(context);
                         }
