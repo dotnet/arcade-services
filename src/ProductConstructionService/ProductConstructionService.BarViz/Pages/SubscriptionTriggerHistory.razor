@@ -82,6 +82,13 @@
                      VerticalAlignment="VerticalAlignment.Bottom"
                      Wrap="true">
             <div>
+                <FluentTextField @bind-Value="_searchFilter"
+                                 @bind-Value:after="ApplyFiltersAsync"
+                                 Label="Search"
+                                 Placeholder="Source/target repo or branch"
+                                 Style="min-width: 280px;" />
+            </div>
+            <div>
                 <FluentTextField @bind-Value="_subscriptionIdFilter"
                                  @bind-Value:after="ApplyFiltersAsync"
                                  Label="Subscription ID"
@@ -214,6 +221,7 @@
     private bool _showLoadingMoreSpinner;
     private bool _reloading;
 
+    private string? _searchFilter;
     private string? _subscriptionIdFilter;
     private string? _subscriptionIdError;
     private string _outcomeTypeFilter = AllOutcomeTypes;
@@ -232,6 +240,9 @@
     [SupplyParameterFromQuery(Name = "before")]
     private string? BeforeQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "search")]
+    private string? SearchQuery { get; set; }
+
     private DateTimeOffset? BeforeFilter => _beforeDate.HasValue
         ? new DateTimeOffset(_beforeDate.Value.Date, TimeSpan.Zero).AddDays(1).AddTicks(-1)
         : null;
@@ -243,6 +254,10 @@
     private string? OutcomeTypeParam => string.IsNullOrEmpty(_outcomeTypeFilter)
         ? null
         : _outcomeTypeFilter;
+
+    private string? SearchParam => string.IsNullOrWhiteSpace(_searchFilter)
+        ? null
+        : _searchFilter.Trim();
 
     private static GridSort<SubscriptionTriggerOutcome> SortBy<TProp>(Expression<Func<SubscriptionTriggerOutcome, TProp>> sorter)
         => GridSort<SubscriptionTriggerOutcome>.ByAscending(sorter);
@@ -312,6 +327,11 @@
         {
             _beforeDate = beforeDate.Date;
         }
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            _searchFilter = SearchQuery.Trim();
+        }
     }
 
     private async Task ApplyFiltersAsync()
@@ -345,6 +365,7 @@
             ["outcomeType"] = OutcomeTypeParam,
             ["buildId"] = _buildIdFilter,
             ["before"] = _beforeDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["search"] = SearchParam,
         });
 
         NavManager.NavigateTo(newUri);
@@ -357,6 +378,7 @@
         _outcomeTypeFilter = AllOutcomeTypes;
         _buildIdFilter = null;
         _beforeDate = null;
+        _searchFilter = null;
 
         await ApplyFiltersAsync();
     }
@@ -381,7 +403,8 @@
             before: beforeDate,
             buildId: _buildIdFilter,
             subscriptionId: SubscriptionIdParam,
-            subscriptionOutcomeType: OutcomeTypeParam);
+            subscriptionOutcomeType: OutcomeTypeParam,
+            search: SearchParam);
 
         _hasMore = batch.Count == PageSize;
 

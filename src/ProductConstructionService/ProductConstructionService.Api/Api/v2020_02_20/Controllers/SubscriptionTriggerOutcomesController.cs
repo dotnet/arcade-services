@@ -39,6 +39,10 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     /// <param name="before">Return only outcomes on or before this date (inclusive upper bound). Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
     /// <param name="subscriptionOutcomeType">Filter by outcome type (e.g. "Updated", "NoUpdate", "Failure").</param>
     /// <param name="operationId">Filter by operation id.</param>
+    /// <param name="search">
+    ///   Free-text filter matched against the subscription's source repository, target repository and target branch.
+    ///   Matching subscriptions are resolved first and the outcome query is then restricted to their ids.
+    /// </param>
     /// <param name="limit">Maximum number of results to return.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionTriggerOutcome>), Description = "The list of subscription outcomes")]
@@ -50,6 +54,7 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
         DateTimeOffset? before = null,
         string? subscriptionOutcomeType = null,
         string? operationId = null,
+        string? search = null,
         [Range(1, MaxResultLimit)] int limit = DefaultResultLimit)
     {
         IQueryable<DataModels.SubscriptionOutcome> query = _context.SubscriptionOutcomes;
@@ -116,9 +121,7 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             query = query.Where(o => o.OperationId == operationId);
         }
 
-        var results = await query
-            .OrderByDescending(o => o.Date)
-            .Take(limit)
+        var joinedQuery = query
             .GroupJoin(
                 _context.Subscriptions,
                 outcome => outcome.SubscriptionId,
@@ -129,11 +132,27 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
                 (joined, subscription) => new
                 {
                     Outcome = joined.outcome,
-                    subscription!.SourceRepository,
-                    subscription!.TargetRepository,
-                    subscription!.TargetBranch,
-                })
+                    Subscription = subscription,
+                });
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            joinedQuery = joinedQuery.Where(x =>
+                x.Subscription!.SourceRepository.Contains(search)
+                || x.Subscription!.TargetRepository.Contains(search)
+                || x.Subscription!.TargetBranch.Contains(search));
+        }
+
+        var results = await joinedQuery
             .OrderByDescending(x => x.Outcome.Date)
+            .Take(limit)
+            .Select(x => new
+            {
+                Outcome = x.Outcome,
+                x.Subscription!.SourceRepository,
+                x.Subscription!.TargetRepository,
+                x.Subscription!.TargetBranch,
+            })
             .ToListAsync();
 
         return Ok(results
