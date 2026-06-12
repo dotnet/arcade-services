@@ -21,6 +21,47 @@ public static class SubscriptionOutcomeHelper
     public static bool IsUserError(SubscriptionTriggerOutcome? outcome)
         => outcome?.Type is OutcomeType.UserError;
 
+    /// <summary>
+    ///   Builds a short, human-readable blurb describing a subscription of the form "source → target"
+    ///   using the short repository names. Returns null when either repository is missing
+    ///   (e.g. the subscription no longer exists), so callers can fall back to another display.
+    /// </summary>
+    public static string? GetSubscriptionBlurb(string? sourceRepository, string? targetRepository, string targetBranch)
+    {
+        if (string.IsNullOrEmpty(sourceRepository)
+            || string.IsNullOrEmpty(targetRepository)
+            || string.IsNullOrEmpty(targetBranch))
+        {
+            return null;
+        }
+
+        var source = RepoShortName(sourceRepository);
+        var target = RepoShortName(targetRepository);
+
+        if (source == null || target == null)
+        {
+            return null;
+        }
+
+        return $"{source} → {target} ({targetBranch})";
+    }
+
+    /// <summary>
+    ///   Converts a repository URL to a readable "org/repo" short name
+    /// </summary>
+    public static string? RepoShortName(string repoUrl)
+    {
+        var slug = RepoUrlConverter.RepoUrlToSlug(repoUrl);
+        if (slug is null)
+        {
+            return null;
+        }
+
+        // Slugs look like "github:org:repo" or "azdo:org:project:repo"; drop the leading
+        // repo-type segment and join the rest as a readable "org/repo" path.
+        return string.Join('/', slug.Split(':').Skip(1));
+    }
+
     public static List<SubscriptionOutcomeError> GetErroredSubscriptions(
         IEnumerable<CodeflowSubscriptionStatus?> flows)
     {
