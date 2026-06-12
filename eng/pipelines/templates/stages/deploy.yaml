@@ -64,9 +64,6 @@ stages:
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
 
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
-    # Required for dotnet-bot-arcade-services-content-write
-    - group: Arcade-Services-Release
     - name: subscriptionId
       value: fbd6122a-9ad3-42e4-976e-bccb82486856
     - name: containerappName
