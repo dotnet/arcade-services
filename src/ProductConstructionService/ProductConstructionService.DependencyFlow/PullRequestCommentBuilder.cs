@@ -146,6 +146,13 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
           ```
         """;
 
+    public static string BuildMissingOppositeDirectionSubscriptionNotification() =>
+        """
+        :warning: No subscription flowing code in the opposite direction was found.
+        This means that any code changes flowed through this pull request will never flow back to the source repository.
+        Consider creating a subscription for the opposite direction so that the repositories stay in sync.
+        """;
+
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
     {
         // We'll try to notify the source repo if the subscription provided a list of aliases to tag.
