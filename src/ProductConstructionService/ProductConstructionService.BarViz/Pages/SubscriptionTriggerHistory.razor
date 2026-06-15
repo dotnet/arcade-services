@@ -175,7 +175,7 @@
                         <FluentLabel>
                             @if (!string.IsNullOrEmpty(context.PrUrl))
                             {
-                                <FluentAnchor Href="@context.PrUrl" Target="_blank" Appearance="Appearance.Hypertext">View Pull Request</FluentAnchor>
+                                <FluentAnchor Href="@context.PrUrl" Target="_blank" Appearance="Appearance.Hypertext">#@RepoUrlConverter.GetPrNumber(context.PrUrl)</FluentAnchor>
                             }
                         </FluentLabel>
                     </TemplateColumn>
