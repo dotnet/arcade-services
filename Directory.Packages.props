@@ -5,11 +5,11 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Azure.Storage.Queues" Version="13.1.2" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.2" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.1.2" />
-    <PackageVersion Include="Aspire.Hosting.Azure" Version="13.1.2" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.1.2" />
+    <PackageVersion Include="Aspire.Azure.Storage.Queues" Version="13.4.3" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.3" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.3" />
+    <PackageVersion Include="Aspire.Hosting.Azure" Version="13.4.3" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.3" />
     <PackageVersion Include="Azure.Core" Version="1.58.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.3" />
@@ -19,7 +19,7 @@
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.1" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
-    <PackageVersion Include="Azure.Storage.Queues" Version="12.26.0-beta.1" />
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.26.0" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="DistributedLock.Redis" Version="1.1.1" />
@@ -91,7 +91,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="8.1.1" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
-    <PackageVersion Include="System.IO.Hashing" Version="10.0.1" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.8" />
     <PackageVersion Include="System.Runtime.Caching" Version="10.0.6" />
     <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="25.0.2" />
