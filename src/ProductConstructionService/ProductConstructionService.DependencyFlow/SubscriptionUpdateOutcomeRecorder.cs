@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
+using Microsoft.EntityFrameworkCore;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -118,7 +119,7 @@ public class SubscriptionUpdateOutcomeRecorder(
     {
         try
         {
-            var subscription = _context.Subscriptions.First(s => s.Id == subscriptionId);
+            var subscription = await _context.Subscriptions.FirstAsync(s => s.Id == subscriptionId);
 
             string prRedisKey = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
 
