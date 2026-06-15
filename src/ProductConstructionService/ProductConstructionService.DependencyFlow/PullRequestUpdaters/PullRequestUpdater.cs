@@ -414,7 +414,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.NextBuildsToProcess);
 
                 return new SubscriptionUpdateResult(
-                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued",
+                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess.Values.First().ToString() ?? "(N/A)"} has already been queued",
                     SubscriptionOutcomeType.NoUpdate);
             }
 
