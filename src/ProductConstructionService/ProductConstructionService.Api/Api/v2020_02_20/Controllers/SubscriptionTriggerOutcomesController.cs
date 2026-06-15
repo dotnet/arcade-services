@@ -14,7 +14,7 @@ using DataModels = Maestro.Data.Models;
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Read <see cref="SubscriptionTriggerOutcome"/>s.
+///
 /// </summary>
 [Route("subscription-trigger-outcomes")]
 [ApiVersion("2020-02-20")]
@@ -39,6 +39,10 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
     /// <param name="before">Return only outcomes on or before this date (inclusive upper bound). Include an explicit offset (e.g. "2025-01-15T12:00:00Z").</param>
     /// <param name="subscriptionOutcomeType">Filter by outcome type (e.g. "Updated", "NoUpdate", "Failure").</param>
     /// <param name="operationId">Filter by operation id.</param>
+    /// <param name="search">
+    ///   Free-text filter matched against the subscription's source repository, target repository and target branch.
+    ///   Matching subscriptions are resolved first and the outcome query is then restricted to their ids.
+    /// </param>
     /// <param name="limit">Maximum number of results to return.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionTriggerOutcome>), Description = "The list of subscription outcomes")]
@@ -50,6 +54,7 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
         DateTimeOffset? before = null,
         string? subscriptionOutcomeType = null,
         string? operationId = null,
+        string? search = null,
         [Range(1, MaxResultLimit)] int limit = DefaultResultLimit)
     {
         IQueryable<DataModels.SubscriptionOutcome> query = _context.SubscriptionOutcomes;
@@ -116,12 +121,43 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             query = query.Where(o => o.OperationId == operationId);
         }
 
-        var results = await query
-            .OrderByDescending(o => o.Date)
+        var joinedQuery = query
+            .GroupJoin(
+                _context.Subscriptions,
+                outcome => outcome.SubscriptionId,
+                subscription => subscription.Id,
+                (outcome, subscriptions) => new { outcome, subscriptions })
+            .SelectMany(
+                joined => joined.subscriptions.DefaultIfEmpty(),
+                (joined, subscription) => new
+                {
+                    Outcome = joined.outcome,
+                    Subscription = subscription,
+                });
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            joinedQuery = joinedQuery.Where(x =>
+                x.Subscription!.SourceRepository.Contains(search)
+                || x.Subscription!.TargetRepository.Contains(search)
+                || x.Subscription!.TargetBranch.Contains(search));
+        }
+
+        var results = await joinedQuery
+            .OrderByDescending(x => x.Outcome.Date)
             .Take(limit)
+            .Select(x => new
+            {
+                Outcome = x.Outcome,
+                x.Subscription!.SourceRepository,
+                x.Subscription!.TargetRepository,
+                x.Subscription!.TargetBranch,
+            })
             .ToListAsync();
 
-        return Ok(results.Select(o => new SubscriptionTriggerOutcome(o)).ToList());
+        return Ok(results
+            .Select(x => new SubscriptionTriggerOutcome(x.Outcome, x.SourceRepository, x.TargetRepository, x.TargetBranch))
+            .ToList());
     }
 
     /// <summary>
@@ -142,6 +178,26 @@ public class SubscriptionTriggerOutcomesController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new SubscriptionTriggerOutcome(outcome));
+        var subscriptions = await GetSubscriptionsAsync([outcome.SubscriptionId]);
+
+        return Ok(new SubscriptionTriggerOutcome(outcome, subscriptions.GetValueOrDefault(outcome.SubscriptionId)));
+    }
+
+    /// <summary>
+    ///   Fetches the <see cref="DataModels.Subscription"/>s for the given subscription ids, keyed by id.
+    /// </summary>
+    private async Task<Dictionary<Guid, DataModels.Subscription>> GetSubscriptionsAsync(IEnumerable<Guid> subscriptionIds)
+    {
+        var ids = subscriptionIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var subscriptions = await _context.Subscriptions
+            .Where(s => ids.Contains(s.Id))
+            .ToListAsync();
+
+        return subscriptions.ToDictionary(s => s.Id);
     }
 }

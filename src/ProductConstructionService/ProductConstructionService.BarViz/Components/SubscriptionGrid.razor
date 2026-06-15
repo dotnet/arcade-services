@@ -2,6 +2,7 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using System.ComponentModel.DataAnnotations
 @using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Model
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
 
@@ -70,6 +71,6 @@
             PreventScroll = true,
         };
 
-        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(SubscriptionDetailData.FromSubscription(subscription), parameters);
     }
 }
