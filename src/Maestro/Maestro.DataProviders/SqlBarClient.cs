@@ -520,29 +520,6 @@ public class SqlBarClient : ISqlBarClient
         };
     }
 
-    public async Task RegisterSubscriptionUpdate(
-        Guid subscriptionId,
-        string updateMessage)
-    {
-        Data.Models.Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);
-        Data.Models.SubscriptionUpdate subscriptionUpdate = new()
-        {
-            SubscriptionId = subscription.Id,
-            Subscription = subscription,
-            Action = updateMessage
-        };
-        var existingSubscriptionUpdate = await _context.SubscriptionUpdates.FindAsync(subscriptionUpdate.SubscriptionId);
-        if (existingSubscriptionUpdate == null)
-        {
-            _context.SubscriptionUpdates.Add(subscriptionUpdate);
-        }
-        else
-        {
-            _context.Entry(existingSubscriptionUpdate).CurrentValues.SetValues(subscriptionUpdate);
-        }
-        await _context.SaveChangesAsync();
-    }
-
     public async Task CreateSubscriptionsAsync(
         IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
         bool andSaveContext = true)
@@ -741,10 +718,6 @@ public class SqlBarClient : ISqlBarClient
     {
         var subscriptionIds = subscriptionsToDelete.Select(s => s.Id).ToHashSet();
 
-        _context.SubscriptionUpdates.RemoveRange(
-            _context.SubscriptionUpdates
-                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
-
         var subscriptionsWithAssets = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .Where(s => subscriptionIds.Contains(s.Id))
@@ -810,11 +783,6 @@ public class SqlBarClient : ISqlBarClient
             throw new InvalidOperationException($"Namespace '{namespaceName}' not found.");
         }
 
-        var subscriptionIds = barNamespace.Subscriptions.Select(sub => sub.Id).ToHashSet();
-
-        _context.SubscriptionUpdates.RemoveRange(
-            _context.SubscriptionUpdates
-                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
         _context.AssetFilters.RemoveRange(
             barNamespace.Subscriptions.SelectMany(s => s.ExcludedAssets));
         _context.Channels.RemoveRange(barNamespace.Channels);
