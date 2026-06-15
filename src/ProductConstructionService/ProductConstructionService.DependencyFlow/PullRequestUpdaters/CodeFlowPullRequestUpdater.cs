@@ -194,6 +194,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             prInfo = null;
         }
 
+        await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription);
+
         if (pr == null)
         {
             (pr, var _) = await CreateCodeFlowPullRequestAsync(
@@ -791,6 +793,37 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
+    }
+
+    private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription)
+    {
+        var defaultChannels = await _sqlClient.GetDefaultChannelsAsync(
+            repository: subscription.TargetRepository,
+            branch: subscription.TargetBranch);
+
+        var channelIds = defaultChannels
+            .Where(dc => dc.Channel != null)
+            .Select(dc => dc.Channel.Id)
+            .ToHashSet();
+
+        var oppositeDirectionSubscriptions = await _sqlClient.GetSubscriptionsAsync(
+            sourceRepo: subscription.TargetRepository,
+            targetRepo: subscription.SourceRepository);
+
+        var hasOppositeDirectionSubscription = oppositeDirectionSubscriptions
+            .Any(s => s.Channel != null && channelIds.Contains(s.Channel.Id));
+
+        if (!hasOppositeDirectionSubscription)
+        {
+            _logger.LogInformation(
+                "No opposite-direction subscription found flowing code from {targetRepository} back to {sourceRepository}. Notifying about the missing subscription.",
+                subscription.TargetRepository,
+                subscription.SourceRepository);
+
+            _commentCollector.AddComment(
+                PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow()),
+                CommentType.Warning);
+        }
     }
 }
 
