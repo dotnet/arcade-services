@@ -17,9 +17,6 @@ jobs:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
     - group: Publish-Build-Assets
-    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
-    # Required for dotnet-bot-maestro-auth-test-content-rw
-    - group: Arcade-Services-Scenario-Tests
     - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
       - name: PcsTestEndpoint
         value: https://maestro.int-dot.net
@@ -49,6 +46,16 @@ jobs:
       federatedServiceConnection: ArcadeServicesInternal
       outputVariableName: AzdoToken
 
+  - template: /eng/pipelines/templates/steps/get-github-app-token.yml
+    parameters:
+      azureSubscription: $(pcsDeploymentServiceConnection)
+      keyVaultName: $(keyVaultName)
+      keyName: maestro-ci-private-key
+      appClientId: $(ciGitHubAppClientId)
+      installationOwner: maestro-auth-test
+      outputVariableName: MaestroAuthTestGitHubAppToken
+      displayName: Get GitHub App token for maestro-auth-test
+
   - task: AzureCLI@2
     displayName: Run E2E tests
     inputs:
@@ -67,7 +74,7 @@ jobs:
         RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
-      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
+      GITHUB_TOKEN: $(MaestroAuthTestGitHubAppToken)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc
