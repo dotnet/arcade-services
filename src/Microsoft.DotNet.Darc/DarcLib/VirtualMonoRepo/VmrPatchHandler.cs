@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -626,6 +627,14 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
+
+        if (!GitRepoUrlUtils.IsValidRemoteRepoUri(change.Url))
+        {
+            throw new DarcException(
+                $"Submodule '{change.Name}' has an invalid or disallowed URL '{change.Url}'. " +
+                "Only https URLs hosted on GitHub or Azure DevOps are allowed.");
+        }
+
         var clonePath = await _cloneManager.PrepareCloneAsync(change.Url, checkoutCommit, resetToRemote: false, cancellationToken);   
 
         // We are only interested in filters specific to submodule's path

