@@ -97,30 +97,38 @@ public static partial class GitRepoUrlUtils
         };
     }
 
-    /// <summary>
-    /// Determines whether the given URI is a remote repository URI that is safe to hand to git
-    /// (e.g. <c>git clone</c>/<c>git fetch</c>). Only <c>https</c> URIs hosted on GitHub or Azure
-    /// DevOps (github.com, dev.azure.com, *.visualstudio.com) are considered valid; everything else
-    /// (git transport helpers such as <c>ext::</c>/<c>fd::</c>, scp-like SSH URLs, <c>file://</c>/local
-    /// paths, plain <c>http</c>, and option-like values starting with <c>-</c>) is rejected. This guards
-    /// against attacker-controlled values (e.g. submodule URLs read from a repository's .gitmodules)
-    /// reaching git with a dangerous transport.
-    /// </summary>
     public static bool IsValidRemoteRepoUri(string pathOrUri)
     {
-        if (!Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? uri))
+        if (string.IsNullOrEmpty(pathOrUri))
         {
             return false;
         }
 
-        if (!string.Equals(uri.Scheme, "https", StringComparison.Ordinal))
+        // Reject values git could interpret as command-line options.
+        if (pathOrUri.StartsWith('-'))
         {
             return false;
         }
 
-        return uri.Host == GitHubComString
-            || uri.Host == "dev.azure.com"
-            || uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase);
+        if (Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? uri))
+        {
+            // Local file paths are allowed.
+            if (uri.IsFile)
+            {
+                return true;
+            }
+
+            // Of the remote schemes, only https on an allowlisted host is allowed.
+            // This rejects http, ssh, git, and transport helpers such as ext::/fd::.
+            return string.Equals(uri.Scheme, "https", StringComparison.Ordinal)
+                && (uri.Host == GitHubComString
+                    || uri.Host == "dev.azure.com"
+                    || uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Not an absolute URI: only accept absolute/rooted local filesystem paths (e.g. "/tmp/repo").
+        // Everything else (relative paths, scp-like SSH targets such as "git@host:path") is rejected.
+        return Path.IsPathRooted(pathOrUri);
     }
 
     /// <summary>
