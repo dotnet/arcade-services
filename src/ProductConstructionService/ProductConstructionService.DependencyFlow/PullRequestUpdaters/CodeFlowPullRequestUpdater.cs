@@ -194,8 +194,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             prInfo = null;
         }
 
-        await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription);
-
         if (pr == null)
         {
             (pr, var _) = await CreateCodeFlowPullRequestAsync(
@@ -793,52 +791,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
-    }
-
-    private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription)
-    {
-        // Find the default channels that publish builds from the repository/branch this subscription targets.
-        // A subscription flowing code in the opposite direction would have to be subscribed to one of these channels.
-        var defaultChannels = await _sqlClient.GetDefaultChannelsAsync(
-            repository: subscription.TargetRepository,
-            branch: subscription.TargetBranch);
-
-        var channelIds = defaultChannels
-            .Where(dc => dc.Channel != null)
-            .Select(dc => dc.Channel.Id)
-            .ToHashSet();
-
-        if (channelIds.Count == 0)
-        {
-            _logger.LogInformation(
-                "No default channel found for {repository} / {branch}. Skipping the opposite-direction subscription check.",
-                subscription.TargetRepository,
-                subscription.TargetBranch);
-            return;
-        }
-
-        // Look for a subscription flowing code in the opposite direction (from the target repo back to the source repo)
-        // on any of the channels found above.
-        var oppositeDirectionSubscriptions = await _sqlClient.GetSubscriptionsAsync(
-            sourceRepo: subscription.TargetRepository,
-            targetRepo: subscription.SourceRepository);
-
-        var hasOppositeDirectionSubscription = oppositeDirectionSubscriptions
-            .Any(s => s.Channel != null && channelIds.Contains(s.Channel.Id));
-
-        if (hasOppositeDirectionSubscription)
-        {
-            return;
-        }
-
-        _logger.LogInformation(
-            "No opposite-direction subscription found flowing code from {targetRepository} back to {sourceRepository}. Notifying about the missing subscription.",
-            subscription.TargetRepository,
-            subscription.SourceRepository);
-
-        _commentCollector.AddComment(
-            PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(),
-            CommentType.Warning);
     }
 }
 
