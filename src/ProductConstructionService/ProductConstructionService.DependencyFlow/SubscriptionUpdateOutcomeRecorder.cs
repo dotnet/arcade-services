@@ -115,7 +115,6 @@ public class SubscriptionUpdateOutcomeRecorder(
 
         if (operationId == null)
         {
-            // Do not record outcomes when there is no operation id, such as E2E tests running against prod.
             return;
         }
 
