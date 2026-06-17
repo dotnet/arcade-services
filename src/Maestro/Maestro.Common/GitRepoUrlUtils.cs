@@ -97,6 +97,40 @@ public static partial class GitRepoUrlUtils
         };
     }
 
+    public static bool IsValidRemoteRepoUri(string pathOrUri)
+    {
+        if (string.IsNullOrEmpty(pathOrUri))
+        {
+            return false;
+        }
+
+        // Reject values git could interpret as command-line options.
+        if (pathOrUri.StartsWith('-'))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? uri))
+        {
+            // Local file paths are allowed.
+            if (uri.IsFile)
+            {
+                return true;
+            }
+
+            // Of the remote schemes, only https on an allowlisted host is allowed.
+            // This rejects http, ssh, git, and transport helpers such as ext::/fd::.
+            return string.Equals(uri.Scheme, "https", StringComparison.Ordinal)
+                && (uri.Host == GitHubComString
+                    || uri.Host == "dev.azure.com"
+                    || uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Not an absolute URI: only accept absolute/rooted local filesystem paths (e.g. "/tmp/repo").
+        // Everything else (relative paths, scp-like SSH targets such as "git@host:path") is rejected.
+        return Path.IsPathRooted(pathOrUri);
+    }
+
     /// <summary>
     /// Sorts so that we go Local -> GitHub -> AzDO.
     /// (in other words local, public, internal)
