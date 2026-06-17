@@ -111,12 +111,8 @@ public class SubscriptionUpdateOutcomeRecorder(
         Guid subscriptionId,
         int? buildId)
     {
-        var operationId = Activity.Current?.RootId;
-
-        if (operationId == null)
-        {
-            return;
-        }
+        // Fall back to a generated id if there's no current Activity
+        var operationId = Activity.Current?.RootId ?? Guid.NewGuid().ToString("N");
 
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
         {
