@@ -160,20 +160,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     case MergePolicyCheckResult.FailedToMerge:
                         _logger.LogInformation("Pull request {url} can be updated", pr.Url);
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
-                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
 
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
 
                     case MergePolicyCheckResult.PendingPolicies:
                         _logger.LogInformation("Pull request {url} still active (not updatable at the moment) - keeping tracking it", pr.Url);
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
-                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
 
                         return (PullRequestStatus.InProgressCannotUpdate, prInfo);
 
                     default:
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
-                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
