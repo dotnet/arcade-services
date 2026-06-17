@@ -797,7 +797,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
-        _outcomeRecorder.SetPullRequestUrl(pr.Url);
     }
 }
 
