@@ -5,18 +5,20 @@ using System.Diagnostics;
 using Maestro.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.Services.Common.Cache;
 using Maestro.WorkItems;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
-using Microsoft.EntityFrameworkCore;
 
 namespace ProductConstructionService.DependencyFlow;
 
 public interface ISubscriptionUpdateOutcomeRecorder
 {
+    /// <summary>
+    /// Register the relevant PR URL of the subscription update, to be used when recording the outcome
+    /// </summary>
+    void SetPullRequestUrl(string? url);
+
     Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionUpdateWorkItem workItem,
         Func<Task<SubscriptionUpdateResult>> processAsync);
@@ -28,12 +30,24 @@ public interface ISubscriptionUpdateOutcomeRecorder
 
 public class SubscriptionUpdateOutcomeRecorder(
     BuildAssetRegistryContext context,
-    IRedisCacheFactory cacheFactory,
     ILogger<SubscriptionUpdateOutcomeRecorder> logger) : ISubscriptionUpdateOutcomeRecorder
 {
     private readonly BuildAssetRegistryContext _context = context;
-    private readonly IRedisCacheFactory _cacheFactory = cacheFactory;
     private readonly ILogger<SubscriptionUpdateOutcomeRecorder> _logger = logger;
+
+    private string? _pullRequestUrl;
+
+    public void SetPullRequestUrl(string? url)
+    {
+        if (url != null)
+        {
+            _pullRequestUrl = GitRepoUrlUtils.TurnApiUrlToWebsite(url);
+        }
+        else
+        {
+            _pullRequestUrl = null;
+        }
+    }
 
     public Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionUpdateWorkItem workItem,
@@ -97,10 +111,13 @@ public class SubscriptionUpdateOutcomeRecorder(
         Guid subscriptionId,
         int? buildId)
     {
-        // Fall back to a generated id if there's no current Activity (e.g. tests).
-        var operationId = Activity.Current?.RootId ?? Guid.NewGuid().ToString("N");
+        var operationId = Activity.Current?.RootId;
 
-        var prUrl = await TryGetPullRequestUrlAsync(subscriptionId);
+        if (operationId == null)
+        {
+            // Do not record outcomes when there is no operation id, such as E2E tests running against prod.
+            return;
+        }
 
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
         {
@@ -110,36 +127,9 @@ public class SubscriptionUpdateOutcomeRecorder(
             BuildId = buildId ?? -1,
             Type = type,
             Date = DateTime.UtcNow,
-            PrUrl = prUrl,
+            PrUrl = _pullRequestUrl,
         });
+
         await _context.SaveChangesAsync();
-    }
-
-    private async Task<string?> TryGetPullRequestUrlAsync(Guid subscriptionId)
-    {
-        try
-        {
-            var subscription = await _context.Subscriptions.FirstAsync(s => s.Id == subscriptionId);
-
-            string prRedisKey = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
-
-            var pullRequest = await _cacheFactory
-                .Create<InProgressPullRequest>(prRedisKey)
-                .TryGetStateAsync();
-
-            if (pullRequest == null)
-            {
-                return null;
-            }
-
-            return GitRepoUrlUtils.TurnApiUrlToWebsite(pullRequest.Url);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e,
-                "Failed to retrieve the in-progress pull request for SubscriptionId: {SubscriptionId} while recording the subscription outcome.",
-                subscriptionId);
-            return null;
-        }
     }
 }

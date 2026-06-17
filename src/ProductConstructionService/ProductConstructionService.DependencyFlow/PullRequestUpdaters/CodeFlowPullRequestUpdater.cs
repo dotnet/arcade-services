@@ -34,6 +34,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
@@ -52,8 +53,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -67,6 +69,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _outcomeRecorder = outcomeRecorder;
         _target = target;
     }
 
@@ -190,6 +193,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             oldPrUrl = pr.Url;
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            _outcomeRecorder.SetPullRequestUrl(null);
             pr = null;
             prInfo = null;
         }
@@ -471,6 +475,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             {
                 oldPrUrl = pr.Url;
                 await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+                _outcomeRecorder.SetPullRequestUrl(null);
                 pr = null;
             }
         }
@@ -687,6 +692,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
+            _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
@@ -791,6 +797,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
+        _outcomeRecorder.SetPullRequestUrl(pr.Url);
     }
 }
 

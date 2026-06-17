@@ -26,6 +26,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly ISqlBarClient _sqlClient;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
@@ -38,8 +39,9 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         ISqlBarClient sqlClient,
         ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter,
-        ISubscriptionEventRecorder subscriptionEventRecorder)
-        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
+        ISubscriptionEventRecorder subscriptionEventRecorder,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
         _target = target;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -49,6 +51,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _stateManager = stateManager;
         _logger = logger;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _outcomeRecorder = outcomeRecorder;
     }
 
     protected override async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
@@ -265,6 +268,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             };
 
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
+            _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
             return pr;
         }
 
@@ -329,6 +333,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
                     pr.Url);
 
                 await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
+                _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
                 return pr;
             }
 

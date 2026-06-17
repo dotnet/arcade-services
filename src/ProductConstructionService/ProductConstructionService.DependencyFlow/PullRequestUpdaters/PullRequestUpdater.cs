@@ -2,12 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Common;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
-using Maestro.WorkItems;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -35,6 +33,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdater(
@@ -45,6 +44,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<PullRequestUpdater> logger)
     {
         _target = target;
@@ -54,6 +54,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestCommenter = pullRequestCommenter;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _outcomeRecorder = outcomeRecorder;
         _logger = logger;
     }
 
@@ -69,6 +70,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
     {
         var inProgressPr = await _stateManager.GetInProgressPullRequestAsync();
+        _outcomeRecorder.SetPullRequestUrl(inProgressPr?.Url);
 
         if (inProgressPr == null)
         {
@@ -82,6 +84,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
+            _outcomeRecorder.SetPullRequestUrl(null);
             // Return true for test PRs to avoid reporting failure for deleted subscriptions during E2E tests
             return inProgressPr.Url?.Contains("maestro-auth-test") ?? false;
         }
@@ -146,6 +149,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
                         await _stateManager.ClearAllStateAsync(isCodeFlow, false);
+                        _outcomeRecorder.SetPullRequestUrl(null);
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -156,17 +160,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     case MergePolicyCheckResult.FailedToMerge:
                         _logger.LogInformation("Pull request {url} can be updated", pr.Url);
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
+                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
 
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
 
                     case MergePolicyCheckResult.PendingPolicies:
                         _logger.LogInformation("Pull request {url} still active (not updatable at the moment) - keeping tracking it", pr.Url);
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
+                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
 
                         return (PullRequestStatus.InProgressCannotUpdate, prInfo);
 
                     default:
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
+                        _outcomeRecorder.SetPullRequestUrl(pr.Url);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
@@ -192,6 +199,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
                 await _stateManager.ClearAllStateAsync(isCodeFlow, clearPendingUpdates: false);
+                _outcomeRecorder.SetPullRequestUrl(null);
 
                 // Also try to clean up the PR branch.
                 try
@@ -394,6 +402,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _stateManager.GetInProgressPullRequestAsync();
+        _outcomeRecorder.SetPullRequestUrl(pr?.Url);
         PullRequest? prInfo;
 
         if (pr == null)
@@ -452,6 +461,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var result = await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
 
         pr = await _stateManager.GetInProgressPullRequestAsync();
+        _outcomeRecorder.SetPullRequestUrl(pr?.Url);
         if (pr != null)
         {
             await _pullRequestCommenter.PostCollectedCommentsAsync(
