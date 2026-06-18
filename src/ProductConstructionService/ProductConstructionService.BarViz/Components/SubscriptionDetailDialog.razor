@@ -222,12 +222,12 @@
             return;
         }
 
-        NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={_subscription.Id}");
-
         if (Dialog != null)
         {
             await Dialog.CloseAsync();
         }
+
+        NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={_subscription.Id}");
     }
 
     private async Task CloseAsync()
