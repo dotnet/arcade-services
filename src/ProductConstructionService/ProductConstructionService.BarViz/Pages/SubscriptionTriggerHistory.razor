@@ -84,13 +84,17 @@
             <div>
                 <FluentTextField @bind-Value="_searchFilter"
                                  @bind-Value:after="ApplyFiltersAsync"
-                                 Label="Search"
+                                 Immediate="true"
+                                 ImmediateDelay="400"
+                                 Label="Filter by repo/branch"
                                  Placeholder="Source/target repo or branch"
                                  Style="min-width: 280px;" />
             </div>
             <div>
                 <FluentTextField @bind-Value="_subscriptionIdFilter"
                                  @bind-Value:after="ApplyFiltersAsync"
+                                 Immediate="true"
+                                 ImmediateDelay="400"
                                  Label="Subscription ID"
                                  Placeholder="GUID"
                                  Style="min-width: 280px;" />
@@ -107,12 +111,15 @@
                               OptionText="@GetOutcomeTypeOptionText"
                               @bind-SelectedOption="_outcomeTypeFilter"
                               @bind-SelectedOption:after="ApplyFiltersAsync"
-                              Width="200px" />
+                              Width="200px"
+                              Style="position: relative; top: -5px" />
             </div>
             <div>
                 <FluentNumberField TValue="int?"
                                    @bind-Value="_buildIdFilter"
                                    @bind-Value:after="ApplyFiltersAsync"
+                                   Immediate="true"
+                                   ImmediateDelay="400"
                                    Label="Build ID"
                                    Placeholder="Build ID"
                                    HideStep=true />
@@ -124,7 +131,8 @@
             </div>
             <FluentButton Appearance="Appearance.Stealth"
                           IconStart="@(new Icons.Regular.Size16.Dismiss())"
-                          OnClick="ClearFiltersAsync">
+                          OnClick="ClearFiltersAsync"
+                          Style="position: relative; top: -5px">
                 Clear filters
             </FluentButton>
         </FluentStack>

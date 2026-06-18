@@ -3,6 +3,7 @@
 @using ProductConstructionService.BarViz.Model
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
+@inject NavigationManager NavigationManager
 @implements IDialogContentComponent<SubscriptionDetailData>
 
 <style>
@@ -152,6 +153,9 @@
 </FluentDialogBody>
 
 <FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="ShowHistoryAsync" Disabled="@(_subscription == null)">
+        Show history
+    </FluentButton>
     <FluentButton Appearance="Appearance.Accent" OnClick="TriggerSubscriptionAsync" Disabled="@(_subscription == null)">
         Trigger Subscription
     </FluentButton>
@@ -208,6 +212,21 @@
         catch
         {
             ToastService.ShowError("Failed to trigger the subscription");
+        }
+    }
+
+    private async Task ShowHistoryAsync()
+    {
+        if (_subscription == null)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={_subscription.Id}");
+
+        if (Dialog != null)
+        {
+            await Dialog.CloseAsync();
         }
     }
 
