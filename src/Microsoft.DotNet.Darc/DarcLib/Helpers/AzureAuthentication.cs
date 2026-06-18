@@ -23,7 +23,7 @@ public static class AzureAuthentication
     {
         if (isDevelopment)
         {
-            return new DefaultAzureCredential(); // CodeQL [SM05137] This is non-production testing code which is not deployed
+            return new ChainedTokenCredential(new AzureCliCredential(), new VisualStudioCredential(), new VisualStudioCodeCredential()); // CodeQL [SM05137] This is non-production testing code which is not deployed
         }
         else
         {
