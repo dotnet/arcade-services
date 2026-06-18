@@ -159,7 +159,7 @@
                     <TemplateColumn Title="Date" Width="140px" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
                         <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
                     </TemplateColumn>
-                    <TemplateColumn Title="Subscription" Width="440px" Sortable="true" SortBy="SortBy(o => GetSubscriptionBlurb(o) ?? o.SubscriptionId.ToString())" Align="Align.Start">
+                    <TemplateColumn Title="Subscription" Width="460px" Sortable="true" SortBy="SortBy(o => GetSubscriptionBlurb(o) ?? o.SubscriptionId.ToString())" Align="Align.Start">
                         @{
                             var blurb = GetSubscriptionBlurb(context);
                         }
