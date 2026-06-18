@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -400,6 +401,26 @@ public class DependencyFileManagerTests
         string xmlWithBom = "∩╗┐" + xmlWithoutBom;
         var f = () => DependencyFileManager.GetXmlDocument(xmlWithBom);
         f.Should().NotThrow<Exception>();
+    }
+
+    [Test]
+    public void GetXmlDocumentRejectsDtdEntityExpansion()
+    {
+        // A "billion-laughs" payload relying on internal-DTD entity expansion must be rejected
+        // (DTD processing is prohibited) rather than expanded, preventing a DoS via memory exhaustion.
+        const string billionLaughs =
+            """
+            <?xml version="1.0"?>
+            <!DOCTYPE lolz [
+              <!ENTITY lol "lol">
+              <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+              <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+            ]>
+            <Dependencies>&lol3;</Dependencies>
+            """;
+
+        var f = () => DependencyFileManager.GetXmlDocument(billionLaughs);
+        f.Should().Throw<XmlException>();
     }
 
     [Test]
