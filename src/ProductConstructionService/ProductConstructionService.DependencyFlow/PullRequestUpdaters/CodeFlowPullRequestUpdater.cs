@@ -194,8 +194,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             prInfo = null;
         }
 
-        await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription);
-
         if (pr == null)
         {
             (pr, var _) = await CreateCodeFlowPullRequestAsync(
@@ -691,6 +689,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
+
+            await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription);
 
             return (inProgressPr, pr);
         }
