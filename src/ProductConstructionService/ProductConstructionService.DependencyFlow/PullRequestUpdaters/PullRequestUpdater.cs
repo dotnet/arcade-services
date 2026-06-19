@@ -70,7 +70,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
     {
         var inProgressPr = await _stateManager.GetInProgressPullRequestAsync();
-        _outcomeRecorder.SetPullRequestUrl(inProgressPr?.Url);
 
         if (inProgressPr == null)
         {
@@ -458,7 +457,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var result = await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
 
         pr = await _stateManager.GetInProgressPullRequestAsync();
-        _outcomeRecorder.SetPullRequestUrl(pr?.Url);
+
         if (pr != null)
         {
             await _pullRequestCommenter.PostCollectedCommentsAsync(
