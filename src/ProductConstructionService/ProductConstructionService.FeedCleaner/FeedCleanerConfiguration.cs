@@ -1,8 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Services.Common;
