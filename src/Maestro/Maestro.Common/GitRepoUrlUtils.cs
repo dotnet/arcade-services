@@ -128,8 +128,15 @@ public static partial class GitRepoUrlUtils
 
         // Not an absolute URI: only accept absolute/rooted local filesystem paths (e.g. "/tmp/repo").
         // Everything else (relative paths, scp-like SSH targets such as "git@host:path") is rejected.
-        return Path.IsPathRooted(pathOrUri);
+        return Path.IsPathRooted(pathOrUri) || IsWindowsPathRooted(pathOrUri);
     }
+
+    private static bool IsWindowsPathRooted(string pathOrUri)
+        => pathOrUri.Length >= 3
+            && char.IsAsciiLetter(pathOrUri[0])
+            && pathOrUri[1] == ':'
+            && (pathOrUri[2] == '\\' || pathOrUri[2] == '/')
+        || pathOrUri.StartsWith(@"\\", StringComparison.Ordinal);
 
     /// <summary>
     /// Sorts so that we go Local -> GitHub -> AzDO.

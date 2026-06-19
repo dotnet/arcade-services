@@ -4,7 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Azure.Core;
-using Maestro.Common.AppCredentials;
+using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
