@@ -50,13 +50,143 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             TenantId = _options.TenantId,
             ClientId = _options.ClientId,
             TokenCachePersistenceOptions = _options.TokenCachePersistenceOptions,
+            DeviceCodeCallback = (info, _) =>
+            {
+                // Surface the device code through the same logger the rest of the auth flow uses;
+                // the default callback writes to AzureEventSource which is not visible in CLI/MCP hosts.
+                _logger.LogInformation("{Message}", info.Message);
+                return Task.CompletedTask;
+            },
         });
+
+        // On WSL the interactive browser flow only succeeds when a Windows-side browser
+        // launcher (wslu's `wslview`) is installed AND WSL2 localhost forwarding can route
+        // the OAuth redirect back into the WSL network namespace. With wslu present that
+        // path works on default NAT-mode WSL2. Without wslu, xdg-open silently does nothing
+        // and `_browserCredential.Authenticate()` blocks forever waiting for a redirect
+        // that will never arrive. In that specific case, skip straight to device code so
+        // the user at least sees a code rather than an indefinite hang.
+        if (IsWslWithoutBrowserLauncher())
+        {
+            Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
+        }
+    }
+
+    private static bool IsWslWithoutBrowserLauncher()
+    {
+        // Opt-out: user knows their setup supports browser auth even if we don't detect it.
+        if (string.Equals(Environment.GetEnvironmentVariable("DARC_FORCE_BROWSER_AUTH"), "1", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Opt-in: user explicitly wants device code regardless of environment.
+        if (string.Equals(Environment.GetEnvironmentVariable("DARC_USE_DEVICE_CODE"), "1", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        bool isWsl = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_INTEROP"));
+        if (!isWsl)
+        {
+            return false;
+        }
+
+        // On WSL: only skip browser flow if no usable launcher is on PATH.
+        // wslview (from the wslu package) is the canonical Windows-browser bridge.
+        // BROWSER env var override is also respected by Azure.Identity's launcher.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROWSER")))
+        {
+            return false;
+        }
+        return !ExistsOnPath("wslview");
+    }
+
+    private static bool ExistsOnPath(string executable)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+        foreach (var dir in path.Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrEmpty(dir))
+            {
+                continue;
+            }
+            try
+            {
+                if (File.Exists(Path.Combine(dir, executable)))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Ignore inaccessible PATH entries.
+            }
+        }
+        return false;
     }
 
     public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
+        try
+        {
+            return GetTokenCore(requestContext, cancellationToken);
+        }
+        catch (Exception e) when (IsMsalCachePersistenceException(e))
+        {
+            RecreateCredentialsWithoutPersistence();
+            try
+            {
+                return GetTokenCore(requestContext, cancellationToken);
+            }
+            catch (AuthenticationFailedException retryEx)
+                when (!cancellationToken.IsCancellationRequested && !ContainsCancellationException(retryEx))
+            {
+                // After persistence fallback, if interactive auth still fails due to environment issues
+                // (e.g. no browser), signal credential unavailability so ChainedTokenCredential can
+                // try the next credential (e.g. AzureCliCredential). User-initiated cancellations
+                // propagate directly so the caller sees the real failure.
+                throw new CredentialUnavailableException(
+                    "Interactive authentication failed after token cache persistence fallback. "
+                    + "Ensure a browser or device code flow is available, or use 'az login' as a fallback.", retryEx);
+            }
+        }
+    }
+
+    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
+        CacheAuthenticationRecord(requestContext, cancellationToken);
+
+        try
+        {
+            return await GetTokenCoreAsync(requestContext, cancellationToken);
+        }
+        catch (Exception e) when (IsMsalCachePersistenceException(e))
+        {
+            RecreateCredentialsWithoutPersistence();
+            try
+            {
+                return await GetTokenCoreAsync(requestContext, cancellationToken);
+            }
+            catch (AuthenticationFailedException retryEx)
+                when (!cancellationToken.IsCancellationRequested && !ContainsCancellationException(retryEx))
+            {
+                throw new CredentialUnavailableException(
+                    "Interactive authentication failed after token cache persistence fallback. "
+                    + "Ensure a browser or device code flow is available, or use 'az login' as a fallback.", retryEx);
+            }
+        }
+    }
+
+    private AccessToken GetTokenCore(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
         if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
@@ -73,10 +203,8 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         }
     }
 
-    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    private async ValueTask<AccessToken> GetTokenCoreAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        CacheAuthenticationRecord(requestContext, cancellationToken);
-
         if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
@@ -114,9 +242,6 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             Directory.CreateDirectory(authRecordDir);
         }
 
-        static bool IsMsalCachePersistenceException(Exception e) =>
-            e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
-
         AuthenticationRecord authRecord;
         try
         {
@@ -126,16 +251,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         catch (Exception e) when (IsMsalCachePersistenceException(e))
         {
             // If we cannot persist the token cache, fall back to interactive authentication without persistence
-            _browserCredential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions()
-            {
-                TenantId = _options.TenantId,
-                ClientId = _options.ClientId,
-            });
-            _deviceCodeCredential = new DeviceCodeCredential(new()
-            {
-                TenantId = _options.TenantId,
-                ClientId = _options.ClientId,
-            });
+            RecreateCredentialsWithoutPersistence();
             authRecord = Authenticate(requestContext, cancellationToken);
         }
 
@@ -147,6 +263,16 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private AuthenticationRecord Authenticate(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
+        // If a previous attempt already proved the browser flow is unavailable in this
+        // environment (e.g. headless WSL / no GUI), skip straight to device code. Without
+        // this, the retry after RecreateCredentialsWithoutPersistence() would re-enter the
+        // browser path and hang waiting for an OAuth redirect that will never arrive.
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
+        {
+            _logger.LogInformation("Using device code authentication (browser flow previously unavailable)...");
+            return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
+        }
+
         try
         {
             _logger.LogInformation("Waiting for authentication in the browser...");
@@ -160,4 +286,32 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
     }
+
+    private void RecreateCredentialsWithoutPersistence()
+    {
+        _browserCredential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions()
+        {
+            TenantId = _options.TenantId,
+            ClientId = _options.ClientId,
+            AuthenticationRecord = _options.AuthenticationRecord,
+        });
+        _deviceCodeCredential = new DeviceCodeCredential(new()
+        {
+            TenantId = _options.TenantId,
+            ClientId = _options.ClientId,
+            DeviceCodeCallback = (info, _) =>
+            {
+                // Surface the device code through the same logger the rest of the auth flow uses;
+                // the default callback writes to AzureEventSource which is not visible in CLI/MCP hosts.
+                _logger.LogInformation("{Message}", info.Message);
+                return Task.CompletedTask;
+            },
+        });
+    }
+
+    private static bool IsMsalCachePersistenceException(Exception e) =>
+        e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
+
+    private static bool ContainsCancellationException(Exception e) =>
+        e is OperationCanceledException || (e.InnerException is not null && ContainsCancellationException(e.InnerException));
 }
