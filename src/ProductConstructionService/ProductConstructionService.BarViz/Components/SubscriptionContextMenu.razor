@@ -32,6 +32,13 @@
         </span>
     </FluentMenuItem>
 
+    <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={Subscription.Id}"))">
+        Show history
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.History())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
     @if (Subscription.LastAppliedBuild != null)
     {
         <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BuildLink!))">
