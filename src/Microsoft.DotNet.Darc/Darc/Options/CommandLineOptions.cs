@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using CommandLine;
+using Maestro.Common;
 using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;

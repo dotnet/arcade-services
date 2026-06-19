@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using Azure.Core;
 using EntityFrameworkCore.Triggers;
+using Maestro.Common;
 using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;

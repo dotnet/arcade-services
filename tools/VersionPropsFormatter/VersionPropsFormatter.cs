@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Xml;
+using Maestro.Common;
 using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
