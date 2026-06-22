@@ -820,7 +820,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             .Any(
             s => s.Channel != null
             && channelIds.Contains(s.Channel.Id)
-            && s.Enabled);
+            && s.Enabled
+            && s.SourceEnabled);
 
         if (!hasOppositeDirectionSubscription)
         {
