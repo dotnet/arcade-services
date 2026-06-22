@@ -690,7 +690,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
-            await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription);
+            await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription, build.GetBranch());
 
             return (inProgressPr, pr);
         }
@@ -795,7 +795,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         await _stateManager.SetInProgressPullRequestAsync(pr);
     }
 
-    private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription)
+    private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription, string sourceBranch)
     {
         var defaultChannels = await _sqlClient.GetDefaultChannelsAsync(
             repository: subscription.TargetRepository,
@@ -811,7 +811,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             targetRepo: subscription.SourceRepository);
 
         var hasOppositeDirectionSubscription = oppositeDirectionSubscriptions
-            .Any(s => s.Channel != null && channelIds.Contains(s.Channel.Id));
+            .Any(
+            s => s.Channel != null
+            && channelIds.Contains(s.Channel.Id)
+            && s.Enabled);
 
         if (!hasOppositeDirectionSubscription)
         {
@@ -821,7 +824,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription.SourceRepository);
 
             _commentCollector.AddComment(
-                PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow()),
+                PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow(), sourceBranch),
                 CommentType.Warning);
         }
     }

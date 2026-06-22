@@ -146,10 +146,10 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
           ```
         """;
 
-    public static string BuildMissingOppositeDirectionSubscriptionNotification(bool isForwardFlow) =>
+    public static string BuildMissingOppositeDirectionSubscriptionNotification(bool isForwardFlow, string sourceBranch) =>
         $"""
         :warning: No subscription flowing code in the opposite direction is set up.
-        Code changes made in {(isForwardFlow ? "the VMR's `src/` directory" : "this repository")} will not flow back to the {(isForwardFlow ? "source repository" : "VMR")}.
+        Code changes made in {(isForwardFlow ? "the VMR's `src/` directory" : "this repository")} will not flow back to the {(isForwardFlow ? "source repository" : "VMR")} on branch "{sourceBranch}".
         """;
 
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
