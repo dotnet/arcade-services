@@ -1,7 +1,7 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;

@@ -64,9 +64,6 @@ stages:
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
 
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
-    # Required for dotnet-bot-arcade-services-content-write
-    - group: Arcade-Services-Release
     - name: subscriptionId
       value: fbd6122a-9ad3-42e4-976e-bccb82486856
     - name: containerappName
@@ -144,6 +141,16 @@ stages:
       - download: current
         artifact: AssetManifests
 
+      - template: /eng/pipelines/templates/steps/get-github-app-token.yml
+        parameters:
+          azureSubscription: $(pcsDeploymentServiceConnection)
+          keyVaultName: $(keyVaultName)
+          keyName: maestro-ci-private-key
+          appClientId: $(ciGitHubAppClientId)
+          installationOwner: dotnet
+          outputVariableName: ArcadeServicesGitHubAppToken
+          displayName: Get GitHub App token for dotnet/arcade-services
+
       - powershell: |
           $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
           $xml = [xml](Get-Content $xmlPaths[0].FullName)
@@ -157,13 +164,13 @@ stages:
             --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
         continueOnError: true
 
       - task: AzureCLI@2
         displayName: Bump minimum darc version if breaking-darc-change label is present
         inputs:
-          azureSubscription: "Darc: Maestro Production"
+          azureSubscription: $(pcsDeploymentServiceConnection)
           scriptType: pscore
           scriptLocation: inlineScript
           inlineScript: |
@@ -185,7 +192,7 @@ stages:
               Write-Host "No 'breaking-darc-change' label found. Skipping minimum darc version bump."
             }
         env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
         continueOnError: true
 
 - stage: E2ETests

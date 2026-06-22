@@ -1,0 +1,465 @@
+@page "/subscription-trigger-history"
+
+@using System.Linq.Expressions
+@using System.Globalization
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
+@using TextCopy
+@inject IProductConstructionServiceApi PcsApi
+@inject IClipboard Clipboard
+@inject IToastService ToastService
+@inject IDialogService DialogService
+@inject NavigationManager NavManager
+
+<style>
+    .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
+    .status-green {
+        background-color: #2da44e;
+    }
+
+    .status-grey {
+        background-color: #888;
+    }
+
+    .status-red {
+        background-color: #cf222e;
+    }
+
+    .status-yellow {
+        background-color: #d4a017;
+    }
+
+    .status-blue {
+        background-color: #0969da;
+    }
+
+    .subscription-link {
+        color: var(--accent-foreground-rest, #0969da);
+        cursor: pointer;
+        vertical-align: middle;
+    }
+
+    .subscription-link:hover {
+        text-decoration: underline;
+    }
+
+    .outcome-message {
+        display: inline-block;
+        max-width: 100%;
+        white-space: normal;
+        word-break: break-word;
+        vertical-align: middle;
+    }
+
+    /* The grid uses MultiLine="true" so cells wrap and the row grows to fit its tallest
+       cell. Top-align cells and clip MultiLine mode's per-cell overflow:auto so multi-line
+       rows stay tidy without horizontal scrollbars. */
+    #outcomesGrid td {
+        vertical-align: top;
+        overflow: hidden;
+    }
+</style>
+
+<PageTitle>Subscription trigger history – Maestro++</PageTitle>
+
+<GridViewTemplate ShowSkeleton="_outcomes == null">
+    <Content>
+        <FluentStack Class="filters"
+                     Orientation="Orientation.Horizontal"
+                     HorizontalGap="16"
+                     VerticalAlignment="VerticalAlignment.Bottom"
+                     Wrap="true">
+            <div>
+                <FluentTextField @bind-Value="_searchFilter"
+                                 @bind-Value:after="ApplyFiltersAsync"
+                                 Immediate="true"
+                                 ImmediateDelay="400"
+                                 Label="Filter by repo/branch"
+                                 Placeholder="Source/target repo or branch"
+                                 Style="min-width: 280px;" />
+            </div>
+            <div>
+                <FluentTextField @bind-Value="_subscriptionIdFilter"
+                                 @bind-Value:after="ApplyFiltersAsync"
+                                 Immediate="true"
+                                 ImmediateDelay="400"
+                                 Label="Subscription ID"
+                                 Placeholder="GUID"
+                                 Style="min-width: 280px;" />
+                @if (_subscriptionIdError != null)
+                {
+                    <FluentLabel Color="Color.Error">@_subscriptionIdError</FluentLabel>
+                }
+            </div>
+            <div>
+                <FluentSelect TOption="string"
+                              Label="Outcome type"
+                              Items="_outcomeTypeOptions"
+                              OptionValue="@(o => o)"
+                              OptionText="@GetOutcomeTypeOptionText"
+                              @bind-SelectedOption="_outcomeTypeFilter"
+                              @bind-SelectedOption:after="ApplyFiltersAsync"
+                              Width="200px"
+                              Style="position: relative; top: -5px" />
+            </div>
+            <div>
+                <FluentNumberField TValue="int?"
+                                   @bind-Value="_buildIdFilter"
+                                   @bind-Value:after="ApplyFiltersAsync"
+                                   Immediate="true"
+                                   ImmediateDelay="400"
+                                   Label="Build ID"
+                                   Placeholder="Build ID"
+                                   HideStep=true />
+            </div>
+            <div>
+                <FluentDatePicker @bind-Value="_beforeDate"
+                                  @bind-Value:after="ApplyFiltersAsync"
+                                  Label="Before date" />
+            </div>
+            <FluentButton Appearance="Appearance.Stealth"
+                          IconStart="@(new Icons.Regular.Size16.Dismiss())"
+                          OnClick="ClearFiltersAsync"
+                          Style="position: relative; top: -5px">
+                Clear filters
+            </FluentButton>
+        </FluentStack>
+
+        @if (_reloading)
+        {
+            <div class="show-more">
+                <FluentProgressRing Style="height: 32px; width: 32px;" />
+            </div>
+        }
+        else
+        {
+            <FluentDataGrid Id="outcomesGrid"
+                            Items="@_outcomes?.AsQueryable()"
+                            TGridItem=SubscriptionTriggerOutcome
+                            ShowHover="true"
+                            ResizableColumns="true"
+                            MultiLine="true"
+                            Style="width: 100%">
+                <EmptyContent>
+                    <FluentLabel>No subscription trigger outcomes found</FluentLabel>
+                </EmptyContent>
+                <ChildContent>
+                    <TemplateColumn Title="Date" Width="140px" Sortable="true" SortBy="SortBy(o => o.Date.UtcTicks)" Align="Align.Start">
+                        <FluentLabel Title="@context.Date.ToString("f")">@((DateTime.UtcNow - context.Date).ToTimeAgo())</FluentLabel>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Subscription" Width="460px" Sortable="true" SortBy="SortBy(o => GetSubscriptionBlurb(o) ?? o.SubscriptionId.ToString())" Align="Align.Start">
+                        @{
+                            var blurb = GetSubscriptionBlurb(context);
+                        }
+                        @if (blurb != null)
+                        {
+                            <span class="subscription-link"
+                                  title="Show subscription details"
+                                  @onclick="@(() => ShowSubscriptionDetailsAsync(context.SubscriptionId))">@blurb</span>
+                        }
+                        else
+                        {
+                            <span title="@context.SubscriptionId">@context.SubscriptionId</span>
+                        }
+                    </TemplateColumn>
+                    <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
+                        <FluentLabel>
+                            <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
+                        </FluentLabel>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Pull Request" Width="200px" Align="Align.Start">
+                        <FluentLabel>
+                            @if (!string.IsNullOrEmpty(context.PrUrl))
+                            {
+                                <FluentAnchor Href="@context.PrUrl" Target="_blank" Appearance="Appearance.Hypertext">#@RepoUrlConverter.GetPrNumber(context.PrUrl)</FluentAnchor>
+                            }
+                        </FluentLabel>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Message" Width="2fr" Align="Align.Start">
+                        <span class="outcome-message" title="@context.Message">@foreach (var segment in StringExtensions.SplitIntoTextAndUrls(context.Message))
+                            {
+                                if (segment.IsUrl)
+                                {
+                                    <FluentAnchor Href="@segment.Text" Target="_blank" Appearance="Appearance.Hypertext">@segment.Text</FluentAnchor>
+                                }
+                                else
+                                {
+                                    @segment.Text
+                                }
+                            }</span>
+                    </TemplateColumn>
+                    <TemplateColumn Width="80px">
+                        <SubscriptionOutcomeContextMenu Outcome="@context" ShowDetails="@ShowSubscriptionDetailsAsync" />
+                    </TemplateColumn>
+                </ChildContent>
+            </FluentDataGrid>
+
+            @if (_outcomes != null && _hasMore)
+            {
+                <div class="show-more">
+                    @if (_showLoadingMoreSpinner)
+                    {
+                        <FluentProgressRing Style="height: 24px; width: 24px;" />
+                    }
+                    else
+                    {
+                        <FluentButton Appearance="Appearance.Lightweight" OnClick="LoadMoreAsync">Show more results…</FluentButton>
+                    }
+                </div>
+            }
+        }
+    </Content>
+</GridViewTemplate>
+
+@code {
+    private const int PageSize = 100;
+    private const string AllOutcomeTypes = "";
+
+    private static readonly string[] _outcomeTypeOptions =
+        [AllOutcomeTypes, .. Enum.GetNames<OutcomeType>()];
+
+    private List<SubscriptionTriggerOutcome>? _outcomes;
+    private readonly HashSet<(string OperationId, Guid SubscriptionId, int BuildId, long DateTicks)> _seenOutcomes = [];
+    private DateTimeOffset? _oldestDate;
+    private bool _hasMore;
+    private bool _showLoadingMoreSpinner;
+    private bool _reloading;
+
+    private string? _searchFilter;
+    private string? _subscriptionIdFilter;
+    private string? _subscriptionIdError;
+    private string _outcomeTypeFilter = AllOutcomeTypes;
+    private int? _buildIdFilter;
+    private DateTime? _beforeDate;
+
+    [SupplyParameterFromQuery(Name = "subscriptionId")]
+    private string? SubscriptionIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "outcomeType")]
+    private string? OutcomeTypeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "buildId")]
+    private string? BuildIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "before")]
+    private string? BeforeQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "search")]
+    private string? SearchQuery { get; set; }
+
+    private DateTimeOffset? BeforeFilter => _beforeDate.HasValue
+        ? new DateTimeOffset(_beforeDate.Value.Date, TimeSpan.Zero).AddDays(1).AddTicks(-1)
+        : null;
+
+    private string? SubscriptionIdParam => string.IsNullOrWhiteSpace(_subscriptionIdFilter)
+        ? null
+        : _subscriptionIdFilter.Trim();
+
+    private string? OutcomeTypeParam => string.IsNullOrEmpty(_outcomeTypeFilter)
+        ? null
+        : _outcomeTypeFilter;
+
+    private string? SearchParam => string.IsNullOrWhiteSpace(_searchFilter)
+        ? null
+        : _searchFilter.Trim();
+
+    private static GridSort<SubscriptionTriggerOutcome> SortBy<TProp>(Expression<Func<SubscriptionTriggerOutcome, TProp>> sorter)
+        => GridSort<SubscriptionTriggerOutcome>.ByAscending(sorter);
+
+    private static string? GetSubscriptionBlurb(SubscriptionTriggerOutcome outcome)
+        => SubscriptionOutcomeHelper.GetSubscriptionBlurb(outcome.SourceRepository, outcome.TargetRepository, outcome.TargetBranch);
+
+    private async Task CopySubscriptionIdAsync(Guid subscriptionId)
+    {
+        try
+        {
+            await Clipboard.SetTextAsync(subscriptionId.ToString());
+            ToastService.ShowSuccess("Copied subscription ID to clipboard");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to copy subscription ID: {ex.Message}");
+        }
+    }
+
+    private async Task ShowSubscriptionDetailsAsync(Guid subscriptionId)
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscriptionId}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(SubscriptionDetailData.FromId(subscriptionId), parameters);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeFiltersFromQuery();
+
+        await LoadOutcomesAsync();
+    }
+
+    private void InitializeFiltersFromQuery()
+    {
+        if (!string.IsNullOrWhiteSpace(SubscriptionIdQuery))
+        {
+            _subscriptionIdFilter = SubscriptionIdQuery.Trim();
+            if (!Guid.TryParse(_subscriptionIdFilter, out _))
+            {
+                _subscriptionIdError = "Enter a valid subscription GUID.";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(OutcomeTypeQuery)
+            && Enum.TryParse<OutcomeType>(OutcomeTypeQuery.Trim(), ignoreCase: true, out var outcomeType))
+        {
+            _outcomeTypeFilter = outcomeType.ToString();
+        }
+
+        if (int.TryParse(BuildIdQuery, NumberStyles.Integer, CultureInfo.InvariantCulture, out var buildId))
+        {
+            _buildIdFilter = buildId;
+        }
+
+        if (DateTime.TryParse(BeforeQuery, CultureInfo.InvariantCulture, DateTimeStyles.None, out var beforeDate))
+        {
+            _beforeDate = beforeDate.Date;
+        }
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            _searchFilter = SearchQuery.Trim();
+        }
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_subscriptionIdFilter) && !Guid.TryParse(_subscriptionIdFilter.Trim(), out _))
+        {
+            _subscriptionIdError = "Enter a valid subscription GUID.";
+            StateHasChanged();
+            return;
+        }
+
+        _subscriptionIdError = null;
+        UpdateQueryParams();
+        _reloading = true;
+        StateHasChanged();
+
+        _seenOutcomes.Clear();
+        _oldestDate = null;
+        _outcomes = [];
+
+        await LoadOutcomesAsync();
+
+        _reloading = false;
+    }
+
+    private void UpdateQueryParams()
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["subscriptionId"] = SubscriptionIdParam,
+            ["outcomeType"] = OutcomeTypeParam,
+            ["buildId"] = _buildIdFilter,
+            ["before"] = _beforeDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["search"] = SearchParam,
+        });
+
+        NavManager.NavigateTo(newUri);
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _subscriptionIdFilter = null;
+        _subscriptionIdError = null;
+        _outcomeTypeFilter = AllOutcomeTypes;
+        _buildIdFilter = null;
+        _beforeDate = null;
+        _searchFilter = null;
+
+        await ApplyFiltersAsync();
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        _showLoadingMoreSpinner = true;
+        StateHasChanged();
+
+        await LoadOutcomesAsync();
+
+        _showLoadingMoreSpinner = false;
+    }
+
+    private async Task LoadOutcomesAsync()
+    {
+        // for new queries, use BeforeFilter. for loading more elements, filter based on the last loaded element.
+        var beforeDate = _oldestDate ?? BeforeFilter;
+
+        var batch = await PcsApi.SubscriptionTriggerOutcomes.ListSubscriptionOutcomesAsync(
+            limit: PageSize,
+            before: beforeDate,
+            buildId: _buildIdFilter,
+            subscriptionId: SubscriptionIdParam,
+            subscriptionOutcomeType: OutcomeTypeParam,
+            search: SearchParam);
+
+        _hasMore = batch.Count == PageSize;
+
+        _outcomes ??= [];
+
+        foreach (var outcome in batch)
+        {
+            var key = (outcome.OperationId, outcome.SubscriptionId, outcome.BuildId, outcome.Date.UtcTicks);
+            if (_seenOutcomes.Add(key))
+            {
+                _outcomes.Add(outcome);
+            }
+        }
+
+        if (_outcomes.Count > 0)
+        {
+            _oldestDate = _outcomes[^1].Date;
+        }
+    }
+
+    private static string GetOutcomeTypeOptionText(string option)
+        => string.IsNullOrEmpty(option) ? "All outcomes" : GetStatusText(Enum.Parse<OutcomeType>(option));
+
+    private static string GetStatusClass(OutcomeType type) => type switch
+    {
+        OutcomeType.Updated => "status-green",
+        OutcomeType.Failure => "status-red",
+        OutcomeType.UserError => "status-yellow",
+        OutcomeType.HasConflict => "status-yellow",
+        OutcomeType.Rescheduled => "status-blue",
+        _ => "status-grey",
+    };
+
+    private static string GetStatusText(OutcomeType type) => type switch
+    {
+        OutcomeType.UserError => "User Error",
+        OutcomeType.HasConflict => "Has conflicts",
+        OutcomeType.NoUpdate => "Nothing to update",
+        OutcomeType.NotUpdatable => "PR not updatable",
+        _ => type.ToString(),
+    };
+}

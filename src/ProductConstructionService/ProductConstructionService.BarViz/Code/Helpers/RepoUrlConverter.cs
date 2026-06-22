@@ -60,4 +60,18 @@ public static class RepoUrlConverter
 
         return null;
     }
+
+    public static string GetPrNumber(string prUrl)
+    {
+        if (prUrl != null && Uri.TryCreate(prUrl, UriKind.Absolute, out var uri))
+        {
+            var lastSegment = uri.Segments[^1].TrimEnd('/');
+            if (int.TryParse(lastSegment, out _))
+            {
+                return lastSegment;
+            }
+        }
+
+        return "?";
+    }
 }

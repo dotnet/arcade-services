@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
+using Maestro.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.WorkItems;
@@ -13,6 +14,11 @@ namespace ProductConstructionService.DependencyFlow;
 
 public interface ISubscriptionUpdateOutcomeRecorder
 {
+    /// <summary>
+    /// Register the relevant PR URL of the subscription update, to be used when recording the outcome
+    /// </summary>
+    void SetPullRequestUrl(string? url);
+
     Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionUpdateWorkItem workItem,
         Func<Task<SubscriptionUpdateResult>> processAsync);
@@ -28,6 +34,20 @@ public class SubscriptionUpdateOutcomeRecorder(
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ILogger<SubscriptionUpdateOutcomeRecorder> _logger = logger;
+
+    private string? _pullRequestUrl;
+
+    public void SetPullRequestUrl(string? url)
+    {
+        if (url != null)
+        {
+            _pullRequestUrl = GitRepoUrlUtils.TurnApiUrlToWebsite(url);
+        }
+        else
+        {
+            _pullRequestUrl = null;
+        }
+    }
 
     public Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionUpdateWorkItem workItem,
@@ -91,7 +111,7 @@ public class SubscriptionUpdateOutcomeRecorder(
         Guid subscriptionId,
         int? buildId)
     {
-        // Fall back to a generated id if there's no current Activity (e.g. tests).
+        // Fall back to a generated id if there's no current Activity
         var operationId = Activity.Current?.RootId ?? Guid.NewGuid().ToString("N");
 
         await _context.SubscriptionOutcomes.AddAsync(new SubscriptionOutcome
@@ -101,8 +121,10 @@ public class SubscriptionUpdateOutcomeRecorder(
             SubscriptionId = subscriptionId,
             BuildId = buildId ?? -1,
             Type = type,
-            Date = DateTime.UtcNow
+            Date = DateTime.UtcNow,
+            PrUrl = _pullRequestUrl,
         });
+
         await _context.SaveChangesAsync();
     }
 }

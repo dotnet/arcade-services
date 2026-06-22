@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             DateTimeOffset? before = default,
             int? buildId = default,
             string operationId = default,
+            string search = default,
             string subscriptionId = default,
             string subscriptionOutcomeType = default,
             CancellationToken cancellationToken = default
@@ -53,6 +54,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             DateTimeOffset? before = default,
             int? buildId = default,
             string operationId = default,
+            string search = default,
             string subscriptionId = default,
             string subscriptionOutcomeType = default,
             CancellationToken cancellationToken = default
@@ -91,6 +93,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             if (!string.IsNullOrEmpty(operationId))
             {
                 _url.AppendQuery("operationId", Client.Serialize(operationId));
+            }
+            if (!string.IsNullOrEmpty(search))
+            {
+                _url.AppendQuery("search", Client.Serialize(search));
             }
             if (limit != default(int))
             {

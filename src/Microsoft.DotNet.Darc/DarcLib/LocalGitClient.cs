@@ -9,10 +9,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using GitRepoUrlUtils = Maestro.Common.GitRepoUrlUtils;
+using GitRepoType = Maestro.Common.GitRepoType;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -157,7 +159,7 @@ public class LocalGitClient : ILocalGitClient
         (string Name, string Email)? author = null,
         CancellationToken cancellationToken = default)
     {
-        IEnumerable<string> args = new[] { "commit", "-m", message };
+        IEnumerable<string> args = new[] { "commit", "--no-gpg-sign", "-m", message };
 
         if (allowEmpty)
         {
@@ -178,7 +180,7 @@ public class LocalGitClient : ILocalGitClient
         string repoPath,
         CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit"], cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit", "--no-gpg-sign"], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to amend commit in {repoPath}");
     }
 

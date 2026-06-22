@@ -1,8 +1,10 @@
 ﻿@using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using ProductConstructionService.BarViz.Model
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
-@implements IDialogContentComponent<Subscription>
+@inject NavigationManager NavigationManager
+@implements IDialogContentComponent<SubscriptionDetailData>
 
 <style>
     table.subscription-details {
@@ -43,104 +45,118 @@
 </FluentDialogHeader>
 
 <FluentDialogBody>
-    <table class="subscription-details">
-        <tbody>
-            <tr>
-                <td>Id</td>
-                <td>@Content.Id</td>
-            </tr>
-            <tr>
-                <td>Channel</td>
-                <td>@Content.Channel.Name</td>
-            </tr>
-            <tr>
-                <td>Source repository</td>
-                <td><FluentAnchor Href="@Content.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@Content.SourceRepository</FluentAnchor></td>
-            </tr>
-            <tr>
-                <td>Target repository</td>
-                <td><FluentAnchor Href="@Content.TargetRepository" Target="_blank" Appearance="Appearance.Hypertext">@Content.TargetRepository</FluentAnchor></td>
-            </tr>
-            <tr>
-                <td>Target branch</td>
-                <td>@Content.TargetBranch</td>
-            </tr>
-            <tr>
-                <td>Update frequency</td>
-                <td>@Content.Policy.UpdateFrequency</td>
-            </tr>
-            <tr>
-                <td>Enabled</td>
-                <td>@(Content.Enabled ? "Yes" : "No")</td>
-            </tr>
-            <tr>
-                <td>Batchable</td>
-                <td>@(Content.Policy.Batchable ? "Yes" : "No")</td>
-            </tr>
-            <tr>
-                <td>Merge policies</td>
-                <td>
-                    @if (Content.Policy.MergePolicies == null || Content.Policy.MergePolicies.Count == 0)
-                    {
-                        <span>None</span>
-                    }
-                    else
-                    {
-                        <ul>
-                            @foreach (var policy in Content.Policy.MergePolicies)
-                            {
-                                <li>@policy.Name</li>
-                            }
-                        </ul>
-                    }
-                </td>
-            </tr>
-            <tr>
-                <td>Source-enabled</td>
-                <td>@(Content.SourceEnabled ? (string.IsNullOrEmpty(Content.SourceDirectory) ? "Yes (Forward flow)" : "Yes (Backflow)") : "No")</td>
-            </tr>
-            @if (!string.IsNullOrEmpty(Content.TargetDirectory))
-            {
+    @if (_loadError != null)
+    {
+        <FluentLabel Color="Color.Error" Style="display: block; margin: 20px 0;">@_loadError</FluentLabel>
+    }
+    else if (_subscription == null)
+    {
+        <PageLoadingStatus StatusText="Loading subscription details ..." />
+    }
+    else
+    {
+        <table class="subscription-details">
+            <tbody>
                 <tr>
-                    <td>Target directory</td>
-                    <td>@Content.TargetDirectory</td>
+                    <td>Id</td>
+                    <td>@_subscription.Id</td>
                 </tr>
-            }
-            @if (Content.SourceEnabled && !string.IsNullOrEmpty(Content.SourceDirectory))
-            {
                 <tr>
-                    <td>Source directory</td>
-                    <td>@Content.SourceDirectory</td>
+                    <td>Channel</td>
+                    <td>@_subscription.Channel.Name</td>
                 </tr>
-            }
-            <tr>
-                <td>ExcludedAssets</td>
-                <td>
-                    @if (Content.ExcludedAssets == null || Content.ExcludedAssets.Count == 0)
-                    {
-                        <span>None</span>
-                    }
-                    else
-                    {
-                        <ul>
-                            @foreach (var asset in Content.ExcludedAssets)
-                            {
-                                <li>@asset</li>
-                            }
-                        </ul>
-                    }
-                </td>
-            </tr>
-            <tr>
-                <td>PR notification tags</td>
-                <td>@Content.PullRequestFailureNotificationTags</td>
-            </tr>
-        </tbody>
-    </table>
+                <tr>
+                    <td>Source repository</td>
+                    <td><FluentAnchor Href="@_subscription.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@_subscription.SourceRepository</FluentAnchor></td>
+                </tr>
+                <tr>
+                    <td>Target repository</td>
+                    <td><FluentAnchor Href="@_subscription.TargetRepository" Target="_blank" Appearance="Appearance.Hypertext">@_subscription.TargetRepository</FluentAnchor></td>
+                </tr>
+                <tr>
+                    <td>Target branch</td>
+                    <td>@_subscription.TargetBranch</td>
+                </tr>
+                <tr>
+                    <td>Update frequency</td>
+                    <td>@_subscription.Policy.UpdateFrequency</td>
+                </tr>
+                <tr>
+                    <td>Enabled</td>
+                    <td>@(_subscription.Enabled ? "Yes" : "No")</td>
+                </tr>
+                <tr>
+                    <td>Batchable</td>
+                    <td>@(_subscription.Policy.Batchable ? "Yes" : "No")</td>
+                </tr>
+                <tr>
+                    <td>Merge policies</td>
+                    <td>
+                        @if (_subscription.Policy.MergePolicies == null || _subscription.Policy.MergePolicies.Count == 0)
+                        {
+                            <span>None</span>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var policy in _subscription.Policy.MergePolicies)
+                                {
+                                    <li>@policy.Name</li>
+                                }
+                            </ul>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td>Source-enabled</td>
+                    <td>@(_subscription.SourceEnabled ? (string.IsNullOrEmpty(_subscription.SourceDirectory) ? "Yes (Forward flow)" : "Yes (Backflow)") : "No")</td>
+                </tr>
+                @if (!string.IsNullOrEmpty(_subscription.TargetDirectory))
+                {
+                    <tr>
+                        <td>Target directory</td>
+                        <td>@_subscription.TargetDirectory</td>
+                    </tr>
+                }
+                @if (_subscription.SourceEnabled && !string.IsNullOrEmpty(_subscription.SourceDirectory))
+                {
+                    <tr>
+                        <td>Source directory</td>
+                        <td>@_subscription.SourceDirectory</td>
+                    </tr>
+                }
+                <tr>
+                    <td>ExcludedAssets</td>
+                    <td>
+                        @if (_subscription.ExcludedAssets == null || _subscription.ExcludedAssets.Count == 0)
+                        {
+                            <span>None</span>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var asset in _subscription.ExcludedAssets)
+                                {
+                                    <li>@asset</li>
+                                }
+                            </ul>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td>PR notification tags</td>
+                    <td>@_subscription.PullRequestFailureNotificationTags</td>
+                </tr>
+            </tbody>
+        </table>
+    }
 </FluentDialogBody>
 
 <FluentDialogFooter>
-    <FluentButton Appearance="Appearance.Accent" OnClick="TriggerSubscriptionAsync">
+    <FluentButton Appearance="Appearance.Neutral" OnClick="ShowHistoryAsync" Disabled="@(_subscription == null)">
+        Show history
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" OnClick="TriggerSubscriptionAsync" Disabled="@(_subscription == null)">
         Trigger Subscription
     </FluentButton>
     <FluentButton Appearance="Appearance.Neutral" OnClick="CloseAsync">
@@ -149,23 +165,69 @@
 </FluentDialogFooter>
 
 @code {
+    private Subscription? _subscription;
+    private string? _loadError;
+
     [Parameter]
-    public Subscription Content { get; set; } = default!;
+    public SubscriptionDetailData Content { get; set; } = default!;
 
     [CascadingParameter]
     public FluentDialog? Dialog { get; set; }
 
-    private async Task TriggerSubscriptionAsync()
+    protected override async Task OnInitializedAsync()
     {
+        if (Content.Subscription != null)
+        {
+            _subscription = Content.Subscription;
+            return;
+        }
+
         try
         {
-            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Content.Id);
+            _subscription = await PcsApi.Subscriptions.GetSubscriptionAsync(Content.SubscriptionId);
+        }
+        catch (RestApiException e) when (e.Response.Status == (int)System.Net.HttpStatusCode.NotFound)
+        {
+            _loadError = $"Subscription {Content.SubscriptionId} no longer exists. "
+                + "It may have been deleted or recreated with a new ID (e.g. by a configuration change).";
+        }
+        catch
+        {
+            _loadError = "Failed to load subscription details.";
+        }
+    }
+
+    private async Task TriggerSubscriptionAsync()
+    {
+        if (_subscription == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(_subscription.Id);
             ToastService.ShowProgress("Subscription triggered");
         }
         catch
         {
             ToastService.ShowError("Failed to trigger the subscription");
         }
+    }
+
+    private async Task ShowHistoryAsync()
+    {
+        if (_subscription == null)
+        {
+            return;
+        }
+
+        if (Dialog != null)
+        {
+            await Dialog.CloseAsync();
+        }
+
+        NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={_subscription.Id}");
     }
 
     private async Task CloseAsync()

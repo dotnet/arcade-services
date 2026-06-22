@@ -244,6 +244,10 @@ internal class TriggerSubscriptionsOperation : Operation
     {
         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
         Console.WriteLine($"    Outcome: {outcome.Type} (build {outcome.BuildId})");
+        if (!string.IsNullOrEmpty(outcome.PrUrl))
+        {
+            Console.WriteLine($"    PR URL: {outcome.PrUrl}");
+        }
         if (!string.IsNullOrWhiteSpace(outcome.Message))
         {
             Console.WriteLine($"    {outcome.Message}");
