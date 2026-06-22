@@ -21,6 +21,7 @@
 - Update or add tests for any behavior change.
 - Do not modify CI, dependency versions, or security settings unless asked.
 - Never print, log, or commit secrets.
+- Do not run git write commands (`git commit`, `git push`, etc.); leave staging and committing to the user.
 
 ## Learning from corrections
 - When the user corrects you, rejects an approach, or states a durable preference or convention, store it with Copilot Memory (the `store_memory` tool) so it persists across sessions.
