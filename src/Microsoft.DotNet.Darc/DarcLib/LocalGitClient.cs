@@ -9,10 +9,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using GitRepoUrlUtils = Maestro.Common.GitRepoUrlUtils;
+using GitRepoType = Maestro.Common.GitRepoType;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;

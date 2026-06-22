@@ -34,6 +34,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
@@ -52,8 +53,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -67,6 +69,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _outcomeRecorder = outcomeRecorder;
         _target = target;
     }
 
@@ -87,7 +90,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
-                $"The existing PR ({GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}) is already up to date with source commit {update.SourceSha}",
+                $"The existing PR is already up to date with source repo (commit {update.SourceSha})",
                 Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
         }
 
@@ -100,7 +103,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
-                $"The existing codeflow PR ({GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}) was not updated because it is currently blocked from future updates.",
+                "The existing codeflow PR is currently blocked from future updates",
                 Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable);
         }
 
@@ -142,8 +145,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (!codeFlowRes.HadUpdates)
         {
             var msg = pr !=  null
-                ? $"There were no codeflow updates for the existing PR {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}"
-                : "Codeflow PR not created: there were no updates for this subscription";
+                ? "No source code updates detected"
+                : "Codeflow PR not created: no source code updates detected";
             return new SubscriptionUpdateResult(msg, Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
         }
 
@@ -181,7 +184,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 upstreamRepoDiffs,
                 isUnsafeFlow);
             return new SubscriptionUpdateResult(
-                $"Conflict resolution is required by user for PR {GitRepoUrlUtils.TurnApiUrlToWebsite(prUrl)}",
+                "Conflict resolution is required by user",
                 Maestro.Data.Models.SubscriptionOutcomeType.HasConflict);
         }
 
@@ -190,6 +193,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             oldPrUrl = pr.Url;
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            _outcomeRecorder.SetPullRequestUrl(null);
             pr = null;
             prInfo = null;
         }
@@ -211,7 +215,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
 
             return new SubscriptionUpdateResult(
-                $"New codeflow PR created: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
+                "New codeflow PR created",
                 Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
         else
@@ -231,7 +235,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 upstreamRepoDiffs);
 
             return new SubscriptionUpdateResult(
-                $"Existing codeflow PR has been updated: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}.",
+                string.Empty,
                 Maestro.Data.Models.SubscriptionOutcomeType.Updated);
         }
     }
@@ -471,6 +475,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             {
                 oldPrUrl = pr.Url;
                 await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+                _outcomeRecorder.SetPullRequestUrl(null);
                 pr = null;
             }
         }
@@ -687,6 +692,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
+            _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 

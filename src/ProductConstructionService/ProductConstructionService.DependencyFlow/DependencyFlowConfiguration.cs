@@ -30,7 +30,7 @@ public static class DependencyFlowConfiguration
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
         services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
-        services.TryAddTransient<ISubscriptionUpdateOutcomeRecorder, SubscriptionUpdateOutcomeRecorder>();
+        services.TryAddScoped<ISubscriptionUpdateOutcomeRecorder, SubscriptionUpdateOutcomeRecorder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();

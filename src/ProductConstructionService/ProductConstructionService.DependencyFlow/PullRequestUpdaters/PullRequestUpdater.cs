@@ -2,12 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Common;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
-using Maestro.WorkItems;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -35,6 +33,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
+    private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdater(
@@ -45,6 +44,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<PullRequestUpdater> logger)
     {
         _target = target;
@@ -54,6 +54,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestCommenter = pullRequestCommenter;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
+        _outcomeRecorder = outcomeRecorder;
         _logger = logger;
     }
 
@@ -82,6 +83,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
             await _stateManager.ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
+            _outcomeRecorder.SetPullRequestUrl(null);
             // Return true for test PRs to avoid reporting failure for deleted subscriptions during E2E tests
             return inProgressPr.Url?.Contains("maestro-auth-test") ?? false;
         }
@@ -146,6 +148,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
                         await _stateManager.ClearAllStateAsync(isCodeFlow, false);
+                        _outcomeRecorder.SetPullRequestUrl(null);
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -192,6 +195,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
                 await _stateManager.ClearAllStateAsync(isCodeFlow, clearPendingUpdates: false);
+                _outcomeRecorder.SetPullRequestUrl(null);
 
                 // Also try to clean up the PR branch.
                 try
@@ -394,6 +398,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _stateManager.GetInProgressPullRequestAsync();
+        _outcomeRecorder.SetPullRequestUrl(pr?.Url);
         PullRequest? prInfo;
 
         if (pr == null)
@@ -414,8 +419,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.NextBuildsToProcess);
 
                 return new SubscriptionUpdateResult(
-                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess} has already been queued."
-                     + (pr != null ? $"PR url: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}" : ""),
+                    $"Skipping codeflow update because an update with a newer build {pr.NextBuildsToProcess.Values.First().ToString() ?? "(N/A)"} has already been queued",
                     SubscriptionOutcomeType.NoUpdate);
             }
 
@@ -443,7 +447,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
                     await _stateManager.ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return new SubscriptionUpdateResult(
-                        $"The existing PR cannot be updated at this time due to pending checks, and will be retried periodically. Pr url: {GitRepoUrlUtils.TurnApiUrlToWebsite(pr.Url)}",
+                        "The existing PR cannot be updated due to pending checks - retrying periodically until success",
                         SubscriptionOutcomeType.Rescheduled);
                 default:
                     throw new NotImplementedException($"Unknown PR status {status}");
@@ -453,6 +457,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var result = await ProcessSubscriptionUpdateAsync(update, pr, prInfo, build, forceUpdate);
 
         pr = await _stateManager.GetInProgressPullRequestAsync();
+
         if (pr != null)
         {
             await _pullRequestCommenter.PostCollectedCommentsAsync(
