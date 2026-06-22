@@ -18,6 +18,8 @@ public class SubscriptionOutcome
     public string Message { get; set; }
 
     public SubscriptionOutcomeType Type { get; set; }
+
+    public string PrUrl { get; set; }
 }
 
 public enum SubscriptionOutcomeType
