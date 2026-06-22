@@ -198,7 +198,6 @@ public class VersionDetailsParser : IVersionDetailsParser
             fileContent = fileContent.Substring(3);
         }
 
-        // Disable DTD processing to prevent entity-expansion (billion-laughs) DoS attacks
         var readerSettings = new XmlReaderSettings
         {
             DtdProcessing = DtdProcessing.Prohibit,

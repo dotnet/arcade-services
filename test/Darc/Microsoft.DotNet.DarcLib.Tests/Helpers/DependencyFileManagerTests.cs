@@ -406,8 +406,6 @@ public class DependencyFileManagerTests
     [Test]
     public void GetXmlDocumentRejectsDtdEntityExpansion()
     {
-        // A "billion-laughs" payload relying on internal-DTD entity expansion must be rejected
-        // (DTD processing is prohibited) rather than expanded, preventing a DoS via memory exhaustion.
         const string billionLaughs =
             """
             <?xml version="1.0"?>
