@@ -86,7 +86,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         if (subscriptionToUpdate == null)
         {
             return new SubscriptionUpdateResult(
-                "No matching subscription and build found",
+                "Could not find the matching subscription or latest build to apply",
                 SubscriptionOutcomeType.Failure);
         }
 
@@ -119,7 +119,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         if (subscriptionToUpdate == null)
         {
             return new SubscriptionUpdateResult(
-                "No matching subscription and build found",
+                "Could not find the matching subscription or latest build to apply",
                 SubscriptionOutcomeType.Failure);
         }
 

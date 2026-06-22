@@ -41,6 +41,8 @@
     <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="1.0.0" />
     <PackageVersion Include="Microsoft.DncEng.Configuration.Extensions" Version="$(MicrosoftDncEngConfigurationExtensionsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.GitHub.Authentication" Version="$(MicrosoftDotNetGitHubAuthenticationVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.Internal.AzureDevOps.Authentication" Version="$(MicrosoftDotNetInternalAzureDevOpsAuthenticationVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.Internal.Credentials" Version="$(MicrosoftDotNetInternalCredentialsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" Version="$(MicrosoftDotNetInternalDependencyInjectionTestingVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Logging" Version="$(MicrosoftDotNetInternalLoggingVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" Version="$(MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion)" />

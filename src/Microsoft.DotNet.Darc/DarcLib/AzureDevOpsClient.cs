@@ -11,7 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
