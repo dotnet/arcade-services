@@ -3,6 +3,7 @@
 
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
@@ -61,9 +62,10 @@ internal static class DarcVersionValidator
         if (darcVersion < minVersion)
         {
             logger.LogError(
-                "Your darc version {DarcVersion} is below the minimum required version {MinVersion}. Run `eng/common/darc-init.sh` on Linux/macOS, or `eng/common/darc-init.ps1` on Windows (or `dotnet tool update -g microsoft.dotnet.darc`) to upgrade.",
+                "Your darc version {DarcVersion} is below the minimum required version {MinVersion}. Run `{DarcInitCommand}` (or `dotnet tool update -g microsoft.dotnet.darc`) to upgrade.",
                 darcVersion.ToNormalizedString(),
-                minVersion.ToNormalizedString());
+                minVersion.ToNormalizedString(),
+                GetDarcInitCommand());
             return false;
         }
 
@@ -79,5 +81,12 @@ internal static class DarcVersionValidator
         // Strip the SourceLink "+<commit-sha>" suffix
         int plusIndex = informationalVersion?.IndexOf('+') ?? -1;
         return plusIndex >= 0 ? informationalVersion.Substring(0, plusIndex) : informationalVersion;
+    }
+
+    private static string GetDarcInitCommand()
+    {
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? @".\eng\common\darc-init.ps1"
+            : "./eng/common/darc-init.sh";
     }
 }
