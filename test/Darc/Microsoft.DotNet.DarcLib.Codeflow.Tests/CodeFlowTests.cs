@@ -237,6 +237,36 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             ProductRepoPath,
             expectedConflicts);
 
+    protected async Task<string[]> CallDarcReset(string? target = null)
+    {
+        var options = new ResetCommandLineOptions
+        {
+            VmrPath = VmrPath,
+            TmpPath = TmpPath,
+            Target = target ?? string.Empty,
+        };
+
+        using var serviceProvider = options.RegisterServices(CreateServiceProvider()).BuildServiceProvider();
+        serviceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
+        var operation = ActivatorUtilities.CreateInstance<ResetOperation>(serviceProvider, options);
+
+        var currentDirectory = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(ProductRepoPath);
+        try
+        {
+            var result = await operation.ExecuteAsync();
+            result.Should().Be(0);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(currentDirectory);
+        }
+
+        var gitResult = await GitOperations.ExecuteGitCommand(VmrPath, "diff", "--name-only", "--cached");
+        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+    }
+
     private async Task<string[]> CallDarcCodeFlowOperation<T>(
             ICodeFlowCommandLineOptions options,
             NativePath sourceRepo,
@@ -292,4 +322,3 @@ internal static class BackFlowTestExtensions
         codeFlowResult.HadUpdates.Should().Be(expected, message);
     }
 }
-

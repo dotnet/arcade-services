@@ -16,6 +16,7 @@ using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,7 @@ internal abstract class CodeFlowTestsBase
 
     private readonly CancellationTokenSource _cancellationToken = new();
     protected readonly Mock<IBasicBarClient> _basicBarClient = new();
+    protected readonly Mock<IBarApiClient> _barApiClient = new();
     protected readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
 
     private int _buildId = 100;
@@ -99,6 +101,7 @@ internal abstract class CodeFlowTestsBase
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddCodeflow(TmpPath, VmrPath)
         .AddSingleton(_basicBarClient.Object)
+        .AddSingleton(_barApiClient.Object)
         .AddSingleton(_assetLocationResolver.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
         .AddTransient<IDependencyFileManagerFactory, DependencyFileManagerFactory>()

@@ -24,8 +24,10 @@ internal class ResetOperation : Operation
     private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger<ResetOperation> _logger;
 
     public ResetOperation(
@@ -34,8 +36,10 @@ internal class ResetOperation : Operation
         IVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
+        ILocalGitRepoFactory localGitRepoFactory,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IVersionDetailsParser versionDetailsParser,
         ILogger<ResetOperation> logger)
     {
         _options = options;
@@ -43,8 +47,10 @@ internal class ResetOperation : Operation
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _processManager = processManager;
+        _localGitRepoFactory = localGitRepoFactory;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _versionDetailsParser = versionDetailsParser;
         _logger = logger;
     }
 
@@ -57,12 +63,19 @@ internal class ResetOperation : Operation
         }
 
         string mappingName, targetSha = default!;
+        ResolvedResetTarget? currentRepositoryTarget = null;
         ProductConstructionService.Client.Models.Build? build = null;
         
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
         {
             // When --build or --channel is provided, Target should only be the mapping name
             mappingName = _options.Target;
+
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                _logger.LogError("Mapping name must be provided when using --build or --channel.");
+                return Constants.ErrorCode;
+            }
             
             if (mappingName.Contains(':'))
             {
@@ -72,21 +85,32 @@ internal class ResetOperation : Operation
         }
         else
         {
-            // Default behavior: Target is in the format [mapping]:[sha]
-            var parts = _options.Target.Split(':', 2);
-            if (parts.Length != 2)
+            currentRepositoryTarget = await TryResolveTargetFromCurrentRepositoryAsync();
+            if (currentRepositoryTarget != null && string.IsNullOrWhiteSpace(_options.Target))
             {
-                _logger.LogError("Invalid format. Expected [mapping]:[sha] but got: {input}", _options.Target);
-                return Constants.ErrorCode;
+                mappingName = currentRepositoryTarget.MappingName;
+                targetSha = currentRepositoryTarget.TargetSha;
             }
-
-            mappingName = parts[0];
-            targetSha = parts[1];
-            
-            if (string.IsNullOrWhiteSpace(targetSha))
+            else
             {
-                _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
-                return Constants.ErrorCode;
+                // Default behavior: Target is in the format [mapping]:[sha]
+                var parts = (_options.Target ?? string.Empty).Split(':', 2);
+                if (parts.Length != 2)
+                {
+                    _logger.LogError(
+                        "Invalid format. Expected [mapping]:[sha] or call from the source repository with --vmr, but got: {input}",
+                        _options.Target);
+                    return Constants.ErrorCode;
+                }
+
+                mappingName = parts[0];
+                targetSha = parts[1];
+            
+                if (string.IsNullOrWhiteSpace(targetSha))
+                {
+                    _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
+                    return Constants.ErrorCode;
+                }
             }
         }
 
@@ -143,6 +167,15 @@ internal class ResetOperation : Operation
                 .Select(a => a.Split(':', 2))
                 .Select(parts => new AdditionalRemote(parts[0], parts[1]))
                 .ToImmutableArray();
+        }
+
+        if (currentRepositoryTarget != null)
+        {
+            additionalRemotes =
+            [
+                .. additionalRemotes,
+                new AdditionalRemote(mappingName, currentRepositoryTarget.RepositoryPath)
+            ];
         }
 
         // Perform the reset by updating to the target SHA
@@ -254,4 +287,40 @@ internal class ResetOperation : Operation
 
         return build;
     }
+
+    private async Task<ResolvedResetTarget?> TryResolveTargetFromCurrentRepositoryAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_options.Target))
+        {
+            return null;
+        }
+
+        NativePath currentRepoPath;
+        try
+        {
+            currentRepoPath = new(_processManager.FindGitRoot(Environment.CurrentDirectory));
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        var sourceDependency = _versionDetailsParser
+            .ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml)
+            .Source
+            ?? throw new DarcException(
+                $"Current repository is missing a Source tag in {VersionFiles.VersionDetailsXml}. " +
+                "Specify [mapping]:[sha] explicitly instead.");
+
+        var targetSha = await _localGitRepoFactory.Create(currentRepoPath).GetShaForRefAsync();
+        _logger.LogInformation(
+            "Resolved mapping '{mapping}' and current commit '{sha}' from repository '{repo}'",
+            sourceDependency.Mapping,
+            targetSha,
+            currentRepoPath);
+
+        return new ResolvedResetTarget(sourceDependency.Mapping, targetSha, currentRepoPath);
+    }
+
+    private sealed record ResolvedResetTarget(string MappingName, string TargetSha, string RepositoryPath);
 }
