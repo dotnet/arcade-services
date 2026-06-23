@@ -85,16 +85,10 @@ internal class ResetOperation : Operation
         }
         else
         {
-            currentRepositoryTarget = await TryResolveTargetFromCurrentRepositoryAsync();
-            if (currentRepositoryTarget != null && string.IsNullOrWhiteSpace(_options.Target))
-            {
-                mappingName = currentRepositoryTarget.MappingName;
-                targetSha = currentRepositoryTarget.TargetSha;
-            }
-            else
+            if (!string.IsNullOrWhiteSpace(_options.Target))
             {
                 // Default behavior: Target is in the format [mapping]:[sha]
-                var parts = (_options.Target ?? string.Empty).Split(':', 2);
+                var parts = _options.Target.Split(':', 2);
                 if (parts.Length != 2)
                 {
                     _logger.LogError(
@@ -105,12 +99,25 @@ internal class ResetOperation : Operation
 
                 mappingName = parts[0];
                 targetSha = parts[1];
-            
+
                 if (string.IsNullOrWhiteSpace(targetSha))
                 {
                     _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
                     return Constants.ErrorCode;
                 }
+            }
+            else
+            {
+                currentRepositoryTarget = await TryResolveTargetFromCurrentRepositoryAsync();
+                if (currentRepositoryTarget == null)
+                {
+                    _logger.LogError(
+                        "Target must be provided as [mapping]:[sha], or the command must be run from a source repository with a VMR Source tag.");
+                    return Constants.ErrorCode;
+                }
+
+                mappingName = currentRepositoryTarget.MappingName;
+                targetSha = currentRepositoryTarget.TargetSha;
             }
         }
 
@@ -290,11 +297,6 @@ internal class ResetOperation : Operation
 
     private async Task<ResolvedResetTarget?> TryResolveTargetFromCurrentRepositoryAsync()
     {
-        if (!string.IsNullOrWhiteSpace(_options.Target))
-        {
-            return null;
-        }
-
         NativePath currentRepoPath;
         try
         {
