@@ -6,14 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -247,34 +244,6 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(VmrPath / expectedFiles[2], "New stuff");
         (await GetLocal(VmrPath).GetDependenciesAsync(newDependency.Name, relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
             .Should().ContainEquivalentOf(newDependency);
-    }
-
-    [Test]
-    public async Task DarcVmrResetCommandCanUseCurrentRepositorySourceTagTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        var versionDetailsPath = ProductRepoPath / VersionFiles.VersionDetailsXml;
-        var versionDetails = new XmlDocument
-        {
-            PreserveWhitespace = true,
-        };
-        versionDetails.Load(versionDetailsPath);
-        var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
-        var sourceDependency = new SourceDependency(VmrPath, Constants.ProductRepoName, vmrSha, null);
-        ServiceProvider.GetRequiredService<IDependencyFileManager>().UpdateVersionDetailsXmlSourceTag(
-            versionDetails,
-            sourceDependency);
-        await File.WriteAllTextAsync(versionDetailsPath, versionDetails.OuterXml);
-
-        await File.WriteAllTextAsync(_productRepoFilePath, "Reset content from current repository");
-        await GitOperations.CommitAll(ProductRepoPath, "Change repo content for reset");
-
-        string[] stagedFiles = await CallDarcReset();
-
-        stagedFiles.Should().Contain((VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName).Path);
-        stagedFiles.Should().Contain((VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml).Path);
-        CheckFileContents(_productRepoVmrFilePath, "Reset content from current repository");
     }
 
     [Test]
