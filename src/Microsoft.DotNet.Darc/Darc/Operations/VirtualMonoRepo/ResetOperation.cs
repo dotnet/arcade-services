@@ -69,13 +69,13 @@ internal class ResetOperation : Operation
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
         {
             // When --build or --channel is provided, Target should only be the mapping name
-            mappingName = _options.Target;
-
-            if (string.IsNullOrWhiteSpace(mappingName))
+            if (string.IsNullOrWhiteSpace(_options.Target))
             {
                 _logger.LogError("Mapping name must be provided when using --build or --channel.");
                 return Constants.ErrorCode;
             }
+
+            mappingName = _options.Target;
             
             if (mappingName.Contains(':'))
             {
