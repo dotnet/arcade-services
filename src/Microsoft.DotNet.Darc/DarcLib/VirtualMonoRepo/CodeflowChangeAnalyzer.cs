@@ -295,12 +295,12 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         var srcMappingPrefix = srcMappingPath + "/";
         HashSet<string> sourceRepoChanges = await GetChangedMappingFilesAsync(
             sourceRepo, mappingName, oldSha, newSha, exclusionPathspecs: exclusionPathspecs, cancellationToken: cancellationToken);
-        HashSet<string> targetRepoChanges = await GetChangedMappingFilesAsync(
+        HashSet<string> vmrPrChanges = await GetChangedMappingFilesAsync(
             vmr, mappingName, vmrTargetBranch, vmrHeadBranch, relativePath: srcMappingPrefix, cancellationToken: cancellationToken);
 
-        var intersection = sourceRepoChanges.Where(targetRepoChanges.Contains).ToList();
-        var sourceRepoOnlyChanges = sourceRepoChanges.Where(f => !targetRepoChanges.Contains(f)).ToList();
-        var unexpectedFiles = targetRepoChanges.Where(f => !sourceRepoChanges.Contains(f)).ToList();
+        var intersection = sourceRepoChanges.Where(vmrPrChanges.Contains).ToList();
+        var sourceRepoOnlyChanges = sourceRepoChanges.Where(f => !vmrPrChanges.Contains(f)).ToList();
+        var unexpectedFiles = vmrPrChanges.Where(f => !sourceRepoChanges.Contains(f)).ToList();
 
         // The PR changed files that the source diff didn't - the codeflow can't be trusted.
         if (unexpectedFiles.Count > 0)
@@ -430,8 +430,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         var vmrResult = await vmr.ExecuteGitCommand(["diff", "-U0", $"{vmrTargetBranch}...{vmrHeadBranch}", "--", $"{srcMappingPath}/{file}"], cancellationToken);
         vmrResult.ThrowIfFailed($"Failed to get the VMR diff of {file} between {vmrTargetBranch} and {vmrHeadBranch}");
 
-        var sourceChanges = GetChangeLines(sourceResult);
-        var vmrChanges = GetChangeLines(vmrResult);
+        var sourceChanges = GetChangeLines(sourceResult.GetOutputLines());
+        var vmrChanges = GetChangeLines(vmrResult.GetOutputLines());
 
         return sourceChanges.SequenceEqual(vmrChanges);
     }
@@ -440,18 +440,14 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     /// Keeps only the +/- change lines from a zero-context diff, dropping the diff-format lines that
     /// are expected to differ between the source repo and its VMR copy.
     /// </summary>
-    private static List<string> GetChangeLines(ProcessExecutionResult diffResult)
-    {
-        return diffResult.GetOutputLines()
-            .Where(line => (line.StartsWith('+') || line.StartsWith('-')) && !IgnoredDiffLines.Any(line.StartsWith))
-            .ToList();
-    }
+    private static List<string> GetChangeLines(IReadOnlyCollection<string> lines) =>
+        [.. lines.Where(line => (line.StartsWith('+') || line.StartsWith('-')) && !IgnoredDiffLines.Any(line.StartsWith))];
 
     /// <summary>
     /// A file the source changed but the PR did not is only legitimate when the VMR copy is already
     /// at the source's new state (equal content, or both absent for an already-reconciled deletion).
     /// </summary>
-    private async Task<bool> IsLegitimateNoOpAsync(
+    private static async Task<bool> IsLegitimateNoOpAsync(
         ILocalGitRepo sourceRepo,
         ILocalGitRepo vmr,
         string file,
