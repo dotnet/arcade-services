@@ -101,6 +101,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
             Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NotUpdatable));
 
+            AndPullRequestShouldHaveComment("opposite codeflow merged");
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
         }
