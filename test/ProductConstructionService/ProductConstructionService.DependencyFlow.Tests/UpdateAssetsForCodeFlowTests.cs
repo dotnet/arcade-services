@@ -193,6 +193,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndPullRequestShouldHaveComment("need to be manually resolved");
         AndCodeShouldHaveBeenFlownForward(build);
         AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);

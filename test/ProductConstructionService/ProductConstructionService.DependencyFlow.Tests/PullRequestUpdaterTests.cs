@@ -198,6 +198,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     .Excluding(pr => pr.Description));
     }
 
+    protected void AndPullRequestShouldHaveComment(string comment)
+    {
+        var remote = DarcRemotes[Subscription.TargetRepository];
+        remote.Verify(x => x.CommentPullRequestAsync(
+                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                It.Is<string>(content => content.Contains(comment))),
+                Times.Once());
+    }
+
     protected void WithForwardFlowerReturningNoUpdates()
     {
         _forwardFlower.Setup(x => x.FlowForwardAsync(
@@ -526,8 +535,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             remote
                 .Setup(x => x.CommentPullRequestAsync(
-                    prUrl,
-                    It.Is<string>(content => content.Contains("opposite codeflow merged"))))
+                    It.IsAny<string>(),
+                    It.IsAny<string>()))
                 .Returns(Task.CompletedTask);
         }
 
@@ -575,8 +584,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         remote
             .Setup(x => x.CommentPullRequestAsync(
-                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.Is<string>(content => content.Contains("need to be manually resolved"))))
+                It.IsAny<string>(),
+                It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes
