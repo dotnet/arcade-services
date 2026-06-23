@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 #   - Scenario tests (PostDeployment/Nightly/PreDeployment) - require a deployed service.
 #   - Codeflow tests (Microsoft.DotNet.DarcLib.Codeflow.Tests) - slow on-disk git e2e tests.
 $testFilter = "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment&FullyQualifiedName!~Microsoft.DotNet.DarcLib.Codeflow.Tests"
-dotnet build
+& "$PSScriptRoot\..\eng\common\dotnet.ps1" build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet test --no-build --filter $testFilter
+& "$PSScriptRoot\..\eng\common\dotnet.ps1" test --no-build --filter $testFilter
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
