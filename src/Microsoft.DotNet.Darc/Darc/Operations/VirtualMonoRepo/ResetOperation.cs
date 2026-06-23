@@ -306,9 +306,10 @@ internal class ResetOperation : Operation
             return null;
         }
 
-        var sourceDependency = _versionDetailsParser
-            .ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml)
-            .Source
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml);
+        ArgumentNullException.ThrowIfNull(versionDetails);
+
+        var sourceDependency = versionDetails.Source
             ?? throw new DarcException(
                 $"Current repository '{currentRepoPath}' is missing a Source tag in {VersionFiles.VersionDetailsXml}. " +
                 "Run this command from a source repository that has a VMR Source tag, or specify [mapping]:[sha] explicitly instead.");

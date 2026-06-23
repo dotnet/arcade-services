@@ -260,9 +260,11 @@ internal class ForwardFlowTests : CodeFlowTests
             PreserveWhitespace = true,
         };
         versionDetails.Load(versionDetailsPath);
+        var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
+        var sourceDependency = new SourceDependency(VmrPath, Constants.ProductRepoName, vmrSha, null);
         ServiceProvider.GetRequiredService<IDependencyFileManager>().UpdateVersionDetailsXmlSourceTag(
             versionDetails,
-            new SourceDependency(VmrPath, Constants.ProductRepoName, await GitOperations.GetRepoLastCommit(VmrPath), null));
+            sourceDependency);
         await File.WriteAllTextAsync(versionDetailsPath, versionDetails.OuterXml);
 
         await File.WriteAllTextAsync(_productRepoFilePath, "Reset content from current repository");
