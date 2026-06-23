@@ -302,12 +302,11 @@ internal class ResetOperation : Operation
         {
             currentRepoPath = new(_processManager.FindGitRoot(Environment.CurrentDirectory));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.LogError(
                 "Could not resolve a git repository root from '{path}'. Run this command from a source repository with a VMR Source tag, or specify [mapping]:[sha] explicitly instead.",
                 Environment.CurrentDirectory);
-            _logger.LogDebug(ex, "FindGitRoot failed for '{path}'", Environment.CurrentDirectory);
             return null;
         }
 
