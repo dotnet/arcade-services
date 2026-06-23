@@ -26,10 +26,14 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         const string backflowBranch = nameof(ForwardFlowWithChangesInThePrBranchTest) + "-bf";
         const string forwardFlowBranch = nameof(ForwardFlowWithChangesInThePrBranchTest) + "-ff";
 
+        // The source commit currently reflected in the VMR's main branch
+        var previousSourceSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+
         // Make changes in the product repo
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "repo.txt", "New file in the repo");
         await GitOperations.CommitAll(ProductRepoPath, "New file in the repo");
+        var firstFlowSourceSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
 
         // Make changes in the VMR
         await GitOperations.Checkout(VmrPath, "main");
@@ -49,6 +53,9 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
 
         await GitOperations.CommitAll(VmrPath, "Forward flow commit");
 
+        // The freshly opened FF PR should faithfully reflect the source diff
+        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, previousSourceSha, firstFlowSourceSha)).Should().BeTrue();
+
         // 3. Make some changes in the forward flow PR branch
         await GitOperations.Checkout(VmrPath, forwardFlowBranch);
         await File.WriteAllTextAsync(_productRepoVmrPath / "repo.txt", "Updated file in the PR");
@@ -58,10 +65,15 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
 
         // 5. Flow the changes from the repo into the VMR PR
+        var secondFlowSourceSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
         result.ShouldHaveUpdates();
 
         await GitOperations.CommitAll(VmrPath, "Forward flow update", allowEmpty: true);
+
+        // The PR now carries an extra manual change (repo.txt) that the source diff doesn't contain,
+        // so the verification should fail
+        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, firstFlowSourceSha, secondFlowSourceSha)).Should().BeFalse();
 
         // Check that the changes in the PR branch are preserved
         var prFileContent = await File.ReadAllTextAsync(_productRepoVmrPath / "repo.txt");

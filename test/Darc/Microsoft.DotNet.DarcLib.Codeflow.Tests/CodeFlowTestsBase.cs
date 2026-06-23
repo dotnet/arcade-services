@@ -287,6 +287,30 @@ internal abstract class CodeFlowTestsBase
 
     protected IReadOnlyList<string> GetLastFlowCollectedComments() => _lastFlowCollectedComments;
 
+    /// <summary>
+    /// Runs the source-diff verification (the same check PCS runs after a forward-flow push)
+    /// against the current state of the VMR PR branch and returns whether the PR faithfully
+    /// reflects the source repo's diff (<paramref name="oldSha"/>...<paramref name="newSha"/>).
+    /// The PR branch must be committed before calling this.
+    /// </summary>
+    protected async Task<bool> VerifyForwardFlowSourceDiff(string branchName, string oldSha, string newSha)
+    {
+        using var scope = ServiceProvider.CreateScope();
+        var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
+        await cloneManager.RegisterCloneAsync(VmrPath);
+
+        var verifier = scope.ServiceProvider.GetRequiredService<ICodeflowSourceDiffVerifier>();
+        return await verifier.VerifyForwardFlowAsync(
+            sourceRepoUri: ProductRepoPath,
+            vmrUri: VmrPath,
+            mappingName: Constants.ProductRepoName,
+            oldSha: oldSha,
+            newSha: newSha,
+            vmrTargetBranch: "main",
+            vmrHeadBranch: branchName,
+            cancellationToken: _cancellationToken.Token);
+    }
+
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {
         using var scope = ServiceProvider.CreateScope();
