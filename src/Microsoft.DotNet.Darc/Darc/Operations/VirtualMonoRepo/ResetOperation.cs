@@ -300,8 +300,9 @@ internal class ResetOperation : Operation
         {
             currentRepoPath = new(_processManager.FindGitRoot(Environment.CurrentDirectory));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Could not resolve a git repository root from '{path}'", Environment.CurrentDirectory);
             return null;
         }
 
@@ -309,8 +310,8 @@ internal class ResetOperation : Operation
             .ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml)
             .Source
             ?? throw new DarcException(
-                $"Current repository is missing a Source tag in {VersionFiles.VersionDetailsXml}. " +
-                "Specify [mapping]:[sha] explicitly instead.");
+                $"Current repository '{currentRepoPath}' is missing a Source tag in {VersionFiles.VersionDetailsXml}. " +
+                "Run this command from a source repository that has a VMR Source tag, or specify [mapping]:[sha] explicitly instead.");
 
         var targetSha = await _localGitRepoFactory.Create(currentRepoPath).GetShaForRefAsync();
         _logger.LogInformation(
