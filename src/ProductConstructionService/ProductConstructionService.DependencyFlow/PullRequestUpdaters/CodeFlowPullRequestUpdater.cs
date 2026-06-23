@@ -814,14 +814,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         var oppositeDirectionSubscriptions = await _sqlClient.GetSubscriptionsAsync(
             sourceRepo: subscription.TargetRepository,
-            targetRepo: subscription.SourceRepository);
+            targetRepo: subscription.SourceRepository,
+            sourceEnabled: true);
 
         var hasOppositeDirectionSubscription = oppositeDirectionSubscriptions
             .Any(
             s => s.Channel != null
             && channelIds.Contains(s.Channel.Id)
-            && s.Enabled
-            && s.SourceEnabled);
+            && s.Enabled);
 
         if (!hasOppositeDirectionSubscription)
         {

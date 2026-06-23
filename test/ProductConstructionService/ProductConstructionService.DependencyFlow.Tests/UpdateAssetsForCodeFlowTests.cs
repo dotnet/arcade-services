@@ -214,6 +214,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null, willFlowNewBuild: true))
         {
+            WithNewPrCreated();
+
             // Original PR is merged, we should try to delete the branch
             DarcRemotes[VmrUri]
                 .Setup(x => x.DeletePullRequestBranchAsync(VmrPullRequestUrl))
@@ -296,6 +298,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(build2, PrStatus.Merged, null, willFlowNewBuild: true))
         {
+            WithNewPrCreated();
+
             // Original PR is merged, we should try to delete the branch
             DarcRemotes[VmrUri]
                 .Setup(x => x.DeletePullRequestBranchAsync(VmrPullRequestUrl))
@@ -374,6 +378,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
         {
             WithForwardFlowThrowingNonLinearException();
+            WithNewPrCreated();
 
             // Set up the new PR URL
             var newPrUrl = $"{VmrUri}/pulls/2";
