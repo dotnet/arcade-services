@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using Maestro.Common;
 using Maestro.Common.Telemetry;
+using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.WorkItems;
@@ -35,7 +35,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
-    private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
+    private readonly ICodeflowSourceDiffVerifier _codeflowSourceDiffVerifier;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
@@ -55,7 +55,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
         ISubscriptionEventRecorder subscriptionEventRecorder,
-        ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
+        ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
@@ -72,7 +72,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
-        _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
+        _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
         _target = target;
     }
@@ -95,7 +95,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
                 $"The existing PR is already up to date with source repo (commit {update.SourceSha})",
-                Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
+                SubscriptionOutcomeType.NoUpdate);
         }
 
         if (pr?.BlockedFromFutureUpdates == true && !forceUpdate)
@@ -108,7 +108,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
                 "The existing codeflow PR is currently blocked from future updates",
-                Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable);
+                SubscriptionOutcomeType.NotUpdatable);
         }
 
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
@@ -143,7 +143,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await HandleBlockingCodeflowException(pr);
             return new SubscriptionUpdateResult(
                 e.Message,
-                Maestro.Data.Models.SubscriptionOutcomeType.NotUpdatable);
+                SubscriptionOutcomeType.NotUpdatable);
         }
 
         if (!codeFlowRes.HadUpdates)
@@ -151,7 +151,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             var msg = pr !=  null
                 ? "No source code updates detected"
                 : "Codeflow PR not created: no source code updates detected";
-            return new SubscriptionUpdateResult(msg, Maestro.Data.Models.SubscriptionOutcomeType.NoUpdate);
+            return new SubscriptionUpdateResult(msg, SubscriptionOutcomeType.NoUpdate);
         }
 
         if (isForwardFlow)
@@ -189,7 +189,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 isUnsafeFlow);
             return new SubscriptionUpdateResult(
                 "Conflict resolution is required by user",
-                Maestro.Data.Models.SubscriptionOutcomeType.HasConflict);
+                SubscriptionOutcomeType.HasConflict);
         }
 
         string? oldPrUrl = null;
@@ -218,14 +218,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, pr.Url);
             }
 
-            if (isForwardFlow)
-            {
-                await PostSourceDiffVerificationCommentAsync(remote, subscription, build, previousSourceSha, prHeadBranch, pr.Url);
-            }
-
             return new SubscriptionUpdateResult(
                 "New codeflow PR created",
-                Maestro.Data.Models.SubscriptionOutcomeType.Updated);
+                SubscriptionOutcomeType.Updated);
         }
         else
         {
@@ -243,14 +238,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs);
 
-            if (isForwardFlow)
-            {
-                await PostSourceDiffVerificationCommentAsync(remote, subscription, build, previousSourceSha, prHeadBranch, pr.Url);
-            }
-
             return new SubscriptionUpdateResult(
                 string.Empty,
-                Maestro.Data.Models.SubscriptionOutcomeType.Updated);
+                SubscriptionOutcomeType.Updated);
         }
     }
 
@@ -279,7 +269,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         try
         {
-            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: false);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlow: false);
         }
         catch (NonLinearCodeflowException e)
         {
@@ -304,7 +294,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription.TargetBranch,
                 prHeadBranch);
 
-            codeFlowRes = await InvokeFlowAsync(subscription, build, pr, prHeadBranch, forceUpdate, unsafeFlow: true);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlow: true);
         }
 
         if (codeFlowRes.HadConflicts)
@@ -343,7 +333,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private async Task<CodeFlowResult> InvokeFlowAsync(
         SubscriptionDTO subscription,
         BuildDTO build,
-        InProgressPullRequest? pr,
         string branch,
         bool forceUpdate,
         bool unsafeFlow)
@@ -541,7 +530,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prHeadBranch,
                 codeFlowResult.DependencyUpdates,
                 upstreamRepoDiffs,
-                unsafeFlown);
+                unsafeFlown,
+                skipCodeflowUpdateCheck: true);
         }
         else
         {
@@ -571,7 +561,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 previousSourceSha,
                 subscription,
                 codeFlowResult.DependencyUpdates,
-                upstreamRepoDiffs);
+                upstreamRepoDiffs,
+                skipCodeflowUpdateCheck: true);
 
             // Since we changed the PR state in cache but no commit was pushed,
             // we need to delete non-transient check results so that they can be re-evaluated
@@ -643,7 +634,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        bool unsafeFlow)
+        bool unsafeFlow,
+        bool skipCodeflowUpdateCheck = false)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -706,6 +698,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
+            if (!skipCodeflowUpdateCheck && !string.IsNullOrEmpty(previousSourceSha))
+            {
+                await _stateManager.SetCodeflowUpdateCheck(new CodeflowUpdateCheck
+                {
+                    UpdaterId = _target.UpdaterId,
+                    SubscriptionId = update.SubscriptionId,
+                    PreviousSourceSha = previousSourceSha,
+                    CurrentSourceSha = update.SourceSha
+                });
+            }
             _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
@@ -738,7 +740,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         string? previousSourceSha,
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
-        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
+        bool skipCodeflowUpdateCheck = false)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -802,7 +805,64 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
             await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
+            if (!skipCodeflowUpdateCheck && !string.IsNullOrEmpty(previousSourceSha))
+            {
+                await _stateManager.SetCodeflowUpdateCheck(new CodeflowUpdateCheck
+                {
+                    UpdaterId = _target.UpdaterId,
+                    SubscriptionId = update.SubscriptionId,
+                    PreviousSourceSha = previousSourceSha,
+                    CurrentSourceSha = update.SourceSha
+                });
+            }
         }
+    }
+
+    public async Task RunCodeflowUpdateCodeCheck(
+        SubscriptionDTO subscription,
+        CodeflowUpdateCheck codeflowUpdateCheck,
+        CancellationToken cancellationToken)
+    {
+        if (subscription.IsBackflow())
+        {
+            _logger.LogError("Can't run codeflow code check on backflow subscriptions");
+            return;
+        }
+
+        var pr = await _stateManager.GetInProgressPullRequestAsync();
+
+        if (pr == null)
+        {
+            _logger.LogError("No in-progress PR found for codeflow update code check");
+            return;
+        }
+
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        var prInfo = await remote.GetPullRequestAsync(pr.Url);
+
+        if (prInfo.Status != PrStatus.Open)
+        {
+            _logger.LogInformation(
+                "Skipping codeflow update code check for PR {prUrl} because it is no longer open (status: {status})",
+                pr.Url,
+                prInfo.Status);
+            return;
+        }
+
+        var matches = await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
+            subscription.SourceRepository,
+            subscription.TargetRepository,
+            subscription.TargetDirectory,
+            codeflowUpdateCheck.PreviousSourceSha,
+            codeflowUpdateCheck.CurrentSourceSha,
+            subscription.TargetBranch,
+            pr.HeadBranch,
+            cancellationToken);
+
+        if (matches)
+        {
+            await remote.CommentPullRequestAsync(pr.Url, "Looks good");
+        }    
     }
 
     private async Task PostSourceDiffVerificationCommentAsync(
@@ -823,9 +883,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 return;
             }
 
-            bool matches = await _codeflowChangeAnalyzer.VerifyForwardFlowAsync(
-                subscription.TargetDirectory,
+            bool matches = await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
                 subscription.SourceRepository,
+                subscription.TargetRepository,
+                subscription.TargetDirectory,
                 previousSourceSha,
                 build.Commit,
                 subscription.TargetBranch,

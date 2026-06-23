@@ -69,6 +69,7 @@ public static class CodeflowExtensions
         services.TryAddTransient<IJsonFileMerger, JsonFileMerger>();
         services.TryAddTransient<IVersionDetailsFileMerger, VersionDetailsFileMerger>();
         services.TryAddTransient<ICodeflowChangeAnalyzer, CodeflowChangeAnalyzer>();
+        services.TryAddTransient<ICodeflowSourceDiffVerifier, CodeflowSourceDiffVerifier>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();

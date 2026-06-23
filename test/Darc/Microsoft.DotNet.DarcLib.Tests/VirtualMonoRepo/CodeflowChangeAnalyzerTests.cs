@@ -30,9 +30,6 @@ public class CodeflowChangeAnalyzerTests
     private Mock<ILocalGitRepo> _localGitRepo = null!;
     private Mock<IVersionDetailsParser> _versionDetailsParser = null!;
     private Mock<IBasicBarClient> _barClient = null!;
-    private Mock<IRepositoryCloneManager> _cloneManager = null!;
-    private Mock<IVmrDependencyTracker> _dependencyTracker = null!;
-    private Mock<ISourceManifest> _sourceManifest = null!;
     private IVmrInfo _vmrInfo = null!;
     private CodeflowChangeAnalyzer _analyzer = null!;
 
@@ -43,9 +40,6 @@ public class CodeflowChangeAnalyzerTests
         _localGitRepo = new Mock<ILocalGitRepo>();
         _versionDetailsParser = new Mock<IVersionDetailsParser>();
         _barClient = new Mock<IBasicBarClient>();
-        _cloneManager = new Mock<IRepositoryCloneManager>();
-        _dependencyTracker = new Mock<IVmrDependencyTracker>();
-        _sourceManifest = new Mock<ISourceManifest>();
         _vmrInfo = Mock.Of<IVmrInfo>(x => x.VmrPath == TestVmrPath);
 
         _localGitRepoFactory
@@ -60,9 +54,6 @@ public class CodeflowChangeAnalyzerTests
             _localGitRepoFactory.Object,
             _versionDetailsParser.Object,
             _barClient.Object,
-            _cloneManager.Object,
-            _dependencyTracker.Object,
-            _sourceManifest.Object,
             _vmrInfo,
             NullLogger<CodeflowChangeAnalyzer>.Instance);
     }
