@@ -531,7 +531,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 codeFlowResult.DependencyUpdates,
                 upstreamRepoDiffs,
                 unsafeFlown,
-                skipCodeflowUpdateCheck: true);
+                skipCodeflowApprovalCheck: true);
         }
         else
         {
@@ -562,7 +562,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 codeFlowResult.DependencyUpdates,
                 upstreamRepoDiffs,
-                skipCodeflowUpdateCheck: true);
+                skipCodeflowApprovalCheck: true);
 
             // Since we changed the PR state in cache but no commit was pushed,
             // we need to delete non-transient check results so that they can be re-evaluated
@@ -635,7 +635,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         List<DependencyUpdate> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool unsafeFlow,
-        bool skipCodeflowUpdateCheck = false)
+        bool skipCodeflowApprovalCheck = false)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -698,9 +698,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            if (!skipCodeflowUpdateCheck && !string.IsNullOrEmpty(previousSourceSha))
+            if (!skipCodeflowApprovalCheck && !string.IsNullOrEmpty(previousSourceSha))
             {
-                await _stateManager.SetCodeflowUpdateCheck(new CodeflowUpdateCheck
+                await _stateManager.SetCodeflowApprovalCheck(new CodeflowApprovalCheck
                 {
                     UpdaterId = _target.UpdaterId,
                     SubscriptionId = update.SubscriptionId,
@@ -743,7 +743,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        bool skipCodeflowUpdateCheck = false)
+        bool skipCodeflowApprovalCheck = false)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -807,9 +807,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
             await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            if (!skipCodeflowUpdateCheck && !string.IsNullOrEmpty(previousSourceSha))
+            if (!skipCodeflowApprovalCheck && !string.IsNullOrEmpty(previousSourceSha))
             {
-                await _stateManager.SetCodeflowUpdateCheck(new CodeflowUpdateCheck
+                await _stateManager.SetCodeflowApprovalCheck(new CodeflowApprovalCheck
                 {
                     UpdaterId = _target.UpdaterId,
                     SubscriptionId = update.SubscriptionId,
@@ -820,14 +820,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    public async Task RunCodeflowUpdateCodeCheck(
+    public async Task RunCodeflowApprovalCheck(
         SubscriptionDTO subscription,
-        CodeflowUpdateCheck codeflowUpdateCheck,
+        CodeflowApprovalCheck codeflowApprovalCheck,
         CancellationToken cancellationToken)
     {
         if (subscription.IsBackflow())
         {
-            _logger.LogError("Can't run codeflow code check on backflow subscriptions");
+            _logger.LogError("Can't run codeflow approval check on backflow subscriptions");
             return;
         }
 
@@ -835,7 +835,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (pr == null)
         {
-            _logger.LogError("No in-progress PR found for codeflow update code check");
+            _logger.LogError("No in-progress PR found for codeflow approval check");
             return;
         }
 
@@ -845,7 +845,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (prInfo.Status != PrStatus.Open)
         {
             _logger.LogInformation(
-                "Skipping codeflow update code check for PR {prUrl} because it is no longer open (status: {status})",
+                "Skipping codeflow approval check for PR {prUrl} because it is no longer open (status: {status})",
                 pr.Url,
                 prInfo.Status);
             return;
@@ -855,8 +855,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             subscription.SourceRepository,
             subscription.TargetRepository,
             subscription.TargetDirectory,
-            codeflowUpdateCheck.PreviousSourceSha,
-            codeflowUpdateCheck.CurrentSourceSha,
+            codeflowApprovalCheck.PreviousSourceSha,
+            codeflowApprovalCheck.CurrentSourceSha,
             subscription.TargetBranch,
             pr.HeadBranch,
             cancellationToken);

@@ -58,9 +58,9 @@ internal interface IPullRequestStateManager
 
     #endregion
 
-    #region Codeflow update check
+    #region Codeflow approval check
 
-    Task SetCodeflowUpdateCheck(CodeflowUpdateCheck check);
+    Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check);
 
     #endregion
 

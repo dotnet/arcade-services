@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
-internal class CodeflowUpdateCheck : DependencyFlowWorkItem
+internal class CodeflowApprovalCheck : DependencyFlowWorkItem
 {
     public required Guid SubscriptionId { get; init; }
     public required string PreviousSourceSha { get; init; }

@@ -11,12 +11,12 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-internal class CodeflowUpdateCheckProcessor : WorkItemProcessor<CodeflowUpdateCheck>
+internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprovalCheck>
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
 
-    public CodeflowUpdateCheckProcessor(
+    public CodeflowApprovalCheckProcessor(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory)
     {
@@ -24,7 +24,7 @@ internal class CodeflowUpdateCheckProcessor : WorkItemProcessor<CodeflowUpdateCh
         _updaterFactory = updaterFactory;
     }
 
-    public override async Task<bool> ProcessWorkItemAsync(CodeflowUpdateCheck workItem, CancellationToken cancellationToken)
+    public override async Task<bool> ProcessWorkItemAsync(CodeflowApprovalCheck workItem, CancellationToken cancellationToken)
     {
         var subscription = _context.Subscriptions
             .Include(s => s.Channel)
@@ -40,10 +40,10 @@ internal class CodeflowUpdateCheckProcessor : WorkItemProcessor<CodeflowUpdateCh
 
         if (pullRequestUpdater is not CodeFlowPullRequestUpdater codeFlowUpdater)
         {
-            throw new InvalidOperationException($"Subscription {subscription.Id} is not a source enabled subscription, cannot run codeflow update check");
+            throw new InvalidOperationException($"Subscription {subscription.Id} is not a source enabled subscription, cannot run codeflow approval check");
         }
 
-        await codeFlowUpdater.RunCodeflowUpdateCodeCheck(
+        await codeFlowUpdater.RunCodeflowApprovalCheck(
             SqlBarClient.ToClientModelSubscription(subscription),
             workItem,
             cancellationToken);
