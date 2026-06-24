@@ -59,6 +59,7 @@
     <Project Path="test/ProductConstructionService/ProductConstructionService.Cli.Tests/ProductConstructionService.Cli.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.DependencyFlow.Tests/ProductConstructionService.DependencyFlow.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.FeedCleaner.Tests/ProductConstructionService.FeedCleaner.Tests.csproj" />
+    <Project Path="test/ProductConstructionService/ProductConstructionService.ScenarioTests.Tests/ProductConstructionService.ScenarioTests.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer.Tests/ProductConstructionService.SubscriptionTriggerer.Tests.csproj" />
   </Folder>
