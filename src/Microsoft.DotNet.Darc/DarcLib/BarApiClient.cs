@@ -182,13 +182,19 @@ public class BarApiClient : IBarApiClient
     public async Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
         Guid? subscriptionId = null,
         int? buildId = null,
-        DateTimeOffset? date = null,
+        DateTimeOffset? after = null,
+        DateTimeOffset? before = null,
+        string? subscriptionOutcomeType = null,
+        string? search = null,
         int limit = 100)
     {
         return await _barClient.SubscriptionTriggerOutcomes.ListSubscriptionOutcomesAsync(
             limit: limit,
             buildId: buildId,
-            after: date,
+            after: after,
+            before: before,
+            subscriptionOutcomeType: subscriptionOutcomeType,
+            search: search,
             subscriptionId: subscriptionId?.ToString());
     }
 
