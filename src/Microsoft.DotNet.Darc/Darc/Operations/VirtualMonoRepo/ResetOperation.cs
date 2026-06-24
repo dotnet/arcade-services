@@ -62,74 +62,73 @@ internal class ResetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        string mappingName, targetSha = default!;
-        ResolvedResetTarget? currentRepositoryTarget = null;
-        ProductConstructionService.Client.Models.Build? build = null;
-        
-        if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
-        {
-            // When --build or --channel is provided, Target should only be the mapping name
-            if (string.IsNullOrWhiteSpace(_options.Target))
-            {
-                _logger.LogError("Mapping name must be provided when using --build or --channel.");
-                return Constants.ErrorCode;
-            }
+        bool usingBuildOrChannel = _options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel);
 
-            mappingName = _options.Target;
-            
-            if (mappingName.Contains(':'))
-            {
-                _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
-                return Constants.ErrorCode;
-            }
-        }
-        else
+        // 1. Resolve which mapping to reset and where the target SHA will come from.
+        //    The SHA itself is resolved later, once the mapping is known.
+        string mappingName;
+        string? explicitSha = null;
+        NativePath? currentRepoPath = null;
+
+        if (!string.IsNullOrWhiteSpace(_options.Target))
         {
-            if (!string.IsNullOrWhiteSpace(_options.Target))
+            // A target was provided explicitly - use it
+            if (usingBuildOrChannel)
+            {
+                // When --build or --channel is provided, the target should only be the mapping name
+                if (_options.Target.Contains(':'))
+                {
+                    _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
+                    return Constants.ErrorCode;
+                }
+
+                mappingName = _options.Target;
+            }
+            else
             {
                 // Default behavior: Target is in the format [mapping]:[sha]
                 var parts = _options.Target.Split(':', 2);
                 if (parts.Length != 2)
                 {
                     _logger.LogError(
-                        "Invalid format. Expected [mapping]:[sha] or call from the source repository with --vmr, but got: {input}",
+                        "Invalid format. Expected [mapping]:[sha], use --build/--channel, or run from the source repository, but got: {input}",
                         _options.Target);
                     return Constants.ErrorCode;
                 }
 
                 mappingName = parts[0];
-                targetSha = parts[1];
+                explicitSha = parts[1];
 
-                if (string.IsNullOrWhiteSpace(targetSha))
+                if (string.IsNullOrWhiteSpace(mappingName))
                 {
-                    _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                currentRepositoryTarget = await TryResolveTargetFromCurrentRepositoryAsync();
-                if (currentRepositoryTarget == null)
-                {
-                    _logger.LogError(
-                        "Target must be provided as [mapping]:[sha], or the command must be run from a source repository with a VMR Source tag.");
+                    _logger.LogError("Mapping name cannot be empty in [mapping]:[sha]. Got: '{input}'", _options.Target);
                     return Constants.ErrorCode;
                 }
 
-                mappingName = currentRepositoryTarget.MappingName;
-                targetSha = currentRepositoryTarget.TargetSha;
+                if (string.IsNullOrWhiteSpace(explicitSha))
+                {
+                    _logger.LogError("Target SHA cannot be empty. Got: '{input}'", _options.Target);
+                    return Constants.ErrorCode;
+                }
             }
         }
-
-        if (string.IsNullOrWhiteSpace(mappingName))
+        else
         {
-            _logger.LogError("Mapping name must be provided.");
-            return Constants.ErrorCode;
+            // No target provided - infer the mapping from the current repository's Source tag, like forward flow does
+            CurrentRepositoryInfo? currentRepository = TryResolveCurrentRepository();
+            if (currentRepository == null)
+            {
+                return Constants.ErrorCode;
+            }
+
+            mappingName = currentRepository.MappingName;
+            currentRepoPath = currentRepository.RepositoryPath;
+            _logger.LogInformation("Resolved mapping '{mapping}' from repository '{repo}'", mappingName, currentRepoPath);
         }
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
-        // Validate that the mapping exists
+        // 2. Validate that the mapping exists
         await _dependencyTracker.RefreshMetadataAsync();
 
         SourceMapping mapping;
@@ -145,7 +144,12 @@ internal class ResetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        // Determine the target SHA from build or channel option
+        // 3. Resolve the target SHA from the single source that was specified:
+        //    --build, --channel, the explicit [mapping]:[sha], or the current repository's HEAD.
+        string targetSha;
+        NativePath? localRepositoryRemote = null;
+        ProductConstructionService.Client.Models.Build? build = null;
+
         if (_options.Build.HasValue)
         {
             build = await GetBuildAsync(_options.Build.Value, mappingName);
@@ -155,6 +159,17 @@ internal class ResetOperation : Operation
         {
             build = await GetBuildFromChannelAsync(_options.Channel, mapping);
             targetSha = build.Commit;
+        }
+        else if (explicitSha != null)
+        {
+            targetSha = explicitSha;
+        }
+        else
+        {
+            // Reset to whatever is currently checked out locally (like forward flow)
+            targetSha = await _localGitRepoFactory.Create(currentRepoPath!).GetShaForRefAsync();
+            localRepositoryRemote = currentRepoPath;
+            _logger.LogInformation("Resolved current commit '{sha}' from repository '{repo}'", targetSha, currentRepoPath);
         }
 
         _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
@@ -176,12 +191,12 @@ internal class ResetOperation : Operation
                 .ToImmutableArray();
         }
 
-        if (currentRepositoryTarget != null)
+        if (localRepositoryRemote != null)
         {
             additionalRemotes =
             [
                 .. additionalRemotes,
-                new AdditionalRemote(mappingName, currentRepositoryTarget.RepositoryPath)
+                new AdditionalRemote(mappingName, localRepositoryRemote)
             ];
         }
 
@@ -295,7 +310,7 @@ internal class ResetOperation : Operation
         return build;
     }
 
-    private async Task<ResolvedResetTarget?> TryResolveTargetFromCurrentRepositoryAsync()
+    private CurrentRepositoryInfo? TryResolveCurrentRepository()
     {
         NativePath currentRepoPath;
         try
@@ -310,23 +325,32 @@ internal class ResetOperation : Operation
             return null;
         }
 
-        var versionDetails = _versionDetailsParser.ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml);
-        ArgumentNullException.ThrowIfNull(versionDetails);
+        string? mappingName;
+        try
+        {
+            var versionDetails = _versionDetailsParser.ParseVersionDetailsFile(currentRepoPath / VersionFiles.VersionDetailsXml);
+            mappingName = versionDetails?.Source?.Mapping;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "Could not read {file} from repository '{repo}': {error} " +
+                "Run this command from a source repository that has a VMR Source tag, or specify [mapping]:[sha] explicitly instead.",
+                VersionFiles.VersionDetailsXml, currentRepoPath, ex.Message);
+            return null;
+        }
 
-        var sourceDependency = versionDetails.Source
-            ?? throw new DarcException(
-                $"Current repository '{currentRepoPath}' is missing a Source tag in {VersionFiles.VersionDetailsXml}. " +
-                "Run this command from a source repository that has a VMR Source tag, or specify [mapping]:[sha] explicitly instead.");
+        if (string.IsNullOrEmpty(mappingName))
+        {
+            _logger.LogError(
+                "Current repository '{repo}' is missing a Source tag in {file}. " +
+                "Run this command from a source repository that has a VMR Source tag, or specify [mapping]:[sha] explicitly instead.",
+                currentRepoPath, VersionFiles.VersionDetailsXml);
+            return null;
+        }
 
-        var targetSha = await _localGitRepoFactory.Create(currentRepoPath).GetShaForRefAsync();
-        _logger.LogInformation(
-            "Resolved mapping '{mapping}' and current commit '{sha}' from repository '{repo}'",
-            sourceDependency.Mapping,
-            targetSha,
-            currentRepoPath);
-
-        return new ResolvedResetTarget(sourceDependency.Mapping, targetSha, currentRepoPath);
+        return new CurrentRepositoryInfo(mappingName, currentRepoPath);
     }
 
-    private sealed record ResolvedResetTarget(string MappingName, string TargetSha, string RepositoryPath);
+    private sealed record CurrentRepositoryInfo(string MappingName, NativePath RepositoryPath);
 }
