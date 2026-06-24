@@ -696,6 +696,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
+            await NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(subscription, build.GetBranch());
+
             return (inProgressPr, pr);
         }
         catch (Exception)
@@ -797,6 +799,41 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
+    }
+
+    private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription, string sourceBranch)
+    {
+        var defaultChannels = await _sqlClient.GetDefaultChannelsAsync(
+            repository: subscription.TargetRepository,
+            branch: subscription.TargetBranch);
+
+        var channelIds = defaultChannels
+            .Where(dc => dc.Channel != null)
+            .Select(dc => dc.Channel.Id)
+            .ToHashSet();
+
+        var oppositeDirectionSubscriptions = await _sqlClient.GetSubscriptionsAsync(
+            sourceRepo: subscription.TargetRepository,
+            targetRepo: subscription.SourceRepository,
+            sourceEnabled: true);
+
+        var hasOppositeDirectionSubscription = oppositeDirectionSubscriptions
+            .Any(
+            s => s.Channel != null
+            && channelIds.Contains(s.Channel.Id)
+            && s.Enabled);
+
+        if (!hasOppositeDirectionSubscription)
+        {
+            _logger.LogInformation(
+                "No opposite-direction subscription found flowing code from {targetRepository} back to {sourceRepository}. Notifying about the missing subscription.",
+                subscription.TargetRepository,
+                subscription.SourceRepository);
+
+            _commentCollector.AddComment(
+                PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow(), sourceBranch),
+                CommentType.Warning);
+        }
     }
 }
 

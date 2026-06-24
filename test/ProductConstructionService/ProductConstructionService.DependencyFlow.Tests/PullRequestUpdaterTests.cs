@@ -624,6 +624,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
     }
 
+
+    protected void WithNewPrCreated()
+    {
+        // Because we don't set up matching FF & BF subscriptions in tests, we expect a comment about the missing opposite direction subscription
+        DarcRemotes[Subscription.TargetRepository]
+                .Setup(x => x.CommentPullRequestAsync(
+                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                    It.Is<string>(content => content.Contains("No subscription flowing code in the opposite direction"))))
+                .Returns(Task.CompletedTask);
+    }
+
     protected void AndOldPullRequestShouldHaveBeenClosed(string oldPrUrl, string newPrUrl)
     {
         var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
