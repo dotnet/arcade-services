@@ -820,7 +820,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    public async Task RunCodeflowApprovalCheck(
+    public async Task RunCodeflowApprovalCheckAsync(
         SubscriptionDTO subscription,
         CodeflowApprovalCheck codeflowApprovalCheck,
         CancellationToken cancellationToken)
@@ -865,73 +865,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         {
             await remote.CommentPullRequestAsync(pr.Url, "Looks good");
         }    
-    }
-
-    private async Task PostSourceDiffVerificationCommentAsync(
-        IRemote remote,
-        SubscriptionDTO subscription,
-        BuildDTO build,
-        string? previousSourceSha,
-        string? prHeadBranch,
-        string prUrl)
-    {
-        // Best-effort confidence signal: never fail or slow down the codeflow push.
-        try
-        {
-            if (string.IsNullOrEmpty(previousSourceSha) || string.IsNullOrEmpty(prHeadBranch))
-            {
-                // Without a previous source SHA there is no compare range, so we skip silently
-                // (matching how the PR description's diff link is skipped).
-                return;
-            }
-
-            bool matches = await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
-                subscription.SourceRepository,
-                subscription.TargetRepository,
-                subscription.TargetDirectory,
-                previousSourceSha,
-                build.Commit,
-                subscription.TargetBranch,
-                prHeadBranch);
-
-            var comment = BuildSourceDiffVerificationComment(matches, subscription.SourceRepository, previousSourceSha, build.Commit);
-            await remote.CommentPullRequestAsync(prUrl, comment);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e,
-                "Failed to post source diff verification comment for PR {prUrl} of subscription {subscriptionId}",
-                prUrl,
-                subscription.Id);
-        }
-    }
-
-    private static string BuildSourceDiffVerificationComment(
-        bool matches,
-        string sourceRepo,
-        string oldSha,
-        string newSha)
-    {
-        var shortOld = Commit.GetShortSha(oldSha);
-        var shortNew = Commit.GetShortSha(newSha);
-
-        var builder = new StringBuilder();
-        builder.AppendLine("### Source diff verification");
-        builder.AppendLine();
-
-        if (matches)
-        {
-            builder.AppendLine($"✅ This PR matches the source diff `{shortOld}...{shortNew}` of `{sourceRepo}`.");
-        }
-        else
-        {
-            builder.AppendLine($"⚠️ Couldn't verify that this PR matches the source diff `{shortOld}...{shortNew}` of `{sourceRepo}`. Please review the changes manually.");
-        }
-
-        builder.AppendLine();
-        builder.AppendLine("> This is a best-effort confidence signal. It reuses the same source-mappings configuration the codeflow used, so it validates that the PR reflects the source diff under the current config — not that the config itself is correct.");
-
-        return builder.ToString();
     }
 
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)

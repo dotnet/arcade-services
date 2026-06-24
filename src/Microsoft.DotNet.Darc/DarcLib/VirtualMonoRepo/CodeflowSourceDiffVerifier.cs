@@ -38,19 +38,6 @@ public interface ICodeflowSourceDiffVerifier
 /// </summary>
 public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
 {
-    // List of characters that belong to the git diff format.
-    // Example diff output:
-    // diff --git a/src/product-repo1/eng/Versions.props b/src/product-repo1/eng/Versions.props
-    // index fb13f6d..76d73de 100644
-    // --- a/src/product-repo1/eng/Versions.props
-    // +++ b/src/product-repo1/eng/Versions.props
-    // @@ -10,2 +10,2 @@
-    // -    <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
-    // -    <PackageB1PackageVersion>2.0.0</PackageB1PackageVersion>
-    // +    <PackageA1PackageVersion>2.0.1</PackageA1PackageVersion>
-    // +    <PackageB1PackageVersion>2.0.1</PackageB1PackageVersion>
-    private static readonly IReadOnlyCollection<string> IgnoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
-
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -255,11 +242,36 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
     }
 
     /// <summary>
-    /// Keeps only the +/- change lines from a zero-context diff, dropping the diff-format lines that
-    /// are expected to differ between the source repo and its VMR copy.
+    /// Keeps only the +/- change lines from a zero-context diff. Only lines inside a hunk (after an
+    /// "@@" header) are collected, so the per-file "--- a/file" / "+++ b/file" headers - which share a
+    /// prefix with genuine content lines such as a removed "-- comment" (rendered as "--- comment") - are
+    /// excluded structurally rather than by an ambiguous textual prefix match.
     /// </summary>
-    private static List<string> GetChangeLines(IReadOnlyCollection<string> lines) =>
-        [.. lines.Where(line => (line.StartsWith('+') || line.StartsWith('-')) && !IgnoredDiffLines.Any(line.StartsWith))];
+    private static List<string> GetChangeLines(IReadOnlyCollection<string> lines)
+    {
+        var changeLines = new List<string>();
+        var insideHunk = false;
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("@@"))
+            {
+                // Start of a hunk; the lines that follow (until the next hunk or file) are the changes.
+                insideHunk = true;
+            }
+            else if (line.StartsWith("diff --git"))
+            {
+                // Start of a new file's header section, whose "--- "/"+++ " headers precede its first hunk.
+                insideHunk = false;
+            }
+            else if (insideHunk && (line.StartsWith('+') || line.StartsWith('-')))
+            {
+                changeLines.Add(line);
+            }
+        }
+
+        return changeLines;
+    }
 
     /// <summary>
     /// A file the source changed but the PR did not is only legitimate when the VMR copy is already

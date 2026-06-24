@@ -43,7 +43,7 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
             throw new InvalidOperationException($"Subscription {subscription.Id} is not a source enabled subscription, cannot run codeflow approval check");
         }
 
-        await codeFlowUpdater.RunCodeflowApprovalCheck(
+        await codeFlowUpdater.RunCodeflowApprovalCheckAsync(
             SqlBarClient.ToClientModelSubscription(subscription),
             workItem,
             cancellationToken);
