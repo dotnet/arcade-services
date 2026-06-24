@@ -134,7 +134,7 @@ internal abstract class Operation(
     {
         logger.LogInformation("Preparing VMR fork");
         // Sync the VMR fork branch
-        //await SyncForkAsync("dotnet", "dotnet", branch);
+        await SyncForkAsync("dotnet", "dotnet", branch);
 
         return await CreateTmpBranchAsync(VmrForkRepoName, branch, skipCleanup);
     }
@@ -214,7 +214,7 @@ internal abstract class Operation(
         if (allRepos.Any(repo => repo.HtmlUrl.Equals(productRepoForkUri, StringComparison.OrdinalIgnoreCase)))
         {
             logger.LogInformation("Product repo fork {fork} already exists, syncing branch {branch} with source", productRepoForkUri, productRepoBranch);
-            //await SyncForkAsync(org, name, productRepoBranch);
+            await SyncForkAsync(org, name, productRepoBranch);
         }
         // If we don't, create a fork
         else

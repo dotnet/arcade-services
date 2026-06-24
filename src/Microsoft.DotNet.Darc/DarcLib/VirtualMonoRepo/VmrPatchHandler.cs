@@ -348,7 +348,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             }
         }
 
-        //_logger.LogDebug("{output}", result.ToString());
+        _logger.LogDebug("{output}", result.ToString());
 
         if (removePatchAfter)
         {
