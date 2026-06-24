@@ -76,7 +76,6 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
 
         var srcMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
-        // Make sure both the target and the PR head branches are available locally in the VMR.
         ILocalGitRepo vmr = await _vmrCloneManager.PrepareVmrAsync(
             [vmrUri],
             [vmrTargetBranch, vmrHeadBranch],
@@ -88,7 +87,6 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
 
         var exclusionPathspecs = GetDiffFilters(mapping, _sourceManifest);
 
-        // Obtain a local clone of the source repo containing both SHAs.
         ILocalGitRepo sourceRepo = await _cloneManager.PrepareCloneAsync(
             mapping,
             [sourceRepoUri],
@@ -98,14 +96,14 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
             cancellationToken);
 
         var srcMappingPrefix = srcMappingPath + "/";
-        HashSet<string> sourceRepoChanges = await GetChangedMappingFilesAsync(
+        HashSet<string> sourceRepoChangedFiles = await GetChangedMappingFilesAsync(
             sourceRepo, mappingName, oldSha, newSha, exclusionPathspecs: exclusionPathspecs, cancellationToken: cancellationToken);
-        HashSet<string> vmrPrChanges = await GetChangedMappingFilesAsync(
+        HashSet<string> vmrPrChangedFiles = await GetChangedMappingFilesAsync(
             vmr, mappingName, vmrTargetBranch, vmrHeadBranch, relativePath: srcMappingPrefix, cancellationToken: cancellationToken);
 
-        var intersection = sourceRepoChanges.Where(vmrPrChanges.Contains).ToList();
-        var sourceRepoOnlyChanges = sourceRepoChanges.Where(f => !vmrPrChanges.Contains(f)).ToList();
-        var unexpectedFiles = vmrPrChanges.Where(f => !sourceRepoChanges.Contains(f)).ToList();
+        var intersection = sourceRepoChangedFiles.Where(vmrPrChangedFiles.Contains).ToList();
+        var sourceRepoOnlyChanges = sourceRepoChangedFiles.Where(f => !vmrPrChangedFiles.Contains(f)).ToList();
+        var unexpectedFiles = vmrPrChangedFiles.Where(f => !sourceRepoChangedFiles.Contains(f)).ToList();
 
         // The PR changed files that the source diff didn't - the codeflow can't be trusted.
         if (unexpectedFiles.Count > 0)
@@ -166,9 +164,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
     /// <summary>
     /// Runs a three-dot name-only diff (<paramref name="fromRef"/>...<paramref name="toRef"/>) scoped to the
     /// mapping's location in the repo and returns the mapping-relative paths, after dropping eng/common
-    /// (non-arcade) and version/metadata files. Used for both the source repo diff (mapping lives at the repo
-    /// root, so <paramref name="relativePath"/> is empty) and the target repo (VMR) diff (mapping lives
-    /// under src/&lt;mapping&gt;/, which is stripped from the resulting paths).
+    /// (non-arcade) and version/metadata files.
     /// </summary>
     private static async Task<HashSet<string>> GetChangedMappingFilesAsync(
         ILocalGitRepo repo,
@@ -192,17 +188,12 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         if (!string.IsNullOrEmpty(relativePath))
         {
             files = files
-                .Where(f => f.StartsWith(relativePath, StringComparison.OrdinalIgnoreCase))
                 .Select(f => f.Substring(relativePath.Length));
         }
 
         return FilterMappingFiles(files, mappingName);
     }
 
-    /// <summary>
-    /// Drops eng/common (for non-arcade mappings) and codeflow version/metadata files, which are
-    /// expected to legitimately diverge between the source repo and the VMR.
-    /// </summary>
     private static HashSet<string> FilterMappingFiles(IEnumerable<string> files, string mappingName)
     {
         var engCommonPrefix = Constants.CommonScriptFilesPath + "/";
@@ -256,13 +247,8 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         {
             if (line.StartsWith("@@"))
             {
-                // Start of a hunk; the lines that follow (until the next hunk or file) are the changes.
+                // start of code changes. we want to start adding lines after this, but not the hunk header itself
                 insideHunk = true;
-            }
-            else if (line.StartsWith("diff --git"))
-            {
-                // Start of a new file's header section, whose "--- "/"+++ " headers precede its first hunk.
-                insideHunk = false;
             }
             else if (insideHunk && (line.StartsWith('+') || line.StartsWith('-')))
             {
