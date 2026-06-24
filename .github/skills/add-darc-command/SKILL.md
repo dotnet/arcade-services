@@ -31,6 +31,13 @@ Create `src/Microsoft.DotNet.Darc/Darc/Operations/<Verb>Operation.cs`.
 ### Step 3: Wire up dependencies
 <!-- TODO: Confirm how options map to operations (generic type param) and whether any DI registration is required for new services. Check an existing pair like AddChannelCommandLineOptions / AddChannelOperation. -->
 
+### Step 4: Update the documentation
+Update `docs/Darc.md` so the CLI reference stays in sync (see
+`.github/instructions/darc-docs.instructions.md`):
+- Add a `### **\`my-verb\`**` entry under **Command Reference** documenting the options + a usage example.
+- Link the new verb from the **Index** at the top of the file.
+- Mirror the formatting and depth of neighboring command entries.
+
 ## Constraints
 - Async methods must end in `Async`; never block with `.Result`/`.Wait()`.
 - Use `ILogger<T>` and structural logging; each method logs its own actions.

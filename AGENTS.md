@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Verification
-- Build & test: `dotnet build` then `dotnet test --no-build`
+- Build & test: run `scripts/verify` (bash) or `scripts/verify.ps1` (PowerShell). These run `dotnet build` then a scoped `dotnet test` that excludes scenario tests (require a deployed service) and the slow codeflow tests.
 - The required .NET SDK is pinned in `global.json` — assume it is installed.
 - If verification fails, fix the root cause and re-run.
 
@@ -21,6 +21,7 @@
 - Update or add tests for any behavior change.
 - Do not modify CI, dependency versions, or security settings unless asked.
 - Never print, log, or commit secrets.
+- Do not run git write commands (`git commit`, `git push`, etc.); leave staging and committing to the user.
 
 ## Learning from corrections
 - When the user corrects you, rejects an approach, or states a durable preference or convention, store it with Copilot Memory (the `store_memory` tool) so it persists across sessions.
