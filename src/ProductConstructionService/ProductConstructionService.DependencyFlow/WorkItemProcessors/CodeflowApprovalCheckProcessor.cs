@@ -26,10 +26,10 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
 
     public override async Task<bool> ProcessWorkItemAsync(CodeflowApprovalCheck workItem, CancellationToken cancellationToken)
     {
-        var subscription = _context.Subscriptions
+        var subscription = await _context.Subscriptions
             .Include(s => s.Channel)
-            .FirstOrDefault(s => s.Id == workItem.SubscriptionId);
-
+            .FirstOrDefaultAsync(s => s.Id == workItem.SubscriptionId, cancellationToken);
+        
         if (subscription == null)
         {
             throw new InvalidOperationException($"Subscription with ID {workItem.SubscriptionId} not found.");

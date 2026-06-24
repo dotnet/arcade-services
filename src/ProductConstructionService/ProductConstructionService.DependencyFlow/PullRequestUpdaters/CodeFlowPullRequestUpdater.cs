@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
 using Maestro.Common.Telemetry;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -851,17 +850,15 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        var matches = await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
-            subscription.SourceRepository,
-            subscription.TargetRepository,
-            subscription.TargetDirectory,
-            codeflowApprovalCheck.PreviousSourceSha,
-            codeflowApprovalCheck.CurrentSourceSha,
-            subscription.TargetBranch,
-            pr.HeadBranch,
-            cancellationToken);
-
-        if (matches)
+        if (await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
+                subscription.SourceRepository,
+                subscription.TargetRepository,
+                subscription.TargetDirectory,
+                codeflowApprovalCheck.PreviousSourceSha,
+                codeflowApprovalCheck.CurrentSourceSha,
+                subscription.TargetBranch,
+                pr.HeadBranch,
+                cancellationToken))
         {
             await remote.CommentPullRequestAsync(pr.Url, "Looks good");
         }    
