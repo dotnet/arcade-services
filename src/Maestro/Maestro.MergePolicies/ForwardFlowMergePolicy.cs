@@ -168,6 +168,7 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
                  #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                  - **Source Repository**: {mapping}
                  - **Error**: BAR ID `{sourceManifestBarId}` found in the source manifest does not match the build ID of the current update (`{expectedBuildId}`).
+                 {BarIdMismatchErrorMarker}
                  """);
         }
         if (!repoMappingsToCommitSha.TryGetValue(mapping, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))

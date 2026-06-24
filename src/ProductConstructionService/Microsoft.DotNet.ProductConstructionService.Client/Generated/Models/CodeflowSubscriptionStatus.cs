@@ -8,8 +8,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class CodeflowSubscriptionStatus
     {
-        public CodeflowSubscriptionStatus()
+        public CodeflowSubscriptionStatus(bool hasCodeflowConflict)
         {
+            HasCodeflowConflict = hasCodeflowConflict;
         }
 
         [JsonProperty("subscription")]
@@ -26,5 +27,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("latestOutcome")]
         public SubscriptionTriggerOutcome LatestOutcome { get; set; }
+
+        [JsonProperty("hasCodeflowConflict")]
+        public bool HasCodeflowConflict { get; set; }
     }
 }

@@ -92,6 +92,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
     {
         await _pullRequestState.TryDeleteAsync();
+        await _mergePolicyEvaluationState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
         if (clearPendingUpdates)
         {

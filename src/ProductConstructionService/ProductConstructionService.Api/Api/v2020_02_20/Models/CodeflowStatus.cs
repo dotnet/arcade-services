@@ -41,4 +41,7 @@ public class CodeflowSubscriptionStatus
 
     [JsonProperty("latestOutcome")]
     public SubscriptionTriggerOutcome LatestOutcome { get; set; }
+
+    [JsonProperty("hasCodeflowConflict")]
+    public bool HasCodeflowConflict { get; set; }
 }
