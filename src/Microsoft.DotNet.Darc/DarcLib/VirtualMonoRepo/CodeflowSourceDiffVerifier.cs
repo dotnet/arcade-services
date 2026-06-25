@@ -20,7 +20,7 @@ public interface ICodeflowSourceDiffVerifier
     /// repo's commit diff (oldSha...newSha), accounting for the expected divergences (path remap,
     /// excludes, eng/common, version files, no-ops).
     /// </summary>
-    Task<bool> VerifyForwardFlowAsync(
+    Task<bool> ForwardFlowMatchesSourceDiffAsync(
         string sourceRepoUri,
         string vmrUri,
         string mappingName,
@@ -58,7 +58,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         _logger = logger;
     }
 
-    public async Task<bool> VerifyForwardFlowAsync(
+    public async Task<bool> ForwardFlowMatchesSourceDiffAsync(
         string sourceRepoUri,
         string vmrUri,
         string mappingName,

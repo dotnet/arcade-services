@@ -697,7 +697,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            if (!skipCodeflowApprovalCheck && !string.IsNullOrEmpty(previousSourceSha))
+            if (!skipCodeflowApprovalCheck
+                && !string.IsNullOrEmpty(previousSourceSha)
+                && subscription.IsForwardFlow())
             {
                 await _stateManager.SetCodeflowApprovalCheck(new CodeflowApprovalCheck
                 {
@@ -806,7 +808,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
             await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
-            if (!skipCodeflowApprovalCheck && !string.IsNullOrEmpty(previousSourceSha))
+            if (!skipCodeflowApprovalCheck
+                && !string.IsNullOrEmpty(previousSourceSha)
+                && subscription.IsForwardFlow())
             {
                 await _stateManager.SetCodeflowApprovalCheck(new CodeflowApprovalCheck
                 {
@@ -850,7 +854,21 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        if (await _codeflowSourceDiffVerifier.VerifyForwardFlowAsync(
+        var commits = await remote.GetPullRequestCommitsAsync(pr.Url);
+        var nonBotCommits = commits
+            .Where(commit => !string.Equals(commit.Author, Constants.DarcBotName, StringComparison.Ordinal))
+            .ToList();
+        if (nonBotCommits.Count > 0)
+        {
+            _logger.LogInformation(
+                "Skipping codeflow approval check for PR {prUrl} because it contains {count} commit(s) not authored by {bot}",
+                pr.Url,
+                nonBotCommits.Count,
+                Constants.DarcBotName);
+            return;
+        }
+
+        if (await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
                 subscription.SourceRepository,
                 subscription.TargetRepository,
                 subscription.TargetDirectory,
@@ -860,8 +878,17 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 pr.HeadBranch,
                 cancellationToken))
         {
+            _logger.LogInformation(
+                "Codeflow approval check for PR {prUrl} passed; posting approval comment",
+                pr.Url);
             await remote.CommentPullRequestAsync(pr.Url, "Looks good");
-        }    
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Forward flow PR {prUrl} contains unexpected changes, not auto approving",
+                pr.Url);
+        }
     }
 
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)

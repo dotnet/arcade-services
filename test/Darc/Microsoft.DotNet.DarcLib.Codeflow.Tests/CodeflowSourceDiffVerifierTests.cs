@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 /// <summary>
-/// Unit tests for <see cref="CodeflowSourceDiffVerifier.VerifyForwardFlowAsync"/>. The git/VMR
+/// Unit tests for <see cref="CodeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync"/>. The git/VMR
 /// interactions are mocked so each test drives the public verifier with hand-crafted
 /// "source repo" and "VMR PR" diffs and asserts the verdict.
 /// </summary>
@@ -92,7 +92,7 @@ internal class CodeflowSourceDiffVerifierTests
             NullLogger<CodeflowSourceDiffVerifier>.Instance);
     }
 
-    private Task<bool> VerifyAsync() => _verifier.VerifyForwardFlowAsync(
+    private Task<bool> VerifyAsync() => _verifier.ForwardFlowMatchesSourceDiffAsync(
         SourceRepoUri,
         VmrUri,
         MappingName,
@@ -161,7 +161,7 @@ internal class CodeflowSourceDiffVerifierTests
     ]);
 
     [Test]
-    public async Task VerifyForwardFlowAsync_PrMatchesSourceDiff_ReturnsTrue()
+    public async Task ForwardFlowMatchesSourceDiffAsync_PrMatchesSourceDiff_ReturnsTrue()
     {
         // Arrange: the source repo and the VMR PR change the same file in the same way.
         SetupDiffs(_sourceRepo, "data.txt", new Dictionary<string, string>
@@ -181,7 +181,7 @@ internal class CodeflowSourceDiffVerifierTests
     }
 
     [Test]
-    public async Task VerifyForwardFlowAsync_PrChangesFileNotInSourceDiff_ReturnsFalse()
+    public async Task ForwardFlowMatchesSourceDiffAsync_PrChangesFileNotInSourceDiff_ReturnsFalse()
     {
         // Arrange: the PR touches an extra file the source diff never changed.
         SetupDiffs(_sourceRepo, "data.txt", new Dictionary<string, string>
@@ -198,7 +198,7 @@ internal class CodeflowSourceDiffVerifierTests
     }
 
     [Test]
-    public async Task VerifyForwardFlowAsync_PrChangesFileDifferently_ReturnsFalse()
+    public async Task ForwardFlowMatchesSourceDiffAsync_PrChangesFileDifferently_ReturnsFalse()
     {
         // Arrange: the same file is changed in both, but to different content.
         SetupDiffs(_sourceRepo, "data.txt", new Dictionary<string, string>
@@ -218,7 +218,7 @@ internal class CodeflowSourceDiffVerifierTests
     }
 
     [Test]
-    public async Task VerifyForwardFlowAsync_SourceOnlyChangeAlreadyReconciledInVmr_ReturnsTrue()
+    public async Task ForwardFlowMatchesSourceDiffAsync_SourceOnlyChangeAlreadyReconciledInVmr_ReturnsTrue()
     {
         // Arrange: the source changed two files but the PR only changed one. The other (readme.md) is a
         // legitimate no-op because the VMR copy already holds the source's new content.
@@ -242,7 +242,7 @@ internal class CodeflowSourceDiffVerifierTests
     }
 
     [Test]
-    public async Task VerifyForwardFlowAsync_PrTampersWithDashDashCommentLine_ReturnsFalse()
+    public async Task ForwardFlowMatchesSourceDiffAsync_PrTampersWithDashDashCommentLine_ReturnsFalse()
     {
         // Arrange: a SQL file whose comment line is changed.
         //   Source repo:  "-- old"       -> "-- new"
@@ -268,7 +268,7 @@ internal class CodeflowSourceDiffVerifierTests
     }
 
     [Test]
-    public async Task VerifyForwardFlowAsync_MultiHunkFileWithMatchingChanges_ReturnsTrue()
+    public async Task ForwardFlowMatchesSourceDiffAsync_MultiHunkFileWithMatchingChanges_ReturnsTrue()
     {
         // Arrange: a file changed in two separate places (two hunks) identically in source and PR.
         SetupDiffs(_sourceRepo, "data.txt", new Dictionary<string, string>

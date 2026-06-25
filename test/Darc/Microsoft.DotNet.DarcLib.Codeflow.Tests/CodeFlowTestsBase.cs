@@ -300,7 +300,7 @@ internal abstract class CodeFlowTestsBase
         await cloneManager.RegisterCloneAsync(VmrPath);
 
         var verifier = scope.ServiceProvider.GetRequiredService<ICodeflowSourceDiffVerifier>();
-        return await verifier.VerifyForwardFlowAsync(
+        return await verifier.ForwardFlowMatchesSourceDiffAsync(
             sourceRepoUri: ProductRepoPath,
             vmrUri: VmrPath,
             mappingName: Constants.ProductRepoName,
