@@ -176,7 +176,7 @@
                     </TemplateColumn>
                     <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
                         <FluentLabel>
-                            <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
+                            <span class="status-dot @GetOutcomeTypeBadgeColor(context.Type)"></span>@GetSubscriptionOutcomeTypeText(context.Type)
                         </FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Pull Request" Width="200px" Align="Align.Start">
@@ -442,9 +442,9 @@
     }
 
     private static string GetOutcomeTypeOptionText(string option)
-        => string.IsNullOrEmpty(option) ? "All outcomes" : GetStatusText(Enum.Parse<OutcomeType>(option));
+        => string.IsNullOrEmpty(option) ? "All outcomes" : GetSubscriptionOutcomeTypeText(Enum.Parse<OutcomeType>(option));
 
-    private static string GetStatusClass(OutcomeType type) => type switch
+    public static string GetOutcomeTypeBadgeColor(OutcomeType type) => type switch
     {
         OutcomeType.Updated => "status-green",
         OutcomeType.Failure => "status-red",
@@ -454,7 +454,7 @@
         _ => "status-grey",
     };
 
-    private static string GetStatusText(OutcomeType type) => type switch
+    public static string GetSubscriptionOutcomeTypeText(OutcomeType type) => type switch
     {
         OutcomeType.UserError => "User Error",
         OutcomeType.HasConflict => "Has conflicts",
