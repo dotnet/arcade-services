@@ -139,6 +139,7 @@ internal static class Program
         typeof(GetLatestBuildCommandLineOptions),
         typeof(GetRepositoryMergePoliciesCommandLineOptions),
         typeof(GetSubscriptionsCommandLineOptions),
+        typeof(GetSubscriptionHistoryCommandLineOptions),
         typeof(SetRepositoryMergePoliciesCommandLineOptions),
         typeof(SubscriptionsStatusCommandLineOptions),
         typeof(TriggerSubscriptionsCommandLineOptions),
