@@ -120,9 +120,7 @@ public class CodeflowController : ControllerBase
 
     private async Task<Dictionary<string, InProgressPullRequest>> GetInProgressPullRequestsAsync(List<string> updaterIds)
     {
-        var cacheKeys = updaterIds
-            .Select(id => $"{nameof(InProgressPullRequest)}_{id}")
-            .ToList();
+        List<string> cacheKeys = [.. updaterIds.Select(RedisCache.MakeKey<InProgressPullRequest>)];
 
         var cache = _cacheFactory.Create<InProgressPullRequest>(string.Empty, includeTypeInKey: false);
         var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
@@ -130,7 +128,7 @@ public class CodeflowController : ControllerBase
         var result = new Dictionary<string, InProgressPullRequest>();
         foreach (var id in updaterIds)
         {
-            var prKey = $"{nameof(InProgressPullRequest)}_{id}";
+            var prKey = RedisCache.MakeKey<InProgressPullRequest>(id);
             if (batchResults.TryGetValue(prKey, out var pr) && pr != null)
             {
                 result[id] = pr;
@@ -207,9 +205,7 @@ public class CodeflowController : ControllerBase
 
     private async Task<Dictionary<string, bool>> GetCodeflowPrConflictStatusesAsync(List<string> updaterIds)
     {
-        var cacheKeys = updaterIds
-            .Select(id => $"{nameof(MergePolicyEvaluationResult)}_{id}")
-            .ToList();
+        List<string> cacheKeys = [.. updaterIds.Select(RedisCache.MakeKey<MergePolicyEvaluationResults>)];
 
         var cache = _cacheFactory.Create<MergePolicyEvaluationResults>(string.Empty, includeTypeInKey: false);
         var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
@@ -217,8 +213,8 @@ public class CodeflowController : ControllerBase
         var result = new Dictionary<string, bool>();
         foreach (var id in updaterIds)
         {
-            var checkResultsKey = $"{nameof(MergePolicyEvaluationResults)}_{id}";
-            if (batchResults.TryGetValue(checkResultsKey, out var checkResults) && checkResults != null)
+            var key = RedisCache.MakeKey<MergePolicyEvaluationResults>(id);
+            if (batchResults.TryGetValue(key, out var checkResults) && checkResults != null)
             {
                 bool hasConflict = checkResults.Results
                     .Any(checkResult => checkResult.Message.Contains(CodeFlowMergePolicy.BarIdMismatchErrorMarker));
@@ -317,10 +313,12 @@ public class CodeflowController : ControllerBase
             return null;
         }
 
-        newestBuildInfos.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var newestBuildInfo);
-        activePrsBySubscriptionIds.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var pr);
-        latestOutcomes.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var latestOutcome);
-        conflictStatuses.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var hasConflict);
+        var id = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
+
+        newestBuildInfos.TryGetValue(id, out var newestBuildInfo);
+        activePrsBySubscriptionIds.TryGetValue(id, out var pr);
+        latestOutcomes.TryGetValue(id, out var latestOutcome);
+        conflictStatuses.TryGetValue(id, out var hasConflict);
 
         hasConflict = hasConflict && pr != null;
 
@@ -345,4 +343,4 @@ public class CodeflowController : ControllerBase
     }
 
     #endregion Helpers
-    }
+}
