@@ -893,7 +893,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation(
                 "Codeflow approval check for PR {prUrl} passed; posting approval comment",
                 pr.Url);
-            await remote.CommentPullRequestAsync(pr.Url, "Looks good");
+            await remote.CommentPullRequestAsync(
+                pr.Url,
+                $"This pull request only contains source updates from {subscription.SourceRepository} " +
+                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.");
         }
         else
         {
