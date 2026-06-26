@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Maestro.DataProviders;
+using Maestro.Services.Common.Cache;
 using Maestro.WorkItems;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.DependencyFlow.Model;
@@ -15,13 +16,16 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
+    private readonly IDistributedLock _distributedLock;
 
     public CodeflowApprovalCheckProcessor(
         BuildAssetRegistryContext context,
-        IPullRequestUpdaterFactory updaterFactory)
+        IPullRequestUpdaterFactory updaterFactory,
+        IDistributedLock distributedLock)
     {
         _context = context;
         _updaterFactory = updaterFactory;
+        _distributedLock = distributedLock;
     }
 
     public override async Task<bool> ProcessWorkItemAsync(CodeflowApprovalCheck workItem, CancellationToken cancellationToken)
@@ -43,10 +47,14 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
             throw new InvalidOperationException($"Subscription {subscription.Id} is not a source enabled subscription, cannot run codeflow approval check");
         }
 
-        await codeFlowUpdater.RunCodeflowApprovalCheckAsync(
-            SqlBarClient.ToClientModelSubscription(subscription),
-            workItem,
-            cancellationToken);
+        var mutexKey = pullRequestUpdaterId.Id;
+
+        await _distributedLock.ExecuteWithLockAsync(mutexKey,
+            async () => await codeFlowUpdater.RunCodeflowApprovalCheckAsync(
+                SqlBarClient.ToClientModelSubscription(subscription),
+                workItem,
+                cancellationToken),
+            cancellationToken: cancellationToken);
 
         return true;
     }
