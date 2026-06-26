@@ -1,6 +1,5 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using ProductConstructionService.BarViz.Code.Helpers
-@using ProductConstructionService.BarViz.Pages
 
 @if (Errors.Count > 0)
 {
@@ -20,10 +19,12 @@
                 <PropertyColumn Title="Subscription" Width="300px" Property="@(e => SubscriptionDisplay(e.Subscription))" Align="Align.Start" />
 
                 <TemplateColumn Title="Outcome" Width="175px" Align="Align.Start">
-                    <span class="status-dot @SubscriptionTriggerHistory.GetOutcomeTypeBadgeColor(context.Outcome.Type)"></span>@SubscriptionTriggerHistory.GetSubscriptionOutcomeTypeText(context.Outcome.Type)
+                    <span class="status-dot @SubscriptionOutcomeHelper.GetOutcomeTypeBadgeColor(context.Outcome.Type)"></span>@SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(context.Outcome.Type)
                 </TemplateColumn>
                 <TemplateColumn Title="Message" Width="1fr" Align="Align.Start">
+                    <div class="subscription-error-message" title="@context.Outcome.Message">
                         @context.Outcome.Message
+                    </div>
                 </TemplateColumn>
             </FluentDataGrid>
         }

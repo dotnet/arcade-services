@@ -62,15 +62,15 @@ public class CodeflowController : ControllerBase
 
         var subscriptions = forwardFlowSubscriptions.Concat(backflowSubscriptions).ToList();
 
-        List<Guid> updaterIds = [.. subscriptions.Select(s => Guid.Parse(PullRequestUpdaterId.CreateUpdaterId(s).Id))];
+        List<string> updaterIds = [.. subscriptions.Select(s => PullRequestUpdaterId.CreateUpdaterId(s).Id)];
 
-        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(updaterIds);
+        Dictionary<string, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(updaterIds);
 
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfoPerSubscription = await CalculateNewestBuildInfo(subscriptions);
+        Dictionary<string, NewestBuildInfo> newestBuildInfoPerSubscription = await CalculateNewestBuildInfo(subscriptions);
 
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
 
-        Dictionary<Guid, bool> conflictStatusesPerSubscription = includeConflictStatuses
+        Dictionary<string, bool> conflictStatusesPerSubscription = includeConflictStatuses
             ? await GetCodeflowPrConflictStatusesAsync(updaterIds)
             : [];
 
@@ -118,7 +118,7 @@ public class CodeflowController : ControllerBase
             .ToListAsync();
     }
 
-    private async Task<Dictionary<Guid, InProgressPullRequest>> GetInProgressPullRequestsAsync(List<Guid> updaterIds)
+    private async Task<Dictionary<string, InProgressPullRequest>> GetInProgressPullRequestsAsync(List<string> updaterIds)
     {
         var cacheKeys = updaterIds
             .Select(id => $"{nameof(InProgressPullRequest)}_{id}")
@@ -127,7 +127,7 @@ public class CodeflowController : ControllerBase
         var cache = _cacheFactory.Create<InProgressPullRequest>(string.Empty, includeTypeInKey: false);
         var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
 
-        var result = new Dictionary<Guid, InProgressPullRequest>();
+        var result = new Dictionary<string, InProgressPullRequest>();
         foreach (var id in updaterIds)
         {
             var prKey = $"{nameof(InProgressPullRequest)}_{id}";
@@ -140,7 +140,7 @@ public class CodeflowController : ControllerBase
         return result;
     }
 
-    private async Task<Dictionary<Guid, NewestBuildInfo>> CalculateNewestBuildInfo(
+    private async Task<Dictionary<string, NewestBuildInfo>> CalculateNewestBuildInfo(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
         var subscriptionsWithBuilds = subscriptions
@@ -177,7 +177,7 @@ public class CodeflowController : ControllerBase
 
         var newerBuilds = await newerBuildsQuery.ToListAsync();
 
-        var result = new Dictionary<Guid, NewestBuildInfo>();
+        var result = new Dictionary<string, NewestBuildInfo>();
         foreach (var subscription in subscriptionsWithBuilds)
         {
             var lastAppliedDate = subscription.LastAppliedBuild.DateProduced;
@@ -199,13 +199,13 @@ public class CodeflowController : ControllerBase
                 newestDate = newestBuild.DateProduced;
             }
 
-            result[subscription.Id] = new NewestBuildInfo(matchingBuilds.Count, newestBuildId, newestDate);
+            result[PullRequestUpdaterId.CreateUpdaterId(subscription).Id] = new NewestBuildInfo(matchingBuilds.Count, newestBuildId, newestDate);
         }
 
         return result;
     }
 
-    private async Task<Dictionary<Guid, bool>> GetCodeflowPrConflictStatusesAsync(List<Guid> updaterIds)
+    private async Task<Dictionary<string, bool>> GetCodeflowPrConflictStatusesAsync(List<string> updaterIds)
     {
         var cacheKeys = updaterIds
             .Select(id => $"{nameof(MergePolicyEvaluationResult)}_{id}")
@@ -214,7 +214,7 @@ public class CodeflowController : ControllerBase
         var cache = _cacheFactory.Create<MergePolicyEvaluationResults>(string.Empty, includeTypeInKey: false);
         var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
 
-        var result = new Dictionary<Guid, bool>();
+        var result = new Dictionary<string, bool>();
         foreach (var id in updaterIds)
         {
             var checkResultsKey = $"{nameof(MergePolicyEvaluationResults)}_{id}";
@@ -231,7 +231,7 @@ public class CodeflowController : ControllerBase
 
     private record NewestBuildInfo(int NewerBuildsCount, int? NewestBuildId, DateTimeOffset? NewestBuildDate);
 
-    private async Task<Dictionary<Guid, SubscriptionTriggerOutcome>> GetLatestOutcomesAsync(
+    private async Task<Dictionary<string, SubscriptionTriggerOutcome>> GetLatestOutcomesAsync(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
         var subscriptionIds = subscriptions.Select(s => s.Id).Distinct().ToList();
@@ -249,7 +249,7 @@ public class CodeflowController : ControllerBase
             .ToListAsync();
 
         return latestOutcomes.ToDictionary(
-            o => o.SubscriptionId,
+            o => o.SubscriptionId.ToString(),
             o => new SubscriptionTriggerOutcome(o));
     }
 
@@ -258,10 +258,10 @@ public class CodeflowController : ControllerBase
     private static List<CodeflowStatus> BuildCodeflowStatuses(
         List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
-        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfoPerSubscription,
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomePerSubscription,
-        Dictionary<Guid, bool> conflictStatuses)
+        Dictionary<string, InProgressPullRequest> activePrsPerSubscriptionId,
+        Dictionary<string, NewestBuildInfo> newestBuildInfoPerSubscription,
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription,
+        Dictionary<string, bool> conflictStatuses)
     {
         List<string> mappings = [.. forwardFlowSubscriptions.Concat(backflowSubscriptions)
             .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
@@ -307,20 +307,20 @@ public class CodeflowController : ControllerBase
 
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
-        Dictionary<Guid, InProgressPullRequest> activePrsBySubscriptionIds,
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfos,
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomes,
-        Dictionary<Guid, bool> conflictStatuses)
+        Dictionary<string, InProgressPullRequest> activePrsBySubscriptionIds,
+        Dictionary<string, NewestBuildInfo> newestBuildInfos,
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomes,
+        Dictionary<string, bool> conflictStatuses)
     {
         if (subscription == null)
         {
             return null;
         }
 
-        newestBuildInfos.TryGetValue(subscription.Id, out var newestBuildInfo);
-        activePrsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
-        latestOutcomes.TryGetValue(subscription.Id, out var latestOutcome);
-        conflictStatuses.TryGetValue(subscription.Id, out var hasConflict);
+        newestBuildInfos.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var newestBuildInfo);
+        activePrsBySubscriptionIds.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var pr);
+        latestOutcomes.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var latestOutcome);
+        conflictStatuses.TryGetValue(PullRequestUpdaterId.CreateUpdaterId(subscription).Id, out var hasConflict);
 
         hasConflict = hasConflict && pr != null;
 

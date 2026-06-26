@@ -8,9 +8,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class CodeflowSubscriptionStatus
     {
-        public CodeflowSubscriptionStatus(bool hasCodeflowConflict)
+        public CodeflowSubscriptionStatus()
         {
-            HasCodeflowConflict = hasCodeflowConflict;
         }
 
         [JsonProperty("subscription")]

@@ -176,7 +176,7 @@
                     </TemplateColumn>
                     <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
                         <FluentLabel>
-                            <span class="status-dot @GetOutcomeTypeBadgeColor(context.Type)"></span>@GetSubscriptionOutcomeTypeText(context.Type)
+                            <span class="status-dot @SubscriptionOutcomeHelper.GetOutcomeTypeBadgeColor(context.Type)"></span>@SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(context.Type)
                         </FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Pull Request" Width="200px" Align="Align.Start">
@@ -442,24 +442,5 @@
     }
 
     private static string GetOutcomeTypeOptionText(string option)
-        => string.IsNullOrEmpty(option) ? "All outcomes" : GetSubscriptionOutcomeTypeText(Enum.Parse<OutcomeType>(option));
-
-    public static string GetOutcomeTypeBadgeColor(OutcomeType type) => type switch
-    {
-        OutcomeType.Updated => "status-green",
-        OutcomeType.Failure => "status-red",
-        OutcomeType.UserError => "status-yellow",
-        OutcomeType.HasConflict => "status-yellow",
-        OutcomeType.Rescheduled => "status-blue",
-        _ => "status-grey",
-    };
-
-    public static string GetSubscriptionOutcomeTypeText(OutcomeType type) => type switch
-    {
-        OutcomeType.UserError => "User Error",
-        OutcomeType.HasConflict => "Has conflicts",
-        OutcomeType.NoUpdate => "Nothing to update",
-        OutcomeType.NotUpdatable => "PR not updatable",
-        _ => type.ToString(),
-    };
+        => string.IsNullOrEmpty(option) ? "All outcomes" : SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(Enum.Parse<OutcomeType>(option));
 }
