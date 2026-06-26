@@ -111,5 +111,5 @@ internal class PullRequestStateManager : IPullRequestStateManager
     }
 
     public async Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check) =>
-        await _codeflowApprovalCheckReminders.SetReminderAsync(check, PullRequestUpdater.DefaultReminderDelay, true);
+        await _codeflowApprovalCheckReminders.SetReminderAsync(check, PullRequestUpdater.DefaultReminderDelay, isCodeFlow: true);
 }

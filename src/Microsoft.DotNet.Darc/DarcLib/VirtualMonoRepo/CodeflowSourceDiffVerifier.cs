@@ -101,22 +101,21 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         HashSet<string> vmrPrChangedFiles = await GetChangedMappingFilesAsync(
             vmr, mappingName, vmrTargetBranch, vmrHeadBranch, relativePath: srcMappingPrefix, cancellationToken: cancellationToken);
 
-        var intersection = sourceRepoChangedFiles.Where(vmrPrChangedFiles.Contains).ToList();
+        var filesChangedInBoth = sourceRepoChangedFiles.Where(vmrPrChangedFiles.Contains).ToList();
         var sourceRepoOnlyChanges = sourceRepoChangedFiles.Where(f => !vmrPrChangedFiles.Contains(f)).ToList();
-        var unexpectedFiles = vmrPrChangedFiles.Where(f => !sourceRepoChangedFiles.Contains(f)).ToList();
+        var filesChangedInPrOnly = vmrPrChangedFiles.Where(f => !sourceRepoChangedFiles.Contains(f)).ToList();
 
-        // The PR changed files that the source diff didn't - the codeflow can't be trusted.
-        if (unexpectedFiles.Count > 0)
+        if (filesChangedInPrOnly.Count > 0)
         {
             _logger.LogInformation(
                 "Source diff verification for {mappingName} failed: {unexpected} file(s) changed in the PR but not in the source diff",
                 mappingName,
-                unexpectedFiles.Count);
+                filesChangedInPrOnly.Count);
             return false;
         }
 
         // Per-file content compare on the intersection.
-        foreach (var file in intersection)
+        foreach (var file in filesChangedInBoth)
         {
             if (!await ChangedLinesMatchAsync(sourceRepo, vmr, file, srcMappingPath, oldSha, newSha, vmrTargetBranch, vmrHeadBranch, cancellationToken))
             {
@@ -213,7 +212,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         ILocalGitRepo sourceRepo,
         ILocalGitRepo vmr,
         string file,
-        string srcMappingPath,
+        UnixPath srcMappingPath,
         string oldSha,
         string newSha,
         string vmrTargetBranch,
@@ -223,7 +222,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         var sourceResult = await sourceRepo.ExecuteGitCommand(["diff", "-U0", $"{oldSha}...{newSha}", "--", file], cancellationToken);
         sourceResult.ThrowIfFailed($"Failed to get the source diff of {file} between {oldSha} and {newSha}");
 
-        var vmrResult = await vmr.ExecuteGitCommand(["diff", "-U0", $"{vmrTargetBranch}...{vmrHeadBranch}", "--", $"{srcMappingPath}/{file}"], cancellationToken);
+        var vmrResult = await vmr.ExecuteGitCommand(["diff", "-U0", $"{vmrTargetBranch}...{vmrHeadBranch}", "--", srcMappingPath / file], cancellationToken);
         vmrResult.ThrowIfFailed($"Failed to get the VMR diff of {file} between {vmrTargetBranch} and {vmrHeadBranch}");
 
         var sourceChanges = GetChangeLines(sourceResult.GetOutputLines());
@@ -267,12 +266,12 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         ILocalGitRepo sourceRepo,
         ILocalGitRepo vmr,
         string file,
-        string srcMappingPath,
+        UnixPath srcMappingPath,
         string newSha,
         string vmrHeadBranch)
     {
         var sourceContent = await sourceRepo.GetFileFromGitAsync(file, newSha);
-        var vmrContent = await vmr.GetFileFromGitAsync($"{srcMappingPath}/{file}", vmrHeadBranch);
+        var vmrContent = await vmr.GetFileFromGitAsync(srcMappingPath / file, vmrHeadBranch);
 
         if (sourceContent == null && vmrContent == null)
         {

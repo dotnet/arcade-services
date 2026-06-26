@@ -6,6 +6,7 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 internal class CodeflowApprovalCheck : DependencyFlowWorkItem
 {
     public required Guid SubscriptionId { get; init; }
+    public required string PullRequestUrl { get; init; }
     public required string PreviousSourceSha { get; init; }
     public required string CurrentSourceSha { get; init; }
 }

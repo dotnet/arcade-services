@@ -706,7 +706,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     UpdaterId = _target.UpdaterId,
                     SubscriptionId = update.SubscriptionId,
                     PreviousSourceSha = previousSourceSha,
-                    CurrentSourceSha = update.SourceSha
+                    CurrentSourceSha = update.SourceSha,
+                    PullRequestUrl = pr.Url
                 });
             }
             _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
@@ -817,7 +818,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     UpdaterId = _target.UpdaterId,
                     SubscriptionId = update.SubscriptionId,
                     PreviousSourceSha = previousSourceSha,
-                    CurrentSourceSha = update.SourceSha
+                    CurrentSourceSha = update.SourceSha,
+                    PullRequestUrl = pullRequest.Url
                 });
             }
         }
@@ -839,6 +841,15 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (pr == null)
         {
             _logger.LogError("No in-progress PR found for codeflow approval check");
+            return;
+        }
+
+        if (pr.Url != codeflowApprovalCheck.PullRequestUrl)
+        {
+            _logger.LogInformation(
+                "Codeflow approval check PR URL {codeflowPrUrl} does not match in-progress PR URL {inProgressPrUrl}",
+                codeflowApprovalCheck.PullRequestUrl,
+                pr.Url);
             return;
         }
 
@@ -868,7 +879,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        if (await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
+        bool match = await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
                 subscription.SourceRepository,
                 subscription.TargetRepository,
                 subscription.TargetDirectory,
@@ -876,7 +887,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 codeflowApprovalCheck.CurrentSourceSha,
                 subscription.TargetBranch,
                 pr.HeadBranch,
-                cancellationToken))
+                cancellationToken);
+        if (match)
         {
             _logger.LogInformation(
                 "Codeflow approval check for PR {prUrl} passed; posting approval comment",

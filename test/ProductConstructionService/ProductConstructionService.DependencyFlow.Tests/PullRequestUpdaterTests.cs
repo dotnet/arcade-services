@@ -681,7 +681,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         RemoveExpectedReminder<PullRequestCheck>(Subscription);
     }
 
-    protected void AndShouldHaveCodeflowApprovalCheckReminder(string previousSourceSha, string currentSourceSha)
+    protected void AndShouldHaveCodeflowApprovalCheckReminder(
+        string previousSourceSha,
+        string currentSourceSha,
+        string pullRequestUrl)
     {
         SetExpectedReminder(Subscription, new CodeflowApprovalCheck()
         {
@@ -689,6 +692,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             SubscriptionId = Subscription.Id,
             PreviousSourceSha = previousSourceSha,
             CurrentSourceSha = currentSourceSha,
+            PullRequestUrl = pullRequestUrl
         });
     }
 
