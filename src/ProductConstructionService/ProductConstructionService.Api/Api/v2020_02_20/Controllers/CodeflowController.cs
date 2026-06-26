@@ -68,7 +68,7 @@ public class CodeflowController : ControllerBase
 
         Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
 
-        Dictionary<string, bool> codeflowCheckStatuses = await GetCodeflowPrConflictStatusesAsync(updaterIds);
+        Dictionary<string, bool> codeflowCheckStatuses = await GetCodeflowCheckStatuses(updaterIds);
 
         var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
@@ -199,7 +199,7 @@ public class CodeflowController : ControllerBase
         return result;
     }
 
-    private async Task<Dictionary<string, bool>> GetCodeflowPrConflictStatusesAsync(List<string> updaterIds)
+    private async Task<Dictionary<string, bool>> GetCodeflowCheckStatuses(List<string> updaterIds)
     {
         List<string> cacheKeys = [.. updaterIds.Select(RedisCache.MakeKey<MergePolicyEvaluationResults>)];
 

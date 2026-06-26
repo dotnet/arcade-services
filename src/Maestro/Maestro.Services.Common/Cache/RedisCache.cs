@@ -28,7 +28,7 @@ public class RedisCache : IRedisCache
 
     private IDatabase Cache => _connection.GetDatabase();
 
-    public static string MakeKey<T>(string key) => $"{nameof(T)}_{key}";
+    public static string MakeKey<T>(string key) => $"{typeof(T).Name}_{key}";
 
     public RedisCache(IConnectionMultiplexer connection, string stateKey)
     {
