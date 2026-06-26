@@ -138,7 +138,17 @@
                     @if (context.ForwardFlow?.ActivePullRequest != null)
                     {
                         <FluentLabel>
-                            <span class="status-dot @GetPrStatusClass(context.ForwardFlow.ActivePullRequest)"></span>
+                            @if (context.ForwardFlow.HasFailingCodeflowCheck == true)
+                            {
+                                <FluentIcon Value="@(new Icons.Filled.Size16.Warning())"
+                                            Color="Color.Warning"
+                                            Title="This PR has failing codeflow checks that require user intervention, possibly due to a conflict"
+                                            Style="margin-right: 4px; vertical-align: middle;" />
+                            }
+                            else
+                            {
+                                <span class="status-dot @GetPrStatusClass(context.ForwardFlow.ActivePullRequest)"></span>
+                            }
                             <FluentAnchor Href="@context.ForwardFlow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">#@RepoUrlConverter.GetPrNumber(context.ForwardFlow.ActivePullRequest.Url) (@GetPrAge(context.ForwardFlow.ActivePullRequest))</FluentAnchor>
                         </FluentLabel>
                     }
@@ -176,19 +186,20 @@
                     </FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Backflow PR" Sortable="true" SortBy="@RowSortByDescending(r => r.Backflow != null && r.Backflow.ActivePullRequest != null ? r.Backflow.ActivePullRequest.CreationDate.ToString("o") : "0")" Align="Align.Start">
-
-                    @if (context.Backflow?.HasCodeflowConflict == true)
-                    {
-                            <FluentIcon Value="@(new Icons.Filled.Size16.Warning())"
-                                        Color="Color.Warning"
-                                        Title="This PR has a codeflow conflict that requires user intervention"
-                                        Style="margin-right: 4px; vertical-align: middle;" />
-                    }
-
                     @if (context.Backflow?.ActivePullRequest != null)
                     {
                         <FluentLabel>
-                            <span class="status-dot @GetPrStatusClass(context.Backflow.ActivePullRequest)"></span>
+                            @if (context.Backflow.HasFailingCodeflowCheck == true)
+                            {
+                                <FluentIcon Value="@(new Icons.Filled.Size16.Warning())"
+                                            Color="Color.Warning"
+                                            Title="This PR has failing codeflow checks that require user intervention, possibly due to a conflict"
+                                            Style="margin-right: 4px; vertical-align: middle;" />
+                            }
+                            else
+                            {
+                                <span class="status-dot @GetPrStatusClass(context.Backflow.ActivePullRequest)"></span>
+                            }
                             <FluentAnchor Href="@context.Backflow.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">#@RepoUrlConverter.GetPrNumber(context.Backflow.ActivePullRequest.Url) (@GetPrAge(context.Backflow.ActivePullRequest))</FluentAnchor>
                         </FluentLabel>
                     }

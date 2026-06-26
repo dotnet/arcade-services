@@ -17,11 +17,11 @@ public abstract class CodeFlowMergePolicy(IBasicBarClient barClient, ILogger<IMe
     protected readonly IBasicBarClient _barClient = barClient;
     protected readonly ILogger<IMergePolicy> _logger = logger;
 
-    public static readonly string BarIdMismatchErrorMarker = "[BarIdMismatchMarker]";
-
     public override string DisplayName => "Codeflow verification";
 
-    public override string Name => "CodeFlow";
+    public const string CodeflowMergePolicyName = "CodeFlow";
+
+    public override string Name => CodeflowMergePolicyName;
 
     protected static readonly string ConfigurationErrorsHeader = """
          ### :x: Check Failed

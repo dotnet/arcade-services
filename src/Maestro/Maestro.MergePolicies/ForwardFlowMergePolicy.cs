@@ -12,7 +12,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
-internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
+public class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
@@ -168,7 +168,6 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
                  #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                  - **Source Repository**: {mapping}
                  - **Error**: BAR ID `{sourceManifestBarId}` found in the source manifest does not match the build ID of the current update (`{expectedBuildId}`).
-                 {BarIdMismatchErrorMarker}
                  """);
         }
         if (!repoMappingsToCommitSha.TryGetValue(mapping, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))

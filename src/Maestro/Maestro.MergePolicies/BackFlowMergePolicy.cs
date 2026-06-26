@@ -85,7 +85,6 @@ internal class BackFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePoli
                 #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
                 - **Error**: BAR ID `{sourceDependency.BarId}` found in `{VersionFiles.VersionDetailsXml}` does not match the BAR ID of the current update (`{update.BuildId}`).
-                {BarIdMismatchErrorMarker}
                 """);
         }
 

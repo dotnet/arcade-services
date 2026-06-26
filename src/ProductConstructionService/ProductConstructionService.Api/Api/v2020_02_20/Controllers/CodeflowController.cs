@@ -38,14 +38,12 @@ public class CodeflowController : ControllerBase
     /// </summary>
     /// <param name="repositoryUrl">The VMR repository URL</param>
     /// <param name="branch">The VMR branch name</param>
-    /// <param name="includeConflictStatuses">Whether to include conflict statuses for subscriptions with existing PRs in the response</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<CodeflowStatus>), Description = "The list of codeflow statuses")]
     [ValidateModelState]
     public async Task<IActionResult> GetCodeflowStatuses(
         [FromQuery] string repositoryUrl,
-        [FromQuery] string branch,
-        [FromQuery] bool includeConflictStatuses = false)
+        [FromQuery] string branch)
     {
         if (string.IsNullOrEmpty(repositoryUrl))
         {
@@ -70,9 +68,7 @@ public class CodeflowController : ControllerBase
 
         Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
 
-        Dictionary<string, bool> conflictStatusesPerSubscription = includeConflictStatuses
-            ? await GetCodeflowPrConflictStatusesAsync(updaterIds)
-            : [];
+        Dictionary<string, bool> codeflowCheckStatuses = await GetCodeflowPrConflictStatusesAsync(updaterIds);
 
         var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
@@ -80,7 +76,7 @@ public class CodeflowController : ControllerBase
             activePrsPerSubscriptionId,
             newestBuildInfoPerSubscription,
             latestOutcomePerSubscription,
-            conflictStatusesPerSubscription);
+            codeflowCheckStatuses);
 
         return Ok(codeflowStatuses);
     }
@@ -217,7 +213,8 @@ public class CodeflowController : ControllerBase
             if (batchResults.TryGetValue(key, out var checkResults) && checkResults != null)
             {
                 bool hasConflict = checkResults.Results
-                    .Any(checkResult => checkResult.Message.Contains(CodeFlowMergePolicy.BarIdMismatchErrorMarker));
+                    .Any(checkResult => checkResult.MergePolicyName == CodeFlowMergePolicy.CodeflowMergePolicyName
+                    && checkResult.Status is MergePolicyEvaluationStatus.DecisiveFailure);
 
                 result[id] = hasConflict;
             }
@@ -257,7 +254,7 @@ public class CodeflowController : ControllerBase
         Dictionary<string, InProgressPullRequest> activePrsPerSubscriptionId,
         Dictionary<string, NewestBuildInfo> newestBuildInfoPerSubscription,
         Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription,
-        Dictionary<string, bool> conflictStatuses)
+        Dictionary<string, bool> codeflowCheckStatuses)
     {
         List<string> mappings = [.. forwardFlowSubscriptions.Concat(backflowSubscriptions)
             .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
@@ -276,14 +273,14 @@ public class CodeflowController : ControllerBase
                 activePrsPerSubscriptionId,
                 newestBuildInfoPerSubscription,
                 latestOutcomePerSubscription,
-                conflictStatuses);
+                codeflowCheckStatuses);
 
             var backflowStatus = CreateSubscriptionStatus(
                 backflowSubscription,
                 activePrsPerSubscriptionId,
                 newestBuildInfoPerSubscription,
                 latestOutcomePerSubscription,
-                conflictStatuses);
+                codeflowCheckStatuses);
 
             var repoUrl = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repoBranch = backflowSubscription?.TargetBranch;
@@ -306,7 +303,7 @@ public class CodeflowController : ControllerBase
         Dictionary<string, InProgressPullRequest> activePrsBySubscriptionIds,
         Dictionary<string, NewestBuildInfo> newestBuildInfos,
         Dictionary<string, SubscriptionTriggerOutcome> latestOutcomes,
-        Dictionary<string, bool> conflictStatuses)
+        Dictionary<string, bool> codeflowCheckStatuses)
     {
         if (subscription == null)
         {
@@ -318,9 +315,9 @@ public class CodeflowController : ControllerBase
         newestBuildInfos.TryGetValue(id, out var newestBuildInfo);
         activePrsBySubscriptionIds.TryGetValue(id, out var pr);
         latestOutcomes.TryGetValue(id, out var latestOutcome);
-        conflictStatuses.TryGetValue(id, out var hasConflict);
+        codeflowCheckStatuses.TryGetValue(id, out var hasFailingCodeflowCheck);
 
-        hasConflict = hasConflict && pr != null;
+        hasFailingCodeflowCheck = hasFailingCodeflowCheck && pr != null;
 
         if (subscription.LastAppliedBuild != null && newestBuildInfo != null)
         {
@@ -338,7 +335,7 @@ public class CodeflowController : ControllerBase
             NewestBuildId = newestBuildInfo?.NewestBuildId,
             NewestBuildDate = newestBuildInfo?.NewestBuildDate,
             LatestOutcome = latestOutcome,
-            HasCodeflowConflict = hasConflict,
+            HasFailingCodeflowCheck = hasFailingCodeflowCheck,
         };
     }
 
