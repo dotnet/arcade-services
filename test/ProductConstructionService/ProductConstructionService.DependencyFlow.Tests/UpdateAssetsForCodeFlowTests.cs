@@ -268,6 +268,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
@@ -354,6 +355,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build1.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
@@ -522,6 +524,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }

@@ -21,6 +21,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     private readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
     private readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     private readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
+    private readonly IReminderManager<CodeflowApprovalCheck> _codeflowApprovalCheckReminders;
 
     public PullRequestStateManager(
         IPullRequestTarget pullRequestTarget,
@@ -33,6 +34,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
+        _codeflowApprovalCheckReminders = reminderManagerFactory.CreateReminderManager<CodeflowApprovalCheck>(cacheKey);
     }
 
     public Task<InProgressPullRequest?> GetInProgressPullRequestAsync() =>
@@ -93,6 +95,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     {
         await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        await _codeflowApprovalCheckReminders.UnsetReminderAsync(isCodeFlow);
         if (clearPendingUpdates)
         {
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow); 
@@ -106,4 +109,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await SetInProgressPullRequestAsync(pr);
     }
+
+    public async Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check) =>
+        await _codeflowApprovalCheckReminders.SetReminderAsync(check, PullRequestUpdater.DefaultReminderDelay, isCodeFlow: true);
 }

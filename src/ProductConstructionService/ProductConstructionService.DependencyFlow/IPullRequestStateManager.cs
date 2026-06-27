@@ -58,6 +58,12 @@ internal interface IPullRequestStateManager
 
     #endregion
 
+    #region Codeflow approval check
+
+    Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check);
+
+    #endregion
+
     #region Bulk cleanup
 
     /// <summary>

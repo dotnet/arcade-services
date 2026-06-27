@@ -39,6 +39,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
     private Mock<ILocalLibGit2Client> _gitClient = null!;
+    private Mock<ICodeflowSourceDiffVerifier> _codeflowSourceDiffVerifier = null!;
 
     [SetUp]
     public void PullRequestUpdaterTests_SetUp()
@@ -46,6 +47,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _backFlower = new();
         _forwardFlower = new();
         _gitClient = new();
+        _codeflowSourceDiffVerifier = new();
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -55,6 +57,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_backFlower.Object);
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
+        services.AddSingleton(_codeflowSourceDiffVerifier.Object);
 
         CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
@@ -676,6 +679,21 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void AndShouldNotHavePullRequestCheckReminder()
     {
         RemoveExpectedReminder<PullRequestCheck>(Subscription);
+    }
+
+    protected void AndShouldHaveCodeflowApprovalCheckReminder(
+        string previousSourceSha,
+        string currentSourceSha,
+        string pullRequestUrl)
+    {
+        SetExpectedReminder(Subscription, new CodeflowApprovalCheck()
+        {
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
+            SubscriptionId = Subscription.Id,
+            PreviousSourceSha = previousSourceSha,
+            CurrentSourceSha = currentSourceSha,
+            PullRequestUrl = pullRequestUrl
+        });
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
