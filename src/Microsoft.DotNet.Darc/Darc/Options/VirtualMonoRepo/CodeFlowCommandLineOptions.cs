@@ -4,8 +4,7 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -18,6 +17,8 @@ internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
     public string SubscriptionId { get; set; }
 
     public string ExcludedAssets { get; set; }
+
+    bool UnsafeFlow { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -45,16 +46,10 @@ internal abstract class CodeFlowCommandLineOptions<T>
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.")]
     public string ExcludedAssets { get; set; }
 
+    [Option("unsafe", HelpText = "Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!")]
+    public bool UnsafeFlow { get; set; }
+
     public abstract IEnumerable<string> Repositories { get; }
 
-    public override IServiceCollection RegisterServices(IServiceCollection services)
-    {
-        if (!Verbose && !Debug)
-        {
-            // Force verbose output for these commands
-            Verbose = true;
-        }
-
-        return base.RegisterServices(services);
-    }
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

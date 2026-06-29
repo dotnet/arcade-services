@@ -26,7 +26,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     private readonly AddSubscriptionCommandLineOptions _options;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IConfigurationRepositoryManager _configRepoManager;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
@@ -35,10 +34,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configRepoManager)
-        : base(barClient, logger)
+        : base(barClient, configRepoManager, logger, options)
     {
         _options = options;
-        _configRepoManager = configRepoManager;
         _gitRepoFactory = gitRepoFactory;
         _remoteFactory = remoteFactory; 
     }
@@ -46,7 +44,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'add-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
         {
@@ -158,6 +156,27 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
+        // If --subscription parameter is provided, copy settings from the existing subscription
+        Subscription copyFromSubscription = null;
+        if (!string.IsNullOrEmpty(_options.CopyFromSubscription))
+        {
+            try
+            {
+                copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
+                _logger.LogInformation("Copying settings from subscription '{SubscriptionId}'", copyFromSubscription.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve subscription '{SubscriptionId}'", _options.CopyFromSubscription);
+                return Constants.ErrorCode;
+            }
+        }
+
+        // Initialize variables - if copying from a subscription, use its values as defaults
+        // Command-line options always override copied values for string parameters
+        // For boolean parameters (enabled, batchable, sourceEnabled), they are copied when NO 
+        // merge policies are specified via command-line, as we cannot distinguish between explicit 
+        // false and default false values
         bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
@@ -170,6 +189,67 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
+
+        // Copy values from the source subscription where not explicitly provided via command-line
+        if (copyFromSubscription != null)
+        {
+            // For string values, use copied value if command-line option was not provided
+            if (string.IsNullOrEmpty(channel))
+            {
+                channel = copyFromSubscription.Channel.Name;
+            }
+            if (string.IsNullOrEmpty(sourceRepository))
+            {
+                sourceRepository = copyFromSubscription.SourceRepository;
+            }
+            if (string.IsNullOrEmpty(targetRepository))
+            {
+                targetRepository = copyFromSubscription.TargetRepository;
+            }
+            if (string.IsNullOrEmpty(targetBranch))
+            {
+                targetBranch = copyFromSubscription.TargetBranch;
+            }
+            if (string.IsNullOrEmpty(updateFrequency))
+            {
+                updateFrequency = copyFromSubscription.Policy.UpdateFrequency.ToString();
+            }
+            if (string.IsNullOrEmpty(sourceDirectory))
+            {
+                sourceDirectory = copyFromSubscription.SourceDirectory;
+            }
+            if (string.IsNullOrEmpty(targetDirectory))
+            {
+                targetDirectory = copyFromSubscription.TargetDirectory;
+            }
+            if (string.IsNullOrEmpty(failureNotificationTags))
+            {
+                failureNotificationTags = copyFromSubscription.PullRequestFailureNotificationTags;
+            }
+            if (_options.ExcludedAssets == null && copyFromSubscription.ExcludedAssets != null)
+            {
+                excludedAssets = [..copyFromSubscription.ExcludedAssets];
+            }
+            
+            // Copy merge policies if none were specified via command-line options
+            // This must happen before copying boolean values, as merge policies affect batchable validation
+            if (mergePolicies.Count == 0 && copyFromSubscription.Policy.MergePolicies != null)
+            {
+                mergePolicies = [..copyFromSubscription.Policy.MergePolicies];
+            }
+            
+            // For boolean values, we copy them from the source subscription only if no merge policies 
+            // were specified via command-line (which would indicate the user is making intentional changes).
+            // Note: Due to limitations in CommandLine library, we cannot distinguish between explicit 
+            // false values and default false values, so copied boolean values take precedence.
+            // Users must explicitly specify boolean flags to override them when using --subscription.
+            if (!HasUserSpecifiedMergePolicies())
+            {
+                enabled = copyFromSubscription.Enabled;
+                batchable = copyFromSubscription.Policy.Batchable;
+                sourceEnabled = copyFromSubscription.SourceEnabled;
+            }
+        }
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
         {
@@ -256,8 +336,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
-
-
         try
         {
             // If we are about to add a batchable subscription and the merge policies are empty for the
@@ -321,66 +399,29 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            SubscriptionYamlParameters subscriptionYamlParameters = new()
             {
-                SubscriptionYaml subscriptionYaml = new()
-                {
-                    Id = Guid.NewGuid(),
-                    Enabled = enabled,
-                    Channel = channel,
-                    SourceRepository = sourceRepository,
-                    TargetRepository = targetRepository,
-                    TargetBranch = targetBranch,
-                    UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
-                    Batchable = batchable,
-                    MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
-                    FailureNotificationTags = failureNotificationTags,
-                    SourceEnabled = sourceEnabled,
-                    SourceDirectory = sourceDirectory,
-                    TargetDirectory = targetDirectory,
-                    ExcludedAssets = excludedAssets
-                };
+                Enabled = enabled,
+                Channel = channel,
+                SourceRepository = sourceRepository,
+                TargetRepository = targetRepository,
+                TargetBranch = targetBranch,
+                UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
+                Batchable = batchable,
+                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = sourceEnabled,
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets
+            };
 
-                var equivalentSubscriptionId = await FindEquivalentSubscriptionAsync(subscriptionYaml);
-                if (equivalentSubscriptionId != null)
-                {
-                    throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
-                }
+            await ValidateNoEquivalentSubscription(subscriptionYamlParameters);
 
-                await _configRepoManager.AddSubscriptionAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    subscriptionYaml);
-            }
-            else
-            {
-                Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
-                    enabled,
-                    channel,
-                    sourceRepository,
-                    targetRepository,
-                    targetBranch,
-                    updateFrequency,
-                    batchable,
-                    mergePolicies,
-                    failureNotificationTags,
-                    sourceEnabled,
-                    sourceDirectory,
-                    targetDirectory,
-                    excludedAssets);
+            await _configurationRepositoryManager.AddSubscriptionAsync(
+                _options.ToConfigurationRepositoryOperationParameters(),
+                subscriptionYamlParameters);
 
-                Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
-
-                // Prompt the user to trigger the subscription unless they have explicitly disallowed it
-                if (!_options.NoTriggerOnCreate)
-                {
-                    bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                    if (triggerAutomatically)
-                    {
-                        await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
-                        Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
-                    }
-                }
-            }
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
@@ -388,10 +429,12 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
         {
-            // Could have been some kind of validation error (e.g. channel doesn't exist)
-            _logger.LogError($"Failed to create subscription: {e.Response.Content}");
+            _logger.LogError("Subscription with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
+                ex.FilePath,
+                ex.Repository,
+                ex.Branch);
             return Constants.ErrorCode;
         }
         catch (Exception e)
@@ -401,23 +444,27 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         }
     }
 
-    private async Task<string> FindEquivalentSubscriptionAsync(SubscriptionYaml subscriptionYaml)
+    /// <summary>
+    /// Checks if the user has specified any merge policy options via command line.
+    /// </summary>
+    private bool HasUserSpecifiedMergePolicies()
     {
-        var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
-        if (channel == null)
+        return _options.AllChecksSuccessfulMergePolicy ||
+               _options.NoRequestedChangesMergePolicy ||
+               _options.DontAutomergeDowngradesMergePolicy ||
+               _options.StandardAutoMergePolicies ||
+               _options.ValidateCoherencyCheckMergePolicy ||
+               _options.CodeFlowCheckMergePolicy ||
+               _options.VersionDetailsPropsMergePolicy;
+    }
+
+    private async Task ValidateNoEquivalentSubscription(SubscriptionYamlParameters subscriptionYamlParameters)
+    {
+        var equivalentSub = await TryGetEquivalentSubscription(subscriptionYamlParameters);
+
+        if (equivalentSub != null)
         {
-            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
         }
-
-        var equivalentSub = (await _barClient.GetSubscriptionsAsync(
-                sourceRepo: subscriptionYaml.SourceRepository,
-                channelId: channel.Id,
-                targetRepo: subscriptionYaml.TargetRepository,
-                sourceEnabled: subscriptionYaml.SourceEnabled,
-                sourceDirectory: subscriptionYaml.SourceDirectory,
-                targetDirectory: subscriptionYaml.TargetDirectory))
-            .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
-
-        return equivalentSub?.Id.ToString();
     }
 }

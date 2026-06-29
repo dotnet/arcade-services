@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("delete-channel", HelpText = "Deletes an existing channel.")]
-internal class DeleteChannelCommandLineOptions : CommandLineOptions<DeleteChannelOperation>
+internal class DeleteChannelCommandLineOptions : ConfigurationManagementCommandLineOptions<DeleteChannelOperation>
 {
     [Option('n', "name", Required = true, HelpText = "Name of channel to delete.")]
     public string Name { get; set; }

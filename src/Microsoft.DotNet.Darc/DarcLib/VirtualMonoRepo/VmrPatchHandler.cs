@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -219,6 +220,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool removePatchAfter,
         bool keepConflicts,
         bool reverseApply = false,
+        bool applyToIndex = true,
         CancellationToken cancellationToken = default)
     {
         List<UnixPath> conflicts = [];
@@ -230,10 +232,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             conflicts.AddRange(await ApplyPatch(
                 patch,
                 targetDirectory,
-                removePatchAfter: removePatchAfter,
-                keepConflicts: keepConflicts,
-                reverseApply: reverseApply,
-                cancellationToken));
+                removePatchAfter,
+                keepConflicts,
+                reverseApply,
+                applyToIndex,
+                cancellationToken: cancellationToken));
         }
 
         return conflicts;
@@ -249,6 +252,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool removePatchAfter,
         bool keepConflicts,
         bool reverseApply = false,
+        bool applyToIndex = true,
         CancellationToken cancellationToken = default)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
@@ -275,16 +279,20 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             "apply",
 
-            // Apply diff to index right away, not the working tree
-            // This is faster when we don't care about the working tree
-            // Additionally works around the fact that "git apply" failes with "already exists in working directory"
-            // This happens only when case sensitive renames happened in the history
-            // More details: https://lore.kernel.org/git/YqEiPf%2FJR%2FMEc3C%2F@camp.crustytoothpaste.net/t/
-            "--cached",
 
             // Options to help with CR/LF and similar problems
             "--ignore-space-change",
         };
+
+        if (applyToIndex)
+        {
+            // Apply diff to index right away, not the working tree
+            // This is faster when we don't care about the working tree
+            // Additionally works around the fact that "git apply" fails with "already exists in working directory"
+            // This happens only when case sensitive renames happened in the history
+            // More details: https://lore.kernel.org/git/YqEiPf%2FJR%2FMEc3C%2F@camp.crustytoothpaste.net/t/
+            args.Add("--cached");
+        }
 
         if (reverseApply)
         {
@@ -392,7 +400,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// Creates patches and if any is > 1GB, splits it into smaller ones.
     /// </summary>
     public async Task<List<VmrIngestionPatch>> CreatePatches(
-        string patchName,
+        string patchPath,
         string sha1,
         string sha2,
         UnixPath? path,
@@ -404,7 +412,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken = default)
     {
         var patch = await CreatePatch(
-            patchName,
+            patchPath,
             sha1,
             sha2,
             path,
@@ -421,9 +429,9 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         _logger.LogWarning("Patch {name} targeting {path} is too large (>1GB). Repo will be split into smaller patches." +
-            "Please note that there might be mismatches in non-global cloaking rules.", patchName, applicationPath);
+            "Please note that there might be mismatches in non-global cloaking rules.", patchPath, applicationPath);
 
-        _logger.LogDebug("Deleting too large patch {path}", patchName);
+        _logger.LogDebug("Deleting too large patch {path}", patchPath);
         _fileSystem.DeleteFile(patch.Path);
 
         // If the patch is more than 1GB, new must start over and break it down into smaller patches
@@ -441,7 +449,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 continue;
             }
 
-            var newPatchname = $"{patchName}.{i + 1}";
+            var newPatchname = $"{patchPath}.{i + 1}";
 
             patches.AddRange(await CreatePatches(
                 newPatchname,
@@ -460,7 +468,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         for (var i = 0; i < files.Length; i++)
         {
             var fileName = new UnixPath(files[i].Substring(workingDir.Length + 1));
-            var newPatchname = $"{patchName}.{i + directories.Length + 1}";
+            var newPatchname = $"{patchPath}.{i + directories.Length + 1}";
 
             patch = await CreatePatch(
                 newPatchname,
@@ -505,6 +513,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--patch",
             "--binary", // Include binary contents as base64
             "--no-color", // Don't colorize the output, it will be stored in a file
+            "--no-ext-diff", "--no-textconv", // Don't use external diffing tools defined in .gitattributes
+                                              // These external tools might not be available in Maestro
             "--output", // Store the diff in a .patch file
             patchName,
         };
@@ -617,6 +627,14 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
+
+        if (!GitRepoUrlUtils.IsValidRemoteRepoUri(change.Url))
+        {
+            throw new DarcException(
+                $"Submodule '{change.Name}' has an invalid or disallowed URL '{change.Url}'. " +
+                "Only https URLs hosted on GitHub or Azure DevOps are allowed.");
+        }
+
         var clonePath = await _cloneManager.PrepareCloneAsync(change.Url, checkoutCommit, resetToRemote: false, cancellationToken);   
 
         // We are only interested in filters specific to submodule's path

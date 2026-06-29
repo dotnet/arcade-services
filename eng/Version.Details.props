@@ -5,38 +5,49 @@ This file should be imported by eng/Versions.props
 -->
 <Project>
   <PropertyGroup>
-    <!-- dotnet/dnceng-shared dependencies -->
-    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.25608.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
-    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.25608.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
-    <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.25608.1</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
-    <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.25608.1</MicrosoftDncEngConfigurationExtensionsPackageVersion>
-    <MicrosoftDotNetGitHubAuthenticationPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetGitHubAuthenticationPackageVersion>
-    <MicrosoftDotNetInternalDependencyInjectionPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalDependencyInjectionPackageVersion>
-    <MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>
-    <MicrosoftDotNetInternalLoggingPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalLoggingPackageVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>
-    <MicrosoftDotNetInternalTestingUtilityPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalTestingUtilityPackageVersion>
-    <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetKustoPackageVersion>
-    <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetServicesUtilityPackageVersion>
-    <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <!-- dotnet-arcade dependencies -->
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26304.4</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26304.4</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
-    <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngSecretManagerPackageVersion>
+    <!-- dotnet-dnceng dependencies -->
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26317.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26317.1</MicrosoftDncEngSecretManagerPackageVersion>
+    <!-- dotnet-dnceng-shared dependencies -->
+    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiPaginationPackageVersion>
+    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiVersioningPackageVersion>
+    <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
+    <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.26319.3</MicrosoftDncEngConfigurationExtensionsPackageVersion>
+    <MicrosoftDotNetGitHubAuthenticationPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetGitHubAuthenticationPackageVersion>
+    <MicrosoftDotNetInternalAzureDevOpsAuthenticationPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalAzureDevOpsAuthenticationPackageVersion>
+    <MicrosoftDotNetInternalCredentialsPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalCredentialsPackageVersion>
+    <MicrosoftDotNetInternalDependencyInjectionPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalDependencyInjectionPackageVersion>
+    <MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion>
+    <MicrosoftDotNetInternalLoggingPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalLoggingPackageVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsPackageVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenPackageVersion>
+    <MicrosoftDotNetInternalTestingUtilityPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetInternalTestingUtilityPackageVersion>
+    <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetKustoPackageVersion>
+    <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetServicesUtilityPackageVersion>
+    <!-- maestro-configuration dependencies -->
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26271.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
-    <!-- dotnet/dnceng-shared dependencies -->
+    <!-- dotnet-arcade dependencies -->
+    <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>$(MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion)</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetVersionToolsVersion>$(MicrosoftDotNetVersionToolsPackageVersion)</MicrosoftDotNetVersionToolsVersion>
+    <!-- dotnet-dnceng dependencies -->
+    <MicrosoftDncEngConfigurationBootstrapVersion>$(MicrosoftDncEngConfigurationBootstrapPackageVersion)</MicrosoftDncEngConfigurationBootstrapVersion>
+    <MicrosoftDncEngSecretManagerVersion>$(MicrosoftDncEngSecretManagerPackageVersion)</MicrosoftDncEngSecretManagerVersion>
+    <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationVersion>$(MicrosoftAspNetCoreApiPaginationPackageVersion)</MicrosoftAspNetCoreApiPaginationVersion>
     <MicrosoftAspNetCoreApiVersioningVersion>$(MicrosoftAspNetCoreApiVersioningPackageVersion)</MicrosoftAspNetCoreApiVersioningVersion>
     <MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>$(MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion)</MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>
     <MicrosoftDncEngConfigurationExtensionsVersion>$(MicrosoftDncEngConfigurationExtensionsPackageVersion)</MicrosoftDncEngConfigurationExtensionsVersion>
     <MicrosoftDotNetGitHubAuthenticationVersion>$(MicrosoftDotNetGitHubAuthenticationPackageVersion)</MicrosoftDotNetGitHubAuthenticationVersion>
+    <MicrosoftDotNetInternalAzureDevOpsAuthenticationVersion>$(MicrosoftDotNetInternalAzureDevOpsAuthenticationPackageVersion)</MicrosoftDotNetInternalAzureDevOpsAuthenticationVersion>
+    <MicrosoftDotNetInternalCredentialsVersion>$(MicrosoftDotNetInternalCredentialsPackageVersion)</MicrosoftDotNetInternalCredentialsVersion>
     <MicrosoftDotNetInternalDependencyInjectionVersion>$(MicrosoftDotNetInternalDependencyInjectionPackageVersion)</MicrosoftDotNetInternalDependencyInjectionVersion>
     <MicrosoftDotNetInternalDependencyInjectionTestingVersion>$(MicrosoftDotNetInternalDependencyInjectionTestingPackageVersion)</MicrosoftDotNetInternalDependencyInjectionTestingVersion>
     <MicrosoftDotNetInternalLoggingVersion>$(MicrosoftDotNetInternalLoggingPackageVersion)</MicrosoftDotNetInternalLoggingVersion>
@@ -45,14 +56,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetInternalTestingUtilityVersion>$(MicrosoftDotNetInternalTestingUtilityPackageVersion)</MicrosoftDotNetInternalTestingUtilityVersion>
     <MicrosoftDotNetKustoVersion>$(MicrosoftDotNetKustoPackageVersion)</MicrosoftDotNetKustoVersion>
     <MicrosoftDotNetServicesUtilityVersion>$(MicrosoftDotNetServicesUtilityPackageVersion)</MicrosoftDotNetServicesUtilityVersion>
-    <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>$(MicrosoftDotNetBuildTasksFeedPackageVersion)</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSignToolVersion>$(MicrosoftDotNetSignToolPackageVersion)</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>$(MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion)</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetVersionToolsVersion>$(MicrosoftDotNetVersionToolsPackageVersion)</MicrosoftDotNetVersionToolsVersion>
-    <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapVersion>$(MicrosoftDncEngConfigurationBootstrapPackageVersion)</MicrosoftDncEngConfigurationBootstrapVersion>
-    <MicrosoftDncEngSecretManagerVersion>$(MicrosoftDncEngSecretManagerPackageVersion)</MicrosoftDncEngSecretManagerVersion>
+    <!-- maestro-configuration dependencies -->
+    <MicrosoftDotNetMaestroConfigurationClientVersion>$(MicrosoftDotNetMaestroConfigurationClientPackageVersion)</MicrosoftDotNetMaestroConfigurationClientVersion>
   </PropertyGroup>
 </Project>

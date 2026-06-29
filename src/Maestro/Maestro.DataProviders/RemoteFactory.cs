@@ -4,7 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -88,7 +88,7 @@ public class RemoteFactory : IRemoteFactory
             GitRepoType.GitHub => installationId == default
                 ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
                 : new GitHubClient(
-                    new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
+                    new GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
                     _loggerFactory.CreateLogger<GitHubClient>(),
                     _cache.Cache,

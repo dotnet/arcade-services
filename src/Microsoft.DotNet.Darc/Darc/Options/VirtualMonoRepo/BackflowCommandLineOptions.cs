@@ -12,7 +12,10 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
                              "into a target local repository. Must be called from the VMR directory.")]
 internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>
 {
-    [Value(0, Required = true, HelpText = "Path to a local repository to flow the current VMR commit to")]
+    [Value(0,
+        Required = true,
+        MetaName = "Target repo path",
+        HelpText = "Path to the local repository on disk to flow the current VMR commit to")]
     public string Repository { get; set; }
 
     public override IEnumerable<string> Repositories => [Path.GetFileName(Repository) + ":" + Repository];

@@ -18,6 +18,7 @@ public interface IVmrPatchHandler
         bool removePatchAfter,
         bool keepConflicts,
         bool reverseApply = false,
+        bool applyToIndex = true,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<UnixPath>> ApplyPatches(
@@ -26,6 +27,7 @@ public interface IVmrPatchHandler
         bool removePatchAfter,
         bool keepConflicts,
         bool reverseApply = false,
+        bool applyToIndex = true,
         CancellationToken cancellationToken = default);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
@@ -39,7 +41,7 @@ public interface IVmrPatchHandler
         CancellationToken cancellationToken = default);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
-        string patchName,
+        string patchPath,
         string sha1,
         string sha2,
         UnixPath? path,

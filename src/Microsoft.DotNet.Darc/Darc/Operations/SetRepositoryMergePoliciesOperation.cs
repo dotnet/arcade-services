@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
@@ -11,6 +13,8 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -18,26 +22,30 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class SetRepositoryMergePoliciesOperation : Operation
+internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOperationBase
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
         SetRepositoryMergePoliciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
@@ -150,7 +158,29 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         IRemote verifyRemote = await _remoteFactory.CreateRemoteAsync(repository);
 
-        if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
+        bool branchExistsOnRepo;
+        try
+        {
+            branchExistsOnRepo = await UxHelpers.VerifyAndConfirmBranchExistsAsync(
+                verifyRemote,
+                repository,
+                branch,
+                !_options.Quiet);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            _logger.LogError("Your GitHub or Azure DevOps authentication seems to be invalid." +
+                "Please see https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#step-3-set-additional-pats-for-azure-devops-and-github-operations" +
+                "Make sure your authentication or access token is enabled for the organization associated with the repository `{repo}`.", repository);
+            return Constants.ErrorCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying branch existence for {repo}@{branch}", repository, branch);
+            return Constants.ErrorCode;
+        }
+
+        if (!branchExistsOnRepo)
         {
             Console.WriteLine("Aborting merge policy creation.");
             return Constants.ErrorCode;
@@ -158,8 +188,44 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
-            Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
+            BranchMergePoliciesYaml branchMergePoliciesYaml = new()
+            {
+                Repository = repository,
+                Branch = branch,
+                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies)
+            };
+
+            var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
+            if (policies != null && policies.Any())
+            {
+                if (branchMergePoliciesYaml.MergePolicies.Any())
+                {
+                    await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        branchMergePoliciesYaml);
+                }
+                else
+                {
+                    await _configurationRepositoryManager.DeleteRepositoryMergePoliciesAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        branchMergePoliciesYaml);
+                }
+            }
+            else
+            {
+                if (!branchMergePoliciesYaml.MergePolicies.Any())
+                {
+                    _logger.LogWarning("No merge policies specified for {repo}@{branch}, nothing to add.", 
+                        branchMergePoliciesYaml.Repository, 
+                        branchMergePoliciesYaml.Branch);
+                    return Constants.SuccessCode;
+                }
+
+                await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                branchMergePoliciesYaml);
+            }
+
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
@@ -167,9 +233,24 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
+        catch (ConfigurationObjectNotFoundException ex)
         {
-            _logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
+            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                repository,
+                branch,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
+            return Constants.ErrorCode;
+        }
+        catch (DuplicateConfigurationObjectException ex)
+        {
+            _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}' in repo {configRepo} on branch {configBranch}.",
+                repository,
+                branch,
+                ex.FilePath,
+                ex.Repository,
+                ex.Branch);
             return Constants.ErrorCode;
         }
         catch (Exception e)

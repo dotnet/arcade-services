@@ -64,18 +64,80 @@ internal class CherryPickOperation : Operation
             return Constants.ErrorCode;
         }
 
-        // Step 1: Determine if we're in VMR or repo based on source-manifest.json existence
-        var currentDirectory = Environment.CurrentDirectory;
-        var gitRoot = new NativePath(_processManager.FindGitRoot(currentDirectory));
-        var sourceManifestPath = gitRoot / VmrInfo.DefaultRelativeSourceManifestPath.Path;
-        var isInVmr = _fileSystem.FileExists(sourceManifestPath);
+        // Step 1: Determine VMR path - first check --vmr option (defaults to current dir), then fall back to --source
+        var vmrCandidatePath = _options.VmrPath;
+        NativePath vmrCandidateGitRoot;
+        try
+        {
+            vmrCandidateGitRoot = new NativePath(_processManager.FindGitRoot(vmrCandidatePath));
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Could not find a git repository at '{path}': {message}", vmrCandidatePath, e.Message);
+            return Constants.ErrorCode;
+        }
+
+        var sourceManifestAtVmrOption = vmrCandidateGitRoot / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+        var isVmrAtVmrOption = _fileSystem.FileExists(sourceManifestAtVmrOption);
+
         var source = new NativePath(_options.Source);
+        NativePath vmrPath;
+        NativePath repoPath;
+        bool isInVmr;
+        NativePath applyTarget;
 
-        var (vmrPath, repoPath) = isInVmr
-            ? (gitRoot, source)
-            : (source, gitRoot);
+        if (isVmrAtVmrOption)
+        {
+            // --vmr (or current dir) is a VMR → cherry-pick from repo (--source) to VMR
+            vmrPath = vmrCandidateGitRoot;
+            repoPath = source;
+            isInVmr = true;
+            applyTarget = vmrPath;
+        }
+        else
+        {
+            // --vmr is not a VMR; check if --source is a VMR (backward compat: running from repo with --source = VMR)
+            NativePath sourceGitRoot;
+            try
+            {
+                sourceGitRoot = new NativePath(_processManager.FindGitRoot(source));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Could not find a git repository at '{path}': {message}", source, e.Message);
+                return Constants.ErrorCode;
+            }
 
-        _logger.LogInformation("Cherry-pick operation starting from {location}", isInVmr ? "VMR" : "repository");
+            var sourceManifestAtSource = sourceGitRoot / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+            var isVmrAtSource = _fileSystem.FileExists(sourceManifestAtSource);
+
+            if (!isVmrAtSource)
+            {
+                _logger.LogError(
+                    "Could not find a VMR at '{vmrPath}' (missing '{sourceManifestPath}'). " +
+                    "Run the operation from the VMR directory or specify the VMR path with --vmr.",
+                    vmrCandidatePath,
+                    sourceManifestAtVmrOption);
+                return Constants.ErrorCode;
+            }
+
+            // --source is the VMR, current dir is the repo (old behavior)
+            vmrPath = sourceGitRoot;
+            repoPath = vmrCandidateGitRoot;
+            isInVmr = false;
+            applyTarget = repoPath;
+        }
+
+        if (isInVmr)
+        {
+            _logger.LogInformation("Cherry-picking {commit} from repository ({repoPath}) -> VMR ({vmrPath})",
+                _options.Commit, repoPath, vmrPath);
+        }
+        else
+        {
+            _logger.LogInformation("Cherry-picking {commit} from VMR ({vmrPath}) -> repository ({repoPath})",
+                _options.Commit, vmrPath, repoPath);
+        }
 
         string mappingName = GetMappingFromRepo(repoPath);
 
@@ -84,8 +146,6 @@ internal class CherryPickOperation : Operation
         var mappings = await _sourceMappingParser.ParseMappings(vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath);
         var mapping = mappings.FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
             ?? throw new DarcException($"Mapping '{mappingName}' not found in source mappings.");
-
-        _logger.LogInformation("Cherry-picking commit {commit}", _options.Commit);
 
         List<string> filters =
         [
@@ -117,7 +177,7 @@ internal class CherryPickOperation : Operation
 
         try
         {
-            var conflicts = await _patchHandler.ApplyPatches(patches, gitRoot, removePatchAfter: true, keepConflicts: true);
+            var conflicts = await _patchHandler.ApplyPatches(patches, applyTarget, removePatchAfter: true, keepConflicts: true);
 
             if (conflicts.Count > 0)
             {

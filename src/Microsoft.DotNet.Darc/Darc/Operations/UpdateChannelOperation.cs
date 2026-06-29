@@ -2,29 +2,33 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class UpdateChannelOperation : Operation
+internal class UpdateChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly UpdateChannelCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<UpdateChannelOperation> _logger;
 
     public UpdateChannelOperation(
         UpdateChannelCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<UpdateChannelOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -32,7 +36,7 @@ internal class UpdateChannelOperation : Operation
     /// Updates an existing channel's metadata (name and/or classification).
     /// </summary>
     /// <returns>Process exit code.</returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -51,29 +55,22 @@ internal class UpdateChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            // Update the channel with the specified information
-            var updatedChannel = await _barClient.UpdateChannelAsync(_options.Id, _options.Name, _options.Classification);
-
-            switch (_options.OutputFormat)
+            // When using configuration repository, channel name is immutable
+            if (!string.IsNullOrEmpty(_options.Name) && !string.Equals(channel.Name, _options.Name, StringComparison.OrdinalIgnoreCase))
             {
-                case DarcOutputType.json:
-                    Console.WriteLine(JsonConvert.SerializeObject(
-                        new
-                        {
-                            id = updatedChannel.Id,
-                            name = updatedChannel.Name,
-                            classification = updatedChannel.Classification
-                        },
-                        Formatting.Indented));
-                    break;
-                case DarcOutputType.text:
-                    Console.WriteLine($"Successfully updated channel '{_options.Id}':");
-                    Console.WriteLine($"  Name: {updatedChannel.Name}");
-                    Console.WriteLine($"  Classification: {updatedChannel.Classification}");
-                    break;
-                default:
-                    throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by update-channel");
+                _logger.LogError("Channel name cannot be changed. Channel name is immutable.");
+                return Constants.ErrorCode;
             }
+
+            // Create an updated channel YAML from the existing channel and update classification if provided
+            var updatedChannelYaml = ChannelYaml.FromClientModel(channel) with
+            {
+                Classification = _options.Classification ?? channel.Classification
+            };
+
+            await _configurationRepositoryManager.UpdateChannelAsync(
+                _options.ToConfigurationRepositoryOperationParameters(),
+                updatedChannelYaml);
 
             return Constants.SuccessCode;
         }
@@ -82,9 +79,13 @@ internal class UpdateChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.Conflict)
+        catch (ConfigurationObjectNotFoundException ex)
         {
-            _logger.LogError($"A channel with the specified name already exists.");
+            _logger.LogError("No existing channel with name '{name}' found in file '{filePath}' of repo '{repo}' on branch '{branch}'",
+                _options.Name,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

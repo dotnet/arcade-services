@@ -51,6 +51,15 @@ public interface IRemote
     Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of the repository</param>
+    /// <param name="headBranch">Head (source) branch for the PR</param>
+    /// <param name="targetBranch">Target branch for the PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch);
+
+    /// <summary>
     ///     Retrieve information about a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>
@@ -62,8 +71,9 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">Repository uri.</param>
     /// <param name="pullRequest">Information about pull request to create.</param>
+    /// <param name="enablePrAutoComplete">Whether to enable auto-complete on the pull request, if the remote supports it.</param>
     /// <returns>Pull request information.</returns>
-    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false);
 
     /// <summary>
     ///     Update a pull request with new data.
@@ -71,6 +81,12 @@ public interface IRemote
     /// <param name="pullRequestUri">URI of pull request to update</param>
     /// <param name="pullRequest">Pull request information to update.</param>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
+
+    /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">URI of pull request to close.</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
 
     /// <summary>
     ///     Delete a Pull Request branch
@@ -105,8 +121,28 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">URI of repo containing script files.</param>
     /// <param name="commit">Common to get script files at.</param>
+    /// <param name="baseDirectory">Relative path from repo root where the eng folder is located (eg: src/arcade)</param>
+    /// <param name="stripRelativePath">Whether to strip the relative path from the file paths</param>
     /// <returns>Script files.</returns>
-    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null);
+    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath baseDirectory = null, bool stripRelativePath = false);
+
+    /// <summary>
+    /// Retrieve files from a remote source
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing script files</param>
+    /// <param name="commit">Commit to get files at</param>
+    /// <param name="path">Path to get files from</param>
+    /// <returns>List of files</returns>
+    Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+
+    /// <summary>
+    /// Lists files on a path from a remote source
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing script files</param>
+    /// <param name="commit">Commit to get files at</param>
+    /// <param name="path">Path to get files from</param>
+    /// <returns>List of files on the specified path</returns>
+    Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path);
 
     /// <summary>
     ///     Create a new branch in the specified repository.
@@ -137,25 +173,11 @@ public interface IRemote
     /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
     /// <param name="relativeDependencyBasePath">Relative base path of the dependency files</param>
-    Task<List<GitFile>> GetUpdatesAsync(
-        string repoUri,
+    Task<List<GitFile>> GetUpdatedDependencyFiles(
+        string targetRepo,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        UnixPath relativeDependencyBasePath = null);
-
-    /// <summary>
-    ///     Commit a set of updated dependencies to a repository
-    /// </summary>
-    /// <param name="repoUri">Repository to update</param>
-    /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
-    /// <param name="itemsToUpdate">Dependencies that need updating.</param>
-    /// <param name="message">Commit message.</param>
-    Task<List<GitFile>> CommitUpdatesAsync(
-        string repoUri,
-        string branch,
-        List<DependencyDetail> itemsToUpdate,
-        string message,
-        UnixPath relativeDependencyBasePath = null);
+        UnixPath targetDirectory);
 
     /// <summary>
     ///     Commits a set of files to a repository

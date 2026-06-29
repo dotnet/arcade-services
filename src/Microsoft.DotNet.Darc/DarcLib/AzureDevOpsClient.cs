@@ -11,7 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -315,6 +315,40 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     }
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    public async Task<string> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        var query = $"searchCriteria.sourceRefName=refs/heads/{headBranch}"
+            + $"&searchCriteria.targetRefName=refs/heads/{targetBranch}"
+            + "&searchCriteria.status=active"
+            + "&$top=1";
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/pullrequests?{query}",
+            _logger);
+
+        var values = JArray.Parse(content["value"]!.ToString());
+
+        if (!values.Any())
+        {
+            return null;
+        }
+
+        int pullRequestId = values[0]["pullRequestId"]!.ToObject<int>();
+        return $"https://dev.azure.com/{accountName}/{projectName}/_git/{repoName}/pullrequest/{pullRequestId}";
+    }
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -345,7 +379,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="repoUri">Repository URI</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    /// <param name="enablePrAutoComplete">Whether the created PR should have auto-complete enabled</param>
+    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
@@ -363,7 +398,46 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             projectName,
             repoName);
 
+        if (enablePrAutoComplete)
+        {
+            try
+            {
+                await SetPullRequestAutoCompleteAsync(createdPr, client, projectName, repoName);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(
+                    ex,
+                    "Failed to enable auto-complete for pull request {PullRequestId} in {ProjectName}/{RepoName}. The pull request was created successfully but auto-complete will not be enabled.",
+                    createdPr.PullRequestId,
+                    projectName,
+                    repoName);
+            }
+        }
+
         return ToDarcLibPullRequest(createdPr);
+    }
+
+    private static async Task SetPullRequestAutoCompleteAsync(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
+    {
+        var autoCompleteIdentity = createdPr.CreatedBy;
+
+        var update = new GitPullRequest
+        {
+            AutoCompleteSetBy = autoCompleteIdentity,
+
+            CompletionOptions = new GitPullRequestCompletionOptions
+            {
+                DeleteSourceBranch = true,
+                MergeStrategy = GitPullRequestMergeStrategy.Squash,
+            }
+        };
+
+        await client.UpdatePullRequestAsync(
+            update,
+            projectName,
+            repoName,
+            createdPr.PullRequestId);
     }
 
     /// <summary>
@@ -383,6 +457,23 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 Title = pullRequest.Title,
                 Description = TruncateDescriptionIfNeeded(pullRequest.Description),
+            },
+            projectName,
+            repoName,
+            id);
+    }
+
+    public async Task ClosePullRequestAsync(string pullRequestUri)
+    {
+        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
+
+        using VssConnection connection = CreateVssConnection(accountName);
+        using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+        await client.UpdatePullRequestAsync(
+            new GitPullRequest
+            {
+                Status = PullRequestStatus.Abandoned
             },
             projectName,
             repoName,
@@ -480,8 +571,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             Content = $"{message}{CommentMarker}"
         };
 
-        // Search threads to find ones with comment markers.
         List<GitPullRequestCommentThread> commentThreads = await client.GetThreadsAsync(repoName, id);
+
         foreach (GitPullRequestCommentThread commentThread in commentThreads)
         {
             // Skip non-active and non-unknown threads.  Threads that are active may appear as unknown.
@@ -489,15 +580,22 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 continue;
             }
-            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
-            bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && comment.Content.EndsWith(CommentMarker));
+
+            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id) ?? [];
+
+            bool threadHasCommentWithMarker = comments.Any(comment =>
+                comment != null
+                && comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text
+                && !string.IsNullOrEmpty(comment.Content)
+                && comment.Content.EndsWith(CommentMarker));
+
             if (threadHasCommentWithMarker)
             {
-                // Check if last comment in that thread has the marker.
-                PrComment lastComment = comments.Last();
-                if (lastComment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
+                PrComment lastComment = comments.LastOrDefault();
+                if (lastComment?.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text
+                    && !string.IsNullOrEmpty(lastComment.Content)
+                    && lastComment.Content.EndsWith(CommentMarker))
                 {
-                    // Update comment
                     await client.UpdateCommentAsync(prComment, repoName, id, commentThread.Id, lastComment.Id);
                 }
                 else
@@ -684,11 +782,15 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="baseCommit">Base version</param>
     /// <param name="targetCommit">Target version</param>
     /// <returns>Diff information</returns>
-    public async Task<GitDiff> GitDiffAsync(string repoUri, string baseCommit, string targetCommit)
+    public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
     {
         _logger.LogInformation(
-            $"Diffing '{baseCommit}'->'{targetCommit}' in {repoUri}");
+            $"Diffing '{baseVersion}'->'{targetVersion}' in {repoUri}");
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        // Determine version types based on whether the values look like commit SHAs
+        string baseVersionType = IsCommitSha(baseVersion) ? "commit" : "branch";
+        string targetVersionType = IsCommitSha(targetVersion) ? "commit" : "branch";
 
         try
         {
@@ -696,16 +798,17 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 HttpMethod.Get,
                 accountName,
                 projectName,
-                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
-                $"&targetVersion={targetCommit}&targetVersionType=commit",
+                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseVersion}&baseVersionType={baseVersionType}" +
+                $"&targetVersion={targetVersion}&targetVersionType={targetVersionType}",
                 _logger);
 
             return new GitDiff()
             {
-                BaseVersion = baseCommit,
-                TargetVersion = targetCommit,
+                BaseVersion = baseVersion,
+                TargetVersion = targetVersion,
                 Ahead = content["aheadCount"].Value<int>(),
                 Behind = content["behindCount"].Value<int>(),
+                MergeBaseCommit = content["commonCommit"]?.Value<string>(),
                 Valid = true
             };
         }
@@ -713,6 +816,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             return GitDiff.UnknownDiff();
         }
+    }
+
+    private static bool IsCommitSha(string value)
+    {
+        // A commit SHA is a 40-character hexadecimal string
+        return value.Length == 40 && value.All(c => char.IsAsciiHexDigit(c));
     }
 
     /// <summary>
@@ -1601,6 +1710,10 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="str">String to be shortened if necessary</param>
     private static string TruncateDescriptionIfNeeded(string str)
     {
+        if (str == null)
+        {
+            return null;
+        }
         if (str.Length > MaxPullRequestDescriptionLength)
         {
             return str.Substring(0, MaxPullRequestDescriptionLength);
@@ -1943,5 +2056,31 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         },
         UpdatedAt = DateTimeOffset.UtcNow,
         HeadBranchSha = pr.LastMergeSourceCommit.CommitId,
+        CreationDate = pr.CreationDate,
     };
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        // AzDo doesn't work with leading paths like ./, for example ./eng/common/builds.ps1, so we need to strip it
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/items?scopePath={path}&version={commit}&versionType=commit&recursionLevel=oneLevel",
+            _logger);
+
+        List<AzureDevOpsItem> items = JsonConvert.DeserializeObject<List<AzureDevOpsItem>>(Convert.ToString(content["value"]));
+
+        return items
+            .Where(item => !item.IsFolder)
+            .Select(item => item.Path.TrimStart('/'))
+            .ToList();
+    }
 }

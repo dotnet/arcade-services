@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("reset", HelpText = "Resets the contents of a VMR mapping to match a specific commit SHA from the source repository (stages the changes only).")]
 internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
 {
-    [Value(0, Required = true, HelpText = 
+    [Value(0, MetaName = "Target", Required = true, HelpText = 
         "Repository mapping and optionally target SHA. " +
         "When --build or --channel is provided, format is [mapping]. " +
         "Otherwise, format is [mapping]:[sha]. " +

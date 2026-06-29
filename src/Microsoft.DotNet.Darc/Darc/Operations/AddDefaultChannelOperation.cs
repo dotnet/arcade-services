@@ -2,36 +2,46 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddDefaultChannelOperation : Operation
+internal class AddDefaultChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly AddDefaultChannelCommandLineOptions _options;
     private readonly ILogger<AddDefaultChannelOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
 
     public AddDefaultChannelOperation(
         AddDefaultChannelCommandLineOptions options,
         ILogger<AddDefaultChannelOperation> logger,
         IBarApiClient barClient,
-        IRemoteFactory remoteFactory)
+        IRemoteFactory remoteFactory,
+        IGitRepoFactory gitRepoFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _gitRepoFactory = gitRepoFactory;
+        _configurationRepositoryManager = configurationRepositoryManager;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -46,7 +56,19 @@ internal class AddDefaultChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            await _barClient.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
+            DefaultChannelYaml defaultChannelYaml = new()
+            {
+                Repository = _options.Repository,
+                Branch = _options.Branch,
+                Channel = _options.Channel,
+                Enabled = true
+            };
+
+            await ValidateNoEquivalentDefaultChannel(defaultChannelYaml);
+
+            await _configurationRepositoryManager.AddDefaultChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        defaultChannelYaml);
 
             return Constants.SuccessCode;
         }
@@ -55,10 +77,40 @@ internal class AddDefaultChannelOperation : Operation
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException e)
+        {
+            _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}' in repo {configRepo} on branch {configBranch}.",
+                _options.Repository,
+                _options.Branch,
+                _options.Channel,
+                e.FilePath,
+                e.Repository,
+                e.Branch);
+            return Constants.ErrorCode;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Error: Failed to add a new default channel association.");
             return Constants.ErrorCode;
+        }
+    }
+
+    /// <summary>
+    /// Validates that no equivalent default channel already exists in BAR or YAML files.
+    /// </summary>
+    private async Task ValidateNoEquivalentDefaultChannel(DefaultChannelYaml defaultChannel)
+    {
+        var existingDefaultChannel = (await _barClient.GetDefaultChannelsAsync(
+                repository: defaultChannel.Repository,
+                branch: defaultChannel.Branch,
+                channel: defaultChannel.Channel))
+            .FirstOrDefault();
+
+        if (existingDefaultChannel != null)
+        {
+            _logger.LogError("A default channel with the same repository, branch, and channel already exists (ID: {id})",
+                existingDefaultChannel.Id);
+            throw new ArgumentException($"A default channel with the repository {existingDefaultChannel.Repository}, branch {existingDefaultChannel.Branch} and channel {existingDefaultChannel.Channel} already exists");
         }
     }
 }

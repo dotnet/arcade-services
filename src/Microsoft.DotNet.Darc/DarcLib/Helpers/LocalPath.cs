@@ -52,6 +52,16 @@ public abstract class LocalPath
 
     protected string Combine(string left, string right)
     {
+        if (string.IsNullOrEmpty(left))
+        {
+            return right;
+        }
+
+        if (string.IsNullOrEmpty(right))
+        {
+            return left;
+        }
+
         var slashCount = (left.EndsWith(_separator) ? 1 : 0) + (right.StartsWith(_separator) ? 1 : 0);
 
         return slashCount switch

@@ -5,8 +5,9 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
-using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,7 @@ public static class CodeflowExtensions
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IBackflowConflictResolver, BackflowConflictResolver>();
         services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
+        services.TryAddTransient<IFlatJsonUpdater, FlatJsonUpdater>();
         services.TryAddTransient<IJsonFileMerger, JsonFileMerger>();
         services.TryAddTransient<IVersionDetailsFileMerger, VersionDetailsFileMerger>();
         services.TryAddTransient<ICodeflowChangeAnalyzer, CodeflowChangeAnalyzer>();
@@ -84,6 +86,7 @@ public static class CodeflowExtensions
         services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddScoped<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
 
         services
             .AddHttpClient("GraphQL", httpClient =>

@@ -28,15 +28,12 @@ stages:
           image: 1es-windows-2022
           os: windows
         variables:
-        - group: DotNet-Symbol-Server-Pats
         - group: Publish-Build-Assets
         - _InternalBuildArgs: >
             /p:DotNetSignType=$(_SignType)
             /p:TeamName=$(_TeamName)
             /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
             /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-            /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-            /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         - _BuildConfig: Release
         - _PublishType: blob
@@ -68,7 +65,7 @@ stages:
         displayName: Build/publish docker image
         pool:
           name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals 1es-ubuntu-2204
+          demands: ImageOverride -equals build.azurelinux.3.amd64
           os: linux
         steps:
         - checkout: self
@@ -88,25 +85,3 @@ stages:
             displayName: Push docker image
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
-
-- ${{ if parameters.isProdPipeline }}:
-  - template: /eng/common/templates-official/post-build/post-build.yml@self
-    parameters:
-      enableSymbolValidation: true
-      enableSigningValidation: false
-      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      SDLValidationParameters:
-        enable: true
-        params: |
-          -SourceToolsList @("policheck","credscan")
-          -TsaInstanceURL $(_TsaInstanceURL)
-          -TsaProjectName $(_TsaProjectName)
-          -TsaNotificationEmail $(_TsaNotificationEmail)
-          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-          -TsaBugAreaPath $(_TsaBugAreaPath)
-          -TsaIterationPath $(_TsaIterationPath)
-          -TsaRepositoryName "Arcade-Services"
-          -TsaCodebaseName "Arcade-Services"
-          -TsaPublish $True
-          -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")

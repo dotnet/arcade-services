@@ -4,7 +4,6 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib.ConfigurationRepository;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +16,7 @@ internal interface IConfigurationManagementCommandLineOptions
     string ConfigurationRepository { get; set; }
     string ConfigurationFilePath { get; set; }
     bool NoPr { get; set; }
+    string GetOrGenerateConfigurationBranch();
 }
 
 /// <summary>
@@ -26,7 +26,8 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
 {
     private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
     private const string DefaultConfigurationBaseBranch = "production";
-    private const string UseConfigRepositoryEnvVar = "DARC_USE_CONFIGURATION_REPOSITORY";
+
+    private string _generatedBranchName;
 
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
     public string ConfigurationRepository { get; set; }
@@ -43,9 +44,6 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (push the configuration branch only).", Default = false)]
     public bool NoPr { get; set; }
 
-    public bool ShouldUseConfigurationRepository { get; }
-        = bool.TryParse(Environment.GetEnvironmentVariable(UseConfigRepositoryEnvVar), out var result) && result;
-
     public override IServiceCollection RegisterServices(IServiceCollection services)
     {
         if (!Verbose && !Debug)
@@ -58,15 +56,29 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
         return base.RegisterServices(services);
     }
 
+    /// <summary>
+    /// Gets the effective configuration branch: the user-provided one, or a newly generated one
+    /// (generated once and cached for reuse across multiple operations in the same command).
+    /// </summary>
+    public string GetOrGenerateConfigurationBranch()
+        => ConfigurationBranch ?? (_generatedBranchName ??= GenerateBatchBranchName());
+
     public ConfigurationRepositoryOperationParameters ToConfigurationRepositoryOperationParameters()
     {
         return new ConfigurationRepositoryOperationParameters
         {
             RepositoryUri = ConfigurationRepository,
-            ConfigurationBranch = ConfigurationBranch,
+            ConfigurationBranch = GetOrGenerateConfigurationBranch(),
             ConfigurationBaseBranch = ConfigurationBaseBranch,
             DontOpenPr = NoPr,
             ConfigurationFilePath = ConfigurationFilePath,
         }; 
     }
+
+    /// <summary>
+    /// Generates a unique configuration branch name based on the base branch.
+    /// Used when multiple operations need to share a single branch.
+    /// </summary>
+    public string GenerateBatchBranchName()
+        => $"darc/{ConfigurationBaseBranch}-{Guid.NewGuid().ToString("N")[..8]}";
 }

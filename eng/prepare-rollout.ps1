@@ -7,17 +7,26 @@
 ###   - Creates a PR from the rollout branch to production, referencing the issue
 ###
 ### Parameters:
-###   -d, --date <string> Date for the rollout in YYYY-MM-DD format (default: today)
+###   -d, --date <string>      Date for the rollout in YYYY-MM-DD format (default: today)
+###   -b, --BreakingDarcChange Adds the 'breaking-darc-change' label to the rollout PR, which
+###                            triggers an automatic bump of the minimum required darc version
+###                            during the production deployment
 ###
 ### Example: .\prepare-rollout.ps1
 ### Example: .\prepare-rollout.ps1 -d 2025-12-15
+### Example: .\prepare-rollout.ps1 -BreakingDarcChange
 
 [CmdletBinding(PositionalBinding=$false)]
 Param(
     [Alias('d')]
     [Parameter(Mandatory=$false)]
     [string]
-    $Date
+    $Date,
+
+    [Alias('b')]
+    [Parameter(Mandatory=$false)]
+    [switch]
+    $BreakingDarcChange
 )
 
 $ErrorActionPreference = 'Stop'
@@ -117,10 +126,10 @@ $issueBody = Get-Content $templatePath -Raw
 $issueBody = $issueBody -replace '(?s)^---.*?---\s*', ''
 Write-Host ""
 
-# Step 8: Create the rollout issue with Rollout label
+# Step 8: Create the rollout issue with Rollout label and assign to current user
 Write-Host "Step 8: Creating rollout issue..." -ForegroundColor Yellow
-$issueUrl = gh issue create --title "$issueTitle" --body "$issueBody" --label "Rollout" --repo $Repo
-Write-Host "Created issue: $issueUrl" -ForegroundColor Green
+$issueUrl = gh issue create --title "$issueTitle" --body "$issueBody" --label "Rollout" --assignee "$currentUser" --repo $Repo
+Write-Host "Created issue: $issueUrl (assigned to $currentUser)" -ForegroundColor Green
 
 # Get issue details
 $issue = gh issue view $issueUrl --json id,number,url | ConvertFrom-Json
@@ -182,6 +191,21 @@ try {
 }
 Write-Host ""
 
+# Step 11b: Optionally add the breaking-darc-change label to trigger the minimum darc version bump
+$breakingDarcChangeApplied = $false
+if ($BreakingDarcChange) {
+    Write-Host "Step 11b: Adding 'breaking-darc-change' label to the rollout PR..." -ForegroundColor Yellow
+    try {
+        gh pr edit $prNumber --add-label "breaking-darc-change" --repo $Repo
+        $breakingDarcChangeApplied = $true
+        Write-Host "Label 'breaking-darc-change' added (minimum darc version will be bumped during deployment)" -ForegroundColor Green
+    } catch {
+        Write-Warning "Failed to add 'breaking-darc-change' label: $_"
+        Write-Warning "You may need to manually add the 'breaking-darc-change' label to the PR"
+    }
+    Write-Host ""
+}
+
 # Step 12: Summary
 Write-Host "=== Rollout Preparation Complete ===" -ForegroundColor Cyan
 Write-Host ""
@@ -193,6 +217,7 @@ Write-Host "  Commit:      $commitSha" -ForegroundColor White
 Write-Host "  Issue:       $issueUrl" -ForegroundColor White
 Write-Host "  PR:          $prUrl" -ForegroundColor White
 Write-Host "  Auto-merge:  Enabled (merge commit)" -ForegroundColor White
+Write-Host "  Breaking darc change: $(if ($breakingDarcChangeApplied) { 'Yes (breaking-darc-change label applied)' } else { 'No' })" -ForegroundColor White
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Assign the issue to the current sprint (if not already done)" -ForegroundColor White

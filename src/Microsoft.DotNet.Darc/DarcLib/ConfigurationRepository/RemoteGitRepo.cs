@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 
 #nullable enable
@@ -20,7 +21,7 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
         _gitRepo = gitRepo;
     }
 
-    public async Task CommitFilesAsync(string repositoryUri, string branchName, IReadOnlyList<GitFile> files, string commitMessage)
+    public async Task CommitFilesAsync(string repositoryUri, string branchName, IReadOnlyList<MaestroConfiguration.Client.GitFile> files, string commitMessage)
         => await _remote.CommitUpdatesWithNoCloningAsync(
                 files.Select(f => new Helpers.GitFile(f.Path, f.Content)).ToList(),
                 repositoryUri,
@@ -40,9 +41,17 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
                 HeadBranch = headBranch,
                 Title = prTitle,
                 Description = prDescription
-            });
+            },
+            enablePrAutoComplete: true);
         return pr.Url;
     }
+
+    public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
+        => await _remote.CommitUpdatesWithNoCloningAsync(
+            [new Helpers.GitFile(filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
+            repositoryUri,
+            branch,
+            commitMessage);
 
     public async Task<bool> DoesBranchExistAsync(string repositoryUri, string branchName)
         => await _gitRepo.DoesBranchExistAsync(repositoryUri, branchName);
@@ -58,6 +67,17 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
             throw new FileNotFoundInRepoException(repositoryUri, configurationBranch, filePath);
         }
     }
+
+    public async Task<List<MaestroConfiguration.Client.GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path)
+        => (await _remote.GetFilesAtCommitAsync(repositoryUri, await _remote.GetLatestCommitAsync(repositoryUri, branch), path))
+                .Select(f => new MaestroConfiguration.Client.GitFile(f.FilePath, f.Content))
+                .ToList();
+
+    public async Task<string?> GetPullRequestAsync(string repositoryUri, string headBranch, string baseBranch) =>
+        await _remote.GetPullRequestUrlAsync(repositoryUri, headBranch, baseBranch);
+
+    public async Task<List<string>> ListBlobsAsync(string repositoryUri, string branch, string path)
+        => await _remote.ListFilesAtCommitAsync(repositoryUri, await _remote.GetLatestCommitAsync(repositoryUri, branch), path);
 
     public async Task<bool> RepoExistsAsync(string repositoryUri)
         => await _gitRepo.RepoExistsAsync(repositoryUri);

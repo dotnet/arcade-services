@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+
 namespace Maestro.Common;
 
 public enum GitRepoType
@@ -12,9 +14,62 @@ public enum GitRepoType
     None
 }
 
-public static class GitRepoUrlUtils
+public static partial class GitRepoUrlUtils
 {
-    private const string GitHubUrlPrefix = "https://github.com/";
+    [GeneratedRegex(@"https://api.github.com/repos/(?<org>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>[0-9]+)/?")]
+    private static partial Regex GitHubApiPrUrlRegex();
+
+    [GeneratedRegex(@"https://dev.azure.com/(?<org>[^/]+)/(?<project>[^/]+)/_apis/git/repositories/(?<repo>[^/]+)/pullRequests/(?<id>[0-9]+)/?")]
+    private static partial Regex AzdoApiPrUrlRegex();
+
+    private static readonly ConcurrentDictionary<string, string> WellKnownIds = new(
+        new Dictionary<string, string>
+        {
+            ["7ea9116e-9fac-403d-b258-b31fcf1bb293"] = "internal", // https://dev.azure.com/dnceng/internal
+            ["0bdbc590-a062-4c3f-b0f6-9383f67865ee"] = "DevDiv", // https://dev.azure.com/devdiv/DevDiv
+            ["55e8140e-57ac-4e5f-8f9c-c7c15b51929d"] = "ProjectReunion", // https://dev.azure.com/microsoft/ProjectReunion
+        });
+
+    private static string ResolveWellKnownIds(string str)
+        => WellKnownIds.TryGetValue(str, out var resolved) ? resolved : str;
+
+    /// <summary>
+    /// Returns true if the given URL matches the Azure DevOps API pull request URL format.
+    /// </summary>
+    public static bool IsAzdoApiPrUrl(string url) => AzdoApiPrUrlRegex().IsMatch(url);
+
+    /// <summary>
+    /// Converts a GitHub or Azure DevOps API pull request URL to its corresponding web URL.
+    /// If the URL does not match a known API format, it is returned unchanged.
+    /// </summary>
+    public static string TurnApiUrlToWebsite(string url, string? orgName = null, string? repoName = null)
+    {
+        var match = GitHubApiPrUrlRegex().Match(url);
+        if (match.Success)
+        {
+            return $"https://github.com/{match.Groups["org"]}/{match.Groups["repo"]}/pull/{match.Groups["id"]}";
+        }
+
+        match = AzdoApiPrUrlRegex().Match(url);
+        if (match.Success)
+        {
+            // If we have the repo name, use it to replace the repo GUID in the URL
+            if (repoName != null)
+            {
+                WellKnownIds[match.Groups["repo"].Value] = orgName + "-" + repoName;
+            }
+
+            var org = ResolveWellKnownIds(match.Groups["org"].Value);
+            var project = ResolveWellKnownIds(match.Groups["project"].Value);
+            var repo = ResolveWellKnownIds(match.Groups["repo"].Value);
+            return $"https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{match.Groups["id"]}";
+        }
+
+        return url;
+    }
+
+    private const string GitHubComString = "github.com";
+    private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
@@ -35,12 +90,53 @@ public static class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Host: "github.com" } => GitRepoType.GitHub,
-            { Host: var host } when host is "dev.azure.com" => GitRepoType.AzureDevOps,
-            { Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: GitHubComString } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,
         };
     }
+
+    public static bool IsValidRemoteRepoUri(string pathOrUri)
+    {
+        if (string.IsNullOrEmpty(pathOrUri))
+        {
+            return false;
+        }
+
+        // Reject values git could interpret as command-line options.
+        if (pathOrUri.StartsWith('-'))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? uri))
+        {
+            // Local file paths are allowed.
+            if (uri.IsFile)
+            {
+                return true;
+            }
+
+            // Of the remote schemes, only https on an allowlisted host is allowed.
+            // This rejects http, ssh, git, and transport helpers such as ext::/fd::.
+            return string.Equals(uri.Scheme, "https", StringComparison.Ordinal)
+                && (uri.Host == GitHubComString
+                    || uri.Host == "dev.azure.com"
+                    || uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Not an absolute URI: only accept absolute/rooted local filesystem paths (e.g. "/tmp/repo").
+        // Everything else (relative paths, scp-like SSH targets such as "git@host:path") is rejected.
+        return Path.IsPathRooted(pathOrUri) || IsWindowsPathRooted(pathOrUri);
+    }
+
+    private static bool IsWindowsPathRooted(string pathOrUri)
+        => pathOrUri.Length >= 3
+            && char.IsAsciiLetter(pathOrUri[0])
+            && pathOrUri[1] == ':'
+            && (pathOrUri[2] == '\\' || pathOrUri[2] == '/')
+        || pathOrUri.StartsWith(@"\\", StringComparison.Ordinal);
 
     /// <summary>
     /// Sorts so that we go Local -> GitHub -> AzDO.
@@ -102,7 +198,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(GitHubUrlPrefix.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(uri.IndexOf(GitHubComString, StringComparison.OrdinalIgnoreCase) + GitHubComString.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {
@@ -110,6 +206,16 @@ public static class GitRepoUrlUtils
             }
 
             return new(repoParts[1], repoParts[0]);
+        }
+
+        // Support owner/repo format (e.g. "dotnet/arcade-services")
+        if (repoType == GitRepoType.Local)
+        {
+            string[] repoParts = uri.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            if (repoParts.Length == 2)
+            {
+                return new(repoParts[1], repoParts[0]);
+            }
         }
 
         throw new ArgumentException("Unsupported format of repository url " + uri);

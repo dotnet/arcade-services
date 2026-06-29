@@ -1,7 +1,0 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj" />
-  </ItemGroup>
-
-</Project>

@@ -1,0 +1,85 @@
+@using ProductConstructionService.BarViz.Components
+@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using Microsoft.DotNet.ProductConstructionService.Client.Helpers;
+@using System.Collections.Immutable
+@inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
+@inject IProductConstructionServiceApi PcsApi
+@inject NavigationManager NavManager
+
+<div class="channel-menu @(menuCollapsed ? "collapsed" : "")">
+  @if (!menuCollapsed)
+  {
+    <nav class="channel-nav-menu" aria-labelledby="channel-menu">
+      <input type="checkbox" title="Menu expand/collapse toggle" id="channel-menu-toggle" class="channel-menu-icon" />
+
+      <PinnedChannels AvailableChannels="@AvailableChannels"
+                        PrePinnedChannels="@PrePinnedChannels" />
+
+      <h4>Channels</h4>
+
+      <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Channels" CustomToggle="true">
+        @foreach (var category in Categories)
+        {
+          <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())">
+            @foreach (var channel in category.Channels)
+            {
+              <ChannelNavMenuItem Channel="@channel" />
+            }
+          </FluentNavGroup>
+        }
+
+      </FluentNavMenu>
+    </nav>
+  }
+
+  <div>
+    <FluentButton IconStart="@(menuCollapsed ? new Icons.Regular.Size20.PanelLeftExpand() : new Icons.Regular.Size20.PanelRightExpand())"
+                  Appearance="Appearance.Lightweight"
+                  Title="@(menuCollapsed ? "Expand channel's menu" : "Collapse channel's menu")"
+                  OnClick="@ToggleMenu" />
+  </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "channel")]
+    private long[]? channelFilterQuery { get; set; }
+
+    private const string MenuCollapsedKey = "channel-menu-collapsed";
+    private bool menuCollapsed = false;
+
+    private List<Channel> AvailableChannels = [];
+    private List<ChannelCategorizer.ChannelCategory> Categories = [];
+    private List<Channel> PrePinnedChannels = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load saved preference
+        menuCollapsed = SessionStorage.GetItem<bool>(MenuCollapsedKey);
+
+        AvailableChannels = await PcsApi.Channels.ListChannelsAsync();
+        Categories = ChannelCategorizer.CategorizeChannels(AvailableChannels);
+
+        // Remove categories with no channels
+        foreach (var category in Categories.ToList())
+        {
+            if (category.Channels.Count == 0)
+            {
+                Categories.Remove(category);
+            }
+        }
+
+        if (channelFilterQuery != null)
+        {
+            PrePinnedChannels = channelFilterQuery
+              .Select(f => AvailableChannels.First(channel => channel.Id == f))
+              .ToList();
+        }
+    }
+
+    private void ToggleMenu()
+    {
+        menuCollapsed = !menuCollapsed;
+        SessionStorage.SetItem(MenuCollapsedKey, menuCollapsed);
+    }
+}

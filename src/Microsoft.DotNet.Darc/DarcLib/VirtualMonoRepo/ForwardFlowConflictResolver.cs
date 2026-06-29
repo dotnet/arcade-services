@@ -68,6 +68,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -86,11 +87,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IVersionDetailsFileMerger versionDetailsFileMerger,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<ForwardFlowConflictResolver> logger)
-        : base(vmrInfo, patchHandler, fileSystem, logger)
+        : base(vmrInfo, patchHandler, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
+        _patchHandler = patchHandler;
         _fileSystem = fileSystem;
         _logger = logger;
         _localGitRepoFactory = localGitRepoFactory;
@@ -116,6 +119,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             headBranchExisted,
             cancellationToken);
 
+        await DetectAndFixPartialReverts(
+            codeflowOptions,
+            vmr,
+            sourceRepo,
+            conflictedFiles,
+            lastFlows,
+            cancellationToken);
+
         try
         {
             await MergeDependenciesAsync(
@@ -128,14 +139,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     ? lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
                 cancellationToken);
-
-            if (!codeflowOptions.EnableRebase)
-            {
-                await vmr.CommitAsync(
-                    $"Update dependencies after merging {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
-                    allowEmpty: true,
-                    cancellationToken: CancellationToken.None);
-            }
         }
         catch (Exception e)
         {
@@ -147,14 +150,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             throw;
         }
 
-        if (codeflowOptions.EnableRebase)
-        {
-            return await vmr.GetConflictedFilesAsync(cancellationToken);
-        }
-        else
-        {
-            return conflictedFiles;
-        }
+        return await vmr.GetConflictedFilesAsync(cancellationToken);
     }
 
     protected override async Task<bool> TryResolvingConflict(
@@ -169,21 +165,30 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(vmr, codeflowOptions.Mapping.Name!, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, codeflowOptions, headBranchExisted, cancellationToken);
+            return true;
+        }
+
+        var relativeRepoSourcePath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+        // If there's a conflict outside of the repo folder we're flowing
+        // we don't want the changes
+        if (!conflictedFile.Path.StartsWith(relativeRepoSourcePath))
+        {
+            await vmr.ResolveConflict(conflictedFile.Path, ours: true);
             return true;
         }
 
         // eng/common is always preferred from the source side
         // In rebase mode: ours=true means keep the incoming changes (source)
         // In merge mode: ours=false means prefer theirs (source being merged in)
-        var engCommon = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping) / Constants.CommonScriptFilesPath;
+        var engCommon = relativeRepoSourcePath / Constants.CommonScriptFilesPath;
         if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
         {
-            await vmr.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            await vmr.ResolveConflict(conflictedFile, ours: true);
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
+        if (await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
         {
             return true;
         }
@@ -200,34 +205,36 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
     private async Task TryResolvingSourceManifestConflict(
         ILocalGitRepo vmr,
-        string mappingName,
+        CodeflowOptions codeflowOptions,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+        var mappingName = codeflowOptions.Mapping.Name!;
         _logger.LogDebug("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
 
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
+        var branchToShow = headBranchExisted ? codeflowOptions.HeadBranch : codeflowOptions.TargetBranch;
         var result = await vmr.RunGitCommandAsync(
-            // During merge: :2: is ours (current branch), :3: is theirs (branch being merged)
-            ["show", ":3:" + VmrInfo.DefaultRelativeSourceManifestPath],
+            ["show", $"{branchToShow}:{VmrInfo.DefaultRelativeSourceManifestPath}"],
             cancellationToken);
 
-        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
+        var targetBranchSourceManifest = SourceManifest.FromJson(result.StandardOutput);
         var ourSourceManifest = _sourceManifest;
         var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
 
-        theirSourceManifest.UpdateVersion(
+        targetBranchSourceManifest.UpdateVersion(
             mappingName,
             updatedMapping.RemoteUri,
             updatedMapping.CommitSha,
             updatedMapping.BarId);
 
-        var theirAffectedSubmodules = theirSourceManifest.Submodules
+        var theirAffectedSubmodules = targetBranchSourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mappingName + '/'))
             .ToList();
         foreach (var submodule in theirAffectedSubmodules)
         {
-            theirSourceManifest.RemoveSubmodule(submodule);
+            targetBranchSourceManifest.RemoveSubmodule(submodule);
         }
 
         var ourAffectedSubmodules = ourSourceManifest.Submodules
@@ -235,10 +242,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             .ToList();
         foreach (var submodule in ourAffectedSubmodules)
         {
-            theirSourceManifest.UpdateSubmodule(submodule);
+            targetBranchSourceManifest.UpdateSubmodule(submodule);
         }
 
-        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, targetBranchSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }

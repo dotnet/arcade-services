@@ -6,53 +6,67 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteChannelOperation : Operation
+internal class DeleteChannelOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteChannelCommandLineOptions _options;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<DeleteChannelOperation> _logger;
 
     public DeleteChannelOperation(
         DeleteChannelCommandLineOptions options,
         ILogger<DeleteChannelOperation> logger,
-        IBarApiClient barClient)
+        IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager)
+        : base(options, logger)
     {
         _options = options;
         _logger = logger;
         _barClient = barClient;
+        _configurationRepositoryManager = configurationRepositoryManager;
     }
 
     /// <summary>
     /// Deletes a channel by name
     /// </summary>
     /// <returns></returns>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
+        Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+        if (existingChannel == null)
+        {
+            _logger.LogError($"Could not find channel with name '{_options.Name}'");
+            return Constants.ErrorCode;
+        }
+
         try
         {
-            // Get the ID of the channel with the specified name.
-            Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-
-            if (existingChannel == null)
-            {
-                _logger.LogError($"Could not find channel with name '{_options.Name}'");
-                return Constants.ErrorCode;
-            }
-
-            await _barClient.DeleteChannelAsync(existingChannel.Id);
-            Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
+            await _configurationRepositoryManager.DeleteChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        ChannelYaml.FromClientModel(existingChannel));
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing channel with name '{name}' found in file {filePath} of repo {repo} on branch {branch}",
+                existingChannel.Name,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

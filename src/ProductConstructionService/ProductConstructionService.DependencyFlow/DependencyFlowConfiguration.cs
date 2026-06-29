@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
+using Maestro.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -20,7 +20,7 @@ public static class DependencyFlowConfiguration
     public static void AddDependencyFlowProcessors(this IServiceCollection services)
     {
         services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
-        services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
+        services.TryAddTransient<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestCommenter, PullRequestCommenter>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();
@@ -29,10 +29,13 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
+        services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
+        services.TryAddScoped<ISubscriptionUpdateOutcomeRecorder, SubscriptionUpdateOutcomeRecorder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
         services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
         services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
+        services.AddWorkItemProcessor<BackflowStatusCalculationWorkItem, BackflowStatusCalculationProcessor>();
     }
 }

@@ -1,44 +1,50 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
-    /// <summary>
-    /// Represents an entry in the source manifest for a VMR build
-    /// </summary>
-    public class SourceManifestEntry
+    public partial class SourceManifestEntry
     {
-        public SourceManifestEntry(string path, string remoteUri, string commitSha, int? barId)
+        public SourceManifestEntry(string path, string remoteUri, string commitSha)
         {
             Path = path;
             RemoteUri = remoteUri;
             CommitSha = commitSha;
-            BarId = barId;
         }
 
-        /// <summary>
-        /// Path where the component is located in the VMR
-        /// </summary>
-        [Required]
+        [JsonProperty("path")]
         public string Path { get; set; }
 
-        /// <summary>
-        /// URI from which the component has been synchronized
-        /// </summary>
-        [Required]
+        [JsonProperty("remoteUri")]
         public string RemoteUri { get; set; }
 
-        /// <summary>
-        /// Original commit SHA from which the component has been synchronized
-        /// </summary>
-        [Required]
+        [JsonProperty("commitSha")]
         public string CommitSha { get; set; }
 
-        /// <summary>
-        /// BAR ID of the build, if available
-        /// </summary>
+        [JsonProperty("barId")]
         public int? BarId { get; set; }
+
+        [JsonIgnore]
+        public bool IsValid
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Path))
+                {
+                    return false;
+                }
+                if (string.IsNullOrEmpty(RemoteUri))
+                {
+                    return false;
+                }
+                if (string.IsNullOrEmpty(CommitSha))
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
     }
 }

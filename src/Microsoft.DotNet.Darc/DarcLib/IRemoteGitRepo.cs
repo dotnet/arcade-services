@@ -52,6 +52,15 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
         string? author = null);
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    Task<string?> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch);
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -70,8 +79,9 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
+    /// <param name="enablePrAutoComplete">Whether to enable auto-complete on the pull request, if the remote supports it.</param>
     /// <returns>Pull request information.</returns>
-    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false);
 
     /// <summary>
     ///     Update a pull request with new information
@@ -79,6 +89,12 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
+
+    /// <summary>
+    ///     Close an existing pull request without merging it.
+    /// </summary>
+    /// <param name="pullRequestUri">Uri of pull request to close</param>
+    Task ClosePullRequestAsync(string pullRequestUri);
 
 
     /// <summary>
@@ -114,9 +130,14 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     Task<Commit?> GetCommitAsync(string repoUri, string sha);
 
     /// <summary>
-    /// Gets a list of file under a given path in a given revision.
+    /// Gets a list of files with their content under a given path in a given revision.
     /// </summary>
     Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+
+    /// <summary>
+    /// Gets a list of files without their content under a given path in a given revision.
+    /// </summary>
+    Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path);
 
     /// <summary>
     /// Retrieve the list of status checks on a PR.

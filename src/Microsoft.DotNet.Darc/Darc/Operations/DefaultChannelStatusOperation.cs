@@ -5,9 +5,11 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -15,21 +17,24 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
 {
     private readonly DefaultChannelStatusCommandLineOptions _options;
     private readonly ILogger<DefaultChannelStatusOperation> _logger;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
 
     public DefaultChannelStatusOperation(
         DefaultChannelStatusCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<DefaultChannelStatusOperation> logger)
-        : base(options, barClient)
+        : base(options, barClient, logger)
     {
         _options = options;
         _logger = logger;
+        _configurationRepositoryManager = configurationRepositoryManager;
     }
 
     /// <summary>
     /// Implements the default channel enable/disable operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))
@@ -66,15 +71,32 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 enabled = false;
             }
 
-            await _barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
+            // Create an updated YAML default channel with the new enabled status
+            DefaultChannelYaml updatedDefaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel) with
+            {
+                Enabled = enabled
+            };
 
-            Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
+            await _configurationRepositoryManager.UpdateDefaultChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        updatedDefaultChannelYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing default channel with repository '{repository}', branch '{branch}', and channel '{channel}' found in file {filePath} of repo {repositoryUri} on branch {branchName}",
+                _options.Repository,
+                _options.Branch,
+                _options.Channel,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

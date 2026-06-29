@@ -1,54 +1,35 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Services.Common.Cache;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 
 internal class SubscriptionTriggerer : ISubscriptionTriggerer
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory;
-    private readonly IRedisCacheFactory _cacheFactory;
     private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<SubscriptionTriggerer> _logger;
+    private readonly IDistributedLock _distributedLock;
     private readonly Guid _subscriptionId;
 
     public SubscriptionTriggerer(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory,
-        IRedisCacheFactory cacheFactory,
         ILogger<SubscriptionTriggerer> logger,
+        IDistributedLock distributedLock,
         Guid subscriptionId)
     {
         _context = context;
         _updaterFactory = updaterFactory;
-        _cacheFactory = cacheFactory;
         _logger = logger;
         _subscriptionId = subscriptionId;
-    }
-
-    public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
-    {
-        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", _subscriptionId, updateBuildId);
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
-
-        if (subscription != null)
-        {
-            subscription.LastAppliedBuildId = updateBuildId;
-            _context.Subscriptions.Update(subscription);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        else
-        {
-            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", _subscriptionId);
-            return false;
-        }
+        _distributedLock = distributedLock;
     }
 
     public async Task<bool> AddDependencyFlowEventAsync(
@@ -96,18 +77,13 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         }
     }
 
-    public async Task UpdateSubscriptionAsync(int buildId, bool force = false)
+    public async Task<SubscriptionUpdateResult> UpdateSubscriptionAsync(
+        Subscription subscription,
+        Build build,
+        bool force = false)
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
-
-        if (subscription == null)
-        {
-            _logger.LogWarning("Could not find subscription with ID {subscriptionId}. Skipping update.", _subscriptionId);
-            return;
-        }
-
         await AddDependencyFlowEventAsync(
-            buildId,
+            build.Id,
             DependencyFlowEventType.Fired,
             DependencyFlowEventReason.New,
             MergePolicyCheckResult.PendingPolicies,
@@ -125,31 +101,25 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             subscription.TargetRepository,
             subscription.PolicyObject.Batchable);
 
-        IAsyncDisposable? @lock;
-        var mutexKey = pullRequestUpdater.Id.ToString();
-        do
-        {
-            await using (@lock = await _cacheFactory.TryAcquireLock(mutexKey, TimeSpan.FromHours(1)))
-            {
-                if (@lock == null)
-                {
-                    // Lock not acquired
-                    continue;
-                }
+        var mutexKey = pullRequestUpdaterId.Id;
 
+        return await _distributedLock.ExecuteWithLockAsync(mutexKey,
+            async () =>
+            {
                 _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
 
-                await pullRequestUpdater.UpdateAssetsAsync(
+                var res = await pullRequestUpdater.UpdateAssetsAsync(
                     _subscriptionId,
                     subscription.SourceEnabled
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
-                    buildId,
+                    build.Id,
                     applyNewestOnly: false,
                     forceUpdate: force);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
-            }
-        } while (@lock == null);
+
+                return res;
+            });
     }
 }

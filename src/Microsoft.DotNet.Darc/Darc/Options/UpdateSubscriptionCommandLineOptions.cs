@@ -12,12 +12,6 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("id", Required = true, HelpText = "Subscription's id.")]
     public string Id { get; set; }
 
-    [Option("trigger", SetName = "trigger", HelpText = "Automatically trigger the subscription on update.")]
-    public bool TriggerOnUpdate { get; set; }
-
-    [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on update.")]
-    public bool NoTriggerOnUpdate { get; set; }
-
     [Option("channel", HelpText = "Target channel of the the subscription to be updated")]
     public string Channel { get; set; }
 

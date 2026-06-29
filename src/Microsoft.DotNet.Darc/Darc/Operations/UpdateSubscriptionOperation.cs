@@ -11,10 +11,12 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -26,8 +28,9 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
-        IGitRepoFactory gitRepoFactory,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger)
+        DarcLib.IGitRepoFactory gitRepoFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager,
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger, options)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -36,7 +39,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
     /// <summary>
     /// Implements the 'update-subscription' operation
     /// </summary>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
@@ -269,6 +272,11 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{subscription.SourceEnabled}')");
             }
 
+            if (updateSubscriptionPopUp.Batchable != subscription.Policy.Batchable)
+            {
+                immutableFieldErrors.Add($"Batchable (cannot be changed from '{subscription.Policy.Batchable}')");
+            }
+
             if (immutableFieldErrors.Count != 0)
             {
                 _logger.LogError("The following immutable fields cannot be modified:");
@@ -280,28 +288,8 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             }
         }
 
-
-
         try
         {
-            var subscriptionToUpdate = new SubscriptionUpdate
-            {
-                ChannelName = channel ?? subscription.Channel.Name,
-                SourceRepository = sourceRepository ?? subscription.SourceRepository,
-                Enabled = enabled,
-                Policy = subscription.Policy,
-                PullRequestFailureNotificationTags = failureNotificationTags,
-                SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets,
-                SourceDirectory = sourceDirectory,
-                TargetDirectory = targetDirectory,
-            };
-
-            subscriptionToUpdate.Policy.Batchable = batchable;
-            subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
-
-            subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
-
             // Check for codeflow subscription conflicts (source-enabled subscriptions)
             if (sourceEnabled)
             {
@@ -321,41 +309,50 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                _options.Id,
-                subscriptionToUpdate);
-
-            Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
-
-            // Determine whether the subscription should be triggered.
-            if (!_options.NoTriggerOnUpdate)
+            // We created an updated Yaml subscription, keeping immutable fields from the existing subscription.
+            SubscriptionYaml updatedSubscriptionYaml = new()
             {
-                bool triggerAutomatically = _options.TriggerOnUpdate;
-                // Determine whether we should prompt if the user hasn't explicitly
-                // said one way or another. We shouldn't prompt if nothing changes or
-                // if non-interesting options have changed
-                if (!triggerAutomatically &&
-                    ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
-                     (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
-                     (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
-                     (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
-                         subscription.Policy.UpdateFrequency)))
-                {
-                    triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                }
+                Id = subscription.Id,
+                Enabled = enabled,
+                Channel = channel ?? subscription.Channel.Name,
+                SourceRepository = sourceRepository ?? subscription.SourceRepository,
+                TargetRepository = subscription.TargetRepository,
+                TargetBranch = subscription.TargetBranch,
+                UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true),
+                Batchable = batchable,
+                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = subscription.SourceEnabled,
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets
+            };
 
-                if (triggerAutomatically)
-                {
-                    await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
-                    Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
-                }
-            }
+            await ValidateNoEquivalentSubscription(updatedSubscriptionYaml);
+
+            await _configurationRepositoryManager.UpdateSubscriptionAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        updatedSubscriptionYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
+                _options.Id,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
+        {
+            _logger.LogError("Subscription with equivalent parameters already exists in file {filePath}", ex.FilePath);
             return Constants.ErrorCode;
         }
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
@@ -421,6 +418,25 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                             = JToken.FromObject(_options.IgnoreChecks)
                     }
                 });
+        }
+    }
+
+    private async Task ValidateNoEquivalentSubscription(SubscriptionYaml subscriptionYaml)
+    {
+        var equivalentSub = await TryGetEquivalentSubscription(new SubscriptionYamlParameters
+        {
+            Channel = subscriptionYaml.Channel,
+            SourceRepository = subscriptionYaml.SourceRepository,
+            TargetRepository = subscriptionYaml.TargetRepository,
+            TargetBranch = subscriptionYaml.TargetBranch,
+            SourceEnabled = subscriptionYaml.SourceEnabled,
+            SourceDirectory = subscriptionYaml.SourceDirectory,
+            TargetDirectory = subscriptionYaml.TargetDirectory
+        });
+
+        if (equivalentSub != null && equivalentSub.Id != subscriptionYaml.Id)
+        {
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
         }
     }
 }

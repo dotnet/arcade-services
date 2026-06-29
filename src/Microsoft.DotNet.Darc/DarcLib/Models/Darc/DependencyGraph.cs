@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -137,6 +140,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         IBasicBarClient barClient,
         string repoUri,
         string commit,
@@ -145,6 +149,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            localFactory,
             barClient,
             null, /* no initial root dependencies */
             repoUri,
@@ -169,6 +174,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         IBarApiClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
@@ -178,6 +184,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            localFactory,
             barClient,
             rootDependencies,
             repoUri,
@@ -204,6 +211,7 @@ public class DependencyGraph
     /// <param name="reposFolder">Folder containing local repositories.</param>
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildLocalDependencyGraphAsync(
+        ILocalFactory localFactory,
         IEnumerable<DependencyDetail> rootDependencies,
         DependencyGraphBuildOptions options,
         ILogger logger,
@@ -215,6 +223,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             null,
+            localFactory,
             null,
             rootDependencies,
             rootRepoFolder,
@@ -399,6 +408,7 @@ public class DependencyGraph
     /// <returns>New dependency graph</returns>
     private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         IBasicBarClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
@@ -496,6 +506,7 @@ public class DependencyGraph
 
                 dependencies = (await GetDependenciesAsync(
                     remoteFactory,
+                    localFactory,
                     remote,
                     logger,
                     options.GitExecutable,
@@ -807,6 +818,7 @@ public class DependencyGraph
 
     private static async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         bool remote,
         ILogger logger,
         string gitExecutable,
@@ -830,7 +842,7 @@ public class DependencyGraph
 
                 if (Directory.Exists(testPath))
                 {
-                    var local = new Local(new RemoteTokenProvider(), logger, testPath);
+                    var local = localFactory.CreateLocal(testPath);
                     dependencies = await local.GetDependenciesAsync();
                 }
             }
@@ -845,14 +857,14 @@ public class DependencyGraph
 
                 if (!string.IsNullOrEmpty(repoPath))
                 {
-                    var local = new Local(new RemoteTokenProvider(), logger);
                     var fileContents = await GitShowAsync(
                         gitExecutable,
                         repoPath,
                         commit,
                         VersionFiles.VersionDetailsXml,
                         logger);
-                    dependencies = local.GetDependenciesFromFileContents(fileContents);
+                    var versionDetailsParser = new VersionDetailsParser();
+                    dependencies = versionDetailsParser.ParseVersionDetailsXml(fileContents, true).Dependencies;
                 }
             }
 

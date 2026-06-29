@@ -6,19 +6,28 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class SubscriptionOperationBase : Operation
+internal abstract class SubscriptionOperationBase : ConfigurationManagementOperationBase
 {
+    protected readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
 
     protected SubscriptionOperationBase(
-        IBarApiClient barClient, ILogger logger)
+        IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager,
+        ILogger logger,
+        IConfigurationManagementCommandLineOptions configOptions)
+        : base(configOptions, logger)
     {
         _barClient = barClient;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -93,5 +102,22 @@ internal abstract class SubscriptionOperationBase : Operation
             targetDirectory
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => p == "/" ? "." : p));
+    }
+
+    protected async Task<Subscription> TryGetEquivalentSubscription(SubscriptionYamlParameters subscriptionYaml)
+    {
+        var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
+        if (channel == null)
+        {
+            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
+        }
+        return (await _barClient.GetSubscriptionsAsync(
+                sourceRepo: subscriptionYaml.SourceRepository,
+                channelId: channel.Id,
+                targetRepo: subscriptionYaml.TargetRepository,
+                sourceEnabled: subscriptionYaml.SourceEnabled,
+                sourceDirectory: subscriptionYaml.SourceDirectory,
+                targetDirectory: subscriptionYaml.TargetDirectory))
+            .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
     }
 }

@@ -1,11 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Collections.Generic;
 using Azure.Core.Pipeline;
 using Azure.Core;
-using Maestro.Common.AppCredentials;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
@@ -39,23 +40,43 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         };
 
         /// <summary>
+        /// Gets the Entra app ID for a given Maestro URI
+        /// </summary>
+        /// <param name="baseUri">The Maestro base URI</param>
+        /// <returns>The Entra app ID for the given URI</returns>
+        /// <exception cref="ArgumentException">Thrown when the URI is not a known Maestro endpoint</exception>
+        public static string GetAppIdForUri(string baseUri)
+        {
+            string normalizedUri = baseUri.TrimEnd('/');
+            
+            if (EntraAppIds.TryGetValue(normalizedUri, out string appId))
+            {
+                return appId;
+            }
+            
+            throw new ArgumentException($"Unknown Maestro URI: {baseUri}. Please use one of the known Maestro endpoints.");
+        }
+
+        /// <summary>
         /// Creates a new instance of <see cref="ProductConstructionServiceApiOptions"/> with the provided base URI.
         /// </summary>
         /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth)
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
+        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      new AppCredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
+                      new AppCredentialResolverOptions(GetAppIdForUri(baseUri))
                       {
                           DisableInteractiveAuth = disableInteractiveAuth,
                           Token = accessToken,
                           ManagedIdentityId = managedIdentityId,
                           UserScope = APP_USER_SCOPE,
-                      }))
+                      },
+                      loggerFactory))
         {
         }
 
@@ -65,8 +86,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth)
-            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth)
+        /// <param name="loggerFactory">Optional logger factory used by the interactive credential to emit progress messages.</param>
+        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth, ILoggerFactory loggerFactory = null)
+            : this(ProductionMaestroUri, accessToken, managedIdentityId, disableInteractiveAuth, loggerFactory)
         {
         }
 

@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -20,7 +22,9 @@ public interface IVmrCodeFlower
     Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
         ILocalGitRepo repoClone,
-        bool currentIsBackflow);
+        bool currentIsBackflow,
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted);
 }
 
 public record CodeflowOptions(
@@ -30,8 +34,10 @@ public record CodeflowOptions(
     string HeadBranch,
     Build Build,
     IReadOnlyCollection<string>? ExcludedAssets,
-    bool EnableRebase,
-    bool ForceUpdate);
+    bool KeepConflicts,
+    bool ForceUpdate,
+    bool UnsafeFlow,
+    bool UseRecreationFallback);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -59,18 +65,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         not getting removed in the PR due to the other conflicts.
         """;
 
-    private static readonly string CannotFlowAdditionalFlowsInPrMsg =
-        """
-        The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
-        
-        Please continue with one of the following options:
-        1. Close or merge this PR and let the codeflow continue normally
-        2. Close or merge this PR and receive the new codeflow immediately by triggering the subscription:
-            `darc trigger-subscriptions --id <subscriptionId>`
-        3. Force-flow new changes into this PR at your own risk (some PR commits might be reverted):
-            `darc trigger-subscriptions --force --id <subscriptionId>`
-        """;
-
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -91,6 +85,65 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _fileSystem = fileSystem;
         _commentCollector = commentCollector;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Posts a comment listing the PRs that were ingested into this codeflow update.
+    /// PR numbers are extracted from the titles of the commits between <paramref name="lastCommit"/>
+    /// and <paramref name="currentCommit"/> in <paramref name="repo"/>.
+    /// </summary>
+    /// <param name="repo">Repository to read the commit history from.</param>
+    /// <param name="lastCommit">Lower bound commit (exclusive) of the range to inspect.</param>
+    /// <param name="currentCommit">Upper bound commit of the range to inspect.</param>
+    /// <param name="repoUri">URI of the repository the PRs belong to; also used to skip local-only codeflow tests.</param>
+    /// <param name="commentHeader">Header line of the posted comment.</param>
+    /// <param name="pathFilter">Optional git pathspec to restrict the commit history to a subfolder.</param>
+    protected async Task CommentIncludedPRs(
+        ILocalGitRepo repo,
+        string lastCommit,
+        string currentCommit,
+        string repoUri,
+        string commentHeader,
+        string? pathFilter,
+        CancellationToken cancellationToken)
+    {
+        var gitRepoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
+        // codeflow tests set the remote to a local path, we have to skip those
+        if (gitRepoType == GitRepoType.Local)
+        {
+            return;
+        }
+
+        List<string> args = ["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"];
+        if (pathFilter != null)
+        {
+            args.Add("--");
+            args.Add(pathFilter);
+        }
+
+        var result = await repo.ExecuteGitCommand(args.ToArray(), cancellationToken);
+        result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {repo.Path}");
+
+        var commitMessages = result.GetOutputLines();
+        var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
+
+        if (prsInfo.Count == 0)
+        {
+            _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
+            return;
+        }
+        else
+        {
+            StringBuilder str = new(commentHeader);
+            foreach (var prInfo in prsInfo.Distinct().Reverse())
+            {
+                string format = $"- {{0}}";
+                str.AppendLine();
+                str.AppendFormat(format, prInfo.prUri);
+            }
+
+            _commentCollector.AddComment(str.ToString(), CommentType.Information);
+        }
     }
 
     /// <summary>
@@ -115,11 +168,13 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastFlow.IsBackflow != codeflowOptions.CurrentFlow.IsBackflow && headBranchExisted && !codeflowOptions.ForceUpdate)
         {
-            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
-        await EnsureCodeflowLinearityAsync(repo, codeflowOptions.CurrentFlow, lastFlows);
+        if (!codeflowOptions.UnsafeFlow)
+        {
+            await EnsureCodeflowLinearityAsync(repo, codeflowOptions.CurrentFlow, lastFlows);
+        }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
             lastFlow.Name,
@@ -186,6 +241,71 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// If the last flow was adding, deleting or modifying a file, and this change was reverted in PR, the next opposite direction flow
+    /// can revert the PR changes. We can check this by checking if these files have changed in the source repo. If they haven't,
+    /// then we already attempted to flow the change, but it was reverted in PR, so we should drop them from this flow too.
+    /// </summary>
+    protected async Task RevertFalsePositiveChangesAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        ILocalGitRepo sourceRepo,
+        string lastSameDirectionSha,
+        string currentFlowSha,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow == null)
+        {
+            return;
+        }
+
+        var addedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=A"], cancellationToken)).GetOutputLines();
+
+        foreach (var addedFile in addedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
+        {
+            var sourcePath = ToSourceRepoPath(addedFile, mapping);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                _fileSystem.DeleteFile(targetRepo.Path / addedFile);
+                await targetRepo.StageAsync([addedFile], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be added in the last flow, but got removed in the PR, removing it from this flow", addedFile);
+            }
+        }
+
+        var modifiedOrDeletedFiles = (await targetRepo.ExecuteGitCommand(["diff", "--staged", "--name-only", "--diff-filter=MD"], cancellationToken)).GetOutputLines();
+
+        foreach (var file in modifiedOrDeletedFiles.Where(file => !ShouldSkipRevertCheck(file, mapping)))
+        {
+            var sourcePath = ToSourceRepoPath(file, mapping);
+            var lastContent = await sourceRepo.GetFileFromGitAsync(sourcePath, lastSameDirectionSha);
+            var currentContent = await sourceRepo.GetFileFromGitAsync(sourcePath, currentFlowSha);
+
+            if (lastContent == currentContent)
+            {
+                await targetRepo.ExecuteGitCommand(["checkout", Constants.HEAD, "--", file], cancellationToken);
+                _logger.LogInformation("File {file} was attempted to be deleted or modified in the last flow, but the change got reverted in the PR, restoring it in this flow", file);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Maps a path that is relative to the target repo of the current flow to a path that is
+    /// relative to the source repo. Used by RevertFalsePositiveChangesAsync to
+    /// look up the equivalent file in the source repo.
+    /// </summary>
+    protected abstract string ToSourceRepoPath(string targetPath, SourceMapping mapping);
+
+    /// <summary>
+    /// Returns true if the given target-repo-relative path should be skipped by
+    /// <see cref="RevertFalsePositiveChangesAsync"/> (e.g. because it lives
+    /// inside a submodule whose contents are not stored in the source repo).
+    /// </summary>
+    protected abstract bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping);
+
+    /// <summary>
     /// Tries to detect if given last flows (forward and backward) are crossing each other.
     /// In the following diagram, where we are creating the flow 7. the flows 3->6 and 1->5
     /// are crossing each other.
@@ -231,7 +351,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     public async Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
         ILocalGitRepo repoClone,
-        bool currentIsBackflow)
+        bool currentIsBackflow,
+        bool ignoreNonLinearFlow,
+        bool headBranchExisted)
     {
         await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -282,9 +404,34 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         // Commits not comparable. This can happen in situations such as trying to synchronize an old repo commit on top of
         // a new VMR commit which had other synchronization with the repo since.
+        // It can also happen if we get a flow to a branch that previously received flows from a different branch
+        //
+        //     repo                   VMR
+        //       │                     │ 1.
+        //       │                     O────┐
+        //       │                  2. │    │
+        //     3.O◄────────────────────O    │
+        //       │                     │    │
+        //       │  ??? ◄──────────────┼────O 4.
+        //       │                     │
+        //
+        // In such a case, we cannot compare commits 2. and 4.
         if (isBackwardOlder == isForwardOlder)
         {
-            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+            if (ignoreNonLinearFlow)
+            {
+                _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
+
+                return new LastFlows(
+                    // When ignoring non-linear flows, we should do a same direction flow
+                    LastFlow: sourceRepo != repoClone ? lastBackflow : lastForwardFlow,
+                    LastBackFlow: lastBackflow,
+                    LastForwardFlow: lastForwardFlow,
+                    CrossingFlow: null);
+            }
+
+            _logger.LogInformation("Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})", sourceRepo, backwardSha, forwardSha);
+            throw new NonLinearCodeflowException();
         }
 
         // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
@@ -300,7 +447,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
             // For normal flows it should be, but for the case described above it will be on a different branch.
-            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            if (!headBranchExisted && !await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
             {
                 _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
@@ -338,42 +485,20 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     {
         try
         {
-            return await applyLatestChanges(enableRebase: false);
+            return await applyLatestChanges(keepConflicts: false);
         }
-        catch (PatchApplicationFailedException e)
+        catch (PatchApplicationFailedException)
         {
-            if (codeflowOptions.EnableRebase)
-            {
-                // We need to recreate a previous flow so that we have something to rebase later
-                return await RecreatePreviousFlowsAndApplyChanges(
-                    codeflowOptions with
-                    {
-                        HeadBranch = workBranch!.WorkBranchName,
-                    },
-                    productRepo,
-                    lastFlows,
-                    async (_) => await applyLatestChanges(enableRebase: false),
-                    cancellationToken);
-            }
-            else
-            {
-                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-                // In that case we want to throw as that is a conflict we don't want to try to resolve.
-                if (headBranchExisted)
+            // We need to recreate a previous flow so that we have something to rebase later
+            return await RecreatePreviousFlowsAndApplyChanges(
+                codeflowOptions with
                 {
-                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch);
-                }
-
-                // Otherwise, we have a conflicting change in the last backflow PR (before merging)
-                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-                return await RecreatePreviousFlowsAndApplyChanges(
-                    codeflowOptions,
-                    productRepo,
-                    lastFlows,
-                    async (_) => await applyLatestChanges(enableRebase: false),
-                    cancellationToken);
-            }
+                    HeadBranch = workBranch!.WorkBranchName,
+                },
+                productRepo,
+                lastFlows,
+                async (_) => await applyLatestChanges(keepConflicts: false),
+                cancellationToken);
         }
     }
 
@@ -401,6 +526,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             AzureDevOpsRepository = codeflowOptions.Build.AzureDevOpsRepository
         };
 
+        Codeflow? previousFlow = null;
+        LastFlows? previousFlows = null;
+
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
         while (flowsToRecreate < 50)
@@ -408,13 +536,13 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there
-            (Codeflow previousFlow, LastFlows previousFlows) = await RewindToPreviousFlowAsync(
+            (previousFlow, previousFlows) = await UnwindPreviousFlowAsync(
                 codeflowOptions.Mapping,
                 repo,
-                flowsToRecreate,
-                lastFlows,
+                previousFlows ?? lastFlows,
                 codeflowOptions.HeadBranch,
                 codeflowOptions.TargetBranch,
+                codeflowOptions.UnsafeFlow,
                 cancellationToken);
 
             // We store the SHA where the head branch originates from so that later we can diff it
@@ -430,10 +558,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     {
                         Build = previouslyAppliedBuild,
                         CurrentFlow = currentIsBackflow
-                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
-                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
-                        EnableRebase = false,
+                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow!.RepoSha)
+                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
+                        KeepConflicts = false,
                         ForceUpdate = true,
+                        UseRecreationFallback = false,
                     },
                     previousFlows,
                     repo,
@@ -457,7 +586,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             // We apply the current changes on top again to check if they apply now
             try
             {
-                CodeFlowResult result = await reapplyChanges(enableRebase: false);
+                CodeFlowResult result = await reapplyChanges(keepConflicts: false);
 
                 await HandleRevertedFiles(
                     codeflowOptions,
@@ -472,7 +601,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
                 return result with
                 {
-                    RecreatedPreviousFlows = flowsToRecreate > 1,
+                    RecreatedPreviousFlows = true,
                 };
             }
             catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
@@ -491,13 +620,17 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
     }
 
-    protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+    /// <summary>
+    /// Unwinds the last flow before previousFlows and creates a work branch there.
+    /// </summary>
+    /// <returns>The previous-previous flow and its previous flows.</returns>
+    protected abstract Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        int depth,
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        bool unsafeFlow,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -683,7 +816,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        if (codeflowOptions.EnableRebase)
+        if (codeflowOptions.KeepConflicts)
         {
             return await workBranch.RebaseAsync(cancellationToken);
         }
@@ -725,6 +858,6 @@ public record LastFlows(
 /// <summary>
 /// Delegate for applying latest changes with an option to enable rebase mode.
 /// </summary>
-/// <param name="enableRebase">When true, enables rebase mode for applying changes</param>
-/// <returns>When enableRebase is true, returns a list of conflicting files</returns>
-public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool enableRebase);
+/// <param name="keepConflicts">When true, enables rebase mode for applying changes</param>
+/// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
+public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool keepConflicts);

@@ -3,8 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <SignAssembly>False</SignAssembly>
     <UserSecretsId>d1deb1c4-c45b-4d37-8e76-cc23515470a4</UserSecretsId>
   </PropertyGroup>
 
@@ -19,7 +17,6 @@
     <ProjectReference Include="..\..\src\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\Tools.Common\Tools.Common.csproj" />
   </ItemGroup>
 </Project>

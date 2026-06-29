@@ -32,6 +32,13 @@
         </span>
     </FluentMenuItem>
 
+    <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={Subscription.Id}"))">
+        Show history
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.History())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
     @if (Subscription.LastAppliedBuild != null)
     {
         <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BuildLink!))">
@@ -51,19 +58,19 @@
             </span>
         </FluentMenuItem>
 
-        <FluentMenuItem OnClick="@(() => Enable(false))">
-            Disable subscription
+        <FluentMenuItem OnClick="@ForceTrigger">
+            Force-trigger subscription
             <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSyncOff())" Color="@Color.Neutral" />
+                <FluentIcon Value="@(new Icons.Regular.Size16.FlashSparkle())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
     }
     else
     {
-        <FluentMenuItem OnClick="@(() => Enable(true))">
-            Enable subscription
+        <FluentMenuItem Disabled="true">
+            Subscription disabled (use darc to enable)
             <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
+                <FluentIcon Value="@(new Icons.Regular.Size16.ErrorCircle())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
     }
@@ -80,13 +87,17 @@
 
     [Parameter, EditorRequired]
     public required Func<Subscription, Task> ShowDetails { get; set; }
+    
+    async Task Trigger() => await Trigger(false);
 
-    async Task Trigger()
+    async Task ForceTrigger() => await Trigger(true);
+
+    async Task Trigger(bool force)
     {
         try
         {
-            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id);
-            ToastService.ShowProgress("Subscription triggered");
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id, force);
+            ToastService.ShowProgress($"Subscription {(force ? "force-" : "")}triggered");
         }
         catch
         {
@@ -94,45 +105,7 @@
         }
     }
 
-    async Task Enable(bool enable)
-    {
-        await UpdateSubscription(sub =>
-        {
-            sub.Enabled = enable;
-        });
-    }
-
     string? BuildLink => Subscription.LastAppliedBuild == null
         ? null
         : $"/channel/{Subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(Subscription.SourceRepository)}/build/{Subscription.LastAppliedBuild.Id}";
-
-    private async Task UpdateSubscription(Action<SubscriptionUpdate> update)
-    {
-        try
-        {
-            var updatedSubscription = new SubscriptionUpdate
-            {
-                ChannelName = Subscription.Channel.Name,
-                SourceRepository = Subscription.SourceRepository,
-                Enabled = Subscription.Enabled,
-                ExcludedAssets = Subscription.ExcludedAssets,
-                PullRequestFailureNotificationTags = Subscription.PullRequestFailureNotificationTags,
-                Policy = Subscription.Policy,
-                SourceEnabled = Subscription.SourceEnabled,
-                SourceDirectory = Subscription.SourceDirectory,
-                TargetDirectory = Subscription.TargetDirectory,
-            };
-
-            update(updatedSubscription);
-
-            await PcsApi.Subscriptions.UpdateSubscriptionAsync(Subscription.Id, updatedSubscription);
-            ToastService.ShowSuccess("Subscription updated");
-            await Refresh.Invoke();
-        }
-        catch (Exception e)
-        {
-            ToastService.ShowError("Failed to untrack the PR");
-            Console.WriteLine(e);
-        }
-    }
 }

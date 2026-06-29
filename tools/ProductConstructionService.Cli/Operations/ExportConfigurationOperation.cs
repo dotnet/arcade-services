@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -6,6 +6,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -46,6 +47,7 @@ internal class ExportConfigurationOperation : IOperation
         IEnumerable<TData> data,
         Func<TData, TYaml> convertToYaml,
         Func<TYaml, string> getFilePath,
+        IComparer<TYaml> comparer,
         string folderPath)
         where TYaml : IYamlModel
     {
@@ -55,7 +57,7 @@ internal class ExportConfigurationOperation : IOperation
             .GroupBy(t => t.filePath, t => t.yaml);
 
         _fileSystem.CreateDirectory(exportPath / folderPath);
-        WriteGroupsToFiles(exportPath, yamlGroups);
+        WriteGroupsToFiles(exportPath, yamlGroups, comparer);
     }
 
     private async Task ExportSubscriptions(NativePath exportPath)
@@ -66,6 +68,7 @@ internal class ExportConfigurationOperation : IOperation
             subscriptions,
             SubscriptionYaml.FromClientModel,
             ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
+            new SubscriptionYamlComparer(),
             ConfigFilePathResolver.SubscriptionFolderPath);
     }
 
@@ -77,6 +80,7 @@ internal class ExportConfigurationOperation : IOperation
             channels,
             ChannelYaml.FromClientModel,
             ConfigFilePathResolver.GetDefaultChannelFilePath,
+            new ChannelYamlComparer(),
             ConfigFilePathResolver.ChannelFolderPath);
     }
 
@@ -88,6 +92,7 @@ internal class ExportConfigurationOperation : IOperation
             defaultChannels,
             DefaultChannelYaml.FromClientModel,
             ConfigFilePathResolver.GetDefaultDefaultChannelFilePath,
+            new DefaultChannelYamlComparer(),
             ConfigFilePathResolver.DefaultChannelFolderPath);
     }
 
@@ -100,17 +105,18 @@ internal class ExportConfigurationOperation : IOperation
             repositoryBranches,
             BranchMergePoliciesYaml.FromClientModel,
             ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
+            new BranchMergePoliciesYamlComparer(),
             ConfigFilePathResolver.RepositoryBranchFolderPath);
     }
 
-    private void WriteGroupsToFiles<TYaml>(NativePath exportPath, IEnumerable<IGrouping<string, TYaml>> groups)
+    private void WriteGroupsToFiles<TYaml>(NativePath exportPath, IEnumerable<IGrouping<string, TYaml>> groups, IComparer<TYaml> comparer)
         where TYaml : IYamlModel
     {
         foreach (var group in groups)
         {
             var filePath = group.Key;
-            var configurationObjects = YamlModelSorter.Sort(group).ToList();
-            
+            var configurationObjects = group.OrderBy(x => x, comparer).ToList();
+
             var rawYaml = _yamlSerializer.Serialize(configurationObjects);
             _fileSystem.WriteToFile(exportPath / filePath, FormatYaml(rawYaml));
         }

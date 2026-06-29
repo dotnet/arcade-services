@@ -33,15 +33,18 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 {
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICommentCollector _commentCollector;
+    private readonly IFlatJsonUpdater _flatJsonUpdater;
     public const string EmptyJsonString = "{}";
 
     public JsonFileMerger(
             IGitRepoFactory gitRepoFactory,
-            ICommentCollector commentCollector)
+            ICommentCollector commentCollector,
+            IFlatJsonUpdater flatJsonUpdater)
         : base(gitRepoFactory, commentCollector)
     {
         _gitRepoFactory = gitRepoFactory;
         _commentCollector = commentCollector;
+        _flatJsonUpdater = flatJsonUpdater;
     }
 
     public async Task<bool> MergeJsonsAsync(
@@ -90,17 +93,17 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         else
         {
             var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
-            var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
+            var sourceRepoChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
 
             VersionFileChanges<JsonVersionProperty> mergedChanges = MergeChanges(
                 targetRepoChanges,
-                vmrChanges,
+                sourceRepoChanges,
                 (repoProp, vmrProp) => SelectNewerJsonVersionProperty(targetRepoJsonRelativePath, repoProp, vmrProp),
                 targetRepoJsonRelativePath,
                 property => property.Replace(':', '.'));
 
             var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
-            var mergedJson = FlatJson.ApplyJsonChanges(currentJson, mergedChanges);
+            var mergedJson = _flatJsonUpdater.ApplyJsonChanges(currentJson, mergedChanges);
 
             hasChanges |= FlatJson.Parse(currentJson).GetDiff(FlatJson.Parse(mergedJson)).Count != 0;
 

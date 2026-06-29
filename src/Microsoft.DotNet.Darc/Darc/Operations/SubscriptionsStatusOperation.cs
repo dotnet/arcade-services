@@ -9,25 +9,31 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class SubscriptionsStatusOperation : Operation
+internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBase
 {
     private readonly SubscriptionsStatusCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<SubscriptionsStatusOperation> _logger;
 
     public SubscriptionsStatusOperation(
         SubscriptionsStatusCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SubscriptionsStatusOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -35,7 +41,7 @@ internal class SubscriptionsStatusOperation : Operation
     /// Implements the 'subscription-status' operation
     /// </summary>
     /// <param name="options"></param>
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         if ((_options.Enable && _options.Disable) ||
             (!_options.Enable && !_options.Disable))
@@ -112,6 +118,8 @@ internal class SubscriptionsStatusOperation : Operation
             }
 
             Console.Write($"{actionStatusMessage} {subscriptionsToEnableDisable.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+            var parameters = _options.ToConfigurationRepositoryOperationParameters();
+
             foreach (var subscription in subscriptionsToEnableDisable)
             {
                 // If noConfirm was passed, print out the subscriptions as we go
@@ -120,25 +128,15 @@ internal class SubscriptionsStatusOperation : Operation
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
 
-                var subscriptionToUpdate = new SubscriptionUpdate
+                // Create an updated subscription YAML with only the Enabled property changed
+                var updatedyaml = SubscriptionYaml.FromClientModel(subscription) with
                 {
-                    ChannelName = subscription.Channel.Name,
-                    SourceRepository = subscription.SourceRepository,
                     Enabled = _options.Enable,
-                    Policy = subscription.Policy,
-                    SourceEnabled = subscription.SourceEnabled,
-                    PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags,
-                    SourceDirectory = subscription.SourceDirectory,
-                    TargetDirectory = subscription.TargetDirectory,
-                    ExcludedAssets = subscription.ExcludedAssets
                 };
-                subscriptionToUpdate.Policy.Batchable = subscription.Policy.Batchable;
-                subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
-                subscriptionToUpdate.Policy.MergePolicies = subscription.Policy.MergePolicies;
 
-                var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                    subscription.Id.ToString(),
-                    subscriptionToUpdate);
+                await _configurationRepositoryManager.UpdateSubscriptionAsync(
+                    parameters,
+                    updatedyaml);
             }
             Console.WriteLine("done");
 
@@ -147,6 +145,14 @@ internal class SubscriptionsStatusOperation : Operation
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription found in file {filePath} of repo {repo} on branch {branch}",
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

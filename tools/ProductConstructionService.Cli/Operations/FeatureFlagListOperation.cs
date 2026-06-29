@@ -4,6 +4,7 @@
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 
@@ -128,7 +129,7 @@ internal class FeatureFlagListOperation : IOperation
 
         var uniqueSubscriptions = response.Flags.Select(f => f.SubscriptionId).Distinct().Count();
         var uniqueCombinations = groupedByFlagKeyValue.Count();
-        Console.WriteLine("Total: {0} flags across {1} subscriptions ({2} unique key/value combinations)", 
+        Console.WriteLine("Total: {0} flags across {1} subscriptions ({2} unique key/value combinations)",
             response.Total, uniqueSubscriptions, uniqueCombinations);
         return (flowControl: true, value: 0);
     }

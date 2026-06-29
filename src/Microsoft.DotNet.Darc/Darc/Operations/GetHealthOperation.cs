@@ -48,6 +48,7 @@ internal class GetHealthOperation : Operation
 {
     private readonly GetHealthCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly ILocalFactory _localFactory;
     private readonly IBarApiClient _barClient;
     private readonly ILogger<GetHealthOperation> _logger;
 
@@ -55,11 +56,13 @@ internal class GetHealthOperation : Operation
         GetHealthCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         ILogger<GetHealthOperation> logger)
     {
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _localFactory = localFactory;
         _logger = logger;
     }
 
@@ -294,7 +297,7 @@ internal class GetHealthOperation : Operation
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, _remoteFactory, _barClient, _logger);
+                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, _remoteFactory, _localFactory, _barClient, _logger);
 
                     await healthMetric.EvaluateAsync();
 

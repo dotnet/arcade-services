@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
@@ -17,7 +18,7 @@ namespace Microsoft.DotNet.Darc;
 
 internal static class Program
 {
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         if (args.Contains("--debug"))
         {
@@ -44,9 +45,9 @@ internal static class Program
 
         Parser parser = new(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
 
-        return parser.ParseArguments(args, options)
+        return await parser.ParseArguments(args, options)
                 .MapResult(
-                    (CommandLineOptions opts) => {
+                    async (CommandLineOptions opts) => {
                         ServiceCollection services = new();
 
                         opts.RegisterServices(services);
@@ -54,7 +55,14 @@ internal static class Program
                         using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        var ret = RunOperation(opts, provider);
+                        if (!opts.IsCi && !await DarcVersionValidator.ValidateAsync(
+                                opts.BuildAssetRegistryBaseUri,
+                                provider.GetRequiredService<ILogger>()))
+                        {
+                            return Constants.ErrorCode;
+                        }
+
+                        var ret = await RunOperationAsync(opts, provider);
 
                         var logger = provider.GetRequiredService<ILogger>();
                         var comments = provider.GetRequiredService<ICommentCollector>().GetComments();
@@ -75,7 +83,7 @@ internal static class Program
 
                         return ret;
                     },
-                    (errs => 1));
+                    errs => Task.FromResult(1));
     }
 
     /// <summary>
@@ -86,13 +94,13 @@ internal static class Program
     /// <remarks>The primary reason for this is a workaround for an issue in the logging factory which
     /// causes it to not dispose the logging providers on process exit.  This causes missed logs, logs that end midway through
     /// and cause issues with the console coloring, etc.</remarks>
-    private static int RunOperation(CommandLineOptions opts, ServiceProvider sp)
+    private static async Task<int> RunOperationAsync(CommandLineOptions opts, ServiceProvider sp)
     {
         try
         {
             Operation operation = opts.GetOperation(sp);
 
-            return operation.ExecuteAsync().GetAwaiter().GetResult();
+            return await operation.ExecuteAsync();
         }
         catch (Exception e)
         {
@@ -112,7 +120,7 @@ internal static class Program
         typeof(AddSubscriptionCommandLineOptions),
         typeof(AddBuildToChannelCommandLineOptions),
         typeof(AuthenticateCommandLineOptions),
-        typeof(CloneCommandLineOptions),
+        typeof(LoginCommandLineOptions),
         typeof(DefaultChannelStatusCommandLineOptions),
         typeof(DeleteBuildFromChannelCommandLineOptions),
         typeof(DeleteChannelCommandLineOptions),
@@ -158,5 +166,6 @@ internal static class Program
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions),
         typeof(VmrDiffOptions),
+        typeof(MergeBandsCommandLineOptions),
     ];
 }

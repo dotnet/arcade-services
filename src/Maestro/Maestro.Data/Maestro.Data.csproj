@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <SignAssembly>false</SignAssembly>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <!--Warning about lower case class names for migrations-->
     <NoWarn>CS8981</NoWarn>
+    <IsPackable>true</IsPackable>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +18,7 @@
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Services.Utility" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
   </ItemGroup>
 
   <ItemGroup>

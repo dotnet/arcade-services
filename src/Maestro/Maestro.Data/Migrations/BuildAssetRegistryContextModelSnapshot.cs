@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -452,36 +452,6 @@ namespace Maestro.Data.Migrations
                     b.ToTable("GoalTime");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double>("BestCaseTimeInMinutes")
-                        .HasColumnType("float");
-
-                    b.Property<int>("ChannelId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ContributingRepositories")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset>("ReportDate")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<double>("WorstCaseTimeInMinutes")
-                        .HasColumnType("float");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("LongestBuildPaths");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.Namespace", b =>
                 {
                     b.Property<int>("Id")
@@ -541,99 +511,6 @@ namespace Maestro.Data.Migrations
                     b.ToTable("RepositoryBranches");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.RepositoryBranchUpdate", b =>
-                {
-                    b.Property<string>("RepositoryName")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("BranchName")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Arguments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Method")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("Success")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("SysEndTime")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("SysEndTime");
-
-                    b.Property<DateTime>("SysStartTime")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("SysStartTime");
-
-                    b.HasKey("RepositoryName", "BranchName");
-
-                    b.ToTable("RepositoryBranchUpdates");
-
-                    b.ToTable(tb => tb.IsTemporal(ttb =>
-                            {
-                                ttb.UseHistoryTable("RepositoryBranchUpdateHistory");
-                                ttb
-                                    .HasPeriodStart("SysStartTime")
-                                    .HasColumnName("SysStartTime");
-                                ttb
-                                    .HasPeriodEnd("SysEndTime")
-                                    .HasColumnName("SysEndTime");
-                            }));
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.RepositoryBranchUpdateHistory", b =>
-                {
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Arguments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BranchName")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Method")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RepositoryName")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("Success")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("SysEndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("SysStartTime")
-                        .HasColumnType("datetime2");
-
-                    b.HasIndex("SysEndTime", "SysStartTime");
-
-                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("SysEndTime", "SysStartTime"));
-
-                    b.HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
-
-                    b.ToTable("RepositoryBranchUpdateHistory", (string)null);
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -686,6 +563,45 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("NamespaceId");
 
                     b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.SubscriptionOutcome", b =>
+                {
+                    b.Property<string>("OperationId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nchar(32)")
+                        .IsFixedLength();
+
+                    b.Property<int>("BuildId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("OperationId");
+
+                    b.HasIndex("BuildId");
+
+                    b.HasIndex("Date")
+                        .IsDescending();
+
+                    b.HasIndex("SubscriptionId", "Date")
+                        .IsDescending(false, true);
+
+                    b.ToTable("SubscriptionOutcomes");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdate", b =>
@@ -1031,17 +947,6 @@ namespace Maestro.Data.Migrations
                     b.Navigation("Channel");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
-                        .WithMany()
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Channel");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.RepositoryBranch", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Namespace", "Namespace")
@@ -1058,17 +963,6 @@ namespace Maestro.Data.Migrations
                     b.Navigation("Namespace");
 
                     b.Navigation("Repository");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.RepositoryBranchUpdate", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.RepositoryBranch", "RepositoryBranch")
-                        .WithOne()
-                        .HasForeignKey("Maestro.Data.Models.RepositoryBranchUpdate", "RepositoryName", "BranchName")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("RepositoryBranch");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.Subscription", b =>

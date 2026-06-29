@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -10,14 +9,13 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Build = Maestro.Data.Models.Build;
 using Channel = ProductConstructionService.Api.v2020_02_20.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Create/Read/Edit/Delete <see cref="Channel"/>s.
+///   Exposes methods to Read <see cref="Channel"/>s.
 /// </summary>
 /// <remarks>
 ///   Note that below there are several implementations of the channels controller that are overridden
@@ -34,9 +32,8 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        IBasicBarClient barClient,
-        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
-        : base(context, barClient, environmentNamespaceOptions)
+        IBasicBarClient barClient)
+        : base(context, barClient)
     {
         _context = context;
     }
@@ -115,66 +112,6 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
     }
 
     /// <summary>
-    ///   Deletes a <see cref="Channel"/>.
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Channel"/> to delete</param>
-    [HttpDelete("{id}")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The Channel has been deleted")]
-    [ValidateModelState]
-    public override async Task<IActionResult> DeleteChannel(int id)
-    {
-        Maestro.Data.Models.Channel? channel = await _context.Channels
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (channel == null)
-        {
-            return NotFound();
-        }
-
-        // Ensure that there are no subscriptions associated with the channel
-        if (await _context.Subscriptions.AnyAsync(s => s.ChannelId == id))
-        {
-            return BadRequest(
-                new ApiError($"The channel with id '{id}' has associated subscriptions. " +
-                             "Please remove these before removing this channel."));
-        }
-
-        _context.Channels.Remove(channel);
-
-        await _context.SaveChangesAsync();
-        return Ok(new Channel(channel));
-    }
-
-    /// <summary>
-    ///   Creates a <see cref="Channel"/>.
-    /// </summary>
-    /// <param name="name">The name of the new <see cref="Channel"/>. This is required to be unique.</param>
-    /// <param name="classification">The classification of the new <see cref="Channel"/></param>
-    [HttpPost]
-    [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Channel), Description = "The Channel has been created")]
-    [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists.")]
-    [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
-    public override async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
-    {
-        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
-        var channelModel = new Maestro.Data.Models.Channel
-        {
-            Name = name,
-            Classification = classification,
-            Namespace = defaultNamespace
-        };
-        await _context.Channels.AddAsync(channelModel);
-        await _context.SaveChangesAsync();
-        return CreatedAtRoute(
-            new
-            {
-                action = "GetChannel",
-                id = channelModel.Id
-            },
-            new Channel(channelModel));
-    }
-
-    /// <summary>
     ///   Adds an existing <see cref="Build"/> to the specified <see cref="Channel"/>
     /// </summary>
     /// <param name="channelId">The id of the <see cref="Channel"/>.</param>
@@ -238,22 +175,6 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
         _context.BuildChannels.Remove(buildChannel);
         await _context.SaveChangesAsync();
         return StatusCode((int)HttpStatusCode.OK);
-    }
-
-    /// <summary>
-    ///   Update metadata of a <see cref="Channel"/>.
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Channel"/> to update</param>
-    /// <param name="name">Optional new name of the <see cref="Channel"/></param>
-    /// <param name="classification">Optional new classification of the <see cref="Channel"/></param>
-    [HttpPatch("{id}")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The Channel has been updated")]
-    [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "At least one of name or classification must be specified")]
-    [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists")]
-    [HandleDuplicateKeyRows("Could not update channel. A channel with the specified name already exists.")]
-    public override async Task<IActionResult> UpdateChannel(int id, string? name = null, string? classification = null)
-    {
-        return await base.UpdateChannel(id, name, classification);
     }
 
     [ApiRemoved]

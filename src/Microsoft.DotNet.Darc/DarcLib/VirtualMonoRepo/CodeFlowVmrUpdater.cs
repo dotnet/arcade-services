@@ -47,7 +47,7 @@ public interface ICodeFlowVmrUpdater
 public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
 {
     // Message used when synchronizing multiple commits as one
-    private const string SyncCommitMessage =
+    public const string SyncCommitMessage =
         $$"""
         [{name}] Source update {oldShaShort}{{Constants.Arrow}}{newShaShort}
         Diff: {remote}/compare/{oldSha}..{newSha}

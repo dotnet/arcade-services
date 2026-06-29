@@ -14,10 +14,13 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SignAssembly>false</SignAssembly>
     <LangVersion>latest</LangVersion>
     <IsShipping>false</IsShipping>
+    <Nullable>enable</Nullable>
+    <SignAssembly>false</SignAssembly>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
-    <!-- 
+    <!--
       This compiler property is required for debugging the BarViz project locally.  
       https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/code-generation#debugtype
 
@@ -39,18 +42,4 @@
 
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
   </PropertyGroup>
-
-  <PropertyGroup>
-    <TestRunnerName></TestRunnerName>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
-    <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="Moq" />
-    <PackageReference Include="NUnit" />
-    <PackageReference Include="NUnit3TestAdapter">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
 </Project>

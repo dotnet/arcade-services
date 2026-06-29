@@ -1,17 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 using Maestro.Data;
+using Maestro.DataProviders.Exceptions;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Data;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Models.Darc;
+using Channel = Microsoft.DotNet.ProductConstructionService.Client.Models.Channel;
+using DefaultChannel = Microsoft.DotNet.ProductConstructionService.Client.Models.DefaultChannel;
+using RepositoryBranch = Microsoft.DotNet.ProductConstructionService.Client.Models.RepositoryBranch;
+using Subscription = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
 namespace Maestro.DataProviders;
 
@@ -165,7 +171,7 @@ public class SqlBarClient : ISqlBarClient
         return defaultChannels.Select(ToClientModelDefaultChannel);
     }
 
-    private DefaultChannel ToClientModelDefaultChannel(Data.Models.DefaultChannel other)
+    public static DefaultChannel ToClientModelDefaultChannel(Data.Models.DefaultChannel other)
     {
         return new DefaultChannel(other.Id, other.Repository, other.Enabled)
         {
@@ -174,7 +180,21 @@ public class SqlBarClient : ISqlBarClient
         };
     }
 
-    private static Channel ToClientModelChannel(Data.Models.Channel other)
+    public static RepositoryBranch ToClientModelRepositoryBranch(Data.Models.RepositoryBranch other)
+    {
+        return new RepositoryBranch
+        {
+            Repository = other.RepositoryName,
+            Branch = other.BranchName,
+            MergePolicies = [.. (other.PolicyObject?.MergePolicies ?? [])
+            .Select(p => new MergePolicy
+            {
+                Name = p.Name,
+                Properties = p.Properties ?? [],
+            })],
+        };
+    }
+    public static Channel ToClientModelChannel(Data.Models.Channel other)
     {
         return new Channel(
             other.Id,
@@ -273,19 +293,19 @@ public class SqlBarClient : ISqlBarClient
         return flowGraph;
     }
 
-    private Subscription ToClientModelSubscription(Data.Models.Subscription other)
+    public static Subscription ToClientModelSubscription(Data.Models.Subscription other)
     {
         return new Subscription(
-            other.Id,
-            other.Enabled,
-            other.SourceEnabled,
-            other.SourceRepository,
-            other.TargetRepository,
-            other.TargetBranch,
-            other.PullRequestFailureNotificationTags,
-            other.SourceDirectory,
-            other.TargetDirectory,
-            other.ExcludedAssets?.Select(a => a.Filter).ToList())
+            id: other.Id,
+            enabled: other.Enabled,
+            sourceEnabled: other.SourceEnabled,
+            sourceRepository: other.SourceRepository,
+            targetRepository: other.TargetRepository,
+            targetBranch: other.TargetBranch,
+            sourceDirectory: other.SourceDirectory,
+            targetDirectory: other.TargetDirectory,
+            pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
@@ -339,7 +359,14 @@ public class SqlBarClient : ISqlBarClient
         => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
-        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
+        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency)
+        {
+            MergePolicies = other.MergePolicies?.Select(mp => new MergePolicy
+            {
+                Name = mp.Name,
+                Properties = mp.Properties
+            }).ToList()
+        };
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
         string sourceRepo = null, 
@@ -514,5 +541,291 @@ public class SqlBarClient : ISqlBarClient
             _context.Entry(existingSubscriptionUpdate).CurrentValues.SetValues(subscriptionUpdate);
         }
         await _context.SaveChangesAsync();
+    }
+
+    public async Task CreateSubscriptionsAsync(
+        IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
+        bool andSaveContext = true)
+    {
+        var existingSubscriptionHashes = new HashSet<string>(
+            _context.Subscriptions.Local.Select(SubscriptionComparisonKey));
+
+        var newSubscriptionHashes = new HashSet<string>();
+
+        foreach (var subscription in subscriptionsToCreate)
+        {
+            string subscriptionHash = SubscriptionComparisonKey(subscription);
+            if (existingSubscriptionHashes.Contains(subscriptionHash))
+            {
+                throw new EntityConflictException($"Could not create subscription with id `{subscription.Id}`. "
+                    + $"There already exists a subscription that performs the same update.");
+            }
+
+            if (newSubscriptionHashes.Contains(subscriptionHash))
+            {
+                throw new EntityConflictException($"Could not create subscription with id `{subscription.Id}`. "
+                    + $"There is another subscription in the set of subscriptions to create that performs the same update.");
+            }
+
+            _context.Subscriptions.Add(subscription);
+
+            newSubscriptionHashes.Add(SubscriptionComparisonKey(subscription));
+        }
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateSubscriptionsAsync(
+        IEnumerable<Data.Models.Subscription> subscriptions,
+        bool andSaveContext = true)
+    {
+        List<Guid> ids = [.. subscriptions.Select(sub => sub.Id)];
+
+        var existingSubscriptions = await _context.Subscriptions
+            .Include(sub => sub.ExcludedAssets)
+            .Where(sub => ids.Contains(sub.Id))
+            .ToDictionaryAsync(sub => sub.Id);
+
+        foreach (var subscription in subscriptions)
+        {
+            if (!existingSubscriptions.TryGetValue(
+                subscription.Id,
+                out Data.Models.Subscription existingSubscription))
+            {
+                throw new InvalidOperationException($"Failed to update subscription with id {subscription.Id} "
+                    + "because the subscription could not be found in the database.");
+            }
+
+            UpdateSubscription(
+                subscription,
+                existingSubscription);
+        }
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    private void UpdateSubscription(
+        Data.Models.Subscription subscription,
+        Data.Models.Subscription existingSubscription)
+    {
+        List<string> illegalFieldChanges = [];
+
+        if (subscription.TargetBranch != existingSubscription.TargetBranch)
+        {
+            illegalFieldChanges.Add("TargetBranch");
+        }
+
+        if (subscription.TargetRepository != existingSubscription.TargetRepository)
+        {
+            illegalFieldChanges.Add("TargetRepository");
+        }
+
+        if (subscription.PolicyObject.Batchable != existingSubscription.PolicyObject.Batchable)
+        {
+            illegalFieldChanges.Add("Batchable");
+        }
+
+        if (illegalFieldChanges.Count > 0)
+        {
+            throw new ArgumentException($"Subscription update failed for subscription {subscription.Id} because there was an " +
+                $"attempt to modify the following immutable fields: {string.Join(", ", illegalFieldChanges)}");
+        }
+
+        if (!StringEquivalent(existingSubscription.SourceRepository, subscription.SourceRepository))
+        {
+            existingSubscription.SourceRepository = subscription.SourceRepository;
+        }
+
+        if (existingSubscription.Enabled != subscription.Enabled)
+        {
+            existingSubscription.Enabled = subscription.Enabled;
+        }
+
+        if (existingSubscription.SourceEnabled != subscription.SourceEnabled)
+        {
+            existingSubscription.SourceEnabled = subscription.SourceEnabled;
+        }
+
+        if (!StringEquivalent(existingSubscription.SourceDirectory, subscription.SourceDirectory))
+        {
+            existingSubscription.SourceDirectory = subscription.SourceDirectory;
+        }
+
+        if (!StringEquivalent(existingSubscription.TargetDirectory, subscription.TargetDirectory))
+        {
+            existingSubscription.TargetDirectory = subscription.TargetDirectory;
+        }
+
+        if (!StringEquivalent(existingSubscription.PullRequestFailureNotificationTags, subscription.PullRequestFailureNotificationTags))
+        {
+            existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
+        }
+
+        if (existingSubscription.ChannelId != subscription.Channel.Id)
+        {
+            existingSubscription.ChannelId = subscription.Channel.Id;
+        }
+
+        // Compare PolicyString to avoid serialization differences causing false modifications
+        var newPolicyString = subscription.PolicyString;
+        if (!StringEquivalent(existingSubscription.PolicyString, newPolicyString))
+        {
+            existingSubscription.PolicyString = newPolicyString;
+        }
+
+        // Update ExcludedAssets only if they differ
+        UpdateExcludedAssetsIfChanged(existingSubscription, subscription.ExcludedAssets);
+    }
+
+    /// <summary>
+    /// Compares two strings for equivalence, treating null and empty string as equal.
+    /// </summary>
+    private static bool StringEquivalent(string a, string b)
+    {
+        return string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b)
+            || string.Equals(a, b, StringComparison.Ordinal);
+    }
+
+    private void UpdateExcludedAssetsIfChanged(
+        Data.Models.Subscription existingSubscription,
+        IEnumerable<Data.Models.AssetFilter> incomingFilters)
+    {
+        var existingFilterLookup = (existingSubscription.ExcludedAssets ?? [])
+            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase);
+
+        var incomingFilterStrings = (incomingFilters?.Select(f => f.Filter) ?? [])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // If the sets are equal, no update needed
+        if (existingFilterLookup.Count == incomingFilterStrings.Count
+            && existingFilterLookup.Keys.All(incomingFilterStrings.Contains))
+        {
+            return;
+        }
+
+        List<Data.Models.AssetFilter> updatedFilters = [];
+        foreach (var incomingFilter in incomingFilters ?? [])
+        {
+            // Reuse existing entity if it exists, otherwise use the new one
+            if (existingFilterLookup.TryGetValue(incomingFilter.Filter, out var existingFilter))
+            {
+                updatedFilters.Add(existingFilter);
+            }
+            else
+            {
+                updatedFilters.Add(incomingFilter);
+            }
+        }
+
+        // Find orphaned filters that are no longer in the incoming set
+        var orphanedFilters = existingFilterLookup.Values
+            .Where(f => !incomingFilterStrings.Contains(f.Filter))
+            .ToList();
+
+        if (orphanedFilters.Count > 0)
+        {
+            _context.Set<Data.Models.AssetFilter>().RemoveRange(orphanedFilters);
+        }
+
+        existingSubscription.ExcludedAssets = updatedFilters;
+    }
+
+    public async Task DeleteSubscriptionsAsync(
+        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext = true)
+    {
+        var subscriptionIds = subscriptionsToDelete.Select(s => s.Id).ToHashSet();
+
+        _context.SubscriptionUpdates.RemoveRange(
+            _context.SubscriptionUpdates
+                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
+
+        var subscriptionsWithAssets = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .Where(s => subscriptionIds.Contains(s.Id))
+            .ToListAsync();
+
+        _context.AssetFilters.RemoveRange(
+            subscriptionsWithAssets.SelectMany(s => s.ExcludedAssets));
+
+        _context.Subscriptions.RemoveRange(subscriptionsWithAssets);
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    /// <summary>
+    /// Generates key representing the functional attributes of a subscription for comparison purposes.
+    /// If two subscriptions produce the same hash, they are considered functionally equivalent
+    /// </summary>
+    private static string SubscriptionComparisonKey(Data.Models.Subscription subscription)
+    {
+        if (subscription.SourceEnabled)
+        {
+            // For source-enabled subs, the channel doesn't matter - we can only have one flow
+            // between a product repo and a VMR directory on a given branch
+            return string.Join(
+                "|", new string[] {
+                    subscription.TargetBranch,
+                    subscription.TargetDirectory,
+                    subscription.TargetRepository,
+                    subscription.SourceDirectory,
+                    subscription.SourceEnabled.ToString(),
+            });
+        }
+        else
+        {
+            return string.Join(
+                "|", new string[] {
+                    subscription.Channel.Name,
+                    subscription.SourceRepository,
+                    subscription.TargetBranch,
+                    subscription.TargetRepository,
+                    subscription.TargetDirectory,
+                    subscription.SourceEnabled.ToString(),
+            });
+        }
+    }
+
+    public async Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext = true)
+    {
+        var barNamespace = await _context.Namespaces
+            .Include(n => n.Subscriptions)
+            .ThenInclude(s => s.ExcludedAssets)
+            .Include(n => n.Channels)
+            .Include(n => n.DefaultChannels)
+            .Include(n => n.RepositoryBranches)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(n => n.Name == namespaceName);
+
+        if (barNamespace == null)
+        {
+            throw new InvalidOperationException($"Namespace '{namespaceName}' not found.");
+        }
+
+        var subscriptionIds = barNamespace.Subscriptions.Select(sub => sub.Id).ToHashSet();
+
+        _context.SubscriptionUpdates.RemoveRange(
+            _context.SubscriptionUpdates
+                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
+        _context.AssetFilters.RemoveRange(
+            barNamespace.Subscriptions.SelectMany(s => s.ExcludedAssets));
+        _context.Channels.RemoveRange(barNamespace.Channels);
+        _context.DefaultChannels.RemoveRange(barNamespace.DefaultChannels);
+        _context.Subscriptions.RemoveRange(barNamespace.Subscriptions);
+        _context.RepositoryBranches.RemoveRange(barNamespace.RepositoryBranches);
+        _context.Namespaces.Remove(barNamespace);
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-channel", HelpText = "Update an existing channel's metadata.")]
-internal class UpdateChannelCommandLineOptions : CommandLineOptions<UpdateChannelOperation>
+internal class UpdateChannelCommandLineOptions : ConfigurationManagementCommandLineOptions<UpdateChannelOperation>
 {
     [Option('i', "id", Required = true, HelpText = "Channel ID.")]
     public int Id { get; set; }

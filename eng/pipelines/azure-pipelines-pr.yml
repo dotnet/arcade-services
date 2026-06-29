@@ -88,7 +88,7 @@ stages:
         displayName: Build Docker Image
         pool:
           name: NetCore-Public
-          demands: ImageOverride -equals 1es-ubuntu-2004-open
+          demands: ImageOverride -equals build.azurelinux.3.amd64.open
 
         steps:
         - checkout: self

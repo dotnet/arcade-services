@@ -62,26 +62,10 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<SubscriptionUpdate> SubscriptionUpdates { get; set; }
     public DbSet<Repository> Repositories { get; set; }
     public DbSet<RepositoryBranch> RepositoryBranches { get; set; }
-    public DbSet<RepositoryBranchUpdate> RepositoryBranchUpdates { get; set; }
     public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
     public DbSet<GoalTime> GoalTime { get; set; }
-    public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
     public DbSet<Namespace> Namespaces { get; set; }
-
-    public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates
-        .TemporalAll()
-        .Select(
-            u => new RepositoryBranchUpdateHistoryEntry
-            {
-                Repository = u.RepositoryName,
-                Branch = u.BranchName,
-                Action = u.Action,
-                Success = u.Success,
-                ErrorMessage = u.ErrorMessage,
-                Method = u.Method,
-                Arguments = u.Arguments,
-                Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-            });
+    public DbSet<SubscriptionOutcome> SubscriptionOutcomes { get; set; }
 
     public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates
         .TemporalAll()
@@ -209,46 +193,6 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             .WithMany(r => r.Branches)
             .HasForeignKey(rb => new { rb.RepositoryName });
 
-        builder.Entity<RepositoryBranchUpdate>()
-            .HasKey(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
-
-        builder.Entity<RepositoryBranchUpdate>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdate>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdate>()
-            .ToTable(b =>
-            {
-                b.IsTemporal(t =>
-                {
-                    t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
-                    t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
-                    t.UseHistoryTable(nameof(RepositoryBranchUpdateHistory));
-                });
-            })
-            .HasOne(ru => ru.RepositoryBranch)
-            .WithOne()
-            .HasForeignKey<RepositoryBranchUpdate>(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                })
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.Entity<RepositoryBranchUpdateHistory>().ToTable(nameof(RepositoryBranchUpdateHistory));
-        builder.Entity<RepositoryBranchUpdateHistory>()
-            .HasNoKey();
-
-        builder.Entity<RepositoryBranchUpdateHistory>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdateHistory>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
-        builder.Entity<RepositoryBranchUpdateHistory>()
-            .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
-
         builder.Entity<GoalTime>()
             .HasKey(
                 gt => new
@@ -298,6 +242,30 @@ public class BuildAssetRegistryContext(DbContextOptions options)
                 typeof(string),
                 null
             ));
+
+        // SubscriptionOutcome is intentionally decoupled from Subscription and Build:
+        // - OperationId is the primary key.
+        // - SubscriptionId / BuildId are plain scalar columns (no navigation properties, no FK
+        //   constraints) so deleting a Subscription or a Build leaves outcome rows untouched.
+        // - Indexes on SubscriptionId and BuildId support lookups by either id.
+        builder.Entity<SubscriptionOutcome>(b =>
+        {
+            b.HasKey(o => o.OperationId);
+            // Operation IDs are 32-char hex strings (e.g. "dbd48626590fcd10d5685a27baecbca5").
+            b.Property(o => o.OperationId).HasMaxLength(32).IsFixedLength();
+            b.Property(o => o.Type).HasConversion<string>();
+            // SQL Server datetime2 doesn't preserve DateTimeKind. The recorder writes
+            // DateTime.UtcNow, so re-stamp the value as Utc on read so that downstream
+            // conversions to DateTimeOffset produce the correct +00:00 offset.
+            b.Property(o => o.Date).HasConversion(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            b.HasIndex(o => o.BuildId);
+            b.HasIndex(o => o.Date).IsDescending();
+            b.HasIndex(nameof(SubscriptionOutcome.SubscriptionId), nameof(SubscriptionOutcome.Date))
+                .IsDescending(false, true);
+        });
+
     }
 
     public virtual Task<long> GetInstallationId(string repositoryUrl)
@@ -439,12 +407,6 @@ FROM traverse;";
 public class SubscriptionUpdateHistoryEntry : UpdateHistoryEntry
 {
     public Guid SubscriptionId { get; set; }
-}
-
-public class RepositoryBranchUpdateHistoryEntry : UpdateHistoryEntry
-{
-    public string Repository { get; set; }
-    public string Branch { get; set; }
 }
 
 public class UpdateHistoryEntry

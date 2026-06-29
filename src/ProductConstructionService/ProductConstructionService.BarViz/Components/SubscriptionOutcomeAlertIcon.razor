@@ -1,0 +1,60 @@
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using ProductConstructionService.BarViz.Code.Helpers
+
+@{
+    var tooltip = GetRowAlertTooltip(ForwardFlowOutcome, BackflowOutcome);
+}
+
+@if (!string.IsNullOrEmpty(tooltip))
+{
+    <FluentIcon Value="@(new Icons.Filled.Size16.Warning())"
+                Color="Color.Warning"
+                Title="@tooltip"
+                Style="margin-right: 4px; vertical-align: middle;" />
+}
+
+@code {
+    /// <summary>
+    /// Latest trigger outcome of the row's forward-flow subscription, if any.
+    /// </summary>
+    [Parameter]
+    public SubscriptionTriggerOutcome? ForwardFlowOutcome { get; set; }
+
+    /// <summary>
+    /// Latest trigger outcome of the row's backflow subscription, if any.
+    /// </summary>
+    [Parameter]
+    public SubscriptionTriggerOutcome? BackflowOutcome { get; set; }
+
+    /// <summary>
+    ///   Builds the row alert-icon tooltip describing which flow direction(s) had an errored
+    ///   latest trigger outcome. Returns null when neither flow is in error (no icon shown).
+    /// </summary>
+    private static string? GetRowAlertTooltip(
+        SubscriptionTriggerOutcome? forwardFlowOutcome,
+        SubscriptionTriggerOutcome? backflowOutcome)
+    {
+        var lines = new List<string>();
+
+        if (SubscriptionOutcomeHelper.IsErrorOutcome(forwardFlowOutcome))
+        {
+            lines.Add("Forward flow: " + DescribeOutcome(forwardFlowOutcome));
+        }
+
+        if (SubscriptionOutcomeHelper.IsErrorOutcome(backflowOutcome))
+        {
+            lines.Add("Backflow: " + DescribeOutcome(backflowOutcome));
+        }
+
+        if (lines.Count == 0)
+        {
+            return null;
+        }
+
+        lines.Insert(0, "Currently failing:");
+        return string.Join("\n", lines);
+    }
+
+    private static string DescribeOutcome(SubscriptionTriggerOutcome? outcome)
+        => string.IsNullOrWhiteSpace(outcome?.Message) ? "the last trigger failed." : outcome.Message;
+}

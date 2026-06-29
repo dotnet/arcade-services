@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -23,14 +24,13 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
-        bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -60,8 +60,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Subscription subscription,
         Build build,
         string headBranch,
-        bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -70,7 +70,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             targetRepoPath: null,
-            enableRebase,
+            additionalTargetRemotes: [subscription.TargetRepository],
+            unsafeFlow,
             cancellationToken);
 
         CodeFlowResult result = await FlowBackAsync(
@@ -81,28 +82,38 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 headBranch,
                 build,
                 subscription.ExcludedAssets,
-                enableRebase,
-                forceUpdate),
+                KeepConflicts: true,
+                forceUpdate,
+                unsafeFlow,
+                UseRecreationFallback: true),
             targetRepo,
             lastFlows,
             headBranchExisted,
             cancellationToken);
 
-        if (result.HadUpdates && enableRebase && !result.HadConflicts)
+        result = result with
+        {
+            // We want to always push the changes (even if only the <Source> tag changed) as it contains important information about where the flow came from
+            HadUpdates = result.HadUpdates || headBranchExisted,
+        };
+
+        if (result.HadUpdates && !result.HadConflicts)
         {
             var stagedFiles = await targetRepo.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
             {
                 // When we do a rebase flow, the files stay staged and we need to commit them
-                await targetRepo.CommitAsync("Update dependencies", allowEmpty: false, cancellationToken: cancellationToken);
+                var commitMessage = new StringBuilder();
+                commitMessage.Append("Update dependencies from build ");
+                commitMessage.AppendLine(build.Id.ToString());
+                commitMessage.AppendLine(BackflowConflictResolver.BuildDependencyUpdateCommitMessage(result.DependencyUpdates));
+                commitMessage.AppendLine(Constants.AUTOMATION_COMMIT_TAG);
+
+                await targetRepo.CommitAsync(commitMessage.ToString(), allowEmpty: false, cancellationToken: cancellationToken);
             }
         }
 
-        return result with
-        {
-            // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
-            HadUpdates = result.HadUpdates || headBranchExisted,
-        };
+        return result;
     }
 
     protected override bool ShouldResetClones => true;
@@ -123,7 +134,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
+        if (conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR

@@ -6,31 +6,36 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteSubscriptionsOperation : Operation
+internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBase
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteSubscriptionsCommandLineOptions _options;
+    private readonly IConfigurationRepositoryManager _configRepositoryManager;
     private readonly ILogger<DeleteSubscriptionsOperation> _logger;
     public DeleteSubscriptionsOperation(
         DeleteSubscriptionsCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configRepositoryManager,
         ILogger<DeleteSubscriptionsOperation> logger)
+        : base(options, logger)
     {
         _options = options;
         _barClient = barClient;
+        _configRepositoryManager = configRepositoryManager;
         _logger = logger;
     }
 
-    public override async Task<int> ExecuteAsync()
+    protected override async Task<int> ExecuteInternalAsync()
     {
         try
         {
@@ -70,32 +75,15 @@ internal class DeleteSubscriptionsOperation : Operation
                 subscriptionsToDelete.AddRange(subscriptions);
             }
 
-            if (!noConfirm)
-            {
-                // Print out the list of subscriptions about to be triggered.
-                Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
-                foreach (var subscription in subscriptionsToDelete)
-                {
-                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                }
+            var parameters = _options.ToConfigurationRepositoryOperationParameters();
 
-                if (!UxHelpers.PromptForYesNo("Continue?"))
-                {
-                    Console.WriteLine($"No subscriptions deleted, exiting.");
-                    return Constants.ErrorCode;
-                }
+            foreach (Subscription subscription in subscriptionsToDelete)
+            {
+                await _configRepositoryManager.DeleteSubscriptionAsync(
+                                parameters,
+                                SubscriptionYaml.FromClientModel(subscription));
             }
 
-            Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
-            foreach (var subscription in subscriptionsToDelete)
-            {
-                // If noConfirm was passed, print out the subscriptions as we go
-                if (noConfirm)
-                {
-                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                }
-                await _barClient.DeleteSubscriptionAsync(subscription.Id);
-            }
             Console.WriteLine("done");
 
             return Constants.SuccessCode;
@@ -103,6 +91,15 @@ internal class DeleteSubscriptionsOperation : Operation
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
+                ex.FilePath, // The subscription id is not stored in the exception, so we use filePath as context
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

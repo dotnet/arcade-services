@@ -12,7 +12,8 @@ using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -296,6 +297,34 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
+    ///     Get the URL of a pull request matching the given repository, source branch, and target branch.
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing the pull request</param>
+    /// <param name="headBranch">Head (source) branch for PR</param>
+    /// <param name="targetBranch">Target branch for PR</param>
+    /// <returns>URL of the pull request if found, null otherwise</returns>
+    public async Task<string?> GetPullRequestUrlAsync(string repoUri, string headBranch, string targetBranch)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUri);
+
+        var request = new Octokit.PullRequestRequest
+        {
+            Head = $"{owner}:{headBranch}",
+            Base = targetBranch,
+            State = Octokit.ItemStateFilter.Open,
+        };
+
+        IReadOnlyList<Octokit.PullRequest> prs = await GetClient(owner, repo).PullRequest.GetAllForRepository(owner, repo, request);
+
+        if (prs.Count == 0)
+        {
+            return null;
+        }
+
+        return prs[0].HtmlUrl;
+    }
+
+    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -320,10 +349,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     /// <summary>
     ///     Create a new pull request for a repository
-    /// </summary>
+    /// </summary>  
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<Models.PullRequest> CreatePullRequestAsync(string repoUri, Models.PullRequest pullRequest)
+    /// <param name="enablePrAutoComplete">Used only for AzDo PRs, irrelevant for github client</param>
+    public async Task<Models.PullRequest> CreatePullRequestAsync(string repoUri, Models.PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
 
@@ -362,6 +392,20 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 Title = pullRequest.Title,
                 Body = pullRequest.Description
+            });
+    }
+
+    public async Task ClosePullRequestAsync(string pullRequestUri)
+    {
+        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
+
+        await GetClient(owner, repo).PullRequest.Update(
+            owner,
+            repo,
+            id,
+            new PullRequestUpdate
+            {
+                State = ItemState.Closed
             });
     }
 
@@ -1222,6 +1266,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 BaseVersion = baseVersion,
                 TargetVersion = targetVersion,
+                MergeBaseCommit = content["merge_base_commit"]?["sha"]?.Value<string>(),
                 Ahead = content["ahead_by"]!.Value<int>(),
                 Behind = content["behind_by"]!.Value<int>(),
                 Valid = true
@@ -1498,5 +1543,27 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
 
         throw new DarcException($"Failed to GET Github resource at URI {resourceUri}. Status code: {response.HttpResponse.StatusCode}");
+    }
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
+        path = path.Replace('\\', '/');
+        path = path.TrimStart('/').TrimEnd('/');
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+
+        (string owner, string repo) = ParseRepoUri(repoUri);
+
+        var client = GetClient(owner, repo);
+
+        // Get the tree for the specified path (non-recursive, just immediate children)
+        TreeResponse tree = await GetTreeForPathAsync(owner, repo, commit, path);
+
+        return tree.Tree
+            .Where(item => item.Type == TreeType.Blob)
+            .Select(item => $"{path}/{item.Path}".TrimStart('/'))
+            .ToList();
     }
 }

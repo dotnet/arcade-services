@@ -10,9 +10,6 @@ namespace ProductConstructionService.ReproTool.Options;
 [Verb("flow-commit", HelpText = "Flows the given branch between a repo and a VMR (both in maestro-auth-test) using local PCS")]
 internal class FlowCommitOptions : Options
 {
-    [Option("channel", HelpText = "Channel to use / create", Required = true)]
-    public required string Channel { get; init; }
-
     [Option("source-repo", HelpText = "Repo (full URI) to flow the commit from (must be under maestro-auth-test/)", Required = true)]
     public required string SourceRepository { get; init; }
 
@@ -33,6 +30,9 @@ internal class FlowCommitOptions : Options
 
     [Option("assets-from-build", HelpText = "A real build id from which to take assets. Shouldn't be provided if using the --packages option", Required = false)]
     public int RealBuildId { get; init; }
+
+    [Option("skip-cleanup", HelpText = "Don't delete any of the created resources when finished", Required = false)]
+    public bool SkipCleanup { get; init; }
 
     internal override Operation GetOperation(IServiceProvider sp)
         => ActivatorUtilities.CreateInstance<FlowCommitOperation>(sp, this);

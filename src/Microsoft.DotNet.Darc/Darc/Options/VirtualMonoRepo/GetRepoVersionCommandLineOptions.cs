@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("get-version", HelpText = "Gets the current version (a SHA) of a repository in the VMR.")]
 internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase<GetRepoVersionOperation>
 {
-    [Value(0, HelpText = "Repository names (e.g. runtime) to get the versions for.")]
+    [Value(0, MetaName = "Repository names", HelpText = "Repository names (e.g. runtime) to get the versions for.")]
     public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
 
     public override IServiceCollection RegisterServices(IServiceCollection services)

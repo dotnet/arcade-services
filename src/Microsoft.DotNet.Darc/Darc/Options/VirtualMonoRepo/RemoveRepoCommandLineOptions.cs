@@ -4,27 +4,18 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("remove-repo", HelpText = "Removes repo(s) from the VMR.")]
 internal class RemoveRepoCommandLineOptions : VmrCommandLineOptions<RemoveRepoOperation>, IBaseVmrCommandLineOptions
 {
-    [Value(0, Required = true, HelpText = "Repository names to remove from the VMR.")]
+    [Value(0, MetaName = "Repository names", Required = true, HelpText = "Repository names to remove from the VMR.")]
     public IEnumerable<string> Repositories { get; set; }
 
     // Required by IBaseVmrCommandLineOptions but not used for this command
     public IEnumerable<string> AdditionalRemotes { get; set; } = [];
 
-    public override IServiceCollection RegisterServices(IServiceCollection services)
-    {
-        if (!Verbose && !Debug)
-        {
-            // Force verbose output for these commands
-            Verbose = true;
-        }
-
-        return base.RegisterServices(services);
-    }
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

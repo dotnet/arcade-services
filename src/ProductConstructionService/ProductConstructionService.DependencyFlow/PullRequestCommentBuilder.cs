@@ -4,12 +4,10 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -39,104 +37,45 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         _barClient = barClient;
     }
 
-    public static string BuildNotifyAboutConflictingUpdateComment(
-        IReadOnlyCollection<string> filesInConflict,
-        SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        InProgressPullRequest pr,
-        string prHeadBranch)
-    {
-        StringBuilder comment = new();
-        comment.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
-        comment.AppendLine("Files conflicting with the head branch:");
-        AppendConflictedFileList(update, subscription, [..filesInConflict.Select(f => new UnixPath(f))], prHeadBranch, comment);
-        comment.AppendLine();
-        comment.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
-
-        var notificationTags = GetNotificationTags(subscription);
-        if (!string.IsNullOrEmpty(notificationTags))
-        {
-            comment.AppendLine();
-            comment.AppendLine("Tagging the following users to help with conflict resolution:");
-            comment.AppendLine(notificationTags);
-        }
-
-        return comment.ToString();
-    }
-
-    public static string NotifyAboutMergeConflict(
-        InProgressPullRequest pr,
-        SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        Build build)
-    {
-        string metadataFile, contentType, correctContent;
-
-        if (subscription.IsBackflow())
-        {
-            metadataFile = VersionFiles.VersionDetailsXml;
-            contentType = "xml";
-            var sourceMetadata = new SourceDependency(
-                update.SourceRepo,
-                subscription.SourceDirectory,
-                update.SourceSha,
-                update.BuildId);
-            correctContent = VersionDetailsParser.SerializeSourceDependency(sourceMetadata);
-        }
-        else
-        {
-            metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
-            contentType = "json";
-            correctContent = JsonSerializer.Serialize(
-                new RepositoryRecord(
-                    subscription.TargetDirectory,
-                    update.SourceRepo,
-                    update.SourceSha,
-                    update.BuildId),
-                new JsonSerializerOptions()
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                });
-        }
-
-        return $"""
-                There are conflicts with the `{subscription.TargetBranch}` branch in this PR.
-                Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
-                When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
-                ```{contentType}
-                {correctContent}
-                ```
-                """;
-    }
-
     internal static string BuildNotificationAboutManualConflictResolutionComment(
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
-        string prHeadBranch)
+        string prHeadBranch,
+        bool prIsEmpty,
+        bool unsafeFlow)
     {
-        StringBuilder comment = new();
-        comment.AppendLine("# 🛑 Conflict detected");
-        comment.Append($"A conflict was detected when trying to update this PR with changes from ");
-        comment.Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha));
-        comment.AppendLine(".");
-        comment.AppendLine();
+        var comment = new StringBuilder()
+            .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
+            .AppendLine(" — Conflict detected")
+            .Append($"A conflict was detected when trying to update this PR with changes from build `{update.BuildId}` of ")
+            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
+            .AppendLine(".");
+
+        if (!prIsEmpty)
+        {
+            comment
+                .AppendLine()
+                .Append("**:bulb: You can either merge the PR without getting these new updates ")
+                .AppendLine("or manually flow them in and resolve the conflicts so that automated codeflow can resume for this PR.**");
+        }
+
+        comment
+            .AppendLine();
 
         var notificationTags = GetNotificationTags(subscription);
         if (!string.IsNullOrEmpty(notificationTags))
         {
-            comment.Append(notificationTags);
-            comment.AppendLine(" please help resolve the conflict in this PR.");
-            comment.AppendLine();
+            comment
+                .Append(notificationTags)
+                .AppendLine(" please help resolve the conflict in this PR.")
+                .AppendLine();
         }
 
-        comment.AppendLine("The conflicts in the following files need to be manually resolved so that automated codeflow can resume for this PR:");
-
-        AppendConflictedFileList(update, subscription, conflictedFiles, prHeadBranch, comment);
-
-        comment.AppendLine();
+        comment
+            .AppendLine("The conflicts in the following files need to be manually resolved:")
+            .AppendConflictedFileList(update, subscription, conflictedFiles, prHeadBranch)
+            .AppendLine();
 
         // https://github.com/dotnet/arcade-services/issues/5443 - temporary hardcode the version to give repos time to get new arcade
         var maestroVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
@@ -144,9 +83,21 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .Split('+')
             .First();
 
-        comment.AppendLine(
+        var unsafeMessage = unsafeFlow && subscription.IsForwardFlow()
+            ? $"""
+
+                If you don't care about the changes made in the VMR, and just want the vmr branch to match your repo you can use
+                ```bash
+                darc vmr reset --build {update.BuildId} {subscription.TargetDirectory ?? subscription.SourceDirectory}
+                ```
+                from the local vmr clone.
+            """
+            : string.Empty;
+
+        comment
+            .AppendLine(
             $"""
-            #### ℹ️ To resolve the conflict, please follow these steps:
+            #### :information_source: To resolve the conflicts, please follow these steps:
             1. Clone the current repository
                 ```bash
                 git clone {subscription.TargetRepository}
@@ -160,18 +111,46 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 # or on Windows
                 .\eng\common\darc-init.ps1
                 ```
-            3. Run from repo's git clone and follow the instructions provided by the command to resolve the conflict locally
+            3. Run from repo's git clone and follow the instructions provided by the command to stage the conflict locally
                 ```bash
-                darc vmr resolve-conflict --subscription {subscription.Id}
+                darc vmr resolve-conflict --subscription {subscription.Id} {(unsafeFlow ? "--unsafe" : "")}
                 ```
+                {unsafeMessage}
                 This should apply the build `{update.BuildId}` with sources from [`{Microsoft.DotNet.DarcLib.Commit.GetShortSha(update.SourceSha)}`]({GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)})
-            4. Commit & push the changes
+            4. Resolve the conflicts, commit & push the changes
             5. Once pushed, the `Codeflow verification` check will turn green.  
                 If not, a new build might have flown into the PR and you might need to run the command above again.
             """);
 
         return comment.ToString();
     }
+
+    public static string BuildOppositeCodeflowMergedNotification() =>
+        """
+        While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
+        To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
+        
+        You can continue with one of the following options:
+        - Ignore this and merge this PR as usual without waiting for the new changes.
+          Once merged, Maestro will create a new codeflow PR with the new changes.
+        - Close this PR and wait for Maestro to open a new one with old and new changes included.
+          You will lose any manual changes made in this PR.
+          You can also manually trigger the new codeflow right away by running:
+          ```
+          darc trigger-subscriptions --id <subscriptionId>
+          ```
+        - Force a codeflow into this PR at your own risk if you want the new changes.
+          User commits made to this PR might be reverted.
+          ```
+          darc trigger-subscriptions --id <subscriptionId> --force
+          ```
+        """;
+
+    public static string BuildMissingOppositeDirectionSubscriptionNotification(bool isForwardFlow, string sourceBranch) =>
+        $"""
+        :warning: No subscription flowing code in the opposite direction is set up.
+        Code changes made in {(isForwardFlow ? "the VMR's `src/` directory" : "this repository")} will not flow back to the {(isForwardFlow ? "source repository" : "VMR")} on branch "{sourceBranch}".
+        """;
 
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
     {
@@ -250,37 +229,16 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         return string.Join(Environment.NewLine, tagsToNotify);
     }
+}
 
-    private static (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        string filePath,
-        string prHeadBranch)
-    {
-        string vmrFileUrl;
-        string repoFileUrl;
-        if (subscription.IsBackflow())
-        {
-            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.SourceDirectory, update.SourceSha, filePath);
-            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, prHeadBranch, filePath);
-        }
-        else if (subscription.IsForwardFlow())
-        {
-            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.TargetDirectory, prHeadBranch, filePath);
-            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, filePath);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Failed to generate codeflow conflict message because subscription {subscription.Id} is not source-enabled.");
-        }
-        return (vmrFileUrl, repoFileUrl);
-    }
-
-    private static void AppendConflictedFileList(
+static file class StringBuilderExtensions
+{
+    public static StringBuilder AppendConflictedFileList(
+        this StringBuilder sb,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
-        string prHeadBranch,
-        StringBuilder sb)
+        string prHeadBranch)
     {
         string srcDir = subscription.IsForwardFlow()
             ? VmrInfo.GetRelativeRepoSourcesPath(subscription.TargetDirectory)
@@ -307,5 +265,31 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             sb.AppendLine($" - `{relativeFilePath}`");
             sb.AppendLine($"     *🔍 View file in {repoLink} vs {vmrLink}*");
         }
+
+        return sb;
+    }
+
+    private static (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
+        Subscription subscription,
+        string filePath,
+        string prHeadBranch)
+    {
+        string vmrFileUrl;
+        string repoFileUrl;
+        if (subscription.IsBackflow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.SourceDirectory, update.SourceSha, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, prHeadBranch, filePath);
+        }
+        else if (subscription.IsForwardFlow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.TargetDirectory, prHeadBranch, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, filePath);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Failed to generate codeflow conflict message because subscription {subscription.Id} is not source-enabled.");
+        }
+        return (vmrFileUrl, repoFileUrl);
     }
 }

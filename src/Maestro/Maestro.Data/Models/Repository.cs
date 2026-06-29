@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models;
@@ -50,90 +49,4 @@ public class RepositoryBranch
     {
         public List<MergePolicyDefinition> MergePolicies { get; set; }
     }
-}
-
-public class RepositoryBranchUpdate
-{
-    [MaxLength(Repository.RepositoryNameLength)]
-    [Required]
-    public string RepositoryName { get; set; }
-
-    [MaxLength(Repository.BranchNameLength)]
-    [Required]
-    public string BranchName { get; set; }
-
-    public RepositoryBranch RepositoryBranch { get; set; }
-
-    /// <summary>
-    ///     **true** if the update succeeded; **false** otherwise.
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
-    ///     A message describing what the subscription was trying to do.
-    ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
-    /// </summary>
-    public string Action { get; set; }
-
-    /// <summary>
-    ///     The error that occured, if any.
-    /// </summary>
-    public string ErrorMessage { get; set; }
-
-    /// <summary>
-    ///     The method that was called.
-    /// </summary>
-    public string Method { get; set; }
-
-    /// <summary>
-    ///     The parameters to the called method.
-    /// </summary>
-    public string Arguments { get; set; }
-}
-
-public class RepositoryBranchUpdateHistory
-{
-    [MaxLength(Repository.RepositoryNameLength)]
-    [Required]
-    public string RepositoryName { get; set; }
-
-    [MaxLength(Repository.BranchNameLength)]
-    [Required]
-    public string BranchName
-    {
-        get
-        {
-            return GitHelpers.NormalizeBranchName(field);
-        }
-        set
-        {
-            field = GitHelpers.NormalizeBranchName(value);
-        }
-    }
-
-    /// <summary>
-    ///     **true** if the update succeeded; **false** otherwise.
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
-    ///     A message describing what the subscription was trying to do.
-    ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
-    /// </summary>
-    public string Action { get; set; }
-
-    /// <summary>
-    ///     The error that occured, if any.
-    /// </summary>
-    public string ErrorMessage { get; set; }
-
-    /// <summary>
-    ///     The method that was called.
-    /// </summary>
-    public string Method { get; set; }
-
-    /// <summary>
-    ///     The parameters to the called method.
-    /// </summary>
-    public string Arguments { get; set; }
 }

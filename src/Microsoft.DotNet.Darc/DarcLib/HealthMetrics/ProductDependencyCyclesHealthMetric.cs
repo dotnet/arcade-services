@@ -18,6 +18,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
     private readonly string _repository;
     private readonly string _branch;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly ILocalFactory _localFactory;
     private readonly IBasicBarClient _barClient;
     private readonly ILogger _logger;
 
@@ -25,12 +26,14 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         string repo,
         string branch,
         IRemoteFactory remoteFactory,
+        ILocalFactory localFactory,
         IBasicBarClient barClient,
         ILogger logger)
     {
         _repository = repo;
         _branch = branch;
         _remoteFactory = remoteFactory;
+        _localFactory = localFactory;
         _barClient = barClient;
         _logger = logger;
     }
@@ -70,6 +73,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
 
         DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
             _remoteFactory,
+            _localFactory,
             _barClient,
             _repository,
             commit,

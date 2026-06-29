@@ -1,12 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
 using System.Net;
 using System.Text;
+using Azure.Core;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
+using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -16,9 +19,12 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -26,27 +32,21 @@ using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Pages.DependencyFlow;
-using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using ProductConstructionService.Common;
-using ProductConstructionService.WorkItems;
+using Maestro.Services.Common.Cache;
+using Maestro.Services.Common.FeatureFlags;
 using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.ServiceDefaults;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Octokit.Webhooks.AspNetCore;
-using Octokit.Webhooks;
-using ProductConstructionService.Api.Controllers;
-using Azure.Core;
-using Microsoft.DotNet.DarcLib.Helpers;
+using Maestro.WorkItems;
+using Maestro.Services.Common;
 
 namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {
-    private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
-    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
+    private const string DefaultWorkItemType = "Default";
+    private const string CodeFlowWorkItemType = "CodeFlow";
 
-    private static class ConfigurationKeys
+    internal static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
@@ -54,7 +54,6 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
-        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -63,6 +62,13 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+        public const string RedisConnectionString = "ConnectionStrings:redis";
+        public const string Kusto = "Kusto";
+        public const string QueuesConnectionString = "queues";
+
+        public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
+        public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
+        public const string DefaultWorkItemConsumerCount = "DefaultWorkItemConsumerCount";
     }
 
     static PcsStartup()
@@ -75,20 +81,18 @@ internal static class PcsStartup
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
-    /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
-        bool authRedis,
         bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);
+
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<EnvironmentNamespaceOptions>(
             builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
@@ -96,7 +100,9 @@ internal static class PcsStartup
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
-        builder.AddTelemetry();
+        builder.Services.AddTelemetry();
+        builder.Services.AddApplicationInsightsTelemetry();
+        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
         if (addKeyVault)
         {
@@ -113,7 +119,7 @@ internal static class PcsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.DataProviders.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         if (isDevelopment)
@@ -121,23 +127,49 @@ internal static class PcsStartup
             builder.Services.UseMaestroAuthTestRepositories();
         }
 
-        await builder.AddRedisCache(authRedis);
-        builder.AddBuildAssetRegistry();
-        builder.AddMetricRecorder();
-        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
+        var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
+        await builder.AddRedisCache(redisConnectionString, managedIdentityId);
+        builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
+        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
+        builder.Services.AddConfigurationIngestion();
+
+        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
+        if (!string.IsNullOrEmpty(managedIdentityId))
+        {
+            string kustoManagedIdentityIdKey = $"{ConfigurationKeys.Kusto}:{nameof(KustoOptions.ManagedIdentityId)}";
+            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
+        }
+        builder.Services.AddKustoClientProvider(ConfigurationKeys.Kusto);
+
+        var regularQueueCount = int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemConsumerCount));
+        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true,
+            new Dictionary<string, (int Count, string WorkItemType)>
+            {
+                { builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName), (regularQueueCount, DefaultWorkItemType) },
+                { builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName), (1, CodeFlowWorkItemType) }
+            });
+        builder.AddWorkItemProducerFactory(
+            ConfigurationKeys.QueuesConnectionString,
+            azureCredential,
+            builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName),
+            builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName));
         builder.AddDependencyFlowProcessors();
+
         builder.AddCodeflow();
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
+        builder.Services.AddScoped<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
+        builder.Services.AddScoped<ILocalFactory, LocalFactory>();
         builder.Services.AddTransient<IGitHubInstallationIdResolver, GitHubInstallationIdResolver>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
+        builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -148,7 +180,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults();
+        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(
@@ -197,7 +229,6 @@ internal static class PcsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.WebAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
-            .AddGitHubWebHooks()
             .AddApiPagination()
             .AddCookieTempDataProvider(
                 options =>
@@ -206,8 +237,6 @@ internal static class PcsStartup
                     // The application will not function without this cookie.
                     options.Cookie.IsEssential = true;
                 });
-
-        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
 
         if (addSwagger)
         {
@@ -249,10 +278,6 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
-            
-            e.MapGitHubWebhooks(
-                path: GitHubWebHooksPath,
-                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 

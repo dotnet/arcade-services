@@ -40,21 +40,18 @@ jobs:
       artifact: PackageArtifacts
       patterns: PackageArtifacts/Microsoft.DotNet.Darc.*
 
-    - powershell: .\eng\common\build.ps1 -restore
-      displayName: Install .NET
-
     - powershell: |
         $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
         $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
         $darcVersion = $Matches[1]
         mkdir darc
-        .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
+        .\eng\common\dotnet.ps1 tool install Microsoft.DotNet.Darc --tool-path .\darc --source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
       displayName: Install Darc
 
     - template: /eng/common/templates-official/steps/get-federated-access-token.yml
       parameters:
-        federatedServiceConnection: "ArcadeServicesInternal"
-        outputVariableName: "AzdoToken"
+        federatedServiceConnection: ArcadeServicesInternal
+        outputVariableName: AzdoToken
 
     - task: AzureCLI@2
       displayName: Test Darc add-build-to-channel

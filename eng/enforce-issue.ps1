@@ -23,13 +23,17 @@ elseif ($prDetail.title -match "\[automated\]") {
 	Write-Host "Automated PRs don't need release notes. Check passed."
 	exit 0
 }
+elseif ($prDetail.title -match "Bump") {
+	Write-Host "Automated PRs don't need release notes. Check passed."
+	exit 0
+}
 
 
 $issuePatterns = @{
     "GitHub Full Link"      = "github\.com/dotnet/(.+)/issues/(\d+)" # Eg: https://github.com/dotnet/arcade-services/issues/3625
     "AzDO DevOps Link"      = "dev\.azure\.com/(.+)/(.+)/_workitems" #Eg: https://dev.azure.com/dnceng/internal/_workitems/edit/45126
     "AzDO Visual Studio Link" = "(.+)\.visualstudio\.com/(.+)/_workitems"
-    "GitHub Issue Shortcut" = "(?<!\w)#\d+\b" # Eg: #5374
+    "GitHub Issue Shortcut" = "(?<!\w)([\w-]+/[\w-]+)?#\d+\b" # Eg: #5374 or dotnet/arcade-services#5832
 }
 
 $hasIssue = $false

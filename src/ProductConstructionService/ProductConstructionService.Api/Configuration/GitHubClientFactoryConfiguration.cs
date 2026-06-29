@@ -6,7 +6,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 
 namespace ProductConstructionService.Api.Configuration;
 
-public static class GitHubClientFactoryConfiguration
+internal static class GitHubClientFactoryConfiguration
 {
     public static void AddGitHubClientFactory(
         this WebApplicationBuilder builder,

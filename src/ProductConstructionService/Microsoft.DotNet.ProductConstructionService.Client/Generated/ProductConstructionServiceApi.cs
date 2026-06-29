@@ -27,17 +27,22 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         IAssets Assets { get; }
         IAzDo AzDo { get; }
+        IBackflowStatus BackflowStatus { get; }
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
+        IChannels Channels { get; }
+        ICodeflow Codeflow { get; }
+        IConfigurationIngestion Ingestion { get; }
+        IDarcVersion DarcVersion { get; }
         IDefaultChannels DefaultChannels { get; }
         IFeatureFlags FeatureFlags { get; }
         IGoal Goal { get; }
-        IChannels Channels { get; }
         IPipelines Pipelines { get; }
         IPullRequest PullRequest { get; }
         IRepository Repository { get; }
         IStatus Status { get; }
         ISubscriptions Subscriptions { get; }
+        ISubscriptionTriggerOutcomes SubscriptionTriggerOutcomes { get; }
     }
 
     public partial interface IServiceOperations<T>
@@ -117,9 +122,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IAzDo AzDo { get; }
 
+        public IBackflowStatus BackflowStatus { get; }
+
         public IBuilds Builds { get; }
 
         public IBuildTime BuildTime { get; }
+
+        public IChannels Channels { get; }
+
+        public ICodeflow Codeflow { get; }
 
         public IDefaultChannels DefaultChannels { get; }
 
@@ -127,7 +138,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IGoal Goal { get; }
 
-        public IChannels Channels { get; }
+        public IConfigurationIngestion Ingestion { get; }
+
+        public IDarcVersion DarcVersion { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -139,6 +152,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public ISubscriptions Subscriptions { get; }
 
+        public ISubscriptionTriggerOutcomes SubscriptionTriggerOutcomes { get; }
 
         public ProductConstructionServiceApi()
             :this(new ProductConstructionServiceApiOptions())
@@ -150,17 +164,22 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Options = options;
             Assets = new Assets(this);
             AzDo = new AzDo(this);
+            BackflowStatus = new BackflowStatus(this);
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
+            Channels = new Channels(this);
+            Codeflow = new Codeflow(this);
             DefaultChannels = new DefaultChannels(this);
             FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);
-            Channels = new Channels(this);
+            Ingestion = new ConfigurationIngestion(this);
+            DarcVersion = new DarcVersion(this);
             Pipelines = new Pipelines(this);
             PullRequest = new PullRequest(this);
             Repository = new Repository(this);
             Status = new Status(this);
             Subscriptions = new Subscriptions(this);
+            SubscriptionTriggerOutcomes = new SubscriptionTriggerOutcomes(this);
             SerializerSettings = new JsonSerializerSettings
             {
                 Converters =

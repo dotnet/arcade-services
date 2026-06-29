@@ -17,7 +17,6 @@ internal class FlowCommitOperation : Operation
     private readonly FlowCommitOptions _options;
     private readonly ILogger<FlowCommitOperation> _logger;
     private readonly GitHubClient _ghClient;
-    private readonly DarcProcessManager _darc;
     private readonly IProductConstructionServiceApi _localPcsApi;
     private readonly IBarApiClient _barApiClient;
 
@@ -25,7 +24,6 @@ internal class FlowCommitOperation : Operation
             FlowCommitOptions options,
             ILogger<FlowCommitOperation> logger,
             GitHubClient ghClient,
-            DarcProcessManager darc,
             [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
             IBarApiClient barApiClient)
         : base(logger, ghClient, localPcsApi)
@@ -33,7 +31,6 @@ internal class FlowCommitOperation : Operation
         _options = options;
         _logger = logger;
         _ghClient = ghClient;
-        _darc = darc;
         _localPcsApi = localPcsApi;
         _barApiClient = barApiClient;
     }
@@ -45,46 +42,28 @@ internal class FlowCommitOperation : Operation
             throw new ArgumentException("Cannot specify both --packages and --realBuildId options.");
         }
 
-        await _darc.InitializeAsync();
-
         _logger.LogInformation("Flowing commit from {sourceRepo}@{sourceBranch} to {targetRepo}@{targetBranch}",
             _options.SourceRepository,
             _options.SourceBranch,
             _options.TargetRepository,
             _options.TargetBranch);
 
-        List<Channel> channels = await _localPcsApi.Channels.ListChannelsAsync();
-        Channel? channel = channels.FirstOrDefault(c => c.Name == _options.Channel)
-            ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
-
         var (sourceRepo, sourceOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
         var (targetRepo, targetOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.TargetRepository);
 
         bool isForwardFlow = await IsForwardFlow(sourceOwner, sourceRepo, targetOwner, targetRepo);
 
-        var subscriptions = await _localPcsApi.Subscriptions.ListSubscriptionsAsync(
-            channelId: channel.Id,
+        var channelName = $"flow-commit-{Guid.NewGuid()}";
+        var namespaceName = channelName;
+        var (_, subscription) = await CreateChannelAndSubscriptionAsync(
+            @namespace: namespaceName,
+            channelName: channelName,
             sourceRepository: _options.SourceRepository,
             targetRepository: _options.TargetRepository,
-            sourceEnabled: true);
-
-        Subscription subscription = subscriptions.FirstOrDefault(s => s.TargetBranch == _options.TargetBranch)
-            ?? await _localPcsApi.Subscriptions.CreateAsync(
-                new SubscriptionData(
-                    channelName: channel.Name,
-                    sourceRepository: _options.SourceRepository,
-                    targetRepository: _options.TargetRepository,
-                    targetBranch: _options.TargetBranch,
-                    new SubscriptionPolicy(batchable: false, UpdateFrequency.None)
-                    {
-                        MergePolicies = [new MergePolicy() { Name = "Standard" }]
-                    },
-                    null)
-                {
-                    SourceEnabled = true,
-                    SourceDirectory = isForwardFlow ? null : targetRepo,
-                    TargetDirectory = isForwardFlow ? sourceRepo : null,
-                });
+            targetBranch: _options.TargetBranch,
+            sourceEnabled: true,
+            sourceDirectory: isForwardFlow ? null : targetRepo,
+            targetDirectory: isForwardFlow ? sourceRepo : null);
 
         string sourceCommit;
 
@@ -142,13 +121,27 @@ internal class FlowCommitOperation : Operation
                 Assets = assets
             });
 
-        await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);
+        var channel = (await _localPcsApi.Channels.ListChannelsAsync()).First(c => c.Name == channelName);
+        await _localPcsApi.Channels.AddBuildToChannelAsync(build.Id, channel.Id);
 
         _logger.LogInformation("Build created: {buildId}", build.Id);
 
-        await TriggerSubscriptionAsync(subscription.Id.ToString(), build.Id);
+        await TriggerSubscriptionAsync(subscription.Id, build.Id);
 
         _logger.LogInformation("Subscription triggered. Wait for a PR in {url}", $"{_options.TargetRepository}/pulls");
+
+        if (_options.SkipCleanup)
+        {
+            _logger.LogInformation("Skipping cleanup. If you want to re-trigger the subscription run \"darc trigger-subscriptions --ids {subscriptionId} --bar-uri {barUri}\"",
+                subscription.Id,
+                ProductConstructionServiceApiOptions.PcsLocalUri);
+            return;
+        }
+
+        _logger.LogInformation("Press enter to finish and cleanup");
+        Console.ReadLine();
+
+        await DeleteNamespace(namespaceName);
     }
 
     private async Task<bool> IsVmr(string repoName, string repoOwner)

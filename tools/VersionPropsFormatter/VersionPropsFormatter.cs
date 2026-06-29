@@ -1,9 +1,12 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
 using System.Xml;
 using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
+using Maestro.Common.Telemetry;
 using Microsoft.Build.Construction;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
