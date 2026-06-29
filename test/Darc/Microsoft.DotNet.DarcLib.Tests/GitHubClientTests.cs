@@ -159,7 +159,7 @@ internal class TestGitHubClient : GitHubClient
         : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), temporaryRepositoryPath, cache, new NoOpRedisClient(), logger)
     {
     }
-    protected override async Task<T> RequestResourceUsingEtagsAsync<T, K>(
+    protected override async Task<T> FetchEtagEnabledResourceAsync<T, K>(
         string resourceKey,
         Uri resourceUri,
         IGitHubClient client,

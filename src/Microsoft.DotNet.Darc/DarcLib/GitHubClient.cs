@@ -338,7 +338,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var resourceUri = ApiUrls.PullRequest(owner, repo, id);
         string cacheKey = $"{owner}_{repo}_{id}";
 
-        Models.PullRequest result = await RequestResourceUsingEtagsAsync<Models.PullRequest, Octokit.PullRequest>(
+        Models.PullRequest result = await FetchEtagEnabledResourceAsync<Models.PullRequest, Octokit.PullRequest>(
             cacheKey,
             resourceUri,
             client,
@@ -974,7 +974,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var pullRequestReviewsUri = ApiUrls.PullRequestReviews(owner, repo, id);
         string cacheKey = $"{owner}_{repo}_id";
 
-        var pullRequestReviews = await RequestResourceUsingEtagsAsync<GithubPullRequestReviews, List<PullRequestReview>>(
+        var pullRequestReviews = await FetchEtagEnabledResourceAsync<GithubPullRequestReviews, List<PullRequestReview>>(
             cacheKey,
             pullRequestReviewsUri,
             client,
@@ -1488,25 +1488,25 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
-    /// This method fills a functionality that's currently missing from Octokit: fetching Github resources using eTags.
-    /// eTags allow us to cache mutable resources and efficiently check if the resource has changed on Github since the last fetch.
+    /// Fetches a resource through the Github API. If the resource has been cached and the eTag has not changed,
+    /// the cached resource is returned. Otherwise, the resource is fetched from Github and cached.
     /// </summary>
-    /// <typeparam name="T">The domain class of the resource in our server</typeparam>
-    /// <typeparam name="K">The class of the resource in Octokit</typeparam>
+    /// <typeparam name="TDomainModel">The domain model of the resource in our codebase</typeparam>
+    /// <typeparam name="TGithubModel">The model of the resource in Octokit</typeparam>
     /// <param name="resourceKey">The key used to cache the resource in redis</param>
     /// <param name="resourceUri">The uri used to request the resource from Github</param>
     /// <param name="client">The github client that makes the request</param>
-    /// <param name="resourceConverter">Function to convert the resource from Octokit to our domain class</param>
-    /// <returns>The resource of type T</returns>
+    /// <param name="resourceConverter">Function to convert the resource from Octokit to our domain model</param>
+    /// <returns>The resource of type TDomainModel</returns>
     /// <exception cref="DarcException"></exception>
-    protected virtual async Task<T> RequestResourceUsingEtagsAsync<T, K>(
+    protected virtual async Task<TDomainModel> FetchEtagEnabledResourceAsync<TDomainModel, TGithubModel>(
         string resourceKey,
         Uri resourceUri,
         IGitHubClient client,
-        Func<K, T> resourceConverter)
-        where T : class, IGithubEtagResource
+        Func<TGithubModel, TDomainModel> resourceConverter)
+        where TDomainModel : class, IGithubEtagResource
     {
-        var cachedResource = await _cache.TryGetAsync<T>(resourceKey);
+        var cachedResource = await _cache.TryGetAsync<TDomainModel>(resourceKey);
 
         var headers = new Dictionary<string, string>
         {
@@ -1518,7 +1518,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             headers.Add("If-None-Match", cachedResource.Etag);
         }
 
-        var response = await client.Connection.Get<K>(resourceUri, headers);
+        var response = await client.Connection.Get<TGithubModel>(resourceUri, headers);
 
         if (response.HttpResponse.StatusCode == HttpStatusCode.NotModified)
         {
