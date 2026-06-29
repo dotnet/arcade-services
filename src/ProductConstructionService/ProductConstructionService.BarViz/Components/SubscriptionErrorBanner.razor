@@ -7,7 +7,6 @@
         @foreach (var errorGroup in BuildSections())
         {
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 8px;">
-                <FluentIcon Value="@(new Icons.Filled.Size20.Warning())" Color="Color.Warning" />
                 <FluentLabel Typo="Typography.H5">
                     @errorGroup.Title (@errorGroup.Errors.Count)
                 </FluentLabel>
@@ -58,7 +57,7 @@
 
     private IEnumerable<ErrorSection> BuildSections()
     {
-        return [new ErrorSection("Codeflow exceptions", Errors)];
+        return [new ErrorSection("Currently failing subscriptions", Errors)];
     }
 
     private static string SubscriptionDisplay(Subscription subscription)
