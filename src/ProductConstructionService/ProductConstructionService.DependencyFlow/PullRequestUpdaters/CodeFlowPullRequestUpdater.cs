@@ -36,6 +36,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ICodeflowSourceDiffVerifier _codeflowSourceDiffVerifier;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
+    private readonly IPullRequestApprover _pullRequestApprover;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
@@ -56,6 +57,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ISubscriptionEventRecorder subscriptionEventRecorder,
         ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
+        IPullRequestApprover pullRequestApprover,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
@@ -73,6 +75,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _subscriptionEventRecorder = subscriptionEventRecorder;
         _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
+        _pullRequestApprover = pullRequestApprover;
         _target = target;
     }
 
@@ -888,12 +891,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (match)
         {
             _logger.LogInformation(
-                "Codeflow approval check for PR {prUrl} passed; posting approval comment",
+                "Codeflow approval check for PR {prUrl} passed; approving the pull request",
                 pr.Url);
-            await remote.CommentPullRequestAsync(
+            await _pullRequestApprover.ApprovePullRequestAsync(
                 pr.Url,
                 $"This pull request only contains source updates from {subscription.SourceRepository} " +
-                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.");
+                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.",
+                cancellationToken);
         }
         else
         {

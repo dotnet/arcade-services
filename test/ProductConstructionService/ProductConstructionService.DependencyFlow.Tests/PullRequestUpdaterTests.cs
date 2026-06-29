@@ -58,6 +58,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
         services.AddSingleton(_codeflowSourceDiffVerifier.Object);
+        services.AddSingleton(Mock.Of<IPullRequestApprover>());
 
         CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));

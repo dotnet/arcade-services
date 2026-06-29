@@ -15,12 +15,22 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
 {
+    // Mirrors PullRequestUpdater.DefaultReminderDelay: the codeflow approval check reminder
+    // fires after 1 minute in debug builds and 5 minutes otherwise, so we wait that long
+    // before we start polling for the approval.
+#if DEBUG
+    private static readonly TimeSpan ApprovalInitialWait = TimeSpan.FromMinutes(1);
+#else
+    private static readonly TimeSpan ApprovalInitialWait = TimeSpan.FromMinutes(5);
+#endif
+
     protected async Task<PullRequest> CheckForwardFlowGitHubPullRequest(
         (string Repo, string Commit)[] repoUpdates,
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
-        Dictionary<string, string> testFilePatches)
+        Dictionary<string, string> testFilePatches,
+        bool cleanUp = true)
     {
         // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
         // Otherwise it might try to validate the contents before all updates are in place
@@ -28,7 +38,11 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
+        var cleanUpTask = cleanUp
+            ? CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest)
+            : AsyncDisposable.Create(async () => await Task.CompletedTask);
+
+        await using (cleanUpTask)
         {
             IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(
                 TestParameters.GitHubTestOrg,
@@ -262,5 +276,33 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 notExpected,
                 $"PR {pullRequest.HtmlUrl} should NOT contain '{notExpected}'");
         }
+    }
+
+    public static async Task WaitForPullRequestApprovalAsync(
+        string targetRepo,
+        PullRequest pullRequest,
+        TimeSpan? initialWait = null,
+        int attempts = 10)
+    {
+        // The approval is only produced after the service finishes evaluating the
+        // GitHub-check policies, which takes a while, so wait before we start polling.
+        await Task.Delay(initialWait ?? ApprovalInitialWait);
+
+        while (attempts-- > 0)
+        {
+            IReadOnlyList<PullRequestReview> reviews = await GitHubApi.PullRequest.Review.GetAll(
+                TestParameters.GitHubTestOrg,
+                targetRepo,
+                pullRequest.Number);
+
+            if (reviews.Any(review => review.State.Value == PullRequestReviewState.Approved))
+            {
+                return;
+            }
+
+            await Task.Delay(WAIT_DELAY);
+        }
+
+        throw new ScenarioTestException($"Pull request {pullRequest.HtmlUrl} was not approved.");
     }
 }
