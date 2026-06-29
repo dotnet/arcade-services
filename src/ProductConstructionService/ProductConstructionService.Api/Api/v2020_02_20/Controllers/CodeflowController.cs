@@ -214,7 +214,7 @@ public class CodeflowController : ControllerBase
             {
                 bool hasConflict = checkResults.Results
                     .Any(checkResult => checkResult.MergePolicyName == CodeFlowMergePolicy.CodeflowMergePolicyName
-                    && checkResult.Status is MergePolicyEvaluationStatus.DecisiveFailure);
+                    	&& checkResult.Status is MergePolicyEvaluationStatus.DecisiveFailure);
 
                 result[id] = hasConflict;
             }
