@@ -25,8 +25,12 @@ internal class ForwardFlowTests : CodeFlowTests
 
         const string branchName = nameof(OnlyForwardflowsTest);
 
+        var oldSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
+        var newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        await GitOperations.CommitAll(VmrPath, "Commit codeflow");
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
         await FinalizeForwardFlow(branchName);
 
         // Flow again - should be a no-op
@@ -37,9 +41,13 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
 
         // Make a change in the repo again
+        oldSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
         codeFlowResult.ShouldHaveUpdates();
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
+        newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        await GitOperations.CommitAll(VmrPath, "Commit codeflow");
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
@@ -64,8 +72,12 @@ internal class ForwardFlowTests : CodeFlowTests
         // The last forward flow will have to recreate all of the flows to be able to apply the changes
 
         // Make another flow to VMR to have flows both ways ready
+        oldSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         codeFlowResult = await ChangeRepoFileAndFlowIt("Again some content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
+        newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        await GitOperations.CommitAll(VmrPath, "Commit codeflow");
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
         await FinalizeForwardFlow(branchName);
 
         // The file.txt will keep getting changed and conflicting in each flow

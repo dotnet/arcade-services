@@ -67,6 +67,13 @@ public interface IRemote
     Task<PullRequest> GetPullRequestAsync(string pullRequestUri);
 
     /// <summary>
+    ///     Retrieve the commits of a pull request.
+    /// </summary>
+    /// <param name="pullRequestUri">URI of pull request.</param>
+    /// <returns>The commits contained in the pull request.</returns>
+    Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUri);
+
+    /// <summary>
     ///     Create a new pull request.
     /// </summary>
     /// <param name="repoUri">Repository uri.</param>

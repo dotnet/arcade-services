@@ -59,6 +59,8 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-repository-policies](#get-repository-policies) - Retrieves information about repository merge policies.
   - [get-subscriptions](#get-subscriptions) - Get information about
     subscriptions.
+  - [get-subscription-history](#get-subscription-history) - Get the history of
+    subscription trigger outcomes matching the given filters.
   - [trigger-subscriptions](#trigger-subscriptions) - Trigger a subscription or set of subscriptions matching criteria.
   - [update-dependencies](#update-dependencies) - Update local dependencies from
     a channel.
@@ -2914,6 +2916,50 @@ https://github.com/aspnet/AspNetCore (.NET Core 3.1 Dev) ==> 'https://github.com
 
 **See also**:
 - [add-subscription](#add-subscription)
+- [get-subscriptions](#get-subscriptions)
+- [trigger-subscriptions](#trigger-subscriptions)
+
+### **`get-subscription-history`**
+
+Retrieves the history of subscription trigger outcomes recorded by Maestro.
+Each outcome describes what happened the last time a subscription was triggered
+(for example whether a pull request was opened/updated, there was nothing to
+update, or the update failed).
+
+When run without any filters, the command returns the most recent outcomes
+(up to `--limit`, default 10). The result set can be narrowed with the filters
+below, all of which can be combined:
+
+- `--id` - Filter by a specific subscription id (GUID). Obtain the id from
+  [get-subscriptions](#get-subscriptions).
+- `--build` - Filter by the build id that triggered the outcome.
+- `--type` - Filter by outcome type. Valid values: `Updated`, `NoUpdate`,
+  `NotUpdatable`, `Failure`, `UserError`, `HasConflict`, `Rescheduled`.
+- `--search` - Free-text filter matched against the subscription's source repo,
+  target repo and target branch.
+- `--after` / `--before` - Restrict to outcomes on or after / on or before the
+  given date (e.g. `"2025-01-15T12:00:00Z"`).
+- `--limit` - Maximum number of outcomes to return (1-1000, default 100).
+
+The command supports both `text` (default) and `json` `--output-format`.
+
+**Sample**:
+```
+PS D:\enlistments\arcade-services> darc get-subscription-history --search core-sdk --type Failure --limit 2
+
+2025-01-15 12:34:56Z  [Failure]  build 1234567
+  Subscription: https://github.com/aspnet/AspNetCore ==> 'https://github.com/dotnet/core-sdk' ('main')
+  Subscription Id: 510286a9-8cd5-47bd-a259-08d68641480a
+  PR: https://github.com/dotnet/core-sdk/pull/4242
+  Failed to update dependencies: <details>
+
+2025-01-14 09:10:11Z  [Failure]  build 1234560
+  Subscription: https://github.com/aspnet/AspNetCore ==> 'https://github.com/dotnet/core-sdk' ('release/8.0')
+  Subscription Id: 0a2d0ca4-5d87-4bfd-2808-08d690bc5860
+  Failed to update dependencies: <details>
+```
+
+**See also**:
 - [get-subscriptions](#get-subscriptions)
 - [trigger-subscriptions](#trigger-subscriptions)
 

@@ -5,7 +5,7 @@ The .NET Arcade Services repository contains the Product Construction Service (p
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
-- Install .NET 8 SDK (the build script will download the specific required version automatically)
+- Install .NET 10 SDK (the build script will download the specific required version automatically)
 - For full local development: Install Docker Desktop (required for Product Construction Service)
 - For Windows development: Install Visual Studio with Azure Development and ASP.NET workloads
 - Configure git for long paths: `git config --global core.longpaths true`
@@ -89,7 +89,7 @@ After making changes, validate by testing these workflows:
 - `.github/` - GitHub workflows and templates
 
 ## Key Technologies
-- .NET 8 (see global.json for exact version)
+- .NET 10 (see global.json for exact version)
 - Azure DevOps APIs
 - ASP.NET Core for web APIs
 - Entity Framework Core for data access
