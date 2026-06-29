@@ -16,5 +16,6 @@ public class PullRequest : IGithubEtagResource
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public string HeadBranchSha { get; set; }
+    public DateTimeOffset CreationDate { get; set; }
     public string Etag { get; set; }
 }

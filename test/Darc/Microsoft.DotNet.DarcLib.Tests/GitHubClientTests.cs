@@ -156,7 +156,7 @@ internal class TestGitHubClient : GitHubClient
     public override IGitHubClient GetClient(string repoUri) => _client;
 
     public TestGitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), temporaryRepositoryPath, cache, new NoOpRedisClient(), logger)
+        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), temporaryRepositoryPath, cache, new NoopCache(), logger)
     {
     }
     protected override async Task<T> FetchEtagEnabledResourceAsync<T, K>(
@@ -329,7 +329,7 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryTest()
     {
-        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoOpRedisClient(), NullLogger.Instance);
+        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoopCache(), NullLogger.Instance);
 
         var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
         var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
@@ -355,7 +355,7 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryWithRateLimitTest()
     {
-        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoOpRedisClient(), NullLogger.Instance);
+        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoopCache(), NullLogger.Instance);
 
         var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
         var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");

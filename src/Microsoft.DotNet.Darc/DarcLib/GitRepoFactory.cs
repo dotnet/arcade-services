@@ -7,6 +7,7 @@ using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Maestro.Common;
 using GitRepoUrlUtils = Maestro.Common.GitRepoUrlUtils;
 using GitRepoType = Maestro.Common.GitRepoType;
 
@@ -27,7 +28,7 @@ public class GitRepoFactory : IGitRepoFactory
     private readonly IFileSystem _fileSystem;
     private readonly ILoggerFactory _loggerFactory;
     private readonly string? _temporaryPath = null;
-    private readonly IRedisCacheClient _redisCacheClient;
+    private readonly ICache _redisCacheClient;
 
     public GitRepoFactory(
         IRemoteTokenProvider remoteTokenProvider,
@@ -37,7 +38,7 @@ public class GitRepoFactory : IGitRepoFactory
         IFileSystem fileSystem,
         ILoggerFactory loggerFactory,
         string temporaryPath,
-        IRedisCacheClient redisCacheClient)
+        ICache redisCacheClient)
     {
         _remoteTokenProvider = remoteTokenProvider;
         _azdoTokenProvider = azdoTokenProvider;

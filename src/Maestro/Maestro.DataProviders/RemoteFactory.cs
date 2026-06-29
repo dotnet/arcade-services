@@ -25,7 +25,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IRedisCacheClient _redisCacheClient;
+    private readonly ICache _redisCacheClient;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -35,7 +35,7 @@ public class RemoteFactory : IRemoteFactory
         DarcRemoteMemoryCache memoryCache,
         OperationManager operations,
         IProcessManager processManager,
-        IRedisCacheClient redisCacheClient,
+        ICache redisCacheClient,
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider)
     {

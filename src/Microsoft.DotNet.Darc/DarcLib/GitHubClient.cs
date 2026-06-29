@@ -8,13 +8,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Internal.Credentials;
-using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.GitHub;
@@ -45,7 +44,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
     private readonly Dictionary<(string, string, string?), string> _gitRefCommitCache;
-    private readonly IRedisCacheClient _cache;
+    private readonly ICache _cache;
 
     static GitHubClient()
     {
@@ -60,7 +59,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IProcessManager processManager,
         ILogger logger,
         IMemoryCache? cache,
-        IRedisCacheClient redisClient)
+        ICache redisClient)
         : this(remoteTokenProvider, processManager, null, cache, redisClient, logger)
     {
     }
@@ -70,7 +69,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IProcessManager processManager,
         string? temporaryRepositoryPath,
         IMemoryCache? cache,
-        IRedisCacheClient redisClient,
+        ICache redisClient,
         ILogger logger)
         : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
     {
