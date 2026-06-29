@@ -58,7 +58,8 @@ public class SqlBarClient : ISqlBarClient
             sub.SourceDirectory,
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            [.. sub.ExcludedAssets.Select(s => s.Filter)]);
+            [.. sub.ExcludedAssets.Select(s => s.Filter)],
+            sub.AutoApprove);
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
@@ -305,7 +306,8 @@ public class SqlBarClient : ISqlBarClient
             sourceDirectory: other.SourceDirectory,
             targetDirectory: other.TargetDirectory,
             pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
-            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList(),
+            autoApprove: other.AutoApprove)
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),

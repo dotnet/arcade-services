@@ -51,6 +51,12 @@ public class Subscription
     public bool SourceEnabled { get; set; }
 
     /// <summary>
+    /// Denotes whether passing pull requests should be automatically approved.
+    /// Only allowed on forward flow subscriptions.
+    /// </summary>
+    public bool AutoApprove { get; set; }
+
+    /// <summary>
     /// Denotes the directory of the VMR which are the sources synchronized from.
     /// (for VMR->repo subscriptions)
     /// Only Source or Target repository can be set at a time.
