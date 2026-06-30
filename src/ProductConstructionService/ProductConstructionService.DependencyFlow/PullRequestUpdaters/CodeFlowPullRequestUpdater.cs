@@ -268,7 +268,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         try
         {
-            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlow: false);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlown);
         }
         catch (NonLinearCodeflowException e)
         {
@@ -278,10 +278,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
 
             unsafeFlown = true;
-            if (pr != null)
-            {
-                prHeadBranch = GetNewBranchName(subscription.TargetBranch);
-            }
+            prHeadBranch = GetNewBranchName(subscription.TargetBranch);
 
             _logger.LogInformation(
                 "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
@@ -293,7 +290,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription.TargetBranch,
                 prHeadBranch);
 
-            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlow: true);
+            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlown);
         }
 
         if (codeFlowRes.HadConflicts)
