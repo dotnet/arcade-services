@@ -179,6 +179,14 @@ internal class TriggerSubscriptionsOperation : Operation
     private async Task WaitForOutcomesAsync(IReadOnlyList<Subscription> subscriptions, DateTime triggerTime)
     {
         Console.WriteLine("Subscription(s) triggered successfully.");
+
+        Console.WriteLine("If you cancel this command, the subscription(s) will still go through - you can view the outcome on the subscription trigger history page(s):");
+        var triggerHistoryBaseUri = _options.BuildAssetRegistryBaseUri.TrimEnd('/');
+        foreach (var subscription in subscriptions)
+        {
+            Console.WriteLine($"  {triggerHistoryBaseUri}/subscription-trigger-history?subscriptionId={subscription.Id}");
+        }
+
         Console.WriteLine("Waiting for results... (this may take a few minutes)");
         Console.WriteLine($"Failing subscriptions take longer to report (up to {OutcomeWaitTimeout.TotalMinutes:0} minutes) as they are retried several times.");
         Console.WriteLine("You may exit this process at any time - the trigger(s) will still go through. (pass --no-wait to skip)");
