@@ -4,6 +4,7 @@ using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    partial class BuildAssetRegistryContextModelSnapshot : ModelSnapshot
+    [Migration("20260615134416_RemoveDependencyFlowEventsAndSubscriptionUpdates")]
+    partial class RemoveDependencyFlowEventsAndSubscriptionUpdates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -473,9 +476,6 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("AutoApprove")
-                        .HasColumnType("bit");
-
                     b.Property<int>("ChannelId")
                         .HasColumnType("int");
 
@@ -538,9 +538,6 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PrUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("SubscriptionId")

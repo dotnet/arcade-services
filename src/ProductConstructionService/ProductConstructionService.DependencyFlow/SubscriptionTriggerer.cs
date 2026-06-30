@@ -32,64 +32,11 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         _distributedLock = distributedLock;
     }
 
-    public async Task<bool> AddDependencyFlowEventAsync(
-        int updateBuildId,
-        DependencyFlowEventType flowEvent,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult policy,
-        string flowType,
-        string? url)
-    {
-        var updateReason = reason == DependencyFlowEventReason.New || reason == DependencyFlowEventReason.AutomaticallyMerged
-            ? reason.ToString()
-            : $"{reason}{policy}";
-
-        _logger.LogInformation(
-            "Adding dependency flow event for {subscriptionId} with {flowEvent} {updateReason} {flowType}",
-            _subscriptionId,
-            flowEvent,
-            updateReason,
-            flowType);
-
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
-        if (subscription != null)
-        {
-            var dfe = new DependencyFlowEvent
-            {
-                SourceRepository = subscription.SourceRepository,
-                TargetRepository = subscription.TargetRepository,
-                ChannelId = subscription.ChannelId,
-                BuildId = updateBuildId,
-                Timestamp = DateTimeOffset.UtcNow,
-                Event = flowEvent.ToString(),
-                Reason = updateReason,
-                FlowType = flowType,
-                Url = url,
-            };
-            _context.DependencyFlowEvents.Add(dfe);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        else
-        {
-            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping adding dependency flow event.", _subscriptionId);
-            return false;
-        }
-    }
-
     public async Task<SubscriptionUpdateResult> UpdateSubscriptionAsync(
         Subscription subscription,
         Build build,
         bool force = false)
     {
-        await AddDependencyFlowEventAsync(
-            build.Id,
-            DependencyFlowEventType.Fired,
-            DependencyFlowEventReason.New,
-            MergePolicyCheckResult.PendingPolicies,
-            "PR",
-            null);
-
         var pullRequestUpdaterId = PullRequestUpdaterId.CreateUpdaterId(subscription);
 
         var pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(pullRequestUpdaterId);

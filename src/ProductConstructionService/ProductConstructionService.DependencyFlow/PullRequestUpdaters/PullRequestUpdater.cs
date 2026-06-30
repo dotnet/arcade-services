@@ -139,12 +139,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
                         await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-                        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                            pr.ContainedSubscriptions,
-                            DependencyFlowEventType.Completed,
-                            DependencyFlowEventReason.AutomaticallyMerged,
-                            mergePolicyResult,
-                            pr.Url);
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
                         await _stateManager.ClearAllStateAsync(isCodeFlow, false);
@@ -180,17 +174,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                 }
-
-                DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
-                    ? DependencyFlowEventReason.ManuallyMerged
-                    : DependencyFlowEventReason.ManuallyClosed;
-
-                await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                    pr.ContainedSubscriptions,
-                    DependencyFlowEventType.Completed,
-                    reason,
-                    pr.MergePolicyResult,
-                    pr.Url);
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
@@ -256,11 +239,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
-
-            foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
-            {
-                await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
-            }
 
             var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
             _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
