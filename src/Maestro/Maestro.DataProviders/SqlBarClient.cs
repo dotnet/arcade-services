@@ -654,6 +654,11 @@ public class SqlBarClient : ISqlBarClient
             existingSubscription.SourceEnabled = subscription.SourceEnabled;
         }
 
+        if (existingSubscription.AutoApprove != subscription.AutoApprove)
+        {
+            existingSubscription.AutoApprove = subscription.AutoApprove;
+        }
+
         if (!StringEquivalent(existingSubscription.SourceDirectory, subscription.SourceDirectory))
         {
             existingSubscription.SourceDirectory = subscription.SourceDirectory;

@@ -1511,6 +1511,12 @@ Key features:
 (VMR code flow) subscriptions, `--source-directory` or `--target-directory` specify 
 a single VMR source mapping.
 
+**Auto-approval**:
+
+Passing `--auto-approve` marks the subscription so that pull requests which pass all merge 
+policies are automatically approved. This is only allowed on forward flow subscriptions 
+(source-enabled subscriptions that specify a target directory).
+
 **Examples**:
 
 ```
@@ -3211,6 +3217,10 @@ multiple directories (e.g., `src/*`).
 
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
+
+**Auto-approval**: Use `--auto-approve` to toggle whether pull requests that pass all merge 
+policies are automatically approved. This is only allowed on forward flow subscriptions 
+(source-enabled subscriptions that specify a target directory).
 
 **Sample**:
 ```
