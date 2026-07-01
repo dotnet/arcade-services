@@ -27,7 +27,7 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("auto-approve", HelpText = "Whether passing pull requests should be automatically approved. Only allowed on forward flow subscriptions.")]
+    [Option("auto-approve", HelpText = "Whether pull requests should be automatically approved. Only allowed on forward flow subscriptions.")]
     public bool? AutoApprove { get; set; }
 
     [Option("update-merge-policies", Default = false, HelpText = "By default, if any merge policies are specific in the command, we'll overwrite the old ones. " +
