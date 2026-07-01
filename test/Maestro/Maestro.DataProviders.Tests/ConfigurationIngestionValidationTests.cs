@@ -111,6 +111,80 @@ public class ConfigurationIngestionValidationTests
         exception.Message.Should().Contain(subscriptionId.ToString());
     }
 
+    [Test]
+    public void ValidateSubscription_AutoApproveOnNonForwardFlow_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            SourceEnabled = false,
+            AutoApprove = true,
+            MergePolicies = [],
+        });
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => SubscriptionValidator.ValidateSubscription(subscription));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("Auto-approve can only be enabled on forward flow subscriptions");
+        exception.Message.Should().Contain(subscriptionId.ToString());
+    }
+
+    [Test]
+    public void ValidateSubscription_AutoApproveOnBackflow_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            SourceEnabled = true,
+            SourceDirectory = "runtime",
+            AutoApprove = true,
+            MergePolicies = [],
+        });
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => SubscriptionValidator.ValidateSubscription(subscription));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("Auto-approve can only be enabled on forward flow subscriptions");
+        exception.Message.Should().Contain(subscriptionId.ToString());
+    }
+
+    [Test]
+    public void ValidateSubscription_AutoApproveOnForwardFlow_DoesNotThrow()
+    {
+        // Arrange
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            SourceEnabled = true,
+            TargetDirectory = "runtime",
+            AutoApprove = true,
+            MergePolicies = [],
+        });
+
+        // Act & Assert
+        Assert.DoesNotThrow(() => SubscriptionValidator.ValidateSubscription(subscription));
+    }
+
     #endregion
 
     #region ChannelValidator Tests

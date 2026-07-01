@@ -185,6 +185,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         string updateFrequency = _options.UpdateFrequency;
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
+        bool autoApprove = _options.AutoApprove;
         string sourceDirectory = _options.SourceDirectory;
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
@@ -248,6 +249,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 enabled = copyFromSubscription.Enabled;
                 batchable = copyFromSubscription.Policy.Batchable;
                 sourceEnabled = copyFromSubscription.SourceEnabled;
+                autoApprove = copyFromSubscription.AutoApprove;
             }
         }
 
@@ -308,6 +310,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 Constants.AvailableMergePolicyYamlHelp,
                 failureNotificationTags,
                 sourceEnabled,
+                autoApprove,
                 sourceDirectory,
                 targetDirectory,
                 excludedAssets);
@@ -331,6 +334,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             batchable = addSubscriptionPopup.Batchable;
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
             sourceEnabled = addSubscriptionPopup.SourceEnabled;
+            autoApprove = addSubscriptionPopup.AutoApprove;
             sourceDirectory = addSubscriptionPopup.SourceDirectory;
             targetDirectory = addSubscriptionPopup.TargetDirectory;
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
@@ -399,6 +403,11 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
+            if (!ValidateAutoApprove(autoApprove, sourceEnabled, targetDirectory))
+            {
+                return Constants.ErrorCode;
+            }
+
             SubscriptionYamlParameters subscriptionYamlParameters = new()
             {
                 Enabled = enabled,
@@ -411,6 +420,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
+                AutoApprove = autoApprove,
                 SourceDirectory = sourceDirectory,
                 TargetDirectory = targetDirectory,
                 ExcludedAssets = excludedAssets

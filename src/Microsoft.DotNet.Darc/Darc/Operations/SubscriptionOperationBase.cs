@@ -104,6 +104,17 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
                 .Select(p => p == "/" ? "." : p));
     }
 
+    protected bool ValidateAutoApprove(bool autoApprove, bool sourceEnabled, string targetDirectory)
+    {
+        if (autoApprove && !(sourceEnabled && !string.IsNullOrEmpty(targetDirectory)))
+        {
+            _logger.LogError("--auto-approve is only allowed on forward flow subscriptions");
+            return false;
+        }
+
+        return true;
+    }
+
     protected async Task<Subscription> TryGetEquivalentSubscription(SubscriptionYamlParameters subscriptionYaml)
     {
         var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);

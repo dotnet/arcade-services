@@ -1511,6 +1511,14 @@ Key features:
 (VMR code flow) subscriptions, `--source-directory` or `--target-directory` specify 
 a single VMR source mapping.
 
+**Auto-approval**:
+
+Passing `--auto-approve` marks the subscription so that its codeflow pull requests are
+automatically approved when they only contain the source updates flowed from the source
+repository (i.e. the PR's changes match the source diff and it has no commits authored by
+someone other than the bot). This is only allowed on forward flow subscriptions
+(source-enabled subscriptions that specify a target directory).
+
 **Examples**:
 
 ```
@@ -3211,6 +3219,12 @@ multiple directories (e.g., `src/*`).
 
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
+
+**Auto-approval**: Use `--auto-approve` to toggle whether the subscription's codeflow pull
+requests are automatically approved when they only contain the source updates flowed from
+the source repository (the PR's changes match the source diff and it has no commits authored
+by someone other than the bot). This is only allowed on forward flow subscriptions
+(source-enabled subscriptions that specify a target directory).
 
 **Sample**:
 ```
