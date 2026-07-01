@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class ClientSubscriptionYaml
     {
-        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, ClientUpdateFrequency updateFrequency, bool batchable, bool sourceEnabled)
+        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, ClientUpdateFrequency updateFrequency, bool batchable, bool sourceEnabled, bool autoApprove)
         {
             Id = id;
             Enabled = enabled;
@@ -20,6 +20,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             UpdateFrequency = updateFrequency;
             Batchable = batchable;
             SourceEnabled = sourceEnabled;
+            AutoApprove = autoApprove;
         }
 
         [JsonProperty("id")]
@@ -63,6 +64,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("targetDirectory")]
         public string TargetDirectory { get; set; }
+
+        [JsonProperty("autoApprove")]
++       public bool AutoApprove { get; set; }
 
         [JsonIgnore]
         public bool IsValid
