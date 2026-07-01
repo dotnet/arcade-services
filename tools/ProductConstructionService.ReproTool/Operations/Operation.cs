@@ -100,7 +100,8 @@ internal abstract class Operation(
             batchable: false,
             enabled: true,
             id: Guid.NewGuid(),
-            updateFrequency: ClientUpdateFrequency.None)
+            updateFrequency: ClientUpdateFrequency.None,
+            autoApprove: false)
         {
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
