@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string TargetDirectory { get; set; }
 
         [JsonProperty("autoApprove")]
-+       public bool AutoApprove { get; set; }
+        public bool AutoApprove { get; set; }
 
         [JsonIgnore]
         public bool IsValid
