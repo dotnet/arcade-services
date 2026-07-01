@@ -238,7 +238,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 upstreamRepoDiffs);
 
             return new SubscriptionUpdateResult(
-                string.Empty,
+                "Codeflow PR updated",
                 SubscriptionOutcomeType.Updated);
         }
     }
