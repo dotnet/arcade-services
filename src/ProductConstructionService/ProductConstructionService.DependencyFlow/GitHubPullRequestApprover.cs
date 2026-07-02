@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,15 +41,6 @@ internal class GitHubPullRequestApprover : IPullRequestApprover
 
     public async Task ApprovePullRequestAsync(string pullRequestUrl, string reviewBody, CancellationToken cancellationToken = default)
     {
-        var repoType = GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl);
-        if (repoType != GitRepoType.GitHub)
-        {
-            _logger.LogInformation(
-                "Skipping approval of '{url}'; only GitHub pull requests can be approved by the approval app",
-                pullRequestUrl);
-            return;
-        }
-
         var (owner, repo, prNumber) = DarcGitHubClient.ParsePullRequestUri(pullRequestUrl);
         if (owner == null || repo == null || prNumber == 0)
         {

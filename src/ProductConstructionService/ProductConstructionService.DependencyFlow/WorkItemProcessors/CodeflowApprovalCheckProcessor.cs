@@ -39,6 +39,11 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
             throw new InvalidOperationException($"Subscription with ID {workItem.SubscriptionId} not found.");
         }
 
+        if (!subscription.AutoApprove)
+        {
+            throw new InvalidOperationException($"Subscription {subscription.Id} is not auto-approve enabled, cannot run codeflow approval check");
+        }
+
         var pullRequestUpdaterId = PullRequestUpdaterId.CreateUpdaterId(subscription);
         var pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(pullRequestUpdaterId);
 

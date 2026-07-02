@@ -58,7 +58,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             targetBranchName,
             UpdateFrequency.None.ToString(),
             TestParameters.GitHubTestOrg,
-            targetDirectory: TestRepository.TestRepo1Name);
+            targetDirectory: TestRepository.TestRepo1Name,
+            autoApprove: true);
 
         TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);

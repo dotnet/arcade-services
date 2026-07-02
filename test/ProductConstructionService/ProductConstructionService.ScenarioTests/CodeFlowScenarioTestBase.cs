@@ -151,7 +151,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg,
-        string targetDirectory)
+        string targetDirectory,
+        bool autoApprove = false)
             => await CreateSourceEnabledSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
@@ -159,7 +160,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                targetDirectory: targetDirectory);
+                targetDirectory: targetDirectory,
+                autoApprove: autoApprove);
 
     protected async Task<string> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
@@ -188,7 +190,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         bool sourceIsAzDo = false,
         bool targetIsAzDo = false,
         string? sourceDirectory = null,
-        string? targetDirectory = null)
+        string? targetDirectory = null,
+        bool autoApprove = false)
     {
         string directoryType;
         string directoryName;
@@ -209,6 +212,11 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             "--standard-automerge",
             directoryType, directoryName,
         ];
+
+        if (autoApprove)
+        {
+            additionalOptions.AddRange(["--auto-approve", "true"]);
+        }
 
         return await CreateSubscriptionAsync(
                 sourceChannelName,
