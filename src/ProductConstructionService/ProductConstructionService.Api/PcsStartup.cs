@@ -55,6 +55,10 @@ internal static class PcsStartup
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
 
+        // Credentials of the dedicated GitHub App used to approve codeflow pull requests
+        public const string ApprovalGitHubClientId = $"{KeyVaultSecretPrefix}maestro-approval-github-app-id";
+        public const string ApprovalGitHubClientSecret = $"{KeyVaultSecretPrefix}maestro-approval-github-app-private-key";
+
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -160,6 +164,9 @@ internal static class PcsStartup
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddCodeflowPullRequestApprover(
+            builder.Configuration[ConfigurationKeys.ApprovalGitHubClientId],
+            builder.Configuration[ConfigurationKeys.ApprovalGitHubClientSecret]);
         builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
         builder.Services.AddScoped<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
         builder.Services.AddScoped<ILocalFactory, LocalFactory>();
