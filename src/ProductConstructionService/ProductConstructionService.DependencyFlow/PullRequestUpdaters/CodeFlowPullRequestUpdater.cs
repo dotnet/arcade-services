@@ -905,10 +905,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation(
                 "Codeflow approval check for PR {prUrl} passed; approving the pull request",
                 pr.Url);
+            var previousSourceSha = codeflowApprovalCheck.PreviousSourceSha;
+            var currentSourceSha = codeflowApprovalCheck.CurrentSourceSha;
+            var commitDiffLink =
+                $"[{Commit.GetShortSha(previousSourceSha)}...{Commit.GetShortSha(currentSourceSha)}]" +
+                $"({subscription.SourceRepository}/compare/{previousSourceSha}...{currentSourceSha})";
             await _pullRequestApprover.ApprovePullRequestAsync(
                 pr.Url,
-                $"This pull request only contains source updates from {subscription.SourceRepository} " +
-                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.",
+                $"This pull request only contains source updates from {subscription.SourceRepository}." +
+                Environment.NewLine + Environment.NewLine +
+                $"- **Commit Diff**: {commitDiffLink}",
                 cancellationToken);
         }
         else
