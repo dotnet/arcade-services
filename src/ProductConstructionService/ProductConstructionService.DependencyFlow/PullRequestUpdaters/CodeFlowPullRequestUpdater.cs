@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Common;
 using Maestro.Common.Telemetry;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -836,15 +835,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (subscription.IsBackflow())
         {
             _logger.LogError("Can't run codeflow approval check on backflow subscriptions");
-            return;
-        }
-
-        var repoType = GitRepoUrlUtils.ParseTypeFromUri(codeflowApprovalCheck.PullRequestUrl);
-        if (repoType != GitRepoType.GitHub)
-        {
-            _logger.LogInformation(
-                "Skipping approval of '{url}'; only GitHub pull requests can be approved by the approval app",
-                codeflowApprovalCheck.PullRequestUrl);
             return;
         }
 
