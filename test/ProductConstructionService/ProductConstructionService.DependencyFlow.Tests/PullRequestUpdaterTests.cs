@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -40,6 +41,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
     private Mock<ILocalLibGit2Client> _gitClient = null!;
     private Mock<ICodeflowSourceDiffVerifier> _codeflowSourceDiffVerifier = null!;
+    protected Mock<IPullRequestApprover> PullRequestApprover = null!;
 
     [SetUp]
     public void PullRequestUpdaterTests_SetUp()
@@ -48,6 +50,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _forwardFlower = new();
         _gitClient = new();
         _codeflowSourceDiffVerifier = new();
+        PullRequestApprover = new();
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -58,7 +61,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
         services.AddSingleton(_codeflowSourceDiffVerifier.Object);
-        services.AddSingleton(Mock.Of<IPullRequestApprover>());
+        services.AddSingleton(PullRequestApprover.Object);
 
         CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
@@ -695,6 +698,71 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CurrentSourceSha = currentSourceSha,
             PullRequestUrl = pullRequestUrl
         });
+    }
+
+    protected void GivenTheForwardFlowMatchesTheSourceDiff(bool matches)
+        => _codeflowSourceDiffVerifier
+            .Setup(x => x.ForwardFlowMatchesSourceDiffAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(matches);
+
+    protected void GivenThePullRequestOnlyHasBotCommits(string prUrl)
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.GetPullRequestCommitsAsync(prUrl))
+            .ReturnsAsync([new Commit(Constants.DarcBotName, "bot.commit.sha", "Bot commit")]);
+
+    protected void GivenAnOpenInProgressCodeFlowPullRequest(Build forBuild)
+    {
+        AfterDbUpdateActions.Add(() =>
+        {
+            var pr = CreatePullRequestState(forBuild, VmrPullRequestUrl, headBranchSha: InProgressPrHeadBranchSha);
+            SetState(Subscription, pr);
+            SetExpectedPullRequestState(Subscription, pr);
+        });
+
+        DarcRemotes.GetOrAddValue(VmrUri, () => CreateMock<IRemote>())
+            .Setup(x => x.GetPullRequestAsync(VmrPullRequestUrl))
+            .ReturnsAsync(new PullRequest()
+            {
+                Status = PrStatus.Open,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                BaseBranch = TargetBranch,
+            });
+    }
+
+    protected async Task WhenRunCodeflowApprovalCheckAsyncIsCalled(CodeflowApprovalCheck approvalCheck)
+        => await Execute(
+            async context =>
+            {
+                var updater = (CodeFlowPullRequestUpdater)CreatePullRequestActor(context, isCodeflow: true);
+                await updater.RunCodeflowApprovalCheckAsync(
+                    SqlBarClient.ToClientModelSubscription(Subscription),
+                    approvalCheck,
+                    CancellationToken.None);
+            });
+
+    protected void ThenThePullRequestShouldHaveBeenApproved(string prUrl)
+        => PullRequestApprover.Verify(
+            x => x.ApprovePullRequestAsync(prUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+    protected void ThenThePullRequestShouldNotHaveBeenApproved()
+        => PullRequestApprover.Verify(
+            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    protected void ThenTheInProgressPullRequestWasChecked()
+    {
+        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestAsync(VmrPullRequestUrl), Times.Once);
+        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestCommitsAsync(VmrPullRequestUrl), Times.Once);
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
