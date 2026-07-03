@@ -208,7 +208,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
+            },
+            autoApprove: true);
         Build build = GivenANewBuild(true);
         Build build2 = GivenANewBuild(true);
 
@@ -284,7 +285,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
+            },
+            autoApprove: true);
 
         // The situation is following:
         // 1. build1 is flowed and PR is opened
@@ -428,7 +430,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
+            },
+            autoApprove: true);
 
         var oppositeChannel = new Channel
         {

@@ -6,7 +6,6 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using DarcGitHubClient = Microsoft.DotNet.DarcLib.GitHubClient;
 
 namespace ProductConstructionService.DependencyFlow;
