@@ -46,19 +46,13 @@ internal class GitHubPullRequestApprover : IPullRequestApprover
         var repoType = GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl);
         if (repoType != GitRepoType.GitHub)
         {
-            _logger.LogInformation(
-                "Skipping approval of '{url}'; only GitHub pull requests can be approved by the approval app",
-                pullRequestUrl);
-            return;
+            throw new InvalidOperationException($"Can not approve non GitHub pull request: {pullRequestUrl}");
         }
 
         var (owner, repo, prNumber) = DarcGitHubClient.ParsePullRequestUri(pullRequestUrl);
         if (owner == null || repo == null || prNumber == 0)
         {
-            _logger.LogInformation(
-                "Skipping approval of '{url}'; only GitHub pull requests can be approved by the approval app",
-                pullRequestUrl);
-            return;
+            throw new InvalidOperationException($"Unable to parse GitHub pull request Uri {pullRequestUrl}");
         }
 
         GitHubClient installationClient = await CreateInstallationClientAsync(owner, repo);
