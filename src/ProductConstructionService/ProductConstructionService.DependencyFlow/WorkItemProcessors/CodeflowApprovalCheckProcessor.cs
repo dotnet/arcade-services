@@ -40,7 +40,7 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
         
         if (subscription == null)
         {
-            _logger.LogInformation("Subscription {id} doesn't exist, skipping codeflow approval check", subscription.Id);
+            _logger.LogInformation("Subscription {id} doesn't exist, skipping codeflow approval check", workItem.SubscriptionId);
             return true;
         }
 
