@@ -154,6 +154,7 @@ internal class WorkItemConsumer(
                 {
                     _logger.LogError("Work item {type} has failed with non continueable exception: {message}",
                         workItemType, ex.Message);
+                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
                 }
             }
         }

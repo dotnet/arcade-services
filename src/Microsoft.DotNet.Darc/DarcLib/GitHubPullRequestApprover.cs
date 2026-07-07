@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
@@ -8,9 +11,9 @@ using Microsoft.Extensions.Options;
 using Octokit;
 using DarcGitHubClient = Microsoft.DotNet.DarcLib.GitHubClient;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace Microsoft.DotNet.DarcLib;
 
-internal interface IPullRequestApprover
+public interface IPullRequestApprover
 {
     Task ApprovePullRequestAsync(string pullRequestUrl, string reviewBody, CancellationToken cancellationToken = default);
 }
@@ -19,12 +22,12 @@ internal interface IPullRequestApprover
 /// Approves GitHub codeflow pull requests using a dedicated GitHub App that has permission
 /// to approve pull requests.
 /// </summary>
-internal class GitHubPullRequestApprover : IPullRequestApprover
+public class GitHubPullRequestApprover : IPullRequestApprover
 {
     /// <summary>
     /// Logical name of the named <see cref="GitHubTokenProviderOptions"/> that holds the approval app's credentials.
     /// </summary>
-    internal const string GitHubAppOptionsName = "CodeflowApproval";
+    public const string GitHubAppOptionsName = "CodeflowApproval";
 
     private readonly IGitHubAppTokenProvider _appTokenProvider;
     private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
@@ -55,7 +58,7 @@ internal class GitHubPullRequestApprover : IPullRequestApprover
             throw new InvalidOperationException($"Unable to parse GitHub pull request Uri {pullRequestUrl}");
         }
 
-        GitHubClient installationClient = await CreateInstallationClientAsync(owner, repo);
+        Octokit.GitHubClient installationClient = await CreateInstallationClientAsync(owner, repo);
 
         await installationClient.PullRequest.Review.Create(
             owner,
@@ -70,23 +73,23 @@ internal class GitHubPullRequestApprover : IPullRequestApprover
         _logger.LogInformation("Approved pull request {url} using the approval GitHub App", pullRequestUrl);
     }
 
-    private async Task<GitHubClient> CreateInstallationClientAsync(string owner, string repo)
+    private async Task<Octokit.GitHubClient> CreateInstallationClientAsync(string owner, string repo)
     {
-        GitHubClient appClient = CreateAppClient();
+        Octokit.GitHubClient appClient = CreateAppClient();
         Installation installation = await appClient.GitHubApps.GetRepositoryInstallationForCurrent(owner, repo);
         AccessToken accessToken = await appClient.GitHubApps.CreateInstallationToken(installation.Id);
         var installationToken = accessToken.Token;
 
-        return new GitHubClient(_gitHubClientOptions.Value.ProductHeader)
+        return new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader)
         {
             Credentials = new Credentials(installationToken)
         };
     }
 
-    private GitHubClient CreateAppClient()
+    private Octokit.GitHubClient CreateAppClient()
     {
         var jwt = _appTokenProvider.GetAppToken(GitHubAppOptionsName);
-        return new GitHubClient(_gitHubClientOptions.Value.ProductHeader)
+        return new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader)
         {
             Credentials = new Credentials(jwt, AuthenticationType.Bearer)
         };
