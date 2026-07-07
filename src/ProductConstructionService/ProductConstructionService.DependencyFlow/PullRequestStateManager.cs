@@ -43,16 +43,6 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public Task SetInProgressPullRequestAsync(InProgressPullRequest pr) =>
         _pullRequestState.SetAsync(pr);
 
-    public async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
-    {
-        // TODO (https://github.com/dotnet/arcade-services/issues/6146): Temporary solution to update existing PRs; can be removed after all existing PRs get a creation date
-        if (pr.CreationDate != creationDate)
-        {
-            pr.CreationDate = creationDate;
-            await _pullRequestState.SetAsync(pr);
-        }
-    }
-
     public Task<MergePolicyEvaluationResults?> GetMergePolicyEvaluationResultsAsync() =>
         _mergePolicyEvaluationState.TryGetStateAsync();
 
