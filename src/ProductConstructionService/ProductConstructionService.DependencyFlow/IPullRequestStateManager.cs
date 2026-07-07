@@ -20,12 +20,6 @@ internal interface IPullRequestStateManager
 
     Task SetInProgressPullRequestAsync(InProgressPullRequest pr);
 
-    /// <summary>
-    ///     Updates the creation date on the in-progress PR if it differs.
-    ///     Temporary workaround until all existing PRs have a creation date.
-    /// </summary>
-    Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate);
-
     #endregion
 
     #region Merge policy evaluation cache
