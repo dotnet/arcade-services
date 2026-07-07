@@ -900,12 +900,21 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             var commitDiffLink =
                 $"[{Commit.GetShortSha(previousSourceSha)}...{Commit.GetShortSha(currentSourceSha)}]" +
                 $"({subscription.SourceRepository}/compare/{previousSourceSha}...{currentSourceSha})";
-            await _pullRequestApprover.ApprovePullRequestAsync(
-                pr.Url,
-                $"This pull request only contains source updates from {subscription.SourceRepository}." +
-                Environment.NewLine + Environment.NewLine +
-                $"- **Commit Diff**: {commitDiffLink}",
-                cancellationToken);
+            try
+            {
+                await _pullRequestApprover.ApprovePullRequestAsync(
+                    pr.Url,
+                    $"This pull request only contains source updates from {subscription.SourceRepository}." +
+                    Environment.NewLine + Environment.NewLine +
+                    $"- **Commit Diff**: {commitDiffLink}",
+                    cancellationToken);
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.LogError(e, "Failed to approve PR {prUrl}; discarding the work item as non-retriable", pr.Url);
+                throw new NonRetriableException(
+                    $"Failed to approve pull request {pr.Url}: {e.Message}", e);
+            }
         }
         else
         {
