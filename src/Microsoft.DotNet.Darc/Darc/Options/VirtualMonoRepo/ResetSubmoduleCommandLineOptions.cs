@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -17,4 +18,6 @@ internal class ResetSubmoduleCommandLineOptions : VmrCommandLineOptions<ResetSub
         "The command must be run from a local clone of that submodule's repository; its current HEAD " +
         "is used as the target content and commit.")]
     public string Path { get; set; }
+
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }
