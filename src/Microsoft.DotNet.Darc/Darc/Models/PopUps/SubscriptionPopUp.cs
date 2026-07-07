@@ -192,6 +192,11 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         _data.AutoApprove = ParseSetting(outputYamlData.AutoApprove, _data.AutoApprove, false);
 
+        if (string.IsNullOrEmpty(_data.AutoApprove))
+        {
+            _data.AutoApprove = false.ToString();
+        }
+
         if (!bool.TryParse(_data.AutoApprove, out bool _))
         {
             _logger.LogError("AutoApprove is not a valid boolean value.");

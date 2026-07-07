@@ -36,6 +36,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ICodeflowSourceDiffVerifier _codeflowSourceDiffVerifier;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
+    private readonly IPullRequestApprover _pullRequestApprover;
     private readonly IPullRequestTarget _target;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
@@ -56,6 +57,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ISubscriptionEventRecorder subscriptionEventRecorder,
         ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
+        IPullRequestApprover pullRequestApprover,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
@@ -73,6 +75,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _subscriptionEventRecorder = subscriptionEventRecorder;
         _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
+        _pullRequestApprover = pullRequestApprover;
         _target = target;
     }
 
@@ -695,6 +698,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             if (!skipCodeflowApprovalCheck
+                && subscription.AutoApprove
                 && !string.IsNullOrEmpty(previousSourceSha)
                 && subscription.IsForwardFlow())
             {
@@ -807,6 +811,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.SetCheckReminderAsync(pullRequest, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             if (!skipCodeflowApprovalCheck
+                && subscription.AutoApprove
                 && !string.IsNullOrEmpty(previousSourceSha)
                 && subscription.IsForwardFlow())
             {
@@ -888,12 +893,28 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         if (match)
         {
             _logger.LogInformation(
-                "Codeflow approval check for PR {prUrl} passed; posting approval comment",
+                "Codeflow approval check for PR {prUrl} passed; approving the pull request",
                 pr.Url);
-            await remote.CommentPullRequestAsync(
-                pr.Url,
-                $"This pull request only contains source updates from {subscription.SourceRepository} " +
-                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.");
+            var previousSourceSha = codeflowApprovalCheck.PreviousSourceSha;
+            var currentSourceSha = codeflowApprovalCheck.CurrentSourceSha;
+            var commitDiffLink =
+                $"[{Commit.GetShortSha(previousSourceSha)}...{Commit.GetShortSha(currentSourceSha)}]" +
+                $"({subscription.SourceRepository}/compare/{previousSourceSha}...{currentSourceSha})";
+            try
+            {
+                await _pullRequestApprover.ApprovePullRequestAsync(
+                    pr.Url,
+                    $"This pull request only contains source updates from {subscription.SourceRepository}." +
+                    Environment.NewLine + Environment.NewLine +
+                    $"- **Commit Diff**: {commitDiffLink}",
+                    cancellationToken);
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.LogError(e, "Failed to approve PR {prUrl}; discarding the work item as non-retriable", pr.Url);
+                throw new NonRetriableException(
+                    $"Failed to approve pull request {pr.Url}: {e.Message}", e);
+            }
         }
         else
         {
