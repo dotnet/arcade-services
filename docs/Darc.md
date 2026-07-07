@@ -77,6 +77,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
   - [push](#push) - Pushes given VMR branch to a given remote.
   - [reset](#reset) - Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
+  - [reset-submodule](#reset-submodule) - Resets the contents of a single VMR submodule to match the current HEAD of the submodule repository you run the command from, and updates its record in source-manifest.json. Changes are staged only.
   - [diff](#diff) - Diffs the VMR and the product repositories.
 
 ## Scenarios
@@ -3379,6 +3380,18 @@ darc vmr reset runtime --channel ".NET 10"
 # Invalid format - shows clear error
 darc vmr reset invalid-format
 # Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
+```
+
+### **`reset-submodule`**
+
+Resets the contents of a single VMR submodule to match the current `HEAD` of the submodule repository you run the command from, and updates that submodule's record in `source-manifest.json`. Changes are staged only.
+
+Run this command from a local clone of the submodule's own repository. The target commit and content are taken from that local clone's `HEAD`, and the local clone itself is recorded as the submodule's remote in `source-manifest.json` (its `HEAD` may not exist on any public remote yet). The single positional argument is the submodule's path exactly as it appears in `source-manifest.json`, in the form `[mapping]/[path within the mapping]`. Being a positional argument, it should come last on the command line, after any options such as `--vmr`.
+
+**Sample**
+```
+# From within a local clone of the submodule repository:
+darc vmr reset-submodule --vmr C:\Path\VMR runtime/src/external/foo
 ```
 
 ### **`diff`**

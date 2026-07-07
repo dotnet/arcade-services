@@ -162,6 +162,7 @@ internal static class Program
         typeof(ResolveConflictCommandLineOptions),
         typeof(CherryPickCommandLineOptions),
         typeof(ResetCommandLineOptions),
+        typeof(ResetSubmoduleCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
