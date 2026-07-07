@@ -276,7 +276,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the new subscription update section along with the PR header
-            string fromBranch = subscription.LastAppliedBuild != null ? $"`{subscription.LastAppliedBuild.GetBranch()}`" : "branch";
+            string fromBranch = subscription.LastAppliedBuild != null ? $"{subscription.LastAppliedBuild.GetBranch()}" : "<branch not available>";
             var prHeader = unsafeFlow
                 ? $"""
 
