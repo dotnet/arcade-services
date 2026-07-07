@@ -53,6 +53,7 @@ public static class CodeflowExtensions
         services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, sp.GetRequiredService<IVmrInfo>().TmpPath.ToString()));
         services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
+        services.TryAddTransient<ICommitSigner, NoOpCommitSigner>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
@@ -127,6 +128,7 @@ public static class CodeflowExtensions
             return new RemoteTokenProvider(azdoTokenProvider, null);
         });
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
+        services.TryAddTransient<ICommitSigner, NoOpCommitSigner>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();

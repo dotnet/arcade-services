@@ -54,6 +54,8 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string CodeFlowCommitSigningPrivateKey = $"{KeyVaultSecretPrefix}codeflow-commit-signing-private-key";
+        public const string CodeFlowCommitSigningPublicKey = $"{KeyVaultSecretPrefix}codeflow-commit-signing-public-key";
 
         // Credentials of the dedicated GitHub App used to approve codeflow pull requests
         public const string ApprovalGitHubClientId = $"{KeyVaultSecretPrefix}maestro-approval-github-app-id";
@@ -160,6 +162,8 @@ internal static class PcsStartup
         builder.AddDependencyFlowProcessors();
 
         builder.AddCodeflow();
+        builder.Services.AddSingleton<ICommitSigner, ServiceCommitSigner>();
+        builder.Services.AddSingleton<ICommitSignatureVerifier, ServiceCommitSignatureVerifier>();
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);

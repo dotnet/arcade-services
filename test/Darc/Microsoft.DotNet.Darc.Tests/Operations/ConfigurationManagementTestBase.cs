@@ -143,7 +143,8 @@ public abstract class ConfigurationManagementTestBase
             new NoTelemetryRecorder(),
             ProcessManager,
             new FileSystem(),
-            NullLogger.Instance);
+            NullLogger.Instance,
+            new NoOpCommitSigner());
         LocalGitRepoFactory = new LocalGitRepoFactory(localGitClient, ProcessManager);
     }
 

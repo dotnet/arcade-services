@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.IO;
 using Maestro.Common.Telemetry;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -38,6 +41,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestApprover _pullRequestApprover;
     private readonly IPullRequestTarget _target;
+    private readonly ICommitSignatureVerifier _commitSignatureVerifier;
+    private readonly IProcessManager _processManager;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
@@ -59,6 +64,51 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         IPullRequestApprover pullRequestApprover,
         ILogger<CodeFlowPullRequestUpdater> logger)
+        : this(
+            target,
+            mergePolicyEvaluator,
+            remoteFactory,
+            pullRequestBuilder,
+            sqlClient,
+            gitClient,
+            vmrInfo,
+            vmrForwardFlower,
+            vmrBackFlower,
+            telemetryRecorder,
+            commentCollector,
+            pullRequestCommenter,
+            stateManager,
+            subscriptionEventRecorder,
+            codeflowSourceDiffVerifier,
+            outcomeRecorder,
+            pullRequestApprover,
+            new NoOpCommitSignatureVerifier(),
+            new NoOpProcessManager(),
+            logger)
+    {
+    }
+
+    public CodeFlowPullRequestUpdater(
+        IPullRequestTarget target,
+        IMergePolicyEvaluator mergePolicyEvaluator,
+        IRemoteFactory remoteFactory,
+        IPullRequestBuilder pullRequestBuilder,
+        ISqlBarClient sqlClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
+        ICommentCollector commentCollector,
+        IPullRequestCommenter pullRequestCommenter,
+        IPullRequestStateManager stateManager,
+        ISubscriptionEventRecorder subscriptionEventRecorder,
+        ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
+        IPullRequestApprover pullRequestApprover,
+        ICommitSignatureVerifier commitSignatureVerifier,
+        IProcessManager processManager,
+        ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
         _vmrInfo = vmrInfo;
@@ -76,6 +126,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
         _pullRequestApprover = pullRequestApprover;
+        _commitSignatureVerifier = commitSignatureVerifier;
+        _processManager = processManager;
         _target = target;
     }
 
@@ -868,17 +920,57 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
 
         var commits = await remote.GetPullRequestCommitsAsync(pr.Url);
-        var nonBotCommits = commits
-            .Where(commit => !string.Equals(commit.Author, Constants.DarcBotName, StringComparison.Ordinal))
-            .ToList();
-        if (nonBotCommits.Count > 0)
+        string tempRepositoryPath = Path.Combine(Path.GetTempPath(), $"codeflow-pr-verify-{Guid.NewGuid():N}");
+
+        try
         {
+            var cloneResult = await _processManager.Execute(
+                "git",
+                ["clone", "--depth", "1000", "--branch", pr.HeadBranch, subscription.TargetRepository, tempRepositoryPath],
+                cancellationToken: cancellationToken);
+
+            if (!cloneResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Skipping codeflow approval check for PR {prUrl} because the PR branch could not be cloned: {stderr}",
+                    pr.Url,
+                    cloneResult.StandardError);
+                return;
+            }
+
+            var verifiedCommitCount = 0;
+            foreach (var commit in commits)
+            {
+                if (!await _commitSignatureVerifier.VerifyAsync(tempRepositoryPath, commit.Sha, cancellationToken))
+                {
+                    _logger.LogInformation(
+                        "Skipping codeflow approval check for PR {prUrl} because commit {sha} could not be verified",
+                        pr.Url,
+                        commit.Sha);
+                    return;
+                }
+
+                verifiedCommitCount++;
+            }
+
             _logger.LogInformation(
-                "Skipping codeflow approval check for PR {prUrl} because it contains {count} commit(s) not authored by {bot}",
-                pr.Url,
-                nonBotCommits.Count,
-                Constants.DarcBotName);
-            return;
+                "Verified {count} commit(s) for PR {prUrl}",
+                verifiedCommitCount,
+                pr.Url);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempRepositoryPath))
+                {
+                    Directory.Delete(tempRepositoryPath, recursive: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete temporary repository {path}", tempRepositoryPath);
+            }
         }
 
         bool match = await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
@@ -965,6 +1057,53 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow(), sourceBranch),
                 CommentType.Warning);
         }
+    }
+
+    private sealed class NoOpCommitSignatureVerifier : ICommitSignatureVerifier
+    {
+        public Task<bool> VerifyAsync(string repoPath, string commitSha, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+    }
+
+    private sealed class NoOpProcessManager : IProcessManager
+    {
+        public Task<ProcessExecutionResult> Execute(
+            string executable,
+            IEnumerable<string> arguments,
+            TimeSpan? timeout = null,
+            string? workingDir = null,
+            Dictionary<string, string>? envVariables = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessExecutionResult { ExitCode = 0 });
+
+        public Task<ProcessExecutionResult> Execute(
+            string executable,
+            IEnumerable<string> arguments,
+            string? standardInput,
+            TimeSpan? timeout = null,
+            string? workingDir = null,
+            Dictionary<string, string>? envVariables = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessExecutionResult { ExitCode = 0 });
+
+        public Task<ProcessExecutionResult> ExecuteGit(
+            string repoPath,
+            string[] arguments,
+            Dictionary<string, string>? envVariables = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessExecutionResult { ExitCode = 0 });
+
+        public Task<ProcessExecutionResult> ExecuteGit(
+            string repoPath,
+            string[] arguments,
+            string? standardInput,
+            Dictionary<string, string>? envVariables = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessExecutionResult { ExitCode = 0 });
+
+        public string FindGitRoot(string path) => path;
+
+        public string GitExecutable => "git";
     }
 }
 

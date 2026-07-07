@@ -30,6 +30,7 @@ public class LocalGitClient : ILocalGitClient
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
+    private readonly ICommitSigner _commitSigner;
 
     public LocalGitClient(
         IRemoteTokenProvider remoteConfiguration,
@@ -37,12 +38,24 @@ public class LocalGitClient : ILocalGitClient
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger logger)
+        : this(remoteConfiguration, telemetryRecorder, processManager, fileSystem, logger, new NoOpCommitSigner())
+    {
+    }
+
+    public LocalGitClient(
+        IRemoteTokenProvider remoteConfiguration,
+        ITelemetryRecorder telemetryRecorder,
+        IProcessManager processManager,
+        IFileSystem fileSystem,
+        ILogger logger,
+        ICommitSigner commitSigner)
     {
         _remoteConfiguration = remoteConfiguration;
         _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
+        _commitSigner = commitSigner;
     }
 
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string? branch)
@@ -159,7 +172,9 @@ public class LocalGitClient : ILocalGitClient
         (string Name, string Email)? author = null,
         CancellationToken cancellationToken = default)
     {
-        IEnumerable<string> args = new[] { "commit", "--no-gpg-sign", "-m", message };
+        CommitSigningConfiguration signingConfiguration = await _commitSigner.GetConfigurationAsync(repoPath, cancellationToken);
+
+        IEnumerable<string> args = new[] { "commit", signingConfiguration.Enabled ? "--gpg-sign" : "--no-gpg-sign", "-m", message };
 
         if (allowEmpty)
         {
@@ -172,7 +187,7 @@ public class LocalGitClient : ILocalGitClient
             .Append("--author")
             .Append($"{author.Value.Name} <{author.Value.Email}>");
 
-        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, args, signingConfiguration.EnvironmentVariables is null ? null : new Dictionary<string, string>(signingConfiguration.EnvironmentVariables), cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
@@ -180,7 +195,12 @@ public class LocalGitClient : ILocalGitClient
         string repoPath,
         CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit", "--no-gpg-sign"], cancellationToken: cancellationToken);
+        CommitSigningConfiguration signingConfiguration = await _commitSigner.GetConfigurationAsync(repoPath, cancellationToken);
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            ["commit", "--amend", "--no-edit", signingConfiguration.Enabled ? "--gpg-sign" : "--no-gpg-sign"],
+            signingConfiguration.EnvironmentVariables is null ? null : new Dictionary<string, string>(signingConfiguration.EnvironmentVariables),
+            cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to amend commit in {repoPath}");
     }
 

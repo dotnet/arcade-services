@@ -62,7 +62,8 @@ public class LocalGitClientResolveConflictTests
             new NoTelemetryRecorder(),
             _processManager,
             new FileSystem(),
-            NullLogger<LocalGitClient>.Instance);
+            NullLogger<LocalGitClient>.Instance,
+            new NoOpCommitSigner());
 
         // Initialize the repo and make an initial commit so HEAD exists.
         (await _processManager.ExecuteGit(_repoPath, "init", "-b", "main"))
