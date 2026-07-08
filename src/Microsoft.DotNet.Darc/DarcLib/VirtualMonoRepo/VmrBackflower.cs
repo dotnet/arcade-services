@@ -495,7 +495,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetBranch, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
             return (headBranchExisted, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
@@ -531,7 +531,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetBranch, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
@@ -591,7 +591,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             resetToRemote: false,
             cancellationToken);
 
-        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, targetBranch, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
         previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
 

@@ -21,6 +21,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 {
     private const string MappingName = "test-repo";
     private const string RepoUri = "https://github.com/dotnet/test-repo";
+    private const string TargetBranch = "branch";
 
     private const string LastForwardRepoSha = "forward-repo-sha";
     private const string LastForwardVmrSha = "forward-vmr-sha";
@@ -116,6 +117,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -139,9 +141,11 @@ public class VmrCodeFlowerGetLastFlowsTests
         _repoClone
             .Setup(x => x.IsAncestorCommit(LastBackflowRepoSha, LastForwardRepoSha))
             .ReturnsAsync(false);
+        _vmrRepo.Setup(x => x.IsAncestorCommit(LastBackflowVmrSha, TargetBranch)).ReturnsAsync(true);
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -165,6 +169,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -191,12 +196,10 @@ public class VmrCodeFlowerGetLastFlowsTests
         _vmrRepo
             .Setup(x => x.GetShaForRefAsync(null))
             .ReturnsAsync(currentVmrSha);
-        _vmrRepo
-            .Setup(x => x.IsAncestorCommit(LastBackflowVmrSha, currentVmrSha))
-            .ReturnsAsync(false);
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -220,6 +223,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: true,
             ignoreNonLinearFlow: false,
@@ -239,6 +243,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         Func<Task> act = () => _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -257,6 +262,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: true,
@@ -280,6 +286,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         Func<Task> act = () => _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,
@@ -307,6 +314,7 @@ public class VmrCodeFlowerGetLastFlowsTests
 
         var result = await _codeFlower.GetLastFlowsAsync(
             MappingName,
+            TargetBranch,
             _repoClone.Object,
             currentIsBackflow: false,
             ignoreNonLinearFlow: false,

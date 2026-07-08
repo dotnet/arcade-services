@@ -895,26 +895,32 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation(
                 "Codeflow approval check for PR {prUrl} passed; approving the pull request",
                 pr.Url);
-            var previousSourceSha = codeflowApprovalCheck.PreviousSourceSha;
-            var currentSourceSha = codeflowApprovalCheck.CurrentSourceSha;
-            var commitDiffLink =
-                $"[{Commit.GetShortSha(previousSourceSha)}...{Commit.GetShortSha(currentSourceSha)}]" +
-                $"({subscription.SourceRepository}/compare/{previousSourceSha}...{currentSourceSha})";
-            try
-            {
-                await _pullRequestApprover.ApprovePullRequestAsync(
-                    pr.Url,
-                    $"This pull request only contains source updates from {subscription.SourceRepository}." +
-                    Environment.NewLine + Environment.NewLine +
-                    $"- **Commit Diff**: {commitDiffLink}",
-                    cancellationToken);
-            }
-            catch (InvalidOperationException e)
-            {
-                _logger.LogError(e, "Failed to approve PR {prUrl}; discarding the work item as non-retriable", pr.Url);
-                throw new NonRetriableException(
-                    $"Failed to approve pull request {pr.Url}: {e.Message}", e);
-            }
+            await remote.CommentPullRequestAsync(
+                pr.Url,
+                $"This pull request only contains source updates from {subscription.SourceRepository} " +
+                $"between commits {codeflowApprovalCheck.PreviousSourceSha} and {codeflowApprovalCheck.CurrentSourceSha}.");
+            // don't approve the PRs until we start signing and verifying the commits
+            // https://github.com/dotnet/arcade-services/issues/6482
+            //var previousSourceSha = codeflowApprovalCheck.PreviousSourceSha;
+            //var currentSourceSha = codeflowApprovalCheck.CurrentSourceSha;
+            //var commitDiffLink =
+            //    $"[{Commit.GetShortSha(previousSourceSha)}...{Commit.GetShortSha(currentSourceSha)}]" +
+            //    $"({subscription.SourceRepository}/compare/{previousSourceSha}...{currentSourceSha})";
+            //try
+            //{
+            //    await _pullRequestApprover.ApprovePullRequestAsync(
+            //        pr.Url,
+            //        $"This pull request only contains source updates from {subscription.SourceRepository}." +
+            //        Environment.NewLine + Environment.NewLine +
+            //        $"- **Commit Diff**: {commitDiffLink}",
+            //        cancellationToken);
+            //}
+            //catch (InvalidOperationException e)
+            //{
+            //    _logger.LogError(e, "Failed to approve PR {prUrl}; discarding the work item as non-retriable", pr.Url);
+            //    throw new NonRetriableException(
+            //        $"Failed to approve pull request {pr.Url}: {e.Message}", e);
+            //}
         }
         else
         {
