@@ -12,7 +12,8 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 /// security-sensitive because a passing check produces an approving review, so we assert
 /// that an approval is requested only when the PR's diff matches the expected source diff.
 /// </summary>
-[TestFixture, NonParallelizable]
+[TestFixture, NonParallelizable, Ignore("TODO https://github.com/dotnet/arcade-services/issues/6482")]
+
 internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
 {
     private const string PreviousSourceSha = "previous.source.sha";

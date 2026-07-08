@@ -447,7 +447,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
             // We can tell the above by checking if the last backflown VMR sha belongs to the target branch
-            if (!await vmr.IsAncestorCommit(targetBranch, lastBackflow.VmrSha))
+            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, targetBranch))
             {
                 _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR branch {branch}. " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
