@@ -21,6 +21,7 @@ public interface IVmrCodeFlower
 {
     Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
+        string targetBranch,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
         bool ignoreNonLinearFlow,
@@ -350,6 +351,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// </summary>
     public async Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
+        string targetBranch,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
         bool ignoreNonLinearFlow,
@@ -443,16 +445,14 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (!currentIsBackflow && isForwardOlder)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var currentVmrSha = await vmr.GetShaForRefAsync();
 
-            // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
-            // For normal flows it should be, but for the case described above it will be on a different branch.
-            if (!headBranchExisted && !await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            // We can tell the above by checking if the last backflown VMR sha belongs to the target branch
+            if (!await vmr.IsAncestorCommit(targetBranch, lastBackflow.VmrSha))
             {
-                _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
+                _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR branch {branch}. " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
                     lastBackflow.VmrSha,
-                    currentVmrSha);
+                    targetBranch);
 
                 return new LastFlows(
                     LastFlow: lastForwardFlow,
