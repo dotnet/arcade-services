@@ -64,29 +64,29 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26304.4">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26324.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>7b306e34463421cef2816352743b943c6547dfab</Sha>
+      <Sha>1373629deb1e04f3e8e66fb68bb48ae36479c5ef</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26304.4">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26324.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>7b306e34463421cef2816352743b943c6547dfab</Sha>
+      <Sha>1373629deb1e04f3e8e66fb68bb48ae36479c5ef</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.VersionTools" Version="8.0.0-beta.25555.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>048a8c0ba5b72234301a3605c424ee9f9ff99772</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26317.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26325.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>6ce8806ebc79691a02042a85f099d255bcdc4491</Sha>
+      <Sha>bd64de5d46f9e0203b057a4e34cb1e8bcf45692a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26317.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26325.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>6ce8806ebc79691a02042a85f099d255bcdc4491</Sha>
+      <Sha>bd64de5d46f9e0203b057a4e34cb1e8bcf45692a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26271.1">
+    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26352.1">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
-      <Sha>64f36914c6398baa958b51ff89527e5ea20c70fc</Sha>
+      <Sha>de1dc959221fd1a0f580391c5c8402cf79306f4d</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

@@ -25,6 +25,7 @@ internal class SubscriptionPopUpData
     private const string SourceDirectoryElement = "Source Directory";
     private const string TargetDirectoryElement = "Target Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
+    private const string AutoApproveElement = "Auto Approve";
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
@@ -55,6 +56,9 @@ internal class SubscriptionPopUpData
 
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
     public string SourceEnabled { get; set; }
+
+    [YamlMember(Alias = AutoApproveElement, ApplyNamingConventions = false)]
+    public string AutoApprove { get; set; }
 
     [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
     public string SourceDirectory { get; set; }

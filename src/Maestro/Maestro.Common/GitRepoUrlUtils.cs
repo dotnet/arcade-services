@@ -69,6 +69,7 @@ public static partial class GitRepoUrlUtils
     }
 
     private const string GitHubComString = "github.com";
+    private const string GitHubApiString = "api.github.com";
     private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
@@ -90,7 +91,7 @@ public static partial class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Scheme: "https" or "http", Host: GitHubComString } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: GitHubComString or GitHubApiString } => GitRepoType.GitHub,
             { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
             { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,

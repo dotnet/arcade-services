@@ -76,7 +76,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: false);
             return new SubscriptionUpdateResult(
-                string.Empty,
+                "No dependencies to update",
                 SubscriptionOutcomeType.NoUpdate);
         }
         else
@@ -189,7 +189,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
 
         return new SubscriptionUpdateResult(
-            string.Empty,
+            "Pull request updated",
             SubscriptionOutcomeType.Updated);
     }
 

@@ -6,6 +6,7 @@ using Maestro.DataProviders;
 using Maestro.Services.Common.Cache;
 using Maestro.WorkItems;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
@@ -17,15 +18,18 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly IDistributedLock _distributedLock;
+    private readonly ILogger<CodeflowApprovalCheckProcessor> _logger;
 
     public CodeflowApprovalCheckProcessor(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory,
-        IDistributedLock distributedLock)
+        IDistributedLock distributedLock,
+        ILogger<CodeflowApprovalCheckProcessor> logger)
     {
         _context = context;
         _updaterFactory = updaterFactory;
         _distributedLock = distributedLock;
+        _logger = logger;
     }
 
     public override async Task<bool> ProcessWorkItemAsync(CodeflowApprovalCheck workItem, CancellationToken cancellationToken)
@@ -36,7 +40,13 @@ internal class CodeflowApprovalCheckProcessor : WorkItemProcessor<CodeflowApprov
         
         if (subscription == null)
         {
-            throw new InvalidOperationException($"Subscription with ID {workItem.SubscriptionId} not found.");
+            _logger.LogInformation("Subscription {id} doesn't exist, skipping codeflow approval check", workItem.SubscriptionId);
+            return true;
+        }
+
+        if (!subscription.AutoApprove)
+        {
+            throw new InvalidOperationException($"Subscription {subscription.Id} is not auto-approve enabled, cannot run codeflow approval check");
         }
 
         var pullRequestUpdaterId = PullRequestUpdaterId.CreateUpdaterId(subscription);

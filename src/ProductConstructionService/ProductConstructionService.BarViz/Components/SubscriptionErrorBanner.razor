@@ -7,7 +7,6 @@
         @foreach (var errorGroup in BuildSections())
         {
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 8px;">
-                <FluentIcon Value="@(new Icons.Filled.Size20.Warning())" Color="Color.Warning" />
                 <FluentLabel Typo="Typography.H5">
                     @errorGroup.Title (@errorGroup.Errors.Count)
                 </FluentLabel>
@@ -15,10 +14,13 @@
 
             <FluentDataGrid Items="@errorGroup.Errors.AsQueryable()"
                             TGridItem="SubscriptionOutcomeError"
-                            GridTemplateColumns="22rem 1fr"
                             Style="width: 100%; margin-bottom: 16px;">
-                <PropertyColumn Title="Subscription" Property="@(e => SubscriptionDisplay(e.Subscription))" Align="Align.Start" />
-                <TemplateColumn Title="Message" Align="Align.Start">
+                <PropertyColumn Title="Subscription" Width="300px" Property="@(e => SubscriptionDisplay(e.Subscription))" Align="Align.Start" />
+
+                <TemplateColumn Title="Outcome" Width="175px" Align="Align.Start">
+                    <span class="status-dot @SubscriptionOutcomeHelper.GetOutcomeTypeBadgeColor(context.Outcome.Type)"></span>@SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(context.Outcome.Type)
+                </TemplateColumn>
+                <TemplateColumn Title="Message" Width="1fr" Align="Align.Start">
                     <div class="subscription-error-message" title="@context.Outcome.Message">
                         @context.Outcome.Message
                     </div>
@@ -28,10 +30,9 @@
 
         <FluentDivider Style="margin: 16px 0;" />
     </div>
-
     <style>
         /* Keep the message inside its column: it stays on a single line but can
-           be scrolled horizontally, and the full text is shown on hover. */
+                   be scrolled horizontally, and the full text is shown on hover. */
         .subscription-error-banner td {
             overflow: hidden !important;
         }
@@ -56,17 +57,7 @@
 
     private IEnumerable<ErrorSection> BuildSections()
     {
-        var userErrors = Errors.Where(e => SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
-        if (userErrors.Count > 0)
-        {
-            yield return new ErrorSection("Problems in repositories or subscription configuration", userErrors);
-        }
-
-        var serviceErrors = Errors.Where(e => !SubscriptionOutcomeHelper.IsUserError(e.Outcome)).ToList();
-        if (serviceErrors.Count > 0)
-        {
-            yield return new ErrorSection("Internal problems in Maestro", serviceErrors);
-        }
+        return [new ErrorSection("Currently failing subscriptions", Errors)];
     }
 
     private static string SubscriptionDisplay(Subscription subscription)

@@ -80,4 +80,22 @@ public static class SubscriptionOutcomeHelper
 
         return result;
     }
+    public static string GetOutcomeTypeBadgeColor(OutcomeType type) => type switch
+    {
+        OutcomeType.Updated => "status-green",
+        OutcomeType.Failure => "status-red",
+        OutcomeType.UserError => "status-yellow",
+        OutcomeType.HasConflict => "status-yellow",
+        OutcomeType.Rescheduled => "status-blue",
+        _ => "status-grey",
+    };
+
+    public static string GetSubscriptionOutcomeTypeText(OutcomeType type) => type switch
+    {
+        OutcomeType.UserError => "User Error",
+        OutcomeType.HasConflict => "Has conflicts",
+        OutcomeType.NoUpdate => "Nothing to update",
+        OutcomeType.NotUpdatable => "PR not updatable",
+        _ => type.ToString(),
+    };
 }

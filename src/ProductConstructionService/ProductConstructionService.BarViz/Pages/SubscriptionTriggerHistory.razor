@@ -174,17 +174,17 @@
                             <span title="@context.SubscriptionId">@context.SubscriptionId</span>
                         }
                     </TemplateColumn>
-                    <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
-                        <FluentLabel>
-                            <span class="status-dot @GetStatusClass(context.Type)"></span>@GetStatusText(context.Type)
-                        </FluentLabel>
-                    </TemplateColumn>
                     <TemplateColumn Title="Pull Request" Width="200px" Align="Align.Start">
                         <FluentLabel>
                             @if (!string.IsNullOrEmpty(context.PrUrl))
                             {
                                 <FluentAnchor Href="@context.PrUrl" Target="_blank" Appearance="Appearance.Hypertext">#@RepoUrlConverter.GetPrNumber(context.PrUrl)</FluentAnchor>
                             }
+                        </FluentLabel>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Outcome" Width="175px" Sortable="true" SortBy="SortBy(o => o.Type.ToString())" Align="Align.Start">
+                        <FluentLabel>
+                            <span class="status-dot @SubscriptionOutcomeHelper.GetOutcomeTypeBadgeColor(context.Type)"></span>@SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(context.Type)
                         </FluentLabel>
                     </TemplateColumn>
                     <TemplateColumn Title="Message" Width="2fr" Align="Align.Start">
@@ -442,24 +442,5 @@
     }
 
     private static string GetOutcomeTypeOptionText(string option)
-        => string.IsNullOrEmpty(option) ? "All outcomes" : GetStatusText(Enum.Parse<OutcomeType>(option));
-
-    private static string GetStatusClass(OutcomeType type) => type switch
-    {
-        OutcomeType.Updated => "status-green",
-        OutcomeType.Failure => "status-red",
-        OutcomeType.UserError => "status-yellow",
-        OutcomeType.HasConflict => "status-yellow",
-        OutcomeType.Rescheduled => "status-blue",
-        _ => "status-grey",
-    };
-
-    private static string GetStatusText(OutcomeType type) => type switch
-    {
-        OutcomeType.UserError => "User Error",
-        OutcomeType.HasConflict => "Has conflicts",
-        OutcomeType.NoUpdate => "Nothing to update",
-        OutcomeType.NotUpdatable => "PR not updatable",
-        _ => type.ToString(),
-    };
+        => string.IsNullOrEmpty(option) ? "All outcomes" : SubscriptionOutcomeHelper.GetSubscriptionOutcomeTypeText(Enum.Parse<OutcomeType>(option));
 }

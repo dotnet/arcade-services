@@ -37,6 +37,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
     public bool Batchable => bool.Parse(_data.Batchable);
     public string? FailureNotificationTags => _data.FailureNotificationTags;
     public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
+    public bool AutoApprove => bool.Parse(_data.AutoApprove);
     public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
     public string? SourceDirectory => _data.SourceDirectory;
     public string? TargetDirectory => _data.TargetDirectory;
@@ -186,6 +187,19 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
         if (!bool.TryParse(outputYamlData.SourceEnabled, out bool sourceEnabled))
         {
             _logger.LogError("SourceEnabled is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
+        _data.AutoApprove = ParseSetting(outputYamlData.AutoApprove, _data.AutoApprove, false);
+
+        if (string.IsNullOrEmpty(_data.AutoApprove))
+        {
+            _data.AutoApprove = false.ToString();
+        }
+
+        if (!bool.TryParse(_data.AutoApprove, out bool _))
+        {
+            _logger.LogError("AutoApprove is not a valid boolean value.");
             return Constants.ErrorCode;
         }
 
