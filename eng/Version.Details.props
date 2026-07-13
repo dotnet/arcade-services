@@ -6,12 +6,12 @@ This file should be imported by eng/Versions.props
 <Project>
   <PropertyGroup>
     <!-- dotnet-arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26324.4</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26324.4</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26358.3</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26358.3</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26325.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26325.1</MicrosoftDncEngSecretManagerPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26360.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26360.1</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiPaginationPackageVersion>
     <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiVersioningPackageVersion>
@@ -29,7 +29,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26352.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26359.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
