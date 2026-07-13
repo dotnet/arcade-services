@@ -26,6 +26,11 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public string HeadBranchSha { get; set; }
 
     /// <summary>
+    /// SHAs of commits created by the service that are still part of the pull request branch.
+    /// </summary>
+    public List<string> ServiceGeneratedCommits { get; set; } = [];
+
+    /// <summary>
     /// SHA of the commit the update is coming from.
     /// </summary>
     public required string SourceSha { get; set; }
