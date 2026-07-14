@@ -489,11 +489,18 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     private static async Task VerifyCodeFlowCheck(PullRequest pr, string targetRepoName, bool expectSucceeded)
     {
         Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
+        CheckConclusion expectedConclusion = expectSucceeded ? CheckConclusion.Success : CheckConclusion.Failure;
         List<CheckRun> checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id, attempts: 10);
 
-        // Some checks may appear sooner than other, so we wait until the Codeflow verification check completes
+        // The Codeflow verification check is re-run whenever the PR head changes (e.g. after a conflict
+        // resolution or a new subscription update). Until that new run finishes, GitHub can still report the
+        // conclusion from the previous PR state, so waiting only for a non-null conclusion can read a stale
+        // value and make the test flaky. Wait until the check reaches the expected conclusion (or time out and
+        // let the assertion below report the actual value).
         var stopwatch = Stopwatch.StartNew();
-        while (!checks.Any(c => c.Name.Contains("Codeflow verification") && c.Conclusion != null)
+        while (!checks.Any(c => c.Name.Contains("Codeflow verification")
+                && c.Conclusion != null
+                && c.Conclusion.Value.Value == expectedConclusion)
             && stopwatch.Elapsed < TimeSpan.FromMinutes(2))
         {
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -501,7 +508,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         }
 
         CheckRun codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
-        codeFlowCheck.Conclusion.Value.Value.Should().Be(expectSucceeded ? CheckConclusion.Success : CheckConclusion.Failure);
+        codeFlowCheck.Conclusion.Value.Value.Should().Be(expectedConclusion);
     }
 
     private static async Task ChangeAndPushAFile(string repoDir, string filePath, string content, string commitMessage)
