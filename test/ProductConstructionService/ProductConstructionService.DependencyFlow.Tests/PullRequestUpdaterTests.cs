@@ -751,12 +751,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void ThenThePullRequestShouldHaveBeenApproved(string prUrl)
         => PullRequestApprover.Verify(
-            x => x.ApprovePullRequestAsync(prUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.ApprovePullRequestAsync(prUrl, InProgressPrHeadBranchSha, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
     protected void ThenThePullRequestShouldNotHaveBeenApproved()
         => PullRequestApprover.Verify(
-            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
     protected void ThenTheInProgressPullRequestWasChecked()
