@@ -18,7 +18,7 @@
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.2" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.5.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.27.1" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
