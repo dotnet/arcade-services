@@ -928,7 +928,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 await _pullRequestApprover.ApprovePullRequestAsync(
                     pr.Url,
                     prInfo.HeadBranchSha,
-                    $"This pull request only contains source updates from {subscription.SourceRepository}." +
+                    $"This pull request contains only source updates from {subscription.SourceRepository}." +
                     Environment.NewLine + Environment.NewLine +
                     $"- **Commit Diff**: {commitDiffLink}",
                     cancellationToken);
