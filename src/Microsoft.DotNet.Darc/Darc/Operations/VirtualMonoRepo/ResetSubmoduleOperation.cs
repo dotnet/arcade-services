@@ -76,7 +76,7 @@ internal class ResetSubmoduleOperation : Operation
             _logger.LogInformation("Resetting VMR submodule '{path}' to commit '{sha}'", submodule.Path, targetSha);
 
             await ResetSubmoduleContentAsync(submodule, localRepoPath, targetSha, filters);
-            await UpdateManifestAsync(submodule, localRepoPath, targetSha);
+            await UpdateManifestAsync(submodule, targetSha);
 
             _logger.LogInformation("Successfully reset submodule '{path}' to '{sha}'", submodule.Path, targetSha);
             return Constants.SuccessCode;
@@ -208,9 +208,9 @@ internal class ResetSubmoduleOperation : Operation
     /// <summary>
     /// Updates the submodule's record in source-manifest.json and stages the manifest.
     /// </summary>
-    private async Task UpdateManifestAsync(ISourceComponent submodule, NativePath localRepoPath, string targetSha)
+    private async Task UpdateManifestAsync(ISourceComponent submodule, string targetSha)
     {
-        _dependencyTracker.UpdateSubmodules([new SubmoduleRecord(submodule.Path, localRepoPath, targetSha)]);
+        _dependencyTracker.UpdateSubmodules([new SubmoduleRecord(submodule.Path, submodule.RemoteUri, targetSha)]);
 
         var stageManifest = await _processManager.Execute(
             _processManager.GitExecutable,
