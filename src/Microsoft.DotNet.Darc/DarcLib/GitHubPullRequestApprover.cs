@@ -50,7 +50,8 @@ public class GitHubPullRequestApprover : IPullRequestApprover
     public async Task ApprovePullRequestAsync(
         string pullRequestUrl,
         string approvedCommitSha,
-        string reviewBody, CancellationToken cancellationToken = default)
+        string reviewBody,
+        CancellationToken cancellationToken = default)
     {
 
         var repoType = GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl);
