@@ -116,6 +116,10 @@ public class WorkBranch(
                 return await _repo.GetConflictedFilesAsync(CancellationToken.None);
             }
 
+            // If the repository has checked out submodules, we need to update them to the sha in their index to get a clean working tree
+            // this doesn't do anything in case there are no submodules, or they're not checked out
+            await _repo.ExecuteGitCommand(["-c", "protocol.file.always=always", "submodule", "update", "--checkout"], cancellationToken);
+
             return [];
         }
         finally

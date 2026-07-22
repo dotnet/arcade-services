@@ -192,11 +192,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     /// <summary>
     /// Detects submodule changes that happened in the VMR (via <c>darc vmr reset-submodule</c>) and stages them
     /// into the target repo during backflow. A submodule is considered changed when its SHA or URL in the current
-    /// source manifest differs from the one recorded at the last forward flow. When the SHA changes, the submodule
+    /// source manifest differs from the one recorded at the last flow. When the SHA changes, the submodule
     /// pointer in the git tree is updated; when the URL changes, the <c>.gitmodules</c> file is updated.
     /// </summary>
-    /// <returns>True when at least one submodule pointer or URL was staged.</returns>
-    private async Task TryBackflowSubmodulesAsync(
+    /// <returns>True when at least one submodule pointer or URL was updated.</returns>
+    private async Task<bool> TryBackflowSubmodulesAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -210,18 +210,21 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (currentSubmodules.Count == 0)
         {
-            return;
+            return false;
         }
 
-        // Check if submodules changed since last FF
-        List<GitSubmoduleInfo> lastForwardFlowSubmodules =
-            await targetRepo.GetGitSubmodulesAsync(lastFlows.LastForwardFlow.RepoSha);
+        // Compare against the submodule state at the last flow's repo SHA (forward or backward) rather than the
+        // last forward flow, because an intervening backflow may have already backflown a submodule bump.
+        List<GitSubmoduleInfo> lastFlowSubmodules =
+            await targetRepo.GetGitSubmodulesAsync(lastFlows.LastFlow.RepoSha);
+
+        bool updated = false;
 
         foreach (var submodule in currentSubmodules)
         {
             var repoRelativePath = submodule.Path.Substring(submodulePrefix.Length);
 
-            var previous = lastForwardFlowSubmodules.FirstOrDefault(s => s.Path == repoRelativePath);
+            var previous = lastFlowSubmodules.FirstOrDefault(s => s.Path == repoRelativePath);
 
             if (previous == null)
             {
@@ -241,6 +244,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     submodule.CommitSha);
 
                 await UpdateSubmodulePointerAsync(targetRepo, repoRelativePath, submodule.CommitSha, cancellationToken);
+                updated = true;
             }
 
             // When the URL changed, update the .gitmodules file
@@ -253,14 +257,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     submodule.RemoteUri);
 
                 await UpdateSubmoduleUrlAsync(targetRepo, previous.Name, submodule.RemoteUri, cancellationToken);
+                updated = true;
             }
         }
+
+        return updated;
     }
 
     /// <summary>
     /// Updates a submodule gitlink pointer in the target repo's index to the given SHA.
     /// </summary>
-    private static async Task UpdateSubmodulePointerAsync(
+    private async Task UpdateSubmodulePointerAsync(
         ILocalGitRepo targetRepo,
         string repoRelativePath,
         string sha,
@@ -313,28 +320,21 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ignoreLineEndings: false,
             cancellationToken);
 
-        if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
+        // There might be no source changes for the mapping but still submodule pointer changes to backflow
+        // (e.g. after `darc vmr reset-submodule`). Those live at the VMR root, outside the mapping diff, so they
+        // don't show up as patches. Both cases go through the same work branch so they get merged/rebased the same way.
+        bool hasPatchChanges = patches.Count > 0 && patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0);
+
+        if (hasPatchChanges)
         {
-            _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
+            _logger.LogDebug("Created {count} patch(es)", patches.Count);
+        }
+        else
+        {
+            _logger.LogInformation("There are no source changes for VMR between {sha1} and {sha2}, checking for submodule changes only",
                 lastFlownSha,
                 codeflowOptions.CurrentFlow.VmrSha);
-
-            foreach (VmrIngestionPatch patch in patches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, "Failed to delete patch file {patchPath}", patch.Path);
-                }
-            }
-
-            return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
-
-        _logger.LogDebug("Created {count} patch(es)", patches.Count);
 
         IWorkBranch? workBranch = null;
         if (codeflowOptions.KeepConflicts || headBranchExisted)
@@ -362,6 +362,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     targetRepo,
                     codeflowOptions,
                     keepConflicts,
+                    hasPatchChanges,
                     flowSubmodules: true,
                     cancellationToken),
                 cancellationToken);
@@ -374,7 +375,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
-                flowSubmodules: false,
+                hasPatchChanges,
+                flowSubmodules: true,
                 cancellationToken);
         }
 
@@ -403,6 +405,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         CodeflowOptions codeflowOptions,
         bool keepConflicts,
+        bool hasPatchChanges,
         bool flowSubmodules,
         CancellationToken cancellationToken)
     {
@@ -413,13 +416,16 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             keepConflicts: keepConflicts,
             cancellationToken: cancellationToken);
 
+        bool submodulesUpdated = false;
         if (flowSubmodules)
         {
-            await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken); 
+            submodulesUpdated = await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken);
         }
 
+        bool hadUpdates = hasPatchChanges || submodulesUpdated;
+
         // We need to commit because we are on the working branch
-        if (conflicts.Count == 0)
+        if (conflicts.Count == 0 && hadUpdates)
         {
             await CommitBackflow(
                 codeflowOptions.CurrentFlow,
@@ -429,7 +435,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 cancellationToken);
         }
 
-        return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
+        if (!hadUpdates)
+        {
+            _logger.LogInformation("There are no new changes to flow from the VMR between {sha1} and {sha2}",
+                lastFlows.LastFlow.VmrSha,
+                codeflowOptions.CurrentFlow.VmrSha);
+        }
+
+        return new CodeFlowResult(hadUpdates, conflicts, targetRepo.Path, []);
     }
 
     protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
