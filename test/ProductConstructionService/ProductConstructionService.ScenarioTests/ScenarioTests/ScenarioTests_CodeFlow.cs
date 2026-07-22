@@ -112,8 +112,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             pr,
                             [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
 
-                        // TODO https://github.com/dotnet/arcade-services/issues/6482
-                        //await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
+                        await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
                     }
                 }
             }
