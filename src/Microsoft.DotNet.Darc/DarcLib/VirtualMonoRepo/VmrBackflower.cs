@@ -320,20 +320,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ignoreLineEndings: false,
             cancellationToken);
 
-        // There might be no source changes for the mapping but still submodule pointer changes to backflow
-        // (e.g. after `darc vmr reset-submodule`). Those live at the VMR root, outside the mapping diff, so they
-        // don't show up as patches. Both cases go through the same work branch so they get merged/rebased the same way.
         bool hasPatchChanges = patches.Count > 0 && patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0);
 
         if (hasPatchChanges)
         {
             _logger.LogDebug("Created {count} patch(es)", patches.Count);
-        }
-        else
-        {
-            _logger.LogInformation("There are no source changes for VMR between {sha1} and {sha2}, checking for submodule changes only",
-                lastFlownSha,
-                codeflowOptions.CurrentFlow.VmrSha);
         }
 
         IWorkBranch? workBranch = null;
