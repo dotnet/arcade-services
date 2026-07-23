@@ -356,7 +356,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
-                flowSubmodules: true,
+                flowSubmodules: false,
                 cancellationToken);
         }
 
