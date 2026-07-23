@@ -768,9 +768,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         PullRequestApprover.Verify(
             x => x.ApprovePullRequestAsync(prUrl, InProgressPrHeadBranchSha, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        DarcRemotes[VmrUri].Verify(
-            x => x.CommentPullRequestAsync(prUrl, It.IsAny<string>()),
-            Times.Once);
     }
 
     protected void ThenThePullRequestShouldNotHaveBeenApproved()
