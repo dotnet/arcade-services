@@ -45,6 +45,11 @@ public class AssetLocationResolver : IAssetLocationResolver
                     buildCache.Add(asset.BuildId, producingBuild);
                 }
 
+                if (producingBuild.Channels?.Any() != true)
+                {
+                    continue;
+                }
+
                 if (producingBuild.Commit == dependency.Commit)
                 {
                     matchingAssetsFromSameSha.Add(asset);

@@ -15,7 +15,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 public interface IPullRequestApprover
 {
-    Task ApprovePullRequestAsync(string pullRequestUrl, string reviewBody, CancellationToken cancellationToken = default);
+    Task ApprovePullRequestAsync(
+        string pullRequestUrl,
+        string approvedCommitSha,
+        string reviewBody,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -43,7 +47,11 @@ public class GitHubPullRequestApprover : IPullRequestApprover
         _logger = logger;
     }
 
-    public async Task ApprovePullRequestAsync(string pullRequestUrl, string reviewBody, CancellationToken cancellationToken = default)
+    public async Task ApprovePullRequestAsync(
+        string pullRequestUrl,
+        string approvedCommitSha,
+        string reviewBody,
+        CancellationToken cancellationToken = default)
     {
 
         var repoType = GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl);
@@ -66,6 +74,7 @@ public class GitHubPullRequestApprover : IPullRequestApprover
             prNumber,
             new PullRequestReviewCreate
             {
+                CommitId = approvedCommitSha,
                 Body = reviewBody,
                 Event = PullRequestReviewEvent.Approve
             });

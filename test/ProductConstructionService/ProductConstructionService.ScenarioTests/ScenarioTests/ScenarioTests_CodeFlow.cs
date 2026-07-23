@@ -112,8 +112,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             pr,
                             [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
 
-                        // TODO https://github.com/dotnet/arcade-services/issues/6482
-                        //await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
+                        await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
                     }
                 }
             }
@@ -163,8 +162,10 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo2Name, TestFile1Name);
 
-        await CreateBuildAsync(sourceRepoUri, branchName, RepoSideDependencyCommit, "repo-side-location", repoSideAssets);
-        await CreateBuildAsync(sourceRepoUri, branchName, VmrSideDependencyCommit, "vmr-side-location", vmrSideAssets);
+        Build repoSideBuild = await CreateBuildAsync(sourceRepoUri, branchName, RepoSideDependencyCommit, "repo-side-location", repoSideAssets);
+        Build vmrSideBuild = await CreateBuildAsync(sourceRepoUri, branchName, VmrSideDependencyCommit, "vmr-side-location", vmrSideAssets);
+        await AddBuildToChannelAsync(repoSideBuild.Id, channelName);
+        await AddBuildToChannelAsync(vmrSideBuild.Id, channelName);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {

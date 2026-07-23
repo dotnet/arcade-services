@@ -36,6 +36,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected string InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
     protected const string InProgressPrHeadBranchSha = "pr.head.branch.sha";
     protected const string ConflictPRRemoteSha = "sha3333";
+    protected const string BotCommitSha = "bot.commit.sha";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
@@ -716,13 +717,26 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void GivenThePullRequestOnlyHasBotCommits(string prUrl)
         => DarcRemotes[VmrUri]
             .Setup(x => x.GetPullRequestCommitsAsync(prUrl))
-            .ReturnsAsync([new Commit(Constants.DarcBotName, "bot.commit.sha", "Bot commit")]);
+            .ReturnsAsync([new Commit(Constants.DarcBotName, BotCommitSha, "Bot commit")]);
+
+    protected void GivenThePullRequestHasANonServiceCommit(string prUrl)
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.GetPullRequestCommitsAsync(prUrl))
+            .ReturnsAsync(
+            [
+                new Commit(Constants.DarcBotName, BotCommitSha, "Bot commit"),
+                new Commit("attacker", "attacker.commit.sha", "Sneaky commit"),
+            ]);
 
     protected void GivenAnOpenInProgressCodeFlowPullRequest(Build forBuild)
     {
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestState(forBuild, VmrPullRequestUrl, headBranchSha: InProgressPrHeadBranchSha);
+            var pr = CreatePullRequestState(
+                forBuild,
+                VmrPullRequestUrl,
+                headBranchSha: InProgressPrHeadBranchSha,
+                serviceGeneratedCommits: [BotCommitSha]);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
@@ -750,13 +764,31 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             });
 
     protected void ThenThePullRequestShouldHaveBeenApproved(string prUrl)
-        => PullRequestApprover.Verify(
-            x => x.ApprovePullRequestAsync(prUrl, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+    {
+        PullRequestApprover.Verify(
+            x => x.ApprovePullRequestAsync(prUrl, InProgressPrHeadBranchSha, It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
+        DarcRemotes[VmrUri].Verify(
+            x => x.CommentPullRequestAsync(prUrl, It.IsAny<string>()),
+            Times.Once);
+    }
 
     protected void ThenThePullRequestShouldNotHaveBeenApproved()
         => PullRequestApprover.Verify(
-            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    protected void ThenTheSourceDiffShouldNotHaveBeenVerified()
+        => _codeflowSourceDiffVerifier.Verify(
+            x => x.ForwardFlowMatchesSourceDiffAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
 
     protected void ThenTheInProgressPullRequestWasChecked()
@@ -858,12 +890,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             bool? sourceRepoNotified = null,
             UnixPath? relativeBasePath = null,
             List<DependencyUpdateSummary>? dependencyUpdates = null,
-            bool blockedFromFutureUpdates = false)
+            bool blockedFromFutureUpdates = false,
+            List<string>? serviceGeneratedCommits = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
             HeadBranchSha = headBranchSha ?? InProgressPrHeadBranchSha,
+            ServiceGeneratedCommits = serviceGeneratedCommits ?? [],
             SourceSha = forBuild.Commit,
             ContainedSubscriptions =
             [

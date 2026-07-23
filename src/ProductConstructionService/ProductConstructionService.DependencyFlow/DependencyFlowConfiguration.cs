@@ -32,6 +32,9 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
         services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
         services.TryAddScoped<ISubscriptionUpdateOutcomeRecorder, SubscriptionUpdateOutcomeRecorder>();
+        services.TryAddScoped<IServiceCommitTracker, ServiceCommitTracker>();
+        services.AddTransient<ILocalGitClient, TrackingLocalGitClient>();
+        services.AddTransient<ILocalLibGit2Client, TrackingLocalLibGit2Client>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
