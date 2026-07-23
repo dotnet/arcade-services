@@ -195,8 +195,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     /// source manifest differs from the one recorded at the last flow. When the SHA changes, the submodule
     /// pointer in the git tree is updated; when the URL changes, the <c>.gitmodules</c> file is updated.
     /// </summary>
-    /// <returns>True when at least one submodule pointer or URL was updated.</returns>
-    private async Task<bool> TryBackflowSubmodulesAsync(
+    private async Task TryBackflowSubmodulesAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -210,15 +209,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (currentSubmodules.Count == 0)
         {
-            return false;
+            return;
         }
 
         // Compare against the submodule state at the last flow's repo SHA (forward or backward) rather than the
         // last forward flow, because an intervening backflow may have already backflown a submodule bump.
         List<GitSubmoduleInfo> lastFlowSubmodules =
             await targetRepo.GetGitSubmodulesAsync(lastFlows.LastFlow.RepoSha);
-
-        bool updated = false;
 
         foreach (var submodule in currentSubmodules)
         {
@@ -244,7 +241,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     submodule.CommitSha);
 
                 await UpdateSubmodulePointerAsync(targetRepo, repoRelativePath, submodule.CommitSha, cancellationToken);
-                updated = true;
             }
 
             // When the URL changed, update the .gitmodules file
@@ -257,11 +253,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     submodule.RemoteUri);
 
                 await UpdateSubmoduleUrlAsync(targetRepo, previous.Name, submodule.RemoteUri, cancellationToken);
-                updated = true;
             }
         }
-
-        return updated;
     }
 
     /// <summary>
@@ -320,9 +313,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ignoreLineEndings: false,
             cancellationToken);
 
-        bool hasPatchChanges = patches.Count > 0 && patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0);
-
-        if (hasPatchChanges)
+        if (patches.Count > 0 && patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0))
         {
             _logger.LogDebug("Created {count} patch(es)", patches.Count);
         }
@@ -353,7 +344,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     targetRepo,
                     codeflowOptions,
                     keepConflicts,
-                    hasPatchChanges,
                     flowSubmodules: true,
                     cancellationToken),
                 cancellationToken);
@@ -366,13 +356,18 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
-                hasPatchChanges,
                 flowSubmodules: true,
                 cancellationToken);
         }
 
         if (workBranch != null)
         {
+            if (!result.HadUpdates)
+            {
+                await targetRepo.CheckoutAsync(codeflowOptions.HeadBranch);
+                return result;
+            }
+
             var commitMessage = (await targetRepo.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             result = result with
@@ -396,7 +391,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         CodeflowOptions codeflowOptions,
         bool keepConflicts,
-        bool hasPatchChanges,
         bool flowSubmodules,
         CancellationToken cancellationToken)
     {
@@ -407,13 +401,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             keepConflicts: keepConflicts,
             cancellationToken: cancellationToken);
 
-        bool submodulesUpdated = false;
         if (flowSubmodules)
         {
-            submodulesUpdated = await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken);
+            await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken);
         }
 
-        bool hadUpdates = hasPatchChanges || submodulesUpdated;
+        var indexDiff = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
+        bool hadUpdates = indexDiff.ExitCode != 0;
 
         // We need to commit because we are on the working branch
         if (conflicts.Count == 0 && hadUpdates)
