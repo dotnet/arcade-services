@@ -189,6 +189,107 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         };
     }
 
+    /// <summary>
+    /// Detects submodule changes that happened in the VMR (via <c>darc vmr reset-submodule</c>) and stages them
+    /// into the target repo during backflow. A submodule is considered changed when its SHA or URL in the current
+    /// source manifest differs from the one recorded at the last flow. When the SHA changes, the submodule
+    /// pointer in the git tree is updated; when the URL changes, the <c>.gitmodules</c> file is updated.
+    /// </summary>
+    private async Task TryBackflowSubmodulesAsync(
+        CodeflowOptions codeflowOptions,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        CancellationToken cancellationToken)
+    {
+        var submodulePrefix = codeflowOptions.Mapping.Name + '/';
+
+        var currentSubmodules = _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(submodulePrefix))
+            .ToList();
+
+        if (currentSubmodules.Count == 0)
+        {
+            return;
+        }
+
+        // Compare against the submodule state at the last flow's repo SHA (forward or backward) rather than the
+        // last forward flow, because an intervening backflow may have already backflown a submodule bump.
+        List<GitSubmoduleInfo> lastFlowSubmodules =
+            await targetRepo.GetGitSubmodulesAsync(lastFlows.LastFlow.RepoSha);
+
+        foreach (var submodule in currentSubmodules)
+        {
+            var repoRelativePath = submodule.Path.Substring(submodulePrefix.Length);
+
+            var previous = lastFlowSubmodules.FirstOrDefault(s => s.Path == repoRelativePath);
+
+            if (previous == null)
+            {
+                _logger.LogWarning(
+                    "Submodule {path} was added in the VMR but backflowing new submodules is not supported - skipping",
+                    submodule.Path);
+                continue;
+            }
+
+            // When the SHA changed, update the submodule pointer in the git tree
+            if (previous.Commit != submodule.CommitSha)
+            {
+                _logger.LogInformation(
+                    "Updating submodule {path} pointer from {oldSha} to {newSha}",
+                    repoRelativePath,
+                    previous.Commit,
+                    submodule.CommitSha);
+
+                await UpdateSubmodulePointerAsync(targetRepo, repoRelativePath, submodule.CommitSha, cancellationToken);
+            }
+
+            // When the URL changed, update the .gitmodules file
+            if (previous.Url != submodule.RemoteUri)
+            {
+                _logger.LogInformation(
+                    "Updating submodule {path} URL from {oldUrl} to {newUrl}",
+                    repoRelativePath,
+                    previous.Url,
+                    submodule.RemoteUri);
+
+                await UpdateSubmoduleUrlAsync(targetRepo, previous.Name, submodule.RemoteUri, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Updates a submodule gitlink pointer in the target repo's index to the given SHA.
+    /// </summary>
+    private async Task UpdateSubmodulePointerAsync(
+        ILocalGitRepo targetRepo,
+        string repoRelativePath,
+        string sha,
+        CancellationToken cancellationToken)
+    {
+        // 160000 is the git mode for a gitlink (submodule) entry
+        var result = await targetRepo.ExecuteGitCommand(
+            ["update-index", "--cacheinfo", $"160000,{sha},{repoRelativePath}"],
+            cancellationToken);
+        result.ThrowIfFailed($"Failed to update submodule pointer for {repoRelativePath} to {sha}");
+    }
+
+    /// <summary>
+    /// Updates the URL of a submodule in the target repo's .gitmodules file.
+    /// </summary>
+    private async Task UpdateSubmoduleUrlAsync(
+        ILocalGitRepo targetRepo,
+        string submoduleName,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        var result = await targetRepo.ExecuteGitCommand(
+            ["config", "--file", ".gitmodules", $"submodule.{submoduleName}.url", url],
+            cancellationToken);
+        result.ThrowIfFailed($"Failed to update URL of submodule {submoduleName} in .gitmodules");
+
+        await targetRepo.StageAsync([".gitmodules"], cancellationToken);
+    }
+
     protected override async Task<CodeFlowResult> SameDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
@@ -212,28 +313,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ignoreLineEndings: false,
             cancellationToken);
 
-        if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
+        if (patches.Count > 0 && patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0))
         {
-            _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
-                lastFlownSha,
-                codeflowOptions.CurrentFlow.VmrSha);
-
-            foreach (VmrIngestionPatch patch in patches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, "Failed to delete patch file {patchPath}", patch.Path);
-                }
-            }
-
-            return new CodeFlowResult(false, [], targetRepo.Path, []);
+            _logger.LogDebug("Created {count} patch(es)", patches.Count);
         }
-
-        _logger.LogDebug("Created {count} patch(es)", patches.Count);
 
         IWorkBranch? workBranch = null;
         if (codeflowOptions.KeepConflicts || headBranchExisted)
@@ -261,6 +344,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     targetRepo,
                     codeflowOptions,
                     keepConflicts,
+                    flowSubmodules: true,
                     cancellationToken),
                 cancellationToken);
         }
@@ -272,11 +356,18 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 codeflowOptions,
                 codeflowOptions.KeepConflicts,
+                flowSubmodules: false,
                 cancellationToken);
         }
 
         if (workBranch != null)
         {
+            if (!result.HadUpdates)
+            {
+                await targetRepo.CheckoutAsync(codeflowOptions.HeadBranch);
+                return result;
+            }
+
             var commitMessage = (await targetRepo.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             result = result with
@@ -300,6 +391,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         CodeflowOptions codeflowOptions,
         bool keepConflicts,
+        bool flowSubmodules,
         CancellationToken cancellationToken)
     {
         var conflicts = await _vmrPatchHandler.ApplyPatches(
@@ -309,8 +401,16 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             keepConflicts: keepConflicts,
             cancellationToken: cancellationToken);
 
+        if (flowSubmodules)
+        {
+            await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken);
+        }
+
+        var indexDiff = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
+        bool hadUpdates = indexDiff.ExitCode != 0;
+
         // We need to commit because we are on the working branch
-        if (conflicts.Count == 0)
+        if (conflicts.Count == 0 && hadUpdates)
         {
             await CommitBackflow(
                 codeflowOptions.CurrentFlow,
@@ -320,7 +420,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 cancellationToken);
         }
 
-        return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
+        if (!hadUpdates)
+        {
+            _logger.LogInformation("There are no new changes to flow from the VMR between {sha1} and {sha2}",
+                lastFlows.LastFlow.VmrSha,
+                codeflowOptions.CurrentFlow.VmrSha);
+        }
+
+        return new CodeFlowResult(hadUpdates, conflicts, targetRepo.Path, []);
     }
 
     protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
@@ -388,6 +495,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             removePatchAfter: true,
             keepConflicts: false,
             cancellationToken: cancellationToken);
+
+        await TryBackflowSubmodulesAsync(codeflowOptions, lastFlows, targetRepo, cancellationToken);
 
         // Check if there are any changes and only commit if there are
         result = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
