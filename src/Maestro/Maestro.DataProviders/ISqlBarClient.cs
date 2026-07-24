@@ -11,13 +11,6 @@ namespace Maestro.DataProviders;
 
 public interface ISqlBarClient : IBasicBarClient
 {
-    /// <summary>
-    /// Register a subscription update in the database. This is used to track the status of subscription updates.
-    /// </summary>
-    Task RegisterSubscriptionUpdate(
-        Guid subscriptionId,
-        string updateMessage);
-
     #region Configuration Data ingestion
 
     Task CreateSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);

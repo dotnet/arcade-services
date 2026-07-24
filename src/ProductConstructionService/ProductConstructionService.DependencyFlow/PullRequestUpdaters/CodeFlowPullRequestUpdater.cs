@@ -331,8 +331,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
         prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(localTargetRepoPath, prHeadBranch);
 
-        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
-
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
@@ -702,13 +700,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
                 UnsafeFlow = unsafeFlow
             };
-
-            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                inProgressPr.ContainedSubscriptions,
-                DependencyFlowEventType.Created,
-                DependencyFlowEventReason.New,
-                MergePolicyCheckResult.PendingPolicies,
-                pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
