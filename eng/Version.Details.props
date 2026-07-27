@@ -14,7 +14,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26363.3</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiPaginationPackageVersion>
-    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiVersioningPackageVersion>
+    <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26377.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
     <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.26319.3</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
     <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.26319.3</MicrosoftDncEngConfigurationExtensionsPackageVersion>
     <MicrosoftDotNetGitHubAuthenticationPackageVersion>1.1.0-beta.26319.3</MicrosoftDotNetGitHubAuthenticationPackageVersion>
