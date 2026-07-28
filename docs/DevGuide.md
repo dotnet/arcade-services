@@ -316,7 +316,7 @@ az account get-access-token --resource https://redis.azure.com --query accessTok
 Run the following command:
 
 ```bash
-redis-cli -h product-construction-service-redis-prod.redis.cache.windows.net -p 6380 --tls
+redis-cli -h product-construction-service-redis-prod.westus2.redis.azure.net -p 10000 --tls
 ```
 
 Once inside the CLI, authenticate using:

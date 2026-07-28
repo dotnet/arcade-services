@@ -75,7 +75,7 @@ stages:
     - name: authServiceConnection
       value: "Darc: Maestro Production"
     - name: redisConnectionString
-      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+      value: "product-construction-service-redis-prod.westus2.redis.azure.net:10000,ssl=true"
 
   - ${{ else }}:
     - name: subscriptionId
@@ -89,7 +89,7 @@ stages:
     - name: authServiceConnection
       value: "Darc: Maestro Staging"
     - name: redisConnectionString
-      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+      value: "product-construction-service-redis-int.westus2.redis.azure.net:10000,ssl=true"
 
   jobs:
   - job: DeployPCS
