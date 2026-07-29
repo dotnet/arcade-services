@@ -14,6 +14,8 @@ public class AzureDevOpsClientTests
     [TestCase("https://dev.azure.com/dnceng/public/_git/foo", "dnceng", "public", "foo")]
     [TestCase("https://borkbork.visualstudio.com/borky/_git/foo2", "borkbork", "borky", "foo2")]
     [TestCase("https://dev.azure.com/dcn2eng/public-s/_git/foo-23bar", "dcn2eng", "public-s", "foo-23bar")]
+    [TestCase("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar", "dcn-eng", "public-s", "foo-23bar")]
+    [TestCase("https://dcn-eng.visualstudio.com/public-s/_git/foo-23bar", "dcn-eng", "public-s", "foo-23bar")]
     [TestCase("https://dev.azure.com/foo/bar/_git/baz-bop", "foo", "bar", "baz-bop")]
     [TestCase("https://dnceng@dev.azure.com/foo/bar/_git/bebop", "foo", "bar", "bebop")]
     [TestCase("https://dnceng.visualstudio.com/int/_git/bebop", "dnceng", "int", "bebop")]
@@ -25,7 +27,6 @@ public class AzureDevOpsClientTests
         repo.Should().Be(expectedRepo);
     }
 
-    [TestCase("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
     [TestCase("https://github.com/account/bar")]
     public void ParseInvalidRepoUriTests(string inputUri)
     {
@@ -33,6 +34,7 @@ public class AzureDevOpsClientTests
     }
 
     [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/baz98-bop/pullRequests/112", "foo", "bar", "baz98-bop", 112)]
+    [TestCase("https://dev.azure.com/dcn-eng/bar/_apis/git/repositories/baz98-bop/pullRequests/112", "dcn-eng", "bar", "baz98-bop", 112)]
     [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/kidz-bop/pullRequests/1133?_a=files", "foo", "bar", "kidz-bop", 1133)]
     [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/baz-bop/pullRequests/141?_a=files&path=%2F.build%2Frestore.yaml", "foo", "bar", "baz-bop", 141)]
     public void ParseValidPullRequestUriTests(string inputUri, string expectedAccount,
