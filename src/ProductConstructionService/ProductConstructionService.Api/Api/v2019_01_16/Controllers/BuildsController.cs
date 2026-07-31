@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 using ProductConstructionService.Api.v2019_01_16.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
