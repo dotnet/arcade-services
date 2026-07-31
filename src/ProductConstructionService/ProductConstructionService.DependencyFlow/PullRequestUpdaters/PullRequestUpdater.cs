@@ -368,7 +368,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         bool applyNewestOnly,
         bool forceUpdate = false)
     {
-        var build = await _sqlClient.GetBuildAsync(buildId)
+        var build = await _sqlClient.GetBuildAsync(buildId, includeAssetLocation: false)
             ?? throw new InvalidOperationException($"Build with buildId {buildId} not found in the DB.");
 
         return await ProcessPendingUpdatesAsync(

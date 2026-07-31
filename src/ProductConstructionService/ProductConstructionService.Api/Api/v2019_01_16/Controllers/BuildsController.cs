@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using ProductConstructionService.Api.v2019_01_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -11,6 +10,8 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
+using ProductConstructionService.Api.v2019_01_16.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
@@ -78,16 +79,24 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
     ///   Gets a single <see cref="Build"/>, including all the <see cref="ProductConstructionService.Api.v2018_07_16.Models.Channel"/>, <see cref="ProductConstructionService.Api.v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data.
     /// </summary>
     /// <param name="id">The id of the <see cref="Build"/>.</param>
+    /// <param name="includeAssetLocation">Whether to include asset location information.</param>
     [HttpGet("{id}")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The requested Build")]
     [ValidateModelState]
-    public override async Task<IActionResult> GetBuild(int id)
+    public override async Task<IActionResult> GetBuild([FromRoute] int id, [FromQuery] bool? includeAssetLocation = null)
     {
-        Maestro.Data.Models.Build? build = await _context.Builds.Where(b => b.Id == id)
+        IQueryable<Maestro.Data.Models.Build> query = _context.Builds.Where(b => b.Id == id)
             .Include(b => b.BuildChannels)
-            .ThenInclude(bc => bc.Channel)
-            .Include(b => b.Assets)
-            .FirstOrDefaultAsync();
+            .ThenInclude(b => b.Channel)
+            .Include(b => b.Assets);
+
+        if (includeAssetLocation == true)
+        {
+            query = query.Include(b => b.Assets)
+                .ThenInclude(a => a.Locations);
+        }
+
+        var build = await query.FirstOrDefaultAsync();
 
         if (build == null)
         {

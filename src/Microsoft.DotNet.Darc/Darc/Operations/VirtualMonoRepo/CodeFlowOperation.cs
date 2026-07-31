@@ -340,7 +340,7 @@ internal abstract class CodeFlowOperation(
         {
             _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
 
-            build = await _barApiClient.GetBuildAsync(_options.Build)
+            build = await _barApiClient.GetBuildAsync(_options.Build, includeAssetLocation: false)
                 ?? throw new DarcException($"Build with ID '{_options.Build}' not found.");
         }
 
@@ -392,7 +392,7 @@ internal abstract class CodeFlowOperation(
     {
         if (_options.Build != 0 && build == null)
         {
-            build = await _barApiClient.GetBuildAsync(_options.Build);
+            build = await _barApiClient.GetBuildAsync(_options.Build, includeAssetLocation: false);
         }
 
         if (build == null)

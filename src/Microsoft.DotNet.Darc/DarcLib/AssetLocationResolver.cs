@@ -41,7 +41,7 @@ public class AssetLocationResolver : IAssetLocationResolver
             {
                 if (!buildCache.TryGetValue(asset.BuildId, out Build producingBuild))
                 {
-                    producingBuild = await _barClient.GetBuildAsync(asset.BuildId);
+                    producingBuild = await _barClient.GetBuildAsync(asset.BuildId, includeAssetLocation: true);
                     buildCache.Add(asset.BuildId, producingBuild);
                 }
 

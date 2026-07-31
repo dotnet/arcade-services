@@ -417,14 +417,20 @@ public class SqlBarClient : ISqlBarClient
         return results.Select(ToClientModelSubscription);
     }
 
-    public async Task<Build> GetBuildAsync(int buildId)
+    public async Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false)
     {
-        var build = await _context.Builds.Where(b => b.Id == buildId)
+        IQueryable<Data.Models.Build> query = _context.Builds.Where(b => b.Id == buildId)
             .Include(b => b.BuildChannels)
             .ThenInclude(b => b.Channel)
-            .Include(b => b.Assets)
-            .ThenInclude(b => b.Locations)
-            .FirstOrDefaultAsync();
+            .Include(b => b.Assets);
+
+        if (includeAssetLocation)
+        {
+            query = query.Include(b => b.Assets)
+                .ThenInclude(a => a.Locations);
+        }
+
+        var build = await query.FirstOrDefaultAsync();
 
         if (build != null)
         {

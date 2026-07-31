@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -100,7 +101,7 @@ public interface IBasicBarClient
     /// <param name="buildId">Id of build.</param>
     /// <returns>Information about the specific build</returns>
     /// <remarks>The build's assets are returned</remarks>
-    Task<Build> GetBuildAsync(int buildId);
+    Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false);
 
     /// <summary>
     ///     Get a list of builds for the given repo uri and commit.

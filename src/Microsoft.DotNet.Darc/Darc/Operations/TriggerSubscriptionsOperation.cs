@@ -81,7 +81,7 @@ internal class TriggerSubscriptionsOperation : Operation
 
             if (_options.Build != 0)
             {
-                var specificBuild = await _barClient.GetBuildAsync(_options.Build);
+                var specificBuild = await _barClient.GetBuildAsync(_options.Build, includeAssetLocation: false);
                 if (specificBuild == null)
                 {
                     Console.WriteLine($"No build found in the BAR with id '{_options.Build}'");
