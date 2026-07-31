@@ -277,7 +277,7 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
         {
             if (!buildCache.TryGetValue(asset.BuildId, out ProductConstructionService.Client.Models.Build producingBuild))
             {
-                producingBuild = await client.Builds.GetBuildAsync(asset.BuildId, cancellationToken);
+                producingBuild = await client.Builds.GetBuildAsync(asset.BuildId, includeAssetLocation: false, cancellationToken);
                 buildCache.Add(asset.BuildId, producingBuild);
             }
 
@@ -295,7 +295,7 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
 
         // Commonly, if a repository has a dependency on an asset from a build, more dependencies will be to that same build
         // lets fetch all assets from that build to save time later.
-        var build = await client.Builds.GetBuildAsync(buildId.Value, cancellationToken);
+        var build = await client.Builds.GetBuildAsync(buildId.Value, includeAssetLocation: false, cancellationToken);
 
         foreach (var asset in build.Assets.Where(asset => !assetCache.ContainsKey((asset.Name, asset.Version, build.Commit))))
         {
