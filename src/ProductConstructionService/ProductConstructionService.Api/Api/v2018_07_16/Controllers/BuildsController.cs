@@ -151,7 +151,6 @@ public class BuildsController : ControllerBase
             .Include(b => b.BuildChannels)
             .ThenInclude(bc => bc.Channel)
             .Include(b => b.Assets)
-            .ThenInclude(a => a.Locations)
             .FirstOrDefaultAsync();
 
         if (build == null)

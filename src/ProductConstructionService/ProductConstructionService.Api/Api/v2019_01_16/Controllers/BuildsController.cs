@@ -87,7 +87,6 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
             .Include(b => b.BuildChannels)
             .ThenInclude(bc => bc.Channel)
             .Include(b => b.Assets)
-            .ThenInclude(a => a.Locations)
             .FirstOrDefaultAsync();
 
         if (build == null)
