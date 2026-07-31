@@ -156,7 +156,8 @@ public class BuildsController : ControllerBase
         if (includeAssetLocation == true)
         {
             query = query.Include(b => b.Assets)
-                .ThenInclude(a => a.Locations);
+                .ThenInclude(a => a.Locations)
+                .Include(b => b.BuildChannels);
         }
 
         var build = await query.FirstOrDefaultAsync();

@@ -427,7 +427,8 @@ public class SqlBarClient : ISqlBarClient
         if (includeAssetLocation)
         {
             query = query.Include(b => b.Assets)
-                .ThenInclude(a => a.Locations);
+                .ThenInclude(a => a.Locations)
+                .AsSplitQuery();
         }
 
         var build = await query.FirstOrDefaultAsync();

@@ -93,7 +93,8 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
         if (includeAssetLocation == true)
         {
             query = query.Include(b => b.Assets)
-                .ThenInclude(a => a.Locations);
+                .ThenInclude(a => a.Locations)
+                .AsSplitQuery();
         }
 
         var build = await query.FirstOrDefaultAsync();
