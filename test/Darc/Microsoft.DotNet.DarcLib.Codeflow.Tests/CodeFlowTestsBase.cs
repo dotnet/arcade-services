@@ -70,8 +70,8 @@ internal abstract class CodeFlowTestsBase
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
 
-        _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
-             .ReturnsAsync((int id) => _builds[id]);
+        _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>(), It.IsAny<bool>()))
+             .ReturnsAsync((int id, bool _) => _builds[id]);
     }
 
     [TearDown]
