@@ -10,8 +10,8 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26371.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26373.4</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26373.4</MicrosoftDncEngSecretManagerPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26381.3</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26381.3</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26377.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
     <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26377.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
