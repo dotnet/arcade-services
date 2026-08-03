@@ -141,6 +141,12 @@ If the PowerShell script doesn't work for your environment, you can install darc
 dotnet tool install --global Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
 ```
 
+If you prefer to run darc without installing it as a global tool, you can use DNX to execute the package directly. For example:
+
+```
+dnx --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease Microsoft.DotNet.Darc -- get-subscriptions
+```
+
 #### Step 2: Authentication:
 Darc talks to the Maestro API which requires authentication.
 Devs on the .NET team should have access to it through the "all FTE" security group. You can test this by running `darc get-channels` or by visiting [https://maestro.dot.net/](https://maestro.dot.net/).
