@@ -291,9 +291,9 @@ public class BarApiClient : IBarApiClient
     /// <param name="buildId">Id of build.</param>
     /// <returns>Information about the specific build</returns>
     /// <remarks>The build's assets are returned</remarks>
-    public Task<Build> GetBuildAsync(int buildId)
+    public Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false)
     {
-        return _barClient.Builds.GetBuildAsync(buildId);
+        return _barClient.Builds.GetBuildAsync(buildId, includeAssetLocation);
     }
 
     /// <summary>

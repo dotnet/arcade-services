@@ -648,7 +648,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         bool skipCodeflowApprovalCheck = false)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        var build = await _sqlClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId, includeAssetLocation: false);
         List<DependencyUpdateSummary> requiredUpdates = [.. dependencyUpdates.Select(du => new DependencyUpdateSummary(du))];
         try
         {
@@ -766,7 +766,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         bool skipCodeflowApprovalCheck = false)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        var build = await _sqlClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId, includeAssetLocation: false);
 
         pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
         pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate

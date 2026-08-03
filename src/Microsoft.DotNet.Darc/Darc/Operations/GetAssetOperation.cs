@@ -110,7 +110,7 @@ internal class GetAssetOperation : Operation
             ProductConstructionService.Client.Models.Build buildInfo = null;
             if (_options.Build.HasValue)
             {
-                buildInfo = await _barClient.GetBuildAsync(_options.Build.Value);
+                buildInfo = await _barClient.GetBuildAsync(_options.Build.Value, includeAssetLocation: true);
             }
 
             foreach (Asset asset in matchingAssets)
@@ -118,7 +118,7 @@ internal class GetAssetOperation : Operation
                 // Get build info for asset
                 if (!_options.Build.HasValue)
                 {
-                    buildInfo = await _barClient.GetBuildAsync(asset.BuildId);
+                    buildInfo = await _barClient.GetBuildAsync(asset.BuildId, includeAssetLocation: true);
                     if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
                     {
                         break;

@@ -292,7 +292,7 @@ public class CodeflowChangeAnalyzerTests
             GitHubRepository = "https://github.com/dotnet/dotnet"
         };
 
-        _barClient.Setup(x => x.GetBuildAsync(270662)).ReturnsAsync(build1);
-        _barClient.Setup(x => x.GetBuildAsync(271018)).ReturnsAsync(build2);
+        _barClient.Setup(x => x.GetBuildAsync(270662, true)).ReturnsAsync(build1);
+        _barClient.Setup(x => x.GetBuildAsync(271018, true)).ReturnsAsync(build2);
     }
 }

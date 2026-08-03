@@ -53,6 +53,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         Task<Models.Build> GetBuildAsync(
             int id,
+            bool? includeAssetLocation = default,
             CancellationToken cancellationToken = default
         );
 
@@ -381,6 +382,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public async Task<Models.Build> GetBuildAsync(
             int id,
+            bool? includeAssetLocation = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -394,6 +396,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 "/api/builds/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
+            if (includeAssetLocation != default)
+            {
+                _url.AppendQuery("includeAssetLocation", Client.Serialize(includeAssetLocation));
+            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
