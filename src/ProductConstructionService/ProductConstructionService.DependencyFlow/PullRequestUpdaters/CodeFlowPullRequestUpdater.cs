@@ -39,6 +39,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestApprover _pullRequestApprover;
     private readonly IPullRequestTarget _target;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
@@ -60,6 +61,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         IPullRequestApprover pullRequestApprover,
+        IRepositoryCloneManager cloneManager,
         ILogger<CodeFlowPullRequestUpdater> logger)
         : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
     {
@@ -80,6 +82,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _outcomeRecorder = outcomeRecorder;
         _pullRequestApprover = pullRequestApprover;
         _target = target;
+        _cloneManager = cloneManager;
     }
 
     protected override async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
@@ -129,6 +132,33 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
+
+        if (pr != null)
+        {
+            NativePath targetRepoPath;
+            if (isForwardFlow)
+            {
+                targetRepoPath = _vmrInfo.VmrPath;
+            }
+            else
+            {
+                targetRepoPath = (await _cloneManager.PrepareCloneAsync(subscription.TargetRepository, pr.HeadBranchSha)).Path;
+            }
+
+            var initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
+            var (prIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
+                subscription,
+                targetRepoPath,
+                pr.HeadBranch,
+                initialCommitMessage);
+
+            // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
+            if (prIsEmpty && !await _gitClient.IsAncestorCommit(targetRepoPath, latestTargetBranchCommit, latestPrCommit))
+            {
+                _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", pr.HeadBranch, subscription.TargetBranch);
+                await CreateEmptyPrBranch(subscription, targetRepoPath, pr.HeadBranch, latestTargetBranchCommit, initialCommitMessage);
+            }
+        }
 
         CodeFlowResult codeFlowRes;
         bool isUnsafeFlow;
@@ -543,19 +573,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
         else
         {
-            var (existingPrIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
+            (prIsEmpty, _, _) = await GetManualConflictResolutionPrStateAsync(
                 subscription,
                 localTargetRepoPath,
                 prHeadBranch,
                 initialCommitMessage);
-            prIsEmpty = existingPrIsEmpty;
-
-            // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
-            if (prIsEmpty && !await _gitClient.IsAncestorCommit(localTargetRepoPath, latestTargetBranchCommit, latestPrCommit))
-            {
-                _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", prHeadBranch, subscription.TargetBranch);
-                await CreateEmptyPrBranch(subscription, localTargetRepoPath, prHeadBranch, latestTargetBranchCommit, initialCommitMessage);
-            }
 
             prInfo = await remote.GetPullRequestAsync(pr.Url)
                 ?? throw new DarcException($"Failed to retrieve PR info for existing PR {pr.Url} while requesting manual conflict resolution");
