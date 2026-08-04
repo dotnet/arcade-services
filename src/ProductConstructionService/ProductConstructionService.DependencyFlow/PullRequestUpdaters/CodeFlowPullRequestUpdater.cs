@@ -135,29 +135,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
         if (pr != null)
         {
-            NativePath targetRepoPath;
-            if (isForwardFlow)
-            {
-                targetRepoPath = _vmrInfo.VmrPath;
-            }
-            else
-            {
-                targetRepoPath = (await _cloneManager.PrepareCloneAsync(subscription.TargetRepository, pr.HeadBranchSha)).Path;
-            }
-
-            var initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
-            var (prIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
-                subscription,
-                targetRepoPath,
-                pr.HeadBranch,
-                initialCommitMessage);
-
-            // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
-            if (prIsEmpty && !await _gitClient.IsAncestorCommit(targetRepoPath, latestTargetBranchCommit, latestPrCommit))
-            {
-                _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", pr.HeadBranch, subscription.TargetBranch);
-                await CreateEmptyPrBranch(subscription, targetRepoPath, pr.HeadBranch, latestTargetBranchCommit, initialCommitMessage);
-            }
+            await RebaseEmptyPRsOnTargetBranchAsync(subscription, pr);
         }
 
         CodeFlowResult codeFlowRes;
@@ -1006,6 +984,35 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.BuildMissingOppositeDirectionSubscriptionNotification(subscription.IsForwardFlow(), sourceBranch),
                 CommentType.Warning);
+        }
+    }
+
+    private async Task RebaseEmptyPRsOnTargetBranchAsync(
+        SubscriptionDTO subscription,
+        InProgressPullRequest pr)
+    {
+        NativePath targetRepoPath;
+        if (subscription.IsForwardFlow())
+        {
+            targetRepoPath = _vmrInfo.VmrPath;
+        }
+        else
+        {
+            targetRepoPath = (await _cloneManager.PrepareCloneAsync(subscription.TargetRepository, pr.HeadBranchSha)).Path;
+        }
+
+        var initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
+        var (prIsEmpty, latestPrCommit, latestTargetBranchCommit) = await GetManualConflictResolutionPrStateAsync(
+            subscription,
+            targetRepoPath,
+            pr.HeadBranch,
+            initialCommitMessage);
+
+        // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
+        if (prIsEmpty && !await _gitClient.IsAncestorCommit(targetRepoPath, latestTargetBranchCommit, latestPrCommit))
+        {
+            _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", pr.HeadBranch, subscription.TargetBranch);
+            await CreateEmptyPrBranch(subscription, targetRepoPath, pr.HeadBranch, latestTargetBranchCommit, initialCommitMessage);
         }
     }
 }
