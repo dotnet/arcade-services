@@ -424,7 +424,7 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
-            var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
+            var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId, includeAssetLocation: false);
 
             // Download and parse MergedManifest.xml if repo origin filtering is requested
             Dictionary<string, string> assetRepoOrigins = await GetAssetRepoOriginsIfNeededAsync(specificBuild);

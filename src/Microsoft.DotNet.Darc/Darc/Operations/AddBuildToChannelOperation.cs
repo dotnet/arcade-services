@@ -80,7 +80,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            var build = await _barClient.GetBuildAsync(_options.Id);
+            var build = await _barClient.GetBuildAsync(_options.Id, includeAssetLocation: false);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'.");
@@ -182,7 +182,7 @@ internal class AddBuildToChannelOperation : Operation
             }
 
             // Get the latest build information to verify the channels
-            build = await _barClient.GetBuildAsync(build.Id);
+            build = await _barClient.GetBuildAsync(build.Id, includeAssetLocation: false);
 
             Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
             foreach (var channel in targetChannels)
@@ -324,7 +324,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        build = await barClient.GetBuildAsync(build.Id);
+        build = await barClient.GetBuildAsync(build.Id, includeAssetLocation: false);
 
         if (targetChannels.All(ch => build.Channels.Any(c => c.Id == ch.Id)))
         {
@@ -445,7 +445,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        var sourceBuildArcadeSDKDepBuild = await _barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+        var sourceBuildArcadeSDKDepBuild = await _barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId, includeAssetLocation: true);
 
         if (sourceBuildArcadeSDKDepBuild == null)
         {

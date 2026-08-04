@@ -141,7 +141,7 @@ internal class ResolveConflictOperation(
     {
         _logger.LogInformation("Fetching build to apply...");
 
-        var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
+        var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId, includeAssetLocation: false);
 
         _logger.LogInformation("Build {buildId} / {buildName} found: {buildUrl}", build.Id, build.AzureDevOpsBuildNumber, build.GetBuildLink());
 

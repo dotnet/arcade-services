@@ -142,16 +142,25 @@ public class BuildsController : ControllerBase
     ///   Gets a single <see cref="Build"/>, including all the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data.
     /// </summary>
     /// <param name="id">The id of the <see cref="Build"/>.</param>
+    /// <param name="includeAssetLocation">Whether to include asset location information.</param>
     [HttpGet("{id}")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The requested Build")]
     [ValidateModelState]
-    public virtual async Task<IActionResult> GetBuild(int id)
+    public virtual async Task<IActionResult> GetBuild([FromRoute] int id, [FromQuery] bool? includeAssetLocation = null)
     {
-        Maestro.Data.Models.Build? build = await _context.Builds.Where(b => b.Id == id)
+        IQueryable<Maestro.Data.Models.Build> query = _context.Builds.Where(b => b.Id == id)
             .Include(b => b.BuildChannels)
-            .ThenInclude(bc => bc.Channel)
-            .Include(b => b.Assets)
-            .FirstOrDefaultAsync();
+            .ThenInclude(b => b.Channel)
+            .Include(b => b.Assets);
+
+        if (includeAssetLocation == true)
+        {
+            query = query.Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
+                .Include(b => b.BuildChannels);
+        }
+
+        var build = await query.FirstOrDefaultAsync();
 
         if (build == null)
         {

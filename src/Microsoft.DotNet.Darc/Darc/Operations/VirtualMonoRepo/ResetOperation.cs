@@ -260,7 +260,7 @@ internal class ResetOperation : Operation
     /// <returns>The Build object.</returns>
     private async Task<ProductConstructionService.Client.Models.Build> GetBuildAsync(int buildId, string mappingName)
     {
-        var build = await _barClient.GetBuildAsync(buildId)
+        var build = await _barClient.GetBuildAsync(buildId, includeAssetLocation: false)
             ?? throw new DarcException($"Build with ID {buildId} not found in BAR.");
 
         // Validate that the build's repository matches the mapping by checking Version.Details.xml

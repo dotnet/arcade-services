@@ -34,7 +34,7 @@ public class SubscriptionUpdateProcessor(
     private async Task<SubscriptionUpdateResult> ProcessSubscriptionUpdateAsync(
         SubscriptionUpdateWorkItem workItem)
     {
-        var build = await _sqlClient.GetBuildAsync(workItem.BuildId)
+        var build = await _sqlClient.GetBuildAsync(workItem.BuildId, includeAssetLocation: false)
             ?? throw new NonRetriableException($"Build with buildId {workItem.BuildId} not found in the DB.");
 
         var updater = _updaterFactory.CreatePullRequestUpdater(

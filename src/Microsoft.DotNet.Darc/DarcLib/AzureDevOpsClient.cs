@@ -43,13 +43,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
     private static readonly Regex RepositoryUriPattern = new(
-        $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\\.]+)");
+        $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9-]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\\.]+)");
 
     private static readonly Regex LegacyRepositoryUriPattern = new(
-        @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+        @"^https://(?<account>[a-zA-Z0-9-]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
     private static readonly Regex PullRequestApiUriPattern = new(
-        $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\\.]+)/pullRequests/(?<id>\\d+)");
+        $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9-]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\\.]+)/pullRequests/(?<id>\\d+)");
 
     // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
     private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";

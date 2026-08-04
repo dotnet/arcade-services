@@ -162,6 +162,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+        if (IsInSubmodule(codeflowOptions.Mapping.Name, conflictedFile) || conflictedFile == ".gitmodules")
+        {
+            _logger.LogInformation("Conflict in {file} is inside a submodule, leaving it unresolved", conflictedFile);
+            return false;
+        }
+
         // Known version file - check out the branch version, we want to override it
         // See https://github.com/dotnet/arcade-services/issues/4865
         if (DependencyFileManager.CodeflowDependencyFiles
@@ -207,6 +213,21 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Determines whether the given target repo file is a submodule of the current mapping or lives inside one.
+    /// Submodules are recorded in the source manifest as <c>{mappingName}/{repoRelativePath}</c>.
+    /// </summary>
+    private bool IsInSubmodule(string mappingName, UnixPath conflictedFile)
+    {
+        var submodulePrefix = mappingName + '/';
+
+        return _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(submodulePrefix, StringComparison.Ordinal))
+            .Select(s => s.Path.Substring(submodulePrefix.Length))
+            .Any(repoRelativePath =>
+                conflictedFile.Path.Equals(repoRelativePath, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

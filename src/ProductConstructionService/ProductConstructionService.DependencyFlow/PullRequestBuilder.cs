@@ -145,7 +145,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var locationResolver = new AssetLocationResolver(_barClient);
         IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var update = requiredUpdates.SubscriptionUpdate;
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _barClient.GetBuildAsync(update.BuildId, includeAssetLocation: false);
 
         StringBuilder nonCoherencyCommitMessage = new();
         StringBuilder coherencyCommitMessage = new();

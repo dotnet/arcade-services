@@ -188,7 +188,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         return versionDetails.Source?.BarId == null
             ? null
-            : await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+            : await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value, includeAssetLocation: true);
     }
 
     private static bool ContainsUnexpectedChange(string line, IEnumerable<string> expectedContents)

@@ -130,6 +130,12 @@
                                   Label="Before date" />
             </div>
             <FluentButton Appearance="Appearance.Stealth"
+                          IconStart="@(new Icons.Regular.Size16.ArrowSync())"
+                          Disabled="@_reloading"
+                          OnClick="ApplyFiltersAsync"
+                          Style="position: relative; top: -5px"
+                          Title="Refresh" />
+            <FluentButton Appearance="Appearance.Stealth"
                           IconStart="@(new Icons.Regular.Size16.Dismiss())"
                           OnClick="ClearFiltersAsync"
                           Style="position: relative; top: -5px">
