@@ -141,33 +141,11 @@ If the PowerShell script doesn't work for your environment, you can install darc
 dotnet tool install --global Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
 ```
 
-**DNX Alternative Installation:**
-
-For environments where the standard installation doesn't work, you can use DNX (dotnet execute) to run darc without a global installation:
+If you prefer to run darc without installing it as a global tool, you can use DNX to execute the package directly. For example:
 
 ```
-dnx tool install Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+dnx --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease Microsoft.DotNet.Darc -- get-subscriptions
 ```
-
-After installation with DNX, you can run darc commands using:
-
-```
-dnx Microsoft.DotNet.Darc --help
-```
-
-Or create an alias in your shell profile for convenience:
-
-**PowerShell:**
-```powershell
-Set-Alias -Name darc -Value "dnx Microsoft.DotNet.Darc"
-```
-
-**Bash/Zsh:**
-```bash
-alias darc="dnx Microsoft.DotNet.Darc"
-```
-
-**Note:** DNX is useful in containerized environments or CI/CD scenarios where you want to avoid global tool installations but still need to use darc functionality.
 
 #### Step 2: Authentication:
 Darc talks to the Maestro API which requires authentication.
