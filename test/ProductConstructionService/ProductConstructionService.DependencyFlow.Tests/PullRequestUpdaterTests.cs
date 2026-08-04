@@ -43,6 +43,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private Mock<ILocalLibGit2Client> _gitClient = null!;
     private Mock<ICodeflowSourceDiffVerifier> _codeflowSourceDiffVerifier = null!;
     private Mock<IRepositoryCloneManager> _repositoryCloneManager = null!;
+    private Mock<IVmrCloneManager> _vmrCloneManager = null!;
     protected Mock<IPullRequestApprover> PullRequestApprover = null!;
 
     [SetUp]
@@ -53,6 +54,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _gitClient = new();
         _codeflowSourceDiffVerifier = new();
         _repositoryCloneManager = new();
+        _vmrCloneManager = new();
         PullRequestApprover = new();
     }
 
@@ -65,6 +67,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_gitClient.Object);
         services.AddSingleton(_codeflowSourceDiffVerifier.Object);
         services.AddSingleton(_repositoryCloneManager.Object);
+        services.AddSingleton(_vmrCloneManager.Object);
         services.AddSingleton(PullRequestApprover.Object);
 
         CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
@@ -510,10 +513,24 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? new NativePath(VmrPath)
             : new NativePath(TmpPath);
 
-        if (Subscription.TargetDirectory == null)
+        var clonedRepo = new Mock<ILocalGitRepo>();
+        clonedRepo.SetupGet(x => x.Path).Returns(existingPrRepoPath);
+
+        if (Subscription.TargetDirectory != null)
         {
-            var clonedRepo = new Mock<ILocalGitRepo>();
-            clonedRepo.SetupGet(x => x.Path).Returns(existingPrRepoPath);
+            _vmrCloneManager
+                .Setup(x => x.PrepareVmrAsync(
+                    It.Is<IReadOnlyCollection<string>>(remotes =>
+                        remotes.SequenceEqual(new[] { Subscription.TargetRepository })),
+                    It.Is<IReadOnlyCollection<string>>(refs =>
+                        refs.SequenceEqual(new[] { InProgressPrHeadBranch, TargetBranch })),
+                    InProgressPrHeadBranch,
+                    true,
+                    CancellationToken.None))
+                .ReturnsAsync(clonedRepo.Object);
+        }
+        else
+        {
             _repositoryCloneManager
                 .Setup(x => x.PrepareCloneAsync(
                     Subscription.TargetRepository,
