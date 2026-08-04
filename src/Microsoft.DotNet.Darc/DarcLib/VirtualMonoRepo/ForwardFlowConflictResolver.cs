@@ -68,7 +68,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -76,6 +75,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly IJsonFileMerger _jsonFileMerger;
     private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly ICommentCollector _commentCollector;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
@@ -93,7 +93,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
-        _patchHandler = patchHandler;
         _fileSystem = fileSystem;
         _logger = logger;
         _localGitRepoFactory = localGitRepoFactory;
@@ -101,6 +100,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _jsonFileMerger = jsonFileMerger;
         _versionDetailsFileMerger = versionDetailsFileMerger;
         _versionDetailsParser = versionDetailsParser;
+        _commentCollector = commentCollector;
     }
 
     public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
@@ -165,6 +165,23 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
+            // If the repo bumped an existing submodule in this flow while the VMR reset the same submodule to a
+            // different commit since the last flow (e.g. via `darc vmr reset-submodule`), the two sides genuinely
+            // diverged. We must not silently overwrite the VMR's submodule state with the repo's - leave the conflict
+            // so it surfaces to a human (conflict PR / darc error). See https://github.com/dotnet/arcade-services/issues/6444.
+            if (await HasDivergentSubmoduleChangeAsync(vmr, codeflowOptions.Mapping.Name!, cancellationToken))
+            {
+                _commentCollector.AddComment(
+                    $"""
+                    There was a conflict in the submodule flow that needs to be resolved manually. The submodule was
+                    bumped in the repository while it was independently reset in the VMR, so the correct commit for the
+                    submodule cannot be determined automatically. Please choose the correct submodule commit and run
+                    `darc vmr reset-submodule <sha>` to make sure the submodule ends up in the desired state in the VMR.
+                    """,
+                    CommentType.Caution);
+                return false;
+            }
+
             await TryResolvingSourceManifestConflict(vmr, codeflowOptions, headBranchExisted, cancellationToken);
             return true;
         }
@@ -248,6 +265,80 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, targetBranchSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+    }
+
+    /// <summary>
+    /// Determines whether the source-manifest.json conflict is caused by a submodule that was changed on both sides:
+    /// the repo bumped an existing submodule in this flow while the VMR reset the same submodule to a different commit
+    /// since the last flow (e.g. via <c>darc vmr reset-submodule</c>). Such a divergence must not be auto-resolved
+    /// because doing so would silently discard one side's change.
+    /// The three sides are read from the in-progress merge's index stages (1 = merge base, 2 = ours, 3 = theirs).
+    /// </summary>
+    private static async Task<bool> HasDivergentSubmoduleChangeAsync(
+        ILocalGitRepo vmr,
+        string mappingName,
+        CancellationToken cancellationToken)
+    {
+        var baseManifest = await TryReadSourceManifestStageAsync(vmr, 1, cancellationToken);
+        var ourManifest = await TryReadSourceManifestStageAsync(vmr, 2, cancellationToken);
+        var theirManifest = await TryReadSourceManifestStageAsync(vmr, 3, cancellationToken);
+
+        // Without both sides of the merge we cannot reason about the change, so let the default resolution proceed.
+        if (ourManifest is null || theirManifest is null)
+        {
+            return false;
+        }
+
+        var prefix = mappingName + '/';
+
+        static string? GetSubmoduleSha(SourceManifest? manifest, string path)
+            => manifest?.Submodules.FirstOrDefault(s => s.Path == path)?.CommitSha;
+
+        // Look at every submodule of this mapping present at the merge base. A submodule missing from the base was
+        // added by the repo in this flow (the VMR only ever resets already-tracked submodules), so it cannot diverge.
+        var submodulePaths = (baseManifest?.Submodules ?? [])
+            .Select(s => s.Path)
+            .Where(path => path.StartsWith(prefix, StringComparison.Ordinal));
+
+        foreach (var path in submodulePaths)
+        {
+            var baseSha = GetSubmoduleSha(baseManifest, path);
+            var ourSha = GetSubmoduleSha(ourManifest, path);
+            var theirSha = GetSubmoduleSha(theirManifest, path);
+
+            // The submodule must exist on all three sides. A null on any side means it was added or removed, which
+            // only ever originates from the repo (the VMR can only reset an already-tracked submodule), so it is not
+            // a divergence. Beyond that, both the repo (ours) and the VMR (theirs) must have moved it away from the
+            // base to different commits for the change to genuinely conflict.
+            if (baseSha != null
+                && ourSha != null
+                && theirSha != null
+                && ourSha != baseSha
+                && theirSha != baseSha
+                && ourSha != theirSha)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static async Task<SourceManifest?> TryReadSourceManifestStageAsync(
+        ILocalGitRepo vmr,
+        int stage,
+        CancellationToken cancellationToken)
+    {
+        var result = await vmr.RunGitCommandAsync(
+            ["show", $":{stage}:{VmrInfo.DefaultRelativeSourceManifestPath}"],
+            cancellationToken);
+
+        if (!result.Succeeded || string.IsNullOrWhiteSpace(result.StandardOutput))
+        {
+            return null;
+        }
+
+        return SourceManifest.FromJson(result.StandardOutput);
     }
 
     public async Task MergeDependenciesAsync(
