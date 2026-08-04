@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,6 +63,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
     private readonly ILogger<VmrCodeFlower> _logger;
+
+    private const int StaleFFMonthsThreshold = 1;
 
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
@@ -185,7 +188,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
-        if (!result.HadConflicts && !forceUpdate && result.HadUpdates && !headBranchExisted)
+        if (!result.HadConflicts
+            && !forceUpdate
+            && result.HadUpdates
+            && !headBranchExisted
+            && !await WasLastForwardFlowMoreThanOneMonthAgoAsync(mapping.Name, vmr, lastFlows, cancellationToken))
         {
             result = result with
             {
@@ -252,6 +259,40 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             return (headBranchExisted, lastFlows);
         }
+    }
+
+    private async Task<bool> WasLastForwardFlowMoreThanOneMonthAgoAsync(
+        string mappingName,
+        ILocalGitRepo vmr,
+        LastFlows lastFlows,
+        CancellationToken cancellationToken)
+    {
+        string lastForwardFlowCommit = lastFlows.LastForwardFlow.VmrSha;
+        ProcessExecutionResult result = await vmr.ExecuteGitCommand(
+            ["show", "-s", "--format=%aI", lastForwardFlowCommit],
+            cancellationToken);
+        result.ThrowIfFailed($"Failed to get the commit time of the last forward flow {lastForwardFlowCommit}");
+
+        string? commitTime = result.GetOutputLines().SingleOrDefault();
+        if (!DateTimeOffset.TryParse(
+                commitTime,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out DateTimeOffset lastForwardFlowTime))
+        {
+            throw new DarcException($"Failed to parse the commit time of the last forward flow {lastForwardFlowCommit}: '{commitTime}'");
+        }
+
+        bool forceUpdateRequired = lastForwardFlowTime < DateTimeOffset.UtcNow.AddMonths(-1 * StaleFFMonthsThreshold);
+        if (forceUpdateRequired)
+        {
+            _logger.LogInformation(
+                "The last forward flow for {mapping} was at {lastForwardFlowTime}; forcing the update because it was more than one month ago",
+                mappingName,
+                lastForwardFlowTime);
+        }
+
+        return forceUpdateRequired;
     }
 
     protected override async Task<CodeFlowResult> SameDirectionFlowAsync(

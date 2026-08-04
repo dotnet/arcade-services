@@ -10,7 +10,9 @@ using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -258,8 +260,9 @@ internal class ForwardFlowTests : CodeFlowTests
             .Should().ContainEquivalentOf(newDependency);
     }
 
-    [Test]
-    public async Task MeaninglessChangesAreSkippedTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task MeaninglessChangesAreSkippedUnlessLastForwardFlowIsStaleTest(bool lastForwardFlowIsStale)
     {
         await EnsureTestRepoIsInitialized();
 
@@ -287,7 +290,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
 
         // Level the repo and the VMR
-        const string branchName = nameof(MeaninglessChangesAreSkippedTest);
+        const string branchName = nameof(MeaninglessChangesAreSkippedUnlessLastForwardFlowIsStaleTest);
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
@@ -316,6 +319,18 @@ internal class ForwardFlowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
+        if (lastForwardFlowIsStale)
+        {
+            string lastForwardRepoSha = ServiceProvider
+                .GetRequiredService<ISourceManifest>()
+                .GetRepoVersion(Constants.ProductRepoName)
+                .CommitSha;
+            string lastForwardVmrSha = await ServiceProvider.GetRequiredService<ILocalGitClient>().BlameLineAsync(
+                VmrPath / VmrInfo.DefaultRelativeSourceManifestPath,
+                line => line.Contains(lastForwardRepoSha));
+            await GitOperations.ReplaceCommitWithDate(VmrPath, lastForwardVmrSha, DateTimeOffset.UtcNow.AddMonths(-2));
+        }
+
         var secondBuild = await CreateNewVmrBuild(
         [
             ("Package.A1", "3.0.0"),
@@ -340,7 +355,15 @@ internal class ForwardFlowTests : CodeFlowTests
             branchName,
             // This is what we're testing in this test
             forceUpdate: false);
-        codeFlowResult.ShouldNotHaveUpdates();
+
+        if (lastForwardFlowIsStale)
+        {
+            codeFlowResult.ShouldHaveUpdates();
+        }
+        else
+        {
+            codeFlowResult.ShouldNotHaveUpdates();
+        }
     }
 
     // Tests a scenario where the repo and VMR both fork (a release branch snap for instance)

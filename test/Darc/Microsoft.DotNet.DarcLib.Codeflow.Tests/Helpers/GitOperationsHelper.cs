@@ -82,6 +82,45 @@ internal class GitOperationsHelper
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
+    public async Task ReplaceCommitWithDate(NativePath repo, string commit, DateTimeOffset date)
+    {
+        ProcessExecutionResult treeResult = await ExecuteGitCommand(repo, "show", "-s", "--format=%T", commit);
+        treeResult.ThrowIfFailed($"Failed to get the tree for commit {commit}");
+
+        ProcessExecutionResult parentsResult = await ExecuteGitCommand(repo, "show", "-s", "--format=%P", commit);
+        parentsResult.ThrowIfFailed($"Failed to get the parents for commit {commit}");
+
+        ProcessExecutionResult messageResult = await ExecuteGitCommand(repo, "show", "-s", "--format=%B", commit);
+        messageResult.ThrowIfFailed($"Failed to get the message for commit {commit}");
+
+        List<string> commitTreeArguments = ["commit-tree", treeResult.StandardOutput.Trim()];
+        foreach (string parent in parentsResult.GetOutputLines().SelectMany(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+        {
+            commitTreeArguments.AddRange(["-p", parent]);
+        }
+
+        string gitDate = date.ToString("O");
+        Dictionary<string, string> environmentVariables = new()
+        {
+            ["GIT_AUTHOR_DATE"] = gitDate,
+            ["GIT_COMMITTER_DATE"] = gitDate,
+        };
+
+        ProcessExecutionResult replacementCommitResult = await _processManager.ExecuteGit(
+            repo,
+            commitTreeArguments,
+            messageResult.StandardOutput,
+            environmentVariables);
+        replacementCommitResult.ThrowIfFailed($"Failed to create a dated replacement for commit {commit}");
+
+        ProcessExecutionResult replaceResult = await ExecuteGitCommand(
+            repo,
+            "replace",
+            commit,
+            replacementCommitResult.StandardOutput.Trim());
+        replaceResult.ThrowIfFailed($"Failed to replace commit {commit}");
+    }
+
     public async Task CheckAllIsCommitted(NativePath repo)
     {
         var gitStatus = await ExecuteGitCommand(repo, "status", "--porcelain");
