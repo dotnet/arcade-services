@@ -3,60 +3,25 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow;
 
 public interface ISubscriptionEventRecorder
 {
-    Task AddDependencyFlowEventsAsync(
-        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates,
-        DependencyFlowEventType flowEvent,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult policy,
-        string? prUrl);
-
-    Task RegisterSubscriptionUpdateAction(
-        SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId);
-
     Task UpdateSubscriptionsForMergedPRAsync(
         IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates);
 }
 
 internal class SubscriptionEventRecorder(
-    ISqlBarClient sqlClient,
     ILogger<ISubscriptionEventRecorder> logger,
     BuildAssetRegistryContext context,
-    IRemoteFactory remoteFactory,
-    IPullRequestUpdaterFactory updaterFactory) : ISubscriptionEventRecorder
+    IRemoteFactory remoteFactory) : ISubscriptionEventRecorder
 {
-    private readonly ISqlBarClient _sqlClient = sqlClient;
     private readonly ILogger<ISubscriptionEventRecorder> _logger = logger;
     private readonly BuildAssetRegistryContext _context = context;
     private readonly IRemoteFactory _remoteFactory = remoteFactory;
-    private readonly IPullRequestUpdaterFactory _updaterFactory = updaterFactory;
-
-    public async Task AddDependencyFlowEventsAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates, DependencyFlowEventType flowEvent, DependencyFlowEventReason reason, MergePolicyCheckResult policy, string? prUrl)
-    {
-        foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
-        {
-            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
-            if (!await triggerer.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
-            {
-                _logger.LogInformation("Failed to add dependency flow event for {subscriptionId}", update.SubscriptionId);
-            }
-        }
-    }
-
-    public async Task RegisterSubscriptionUpdateAction(SubscriptionUpdateAction subscriptionUpdateAction, Guid subscriptionId)
-    {
-        string updateMessage = subscriptionUpdateAction.ToString();
-        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
-    }
 
     public async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
     {
