@@ -28,6 +28,7 @@ public static class DependencyFlowConfiguration
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
+        services.TryAddTransient<ICodeFlowExecutor, CodeFlowExecutor>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
         services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
