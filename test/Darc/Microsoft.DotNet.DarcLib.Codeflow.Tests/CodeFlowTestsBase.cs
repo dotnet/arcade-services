@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Maestro.Common;
 using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -101,6 +102,9 @@ internal abstract class CodeFlowTestsBase
         .AddSingleton(_basicBarClient.Object)
         .AddSingleton(_assetLocationResolver.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
+        .AddSingleton(Mock.Of<IRemoteTokenProvider>())
+        .AddScoped<ICommentCollector, CommentCollector>()
+        .AddSingleton<ICache, NoopCache>()
         .AddTransient<IDependencyFileManagerFactory, DependencyFileManagerFactory>()
         .AddTransient<ILocalFactory, LocalFactory>()
         .AddSingleton(Mock.Of<IRemoteTokenProvider>());
