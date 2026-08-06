@@ -269,7 +269,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         string lastForwardFlowCommit = lastFlows.LastForwardFlow.VmrSha;
         ProcessExecutionResult result = await vmr.ExecuteGitCommand(
-            ["show", "-s", "--format=%aI", lastForwardFlowCommit],
+            ["show", "-s", "--format=%cI", lastForwardFlowCommit],
             cancellationToken);
         result.ThrowIfFailed($"Failed to get the commit time of the last forward flow {lastForwardFlowCommit}");
 
