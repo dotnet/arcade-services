@@ -129,13 +129,9 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             return new SubscriptionUpdateResult("No new dependency updates", SubscriptionOutcomeType.NoUpdate);
         }
 
-        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
-
         pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
         List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
         pr.CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null;
-
-        List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
         // Update the list of contained subscriptions with the new subscription update.
         // Replace all existing updates for the subscription id with the new update.
@@ -143,16 +139,6 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         // on the subscription to an older build id.
         pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.SubscriptionId);
 
-        // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
-        // marked as update as they are new. Any dependency not being updated should not be marked as failed.
-        // At this point, pr.ContainedSubscriptions only contains the subscriptions that were not updated,
-        // so everything that is in the previous list but not in the current list were updated.
-        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-            previousSubscriptions.Except(pr.ContainedSubscriptions),
-            DependencyFlowEventType.Updated,
-            DependencyFlowEventReason.FailedUpdate,
-            pr.MergePolicyResult,
-            pr.Url);
         pr.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
         {
             SubscriptionId = update.SubscriptionId,
@@ -160,15 +146,6 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             SourceRepo = update.SourceRepo,
             CommitSha = update.SourceSha
         });
-
-        // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
-        // but were not in the previous list of subscriptions are new
-        await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-            pr.ContainedSubscriptions.Except(previousSubscriptions),
-            DependencyFlowEventType.Created,
-            DependencyFlowEventReason.New,
-            MergePolicyCheckResult.PendingPolicies,
-            pr.Url);
 
         var requiredDescriptionUpdates =
             await CalculateOriginalDependenciesAsync(darcRemote, targetRepository, targetBranch, repoDependencyUpdates);
@@ -226,8 +203,6 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         {
             return null;
         }
-
-        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -325,25 +300,10 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
             if (!string.IsNullOrEmpty(pr?.Url))
             {
-                await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                    inProgressPr.ContainedSubscriptions,
-                    DependencyFlowEventType.Created,
-                    DependencyFlowEventReason.New,
-                    MergePolicyCheckResult.PendingPolicies,
-                    pr.Url);
-
                 await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow);
                 _outcomeRecorder.SetPullRequestUrl(inProgressPr.Url);
                 return pr;
             }
-
-            // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
-            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                inProgressPr.ContainedSubscriptions,
-                DependencyFlowEventType.Completed,
-                DependencyFlowEventReason.NothingToDo,
-                MergePolicyCheckResult.PendingPolicies,
-                null);
 
             // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff).
             // We need to delete the branch also in this case.
@@ -384,7 +344,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
         Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = [];
 
-        // Get subscription to access excluded assets
+// Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new InvalidOperationException($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
