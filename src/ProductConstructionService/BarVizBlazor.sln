@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.BarViz", "ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj", "{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.BarViz.Hosting", "ProductConstructionService.BarViz.Hosting\ProductConstructionService.BarViz.Hosting.csproj", "{9E6A7616-C831-403B-A01A-D57FF8EFCAD5}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.BarViz.Tests", "..\..\test\ProductConstructionService\ProductConstructionService.BarViz.Tests\ProductConstructionService.BarViz.Tests.csproj", "{6FF405A5-9084-4970-BC06-1FCC331B39A2}"
 EndProject
 Global
@@ -17,6 +19,10 @@ Global
 		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E6A7616-C831-403B-A01A-D57FF8EFCAD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E6A7616-C831-403B-A01A-D57FF8EFCAD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E6A7616-C831-403B-A01A-D57FF8EFCAD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E6A7616-C831-403B-A01A-D57FF8EFCAD5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Release|Any CPU.ActiveCfg = Release|Any CPU

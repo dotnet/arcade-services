@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\Maestro\Maestro.WorkItems\Maestro.WorkItems.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.BarViz.Hosting\ProductConstructionService.BarViz.Hosting.csproj" />
     <ProjectReference Include="..\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
   </ItemGroup>
 

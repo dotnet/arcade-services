@@ -31,6 +31,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.BarViz.Hosting;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using Maestro.Services.Common.Cache;
@@ -199,7 +200,6 @@ internal static class PcsStartup
                     : CookieSecurePolicy.Always;
             });
         builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
-        builder.ConfigureApiRedirection();
         builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
@@ -250,22 +250,11 @@ internal static class PcsStartup
             builder.ConfigureSwagger();
         }
 
-        if (isDevelopment)
-        {
-            builder.Services.AddCors(policy =>
-            {
-                policy.AddDefaultPolicy(p =>
-                    // These come from BarViz project's launchsettings.json
-                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod());
-            });
-        }
     }
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseApiRedirection(requireAuth: !isDevelopment);
+        app.UseApiRedirection(isDevelopment ? null : context => context.IsAuthenticated());
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {
