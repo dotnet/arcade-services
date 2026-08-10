@@ -2,6 +2,10 @@ parameters:
 - name: isProdPipeline
   displayName: Indicates whether this template should be configured for a production or non-production pipeline.
   type: boolean
+- name: enableSigning
+  displayName: Enables signing and installs the MicroBuild signing plugin.
+  type: boolean
+  default: false
 
 stages:
 - stage: Build
@@ -16,7 +20,7 @@ stages:
           ${{ if parameters.isProdPipeline }}:
             manifests: true
       enableTelemetry: true
-      enableMicrobuild: true
+      enableMicrobuild: ${{ parameters.enableSigning }}
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       jobs:
@@ -55,6 +59,7 @@ stages:
           parameters:
             configuration: $(_BuildConfig)
             buildArgs: $(_InternalBuildArgs)
+            sign: ${{ parameters.enableSigning }}
         templateContext:
           outputs:
           - output: pipelineArtifact
