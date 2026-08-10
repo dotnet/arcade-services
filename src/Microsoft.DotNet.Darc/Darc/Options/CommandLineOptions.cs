@@ -101,7 +101,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
         static bool UriMatches(string first, string second)
             => string.Equals(first?.TrimEnd('/'), second?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
-        if (UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.ProductionMaestroUri))
+        if (string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
+            || UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.ProductionMaestroUri))
         {
             return;
         }

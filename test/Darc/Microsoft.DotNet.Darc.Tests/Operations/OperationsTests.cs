@@ -50,7 +50,8 @@ public class OperationTests
 
     [TestCase(ProductConstructionServiceApiOptions.ProductionMaestroUri)]
     [TestCase("https://maestro.dot.net")]
-    public void InitializeFromSettings_DoesNotWarnForDefaultMaestroUri(string maestroUri)
+    [TestCase("")]
+    public void InitializeFromSettings_DoesNotWarnForDefaultOrEmptyMaestroUri(string maestroUri)
     {
         Mock<ILogger> logger = new();
         FakeCommandLineOptions options = new()
