@@ -16,7 +16,7 @@ stages:
           ${{ if parameters.isProdPipeline }}:
             manifests: true
       enableTelemetry: true
-      enableMicrobuild: false
+      enableMicrobuild: true
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       jobs:
@@ -37,7 +37,11 @@ stages:
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         - _BuildConfig: Release
         - _PublishType: blob
-        - _SignType: test
+        - name: _SignType
+          ${{ if parameters.isProdPipeline }}:
+            value: real
+          ${{ else }}:
+            value: test
         steps:
         - checkout: self
           clean: true

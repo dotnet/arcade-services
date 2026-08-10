@@ -15,6 +15,6 @@ steps:
     -configuration ${{ parameters.configuration }}
     -prepareMachine
     /p:Test=false
-    /p:Sign=false
+    /p:Sign=true
     ${{ parameters.buildArgs }}
   displayName: Build
