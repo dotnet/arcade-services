@@ -10,11 +10,9 @@ param appGwVirtualNetworkSubnetName string
 param nsgName string
 param publicIpAddressName string
 param frontendIpName string
-param httpPortName string
 param httpsPortName string 
 param pcsPool string
 param containerAppName string
-param backendHttpSettingName string
 param backendHttpsSettingName string
 param pcs443listener string
 param pcsRedirection string
