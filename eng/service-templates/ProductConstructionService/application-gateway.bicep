@@ -16,10 +16,8 @@ param pcsPool string
 param containerAppName string
 param backendHttpSettingName string
 param backendHttpsSettingName string
-param pcs80listener string
 param pcs443listener string
 param pcsRedirection string
-param pcs80rule string
 param pcs443rule string
 param containerEnvironmentName string
 param hostName string
@@ -137,12 +135,6 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
     ]
     frontendPorts: [
       {
-        name: httpPortName
-        properties: {
-          port: 80
-        }
-      }
-      {
         name: httpsPortName
         properties: {
           port: 443
@@ -172,31 +164,8 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
           requestTimeout: 60
         }
       }
-      {
-        name: backendHttpSettingName
-        properties: {
-          port: 80
-          protocol: 'Http'
-          cookieBasedAffinity: 'Disabled'
-          pickHostNameFromBackendAddress: true
-          requestTimeout: 60
-        }
-      }
     ]
     httpListeners: [
-      {
-        name: pcs80listener
-        properties: {
-          frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGwName, frontendIpName)
-          }
-          frontendPort: {
-            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpPortName)
-          }
-          protocol: 'Http'
-          hostName: hostName
-        }
-      }
       {
         name: pcs443listener
         properties: {
@@ -228,18 +197,6 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
       }
     ]
     requestRoutingRules: [
-      {
-        name: pcs80rule
-        properties: {
-          priority: 1
-          httpListener: {
-            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs80listener)
-          }
-          redirectConfiguration: {
-            id: resourceId('Microsoft.Network/applicationGateways/redirectConfigurations', appGwName, pcsRedirection)
-          }
-        }
-      }
       {
         name: pcs443rule
         properties: {
