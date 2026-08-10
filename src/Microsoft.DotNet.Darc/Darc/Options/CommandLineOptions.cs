@@ -163,7 +163,13 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
         services ??= new ServiceCollection();
         services.AddLogging(b => b
-            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
+            .AddConsole(o =>
+            {
+                o.FormatterName = CompactConsoleLoggerFormatter.FormatterName;
+                // Route warnings and above to stderr so they don't corrupt machine-readable
+                // output (e.g. `--output-format json`) written to stdout.
+                o.LogToStandardErrorThreshold = LogLevel.Warning;
+            })
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
             .SetMinimumLevel(level)
             .AddFilter("Microsoft.DotNet.DarcLib.VirtualMonoRepo." + nameof(VmrPatchHandler), LogLevel.Warning));
