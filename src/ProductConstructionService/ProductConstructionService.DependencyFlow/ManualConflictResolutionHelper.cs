@@ -3,9 +3,6 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.Model;
 
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
@@ -13,35 +10,6 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal static class ManualConflictResolutionHelper
 {
-    public static async Task RebaseEmptyPRsOnTargetBranchAsync(
-        ILocalLibGit2Client gitClient,
-        ILogger<VmrCodeFlower> logger,
-        SubscriptionDTO subscription,
-        InProgressPullRequest pr,
-        NativePath targetRepoPath)
-    {
-        string initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
-        var (prIsEmpty, latestPrCommit, latestTargetBranchCommit) =
-            await GetManualConflictResolutionPrStateAsync(
-                gitClient,
-                subscription,
-                targetRepoPath,
-                pr.HeadBranch,
-                initialCommitMessage);
-
-        if (prIsEmpty && !await gitClient.IsAncestorCommit(targetRepoPath, latestTargetBranchCommit, latestPrCommit))
-        {
-            logger.LogInformation(
-                "Rebasing empty PR branch {headBranch} onto {targetBranch}",
-                pr.HeadBranch,
-                subscription.TargetBranch);
-            await gitClient.ForceCheckoutAsync(targetRepoPath, latestTargetBranchCommit);
-            await gitClient.CreateBranchAsync(targetRepoPath, pr.HeadBranch, overwriteExistingBranch: true);
-            await gitClient.CommitAsync(targetRepoPath, initialCommitMessage, allowEmpty: true);
-            await gitClient.Push(targetRepoPath, pr.HeadBranch, subscription.TargetRepository, force: true);
-        }
-    }
-
     public static async Task<(bool prIsEmpty, string latestPrCommit, string latestTargetBranchCommit)>
         GetManualConflictResolutionPrStateAsync(
             ILocalLibGit2Client gitClient,
@@ -68,7 +36,4 @@ internal static class ManualConflictResolutionHelper
             latestPrCommit,
             latestTargetBranchCommit);
     }
-
-    private static string GetManualConflictResolutionInitialCommitMessage(SubscriptionDTO subscription)
-        => $"Initial commit for subscription {subscription.Id}";
 }
