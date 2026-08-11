@@ -49,7 +49,7 @@ To run the Product Construction Service locally:
 
 # Debugging the front-end (BarViz) separately
 
-To debug BarViz without running Docker or the full Product Construction Service you can open `src\ProductConstructionService\BarVizBlazor.sln` and run the `ProductConstructionService.BarViz.Hosting` project.
+To debug BarViz without running Docker or the full Product Construction Service you can open `src\ProductConstructionService\BarVizBlazor.slnx` and run the `ProductConstructionService.BarViz.Hosting` project.
 
 It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.BarViz.Hosting\appsettings.Development.json`) to point to the production API so that the front-end has data to work with:
 
