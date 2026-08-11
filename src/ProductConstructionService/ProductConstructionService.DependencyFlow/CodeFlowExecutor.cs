@@ -77,8 +77,10 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
             await RebaseEmptyPRsOnTargetBranchAsync(subscription, pr);
         }
 
+        // If a forward flow subscription had only meaningless changes for a month, we force a codeflow so we're not too far behind.
         forceUpdate |= pr == null
             && subscription.LastAppliedBuild != null
+            && subscription.IsForwardFlow()
             && DateTimeOffset.UtcNow - subscription.LastAppliedBuild.DateProduced > AutoForceCodeFlowAfter;
 
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
