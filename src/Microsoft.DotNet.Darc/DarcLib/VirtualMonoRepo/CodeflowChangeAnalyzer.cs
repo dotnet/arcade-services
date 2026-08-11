@@ -75,14 +75,18 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var commonAncestor = await vmr.GetMergeBaseAsync(headBranch, targetBranch);
-        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, headBranch);
+        var writeTreeResult = await vmr.ExecuteGitCommand(["write-tree"]);
+        writeTreeResult.ThrowIfFailed("Failed to create a tree from the proposed code flow changes");
+        var indexTree = writeTreeResult.StandardOutput.Trim();
+
+        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, indexTree);
 
         if (HasSourceChanges(mappingName, changedFiles))
         {
             return true;
         }
 
-        if (await HasMeaningfulVersioningChanges(mappingName, headBranch, commonAncestor))
+        if (await HasMeaningfulVersioningChanges(mappingName, indexTree, commonAncestor))
         {
             return true;
         }
@@ -129,12 +133,13 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
     private async Task<bool> HasMeaningfulVersioningChanges(
         string mappingName,
-        string headBranch,
+        string indexTree,
         string ancestorCommit)
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var versionFileInclusionRules = DependencyFileManager.CodeflowDependencyFiles
+            .Select(f => $"src/{mappingName}/{f}")
             .Select(VmrPatchHandler.GetInclusionRule)
             .ToList();
 
@@ -142,16 +147,16 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         [
             "diff",
             "-U0",
-            $"{ancestorCommit}..{headBranch}",
+            $"{ancestorCommit}..{indexTree}",
             "--",
             ..versionFileInclusionRules
         ]);
 
-        result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and {headBranch}");
+        result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and the proposed code flow tree");
 
         // We load all different pieces of build information that would be expected in the diff output
         Build? build1 = await GetBuildFromSourceTag(vmr, mappingName, ancestorCommit);
-        Build? build2 = await GetBuildFromSourceTag(vmr, mappingName, headBranch);
+        Build? build2 = await GetBuildFromSourceTag(vmr, mappingName, indexTree);
 
         List<string> expectedContents =
         [
