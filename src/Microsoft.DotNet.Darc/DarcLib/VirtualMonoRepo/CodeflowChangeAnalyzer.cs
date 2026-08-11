@@ -229,13 +229,14 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .Select(l => l.Location)
             .Distinct();
 
-        return
-        [
+        IEnumerable<string> ret = [
             b.Id.ToString(),
             b.Commit,
             b.GetRepository(),
             ..b.Assets.Select(a => a.Version).Distinct(),
             ..darcFeeds,
         ];
+
+        return ret.Where(s => !string.IsNullOrEmpty(s));
     }
 }
