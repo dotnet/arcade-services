@@ -16,17 +16,6 @@
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the `Maestro.Data` project folder
 9. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org)
 10.  Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault
-11.  In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
-
-  ```sql
-  INSERT INTO [Repositories] (RepositoryName, InstallationId) VALUES
-      ('https://github.com/maestro-auth-test/maestro-test', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test2', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test3', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test-vmr', 289474),
-      ('https://github.com/maestro-auth-test/arcade', 289474),
-      ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
-  ```
 
 # Configuring the service for local runs
 
