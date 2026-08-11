@@ -39,36 +39,42 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
-        // with assets and other info just like we do in UpdatePullRequestAsync.
-        // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
-        // For now, we manually update the info the unit tests expect.
-        var expectedState = new InProgressPullRequest()
-        {
-            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
-            Url = VmrPullRequestUrl,
-            HeadBranch = InProgressPrHeadBranch,
-            HeadBranchSha = InProgressPrHeadBranchSha,
-            SourceSha = build.Commit,
-            ContainedSubscriptions =
-            [
-                new()
-                {
-                    SubscriptionId = Subscription.Id,
-                    BuildId = build.Id,
-                    SourceRepo = build.GetRepository(),
-                    CommitSha = build.Commit
-                }
-            ],
-            RequiredUpdates = [],
-            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
-        };
+        InProgressPullRequest expectedState = CreateExpectedNewPullRequestState(build);
 
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
         AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
+        AndPendingUpdateIsRemoved();
+    }
+
+    [Test]
+    public async Task UpdateWithNoExistingStateForcesUpdateWhenLastAppliedBuildIsOld()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(new SubscriptionPolicy
+        {
+            Batchable = false,
+            UpdateFrequency = UpdateFrequency.EveryBuild,
+        });
+
+        Build lastAppliedBuild = GivenANewBuild(true);
+        lastAppliedBuild.Commit = "old.commit";
+        lastAppliedBuild.DateProduced = DateTimeOffset.UtcNow.AddDays(-31);
+        Subscription.LastAppliedBuild = lastAppliedBuild;
+
+        Build newBuild = GivenANewBuild(true);
+        GivenPendingUpdates(newBuild);
+        CreatePullRequestShouldReturnAValidValue();
+
+        await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+        ThenUpdateReminderIsRemoved();
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndCodeShouldHaveBeenFlownForward(newBuild, forceUpdate: true);
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(newBuild, expectedState: CreateExpectedNewPullRequestState(newBuild));
         AndPendingUpdateIsRemoved();
     }
 
@@ -545,5 +551,30 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 var update = CreateSubscriptionUpdate(forBuild, isCodeFlow: false);
                 SetExpectedReminder(Subscription, update);
             });
+    }
+
+    private InProgressPullRequest CreateExpectedNewPullRequestState(Build build)
+    {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate InProgressPullRequest fully in production.
+        return new InProgressPullRequest
+        {
+            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+            Url = VmrPullRequestUrl,
+            HeadBranch = InProgressPrHeadBranch,
+            HeadBranchSha = InProgressPrHeadBranchSha,
+            SourceSha = build.Commit,
+            ContainedSubscriptions =
+            [
+                new()
+                {
+                    SubscriptionId = Subscription.Id,
+                    BuildId = build.Id,
+                    SourceRepo = build.GetRepository(),
+                    CommitSha = build.Commit
+                }
+            ],
+            RequiredUpdates = [],
+            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+        };
     }
 }

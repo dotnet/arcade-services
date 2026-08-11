@@ -30,6 +30,8 @@ internal interface ICodeFlowExecutor
 
 internal class CodeFlowExecutor : ICodeFlowExecutor
 {
+    private static readonly TimeSpan AutoForceCodeFlowAfter = TimeSpan.FromDays(30);
+
     private readonly IVmrInfo _vmrInfo;
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
@@ -74,6 +76,10 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         {
             await RebaseEmptyPRsOnTargetBranchAsync(subscription, pr);
         }
+
+        forceUpdate |= pr == null
+            && subscription.LastAppliedBuild != null
+            && DateTimeOffset.UtcNow - subscription.LastAppliedBuild.DateProduced > AutoForceCodeFlowAfter;
 
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
