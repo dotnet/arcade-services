@@ -45,7 +45,7 @@ When running locally:
 
 To run the Product Construction Service locally:
 1. Start Docker Desktop.
-2. Set the `ProductConstructionService.AppHost` as Startup Project, and run it.
+2. Run `aspire run` from the repo root or set the `ProductConstructionService.AppHost` as Startup Project in VS, and run it.
 
 # Debugging the front-end (BarViz) separately
 
