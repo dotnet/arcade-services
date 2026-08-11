@@ -75,6 +75,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var commonAncestor = await vmr.GetMergeBaseAsync(headBranch, targetBranch);
+        // Codeflow changes may be committed on the checked-out branch (service) or staged in the index (darc).
+        // write-tree gives us the current index tree in either case for comparison with the common ancestor.
         var writeTreeResult = await vmr.ExecuteGitCommand(["write-tree"]);
         writeTreeResult.ThrowIfFailed("Failed to create a tree from the proposed code flow changes");
         var indexTree = writeTreeResult.StandardOutput.Trim();
