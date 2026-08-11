@@ -41,6 +41,7 @@ public class SqlBarClient : ISqlBarClient
     {
         var sub = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
+            .Include(s => s.LastAppliedBuild)
             .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
 
         if (sub == null)
@@ -59,7 +60,10 @@ public class SqlBarClient : ISqlBarClient
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
             [.. sub.ExcludedAssets.Select(s => s.Filter)],
-            sub.AutoApprove);
+            sub.AutoApprove)
+        {
+            LastAppliedBuild = sub.LastAppliedBuild != null ? ToClientModelBuild(sub.LastAppliedBuild) : null,
+        };
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)

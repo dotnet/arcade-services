@@ -241,14 +241,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Times.Once);
     }
 
-    protected void ThenCodeShouldHaveBeenFlownForward(Build build)
+    protected void AndCodeShouldHaveBeenFlownForward(Build build, bool forceUpdate = false)
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
-                It.IsAny<bool>(),
+                forceUpdate,
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -257,9 +257,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>(), It.IsAny<bool>()),
             Times.Once);
     }
-
-    protected void AndCodeShouldHaveBeenFlownForward(Build build)
-        => ThenCodeShouldHaveBeenFlownForward(build);
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
