@@ -139,7 +139,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var versionFileInclusionRules = DependencyFileManager.CodeflowDependencyFiles
-            .Select(f => $"src/{mappingName}/{f}")
+            .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).ToString())
             .Select(VmrPatchHandler.GetInclusionRule)
             .ToList();
 
