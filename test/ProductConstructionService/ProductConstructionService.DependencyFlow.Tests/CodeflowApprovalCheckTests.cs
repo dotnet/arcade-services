@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -33,6 +34,7 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         Build build = GivenANewBuild(true);
 
         GivenAnOpenInProgressCodeFlowPullRequest(build);
+        GivenTheTargetBranchRequiresLastPushApproval(true);
         GivenThePullRequestOnlyHasBotCommits(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(true);
 
@@ -56,6 +58,7 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         Build build = GivenANewBuild(true);
 
         GivenAnOpenInProgressCodeFlowPullRequest(build);
+        GivenTheTargetBranchRequiresLastPushApproval(true);
         GivenThePullRequestOnlyHasBotCommits(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(false);
 
@@ -79,6 +82,7 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         Build build = GivenANewBuild(true);
 
         GivenAnOpenInProgressCodeFlowPullRequest(build);
+        GivenTheTargetBranchRequiresLastPushApproval(true);
         GivenThePullRequestHasANonServiceCommit(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(true);
 
@@ -87,6 +91,29 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         ThenThePullRequestShouldNotHaveBeenApproved();
         ThenTheSourceDiffShouldNotHaveBeenVerified();
         ThenTheInProgressPullRequestWasChecked();
+    }
+
+    [Test]
+    public async Task DoesNotApprovePullRequestWhenLastPushApprovalIsNotRequired()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            },
+            autoApprove: true);
+        Build build = GivenANewBuild(true);
+
+        GivenAnOpenInProgressCodeFlowPullRequest(build);
+        GivenTheTargetBranchRequiresLastPushApproval(false);
+
+        await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
+
+        ThenThePullRequestShouldNotHaveBeenApproved();
+        ThenTheSourceDiffShouldNotHaveBeenVerified();
+        ThenOnlyThePullRequestAndTargetBranchRulesWereChecked();
     }
 
     private CodeflowApprovalCheck GivenACodeflowApprovalCheck(Build build)
@@ -98,4 +125,26 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
             CurrentSourceSha = build.Commit,
             PullRequestUrl = VmrPullRequestUrl,
         };
+
+    private void GivenTheTargetBranchRequiresLastPushApproval(bool required)
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.IsLastPushApprovalRequiredAsync(VmrUri, TargetBranch))
+            .ReturnsAsync(required);
+
+    private void ThenTheInProgressPullRequestWasChecked()
+    {
+        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestAsync(VmrPullRequestUrl), Times.Once);
+        DarcRemotes[VmrUri].Verify(
+            x => x.IsLastPushApprovalRequiredAsync(VmrUri, TargetBranch),
+            Times.Once);
+        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestCommitsAsync(VmrPullRequestUrl), Times.Once);
+    }
+
+    private void ThenOnlyThePullRequestAndTargetBranchRulesWereChecked()
+    {
+        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestAsync(VmrPullRequestUrl), Times.Once);
+        DarcRemotes[VmrUri].Verify(
+            x => x.IsLastPushApprovalRequiredAsync(VmrUri, TargetBranch),
+            Times.Once);
+    }
 }

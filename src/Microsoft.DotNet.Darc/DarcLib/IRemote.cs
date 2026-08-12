@@ -67,6 +67,13 @@ public interface IRemote
     Task<PullRequest> GetPullRequestAsync(string pullRequestUri);
 
     /// <summary>
+    ///     Determines whether the effective rules for a branch require approval of the most recent push.
+    /// </summary>
+    /// <param name="repoUri">URI of the repository.</param>
+    /// <param name="branch">Branch whose effective rules should be checked.</param>
+    Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch);
+
+    /// <summary>
     ///     Retrieve the commits of a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>

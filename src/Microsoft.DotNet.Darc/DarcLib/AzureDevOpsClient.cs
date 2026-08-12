@@ -79,6 +79,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     public bool AllowRetries { get; set; } = true;
 
+    public Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch) => throw new NotImplementedException(
+            "Checking whether the latest push requires approval is not implemented for Azure DevOps repositories.");
+
     /// <summary>
     /// Retrieve the contents of a text file in a repo on a specific branch
     /// </summary>
