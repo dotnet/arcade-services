@@ -101,9 +101,14 @@ public abstract class CommandLineOptions : ICommandLineOptions
         static bool UriMatches(string first, string second)
             => string.Equals(first?.TrimEnd('/'), second?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 
+        static bool IsLocalhostUri(string uri)
+            => Uri.TryCreate(uri, UriKind.Absolute, out Uri parsedUri)
+                && string.Equals(parsedUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+
         if (string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
             || UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.ProductionMaestroUri)
-            || UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.StagingMaestroUri))
+            || UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.StagingMaestroUri)
+            || IsLocalhostUri(BuildAssetRegistryBaseUri))
         {
             return;
         }
