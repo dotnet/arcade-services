@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Maestro.Common;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.Exceptions;
 using Maestro.MergePolicyEvaluation;
@@ -122,6 +123,13 @@ internal static class SubscriptionValidator
             throw new EntityIngestionValidationException(
                 "Auto-approve can only be enabled on forward flow subscriptions "
                 + "(source-enabled subscriptions that specify a target directory).", subscription);
+        }
+
+        if (subscription.Values.AutoApprove
+            && GitRepoUrlUtils.ParseTypeFromUri(subscription.Values.TargetRepository) != GitRepoType.GitHub)
+        {
+            throw new EntityIngestionValidationException(
+                "Auto-approve can only be enabled on GitHub repositories.", subscription);
         }
     }
 }

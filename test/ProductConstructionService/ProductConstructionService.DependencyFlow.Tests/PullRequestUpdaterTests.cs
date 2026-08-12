@@ -845,12 +845,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<CancellationToken>()),
             Times.Never);
 
-    protected void ThenTheInProgressPullRequestWasChecked()
-    {
-        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestAsync(VmrPullRequestUrl), Times.Once);
-        DarcRemotes[VmrUri].Verify(x => x.GetPullRequestCommitsAsync(VmrPullRequestUrl), Times.Once);
-    }
-
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
         int nextBuildToProcess = 0,
