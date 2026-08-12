@@ -1666,10 +1666,6 @@ build_asset_registry_base_uri=https://maestro.dot.net/
 
 ```
 
-The `build_asset_registry_base_uri` value is stored in `~/.darc/settings` and used by subsequent commands unless `--bar-uri` is provided.
-Darc warns when it is using a non-default URI so that stale settings are visible before a connection is attempted.
-Run `darc authenticate` to update the URI, or `darc authenticate --clear` to reset all settings to their defaults.
-
 ### **`login`**
 
 Authenticate with Maestro using interactive browser login and store the credentials for use by the darc CLI and automation tools like MCP agents. 
