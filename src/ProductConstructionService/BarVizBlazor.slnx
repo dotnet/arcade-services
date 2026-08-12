@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../../test/ProductConstructionService/ProductConstructionService.BarViz.Tests/ProductConstructionService.BarViz.Tests.csproj" />
+  <Project Path="ProductConstructionService.BarViz.Hosting/ProductConstructionService.BarViz.Hosting.csproj" />
+  <Project Path="ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
+</Solution>
