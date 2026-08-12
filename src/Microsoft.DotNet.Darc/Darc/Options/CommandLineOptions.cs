@@ -92,44 +92,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
         AzureDevOpsPat ??= localSettings.AzureDevOpsToken;
         GitHubPat ??= localSettings.GitHubToken;
         BuildAssetRegistryBaseUri ??= localSettings.BuildAssetRegistryBaseUri;
-
-        WarnIfUsingNonDefaultMaestroUri(logger);
-    }
-
-    private void WarnIfUsingNonDefaultMaestroUri(ILogger logger)
-    {
-        static bool UriMatches(string first, string second)
-            => string.Equals(first?.TrimEnd('/'), second?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
-
-        if (string.IsNullOrEmpty(BuildAssetRegistryBaseUri)
-            || UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.ProductionMaestroUri))
-        {
-            return;
-        }
-
-        string replacementUri = null;
-        if (UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.OldProductionMaestroUri))
-        {
-            replacementUri = ProductConstructionServiceApiOptions.ProductionMaestroUri;
-        }
-        else if (UriMatches(BuildAssetRegistryBaseUri, ProductConstructionServiceApiOptions.OldStagingMaestroUri))
-        {
-            replacementUri = ProductConstructionServiceApiOptions.StagingMaestroUri;
-        }
-
-        if (replacementUri != null)
-        {
-            logger.LogWarning(
-                "The configured Maestro URI '{MaestroUri}' is outdated. Use '{ReplacementUri}' instead. Run `darc authenticate` to update `build_asset_registry_base_uri`, or `darc authenticate --clear` to reset all settings.",
-                BuildAssetRegistryBaseUri,
-                replacementUri);
-        }
-        else
-        {
-            logger.LogWarning(
-                "Darc is using the non-default Maestro URI '{MaestroUri}'. If this is unexpected, run `darc authenticate` to update `build_asset_registry_base_uri`, or `darc authenticate --clear` to reset all settings.",
-                BuildAssetRegistryBaseUri);
-        }
     }
 
     /// <summary>
@@ -163,13 +125,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
         services ??= new ServiceCollection();
         services.AddLogging(b => b
-            .AddConsole(o =>
-            {
-                o.FormatterName = CompactConsoleLoggerFormatter.FormatterName;
-                // Route warnings and above to stderr so they don't corrupt machine-readable
-                // output (e.g. `--output-format json`) written to stdout.
-                o.LogToStandardErrorThreshold = LogLevel.Warning;
-            })
+            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
             .SetMinimumLevel(level)
             .AddFilter("Microsoft.DotNet.DarcLib.VirtualMonoRepo." + nameof(VmrPatchHandler), LogLevel.Warning));
