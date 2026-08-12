@@ -146,5 +146,8 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         DarcRemotes[VmrUri].Verify(
             x => x.IsLastPushApprovalRequiredAsync(VmrUri, TargetBranch),
             Times.Once);
+        DarcRemotes[VmrUri].Verify(
+            x => x.GetPullRequestCommitsAsync(It.IsAny<string>()),
+            Times.Never);
     }
 }
