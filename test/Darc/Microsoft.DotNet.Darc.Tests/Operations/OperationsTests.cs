@@ -49,6 +49,7 @@ public class OperationTests
     }
 
     [TestCase(ProductConstructionServiceApiOptions.ProductionMaestroUri)]
+    [TestCase(ProductConstructionServiceApiOptions.StagingMaestroUri)]
     [TestCase("https://maestro.dot.net")]
     [TestCase("")]
     public void InitializeFromSettings_DoesNotWarnForDefaultOrEmptyMaestroUri(string maestroUri)
@@ -92,12 +93,12 @@ public class OperationTests
         Mock<ILogger> logger = new();
         FakeCommandLineOptions options = new()
         {
-            BuildAssetRegistryBaseUri = ProductConstructionServiceApiOptions.StagingMaestroUri,
+            BuildAssetRegistryBaseUri = "https://some-other-maestro.example.com/",
         };
 
         options.InitializeFromSettings(logger.Object);
 
-        VerifyWarningContains(logger, ProductConstructionServiceApiOptions.StagingMaestroUri, "non-default");
+        VerifyWarningContains(logger, "https://some-other-maestro.example.com/", "non-default");
     }
 
     private static void VerifyWarningContains(Mock<ILogger> logger, params string[] expectedValues)
