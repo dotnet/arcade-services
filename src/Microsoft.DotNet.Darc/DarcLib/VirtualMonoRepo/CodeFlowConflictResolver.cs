@@ -621,6 +621,7 @@ public abstract class CodeFlowConflictResolver
                 _commentCollector.AddComment(
                     $"Failed to check if file {revertedFile} actually had some changes or just a false positive, please review carefully. {CommentPlaceholders.NotificationTags}",
                     CommentType.Caution);
+                continue;
             }
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
