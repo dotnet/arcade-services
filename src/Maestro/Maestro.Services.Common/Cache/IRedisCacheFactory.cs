@@ -19,12 +19,17 @@ public interface IRedisCacheFactory
 
 public class RedisCacheFactory : IRedisCacheFactory
 {
-    private readonly ConnectionMultiplexer _connection;
+    private readonly IConnectionMultiplexer _connection;
     private readonly ILogger<RedisCache> _logger;
 
     public RedisCacheFactory(ConfigurationOptions options, ILogger<RedisCache> logger)
+        : this(ConnectionMultiplexer.Connect(options), logger)
     {
-        _connection = ConnectionMultiplexer.Connect(options);
+    }
+
+    public RedisCacheFactory(IConnectionMultiplexer connection, ILogger<RedisCache> logger)
+    {
+        _connection = connection;
         _logger = logger;
     }
 

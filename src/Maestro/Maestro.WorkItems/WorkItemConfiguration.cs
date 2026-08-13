@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Text.Json;
 using Azure.Core;
 using Azure.ResourceManager;
@@ -10,6 +11,7 @@ using Maestro.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.WorkItems;
 
@@ -77,12 +79,22 @@ public static class WorkItemConfiguration
     public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string[] queueNames)
     {
         var queueServiceClient = serviceProvider.GetRequiredService<QueueServiceClient>();
+        var logger = serviceProvider.GetRequiredService<ILoggerFactory>()
+            .CreateLogger(typeof(WorkItemConfiguration).FullName!);
+        var stopwatch = Stopwatch.StartNew();
 
-        foreach (var queueName in queueNames)
-        {
-            var queueClient = queueServiceClient.GetQueueClient(queueName);
-            await queueClient.CreateIfNotExistsAsync();
-        }
+        logger.LogInformation(
+            "Initializing {QueueCount} local work item queues: {QueueNames}",
+            queueNames.Length,
+            string.Join(", ", queueNames));
+
+        await Task.WhenAll(queueNames.Select(queueName =>
+            queueServiceClient.GetQueueClient(queueName).CreateIfNotExistsAsync()));
+
+        logger.LogInformation(
+            "Initialized {QueueCount} local work item queues in {ElapsedMilliseconds} ms",
+            queueNames.Length,
+            stopwatch.ElapsedMilliseconds);
     }
 
     public static void AddWorkItemProcessor<TWorkItem, TProcessor>(

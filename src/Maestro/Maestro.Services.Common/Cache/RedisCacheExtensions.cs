@@ -28,7 +28,8 @@ public static class RedisCacheExtensions
             await redisConfig.ConfigureForAzureAsync(azureOptions);
         }
 
-        builder.Services.AddSingleton(redisConfig);
+        IConnectionMultiplexer connection = await ConnectionMultiplexer.ConnectAsync(redisConfig);
+        builder.Services.AddSingleton(connection);
         builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
         builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
         builder.Services.AddSingleton<ICache, RedisCacheClient>();
