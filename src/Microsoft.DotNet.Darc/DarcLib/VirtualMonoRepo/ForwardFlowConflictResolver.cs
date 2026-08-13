@@ -177,6 +177,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     bumped in the repository while it was independently reset in the VMR, so the correct commit for the
                     submodule cannot be determined automatically. Please choose the correct submodule commit and run
                     `darc vmr reset-submodule <sha>` to make sure the submodule ends up in the desired state in the VMR.
+                    {CommentPlaceholders.NotificationTags}
                     """,
                     CommentType.Caution);
                 return false;

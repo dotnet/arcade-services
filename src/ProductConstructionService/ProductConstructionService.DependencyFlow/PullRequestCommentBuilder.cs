@@ -221,11 +221,11 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return sourceRepoNotificationComment;
     }
 
-    private static string GetNotificationTags(Subscription subscription)
+    public static string GetNotificationTags(Subscription? subscription)
     {
-        var tagsToNotify = (subscription.PullRequestFailureNotificationTags ?? string.Empty)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => t.StartsWith('@') ? t : $"@{t}");
+        var tagsToNotify = (subscription?.PullRequestFailureNotificationTags ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(tag => tag.StartsWith('@') ? tag : $"@{tag}");
 
         return string.Join(Environment.NewLine, tagsToNotify);
     }

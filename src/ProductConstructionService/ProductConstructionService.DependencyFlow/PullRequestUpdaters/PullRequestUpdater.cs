@@ -463,20 +463,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 (await _target.GetTargetAsync()).Repository,
                 [
                     (CommentPlaceholders.SubscriptionId, update.SubscriptionId.ToString()),
-                    (CommentPlaceholders.NotificationTags, GetNotificationTags(subscription?.PullRequestFailureNotificationTags)),
+                    (CommentPlaceholders.NotificationTags, PullRequestCommentBuilder.GetNotificationTags(subscription)),
                 ]);
         }
 
         return result;
-    }
-
-    private static string GetNotificationTags(string? notificationTags)
-    {
-        var tags = (notificationTags ?? string.Empty)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(tag => tag.StartsWith('@') ? tag : $"@{tag}");
-
-        return string.Join(Environment.NewLine, tags);
     }
 
     #endregion

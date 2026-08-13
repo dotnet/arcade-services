@@ -629,7 +629,7 @@ public abstract class CodeFlowConflictResolver
             var result = await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken);
             if (!result.Succeeded)
             {
-                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually.", CommentType.Caution);
+                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually. {CommentPlaceholders.NotificationTags}", CommentType.Caution);
                 return;
             }
 
