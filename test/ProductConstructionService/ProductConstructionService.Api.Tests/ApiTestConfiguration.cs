@@ -3,7 +3,10 @@
 
 using Maestro.Services.Common;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Moq;
+using StackExchange.Redis;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -22,6 +25,7 @@ public static class ApiTestConfiguration
         builder.Configuration[PcsStartup.ConfigurationKeys.RedisConnectionString] = "connectionString";
         builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
         builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
+        builder.Services.AddSingleton(Mock.Of<IConnectionMultiplexer>());
         return builder;
     }
 }
