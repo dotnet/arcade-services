@@ -339,6 +339,11 @@ public sealed class Remote : IRemote
         return _remoteGitClient.GetPullRequestAsync(pullRequestUri);
     }
 
+    public Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch)
+    {
+        return _remoteGitClient.IsLastPushApprovalRequiredAsync(repoUri, branch);
+    }
+
     public Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUri)
     {
         return _remoteGitClient.GetPullRequestCommitsAsync(pullRequestUri);

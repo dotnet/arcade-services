@@ -26,6 +26,7 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Mi
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj", "./ProductConstructionService.BarViz/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.BarViz.Hosting/ProductConstructionService.BarViz.Hosting.csproj", "./ProductConstructionService.BarViz.Hosting/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj", "./ProductConstructionService.FeedCleaner/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]

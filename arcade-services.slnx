@@ -34,6 +34,7 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.AppHost/ProductConstructionService.AppHost.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
+    <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz.Hosting/ProductConstructionService.BarViz.Hosting.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />

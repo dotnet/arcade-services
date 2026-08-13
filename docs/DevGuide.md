@@ -1,32 +1,21 @@
 # Getting started with local development
 
 1. Install the latest Preview VS.
-  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
-  - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
-2. Install Docker Desktop: https://www.docker.com/products/docker-desktop
-3. Configure git to support long paths:
+  - Be sure to install the `ASP.NET and web development` => `.NET WebAssembly Build Tools`
+2. Install Docker Desktop:  `winget install --id Docker.Desktop`  or manually from https://www.docker.com/products/docker-desktop
+3. Install Aspire: `winget install --id Microsoft.Aspire` or manually from https://aspire.dev
+4. Configure git to support long paths:
     ```ps1
     git config --system core.longpaths true # you will need elevated shell for this one
     git config --global core.longpaths true
     ```
-4. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-5. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
-6. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)
-7. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`
+5. Install SQL Server Express: `winget install --id Microsoft.SQLServer.2022.Express` or manually from https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+6. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
+7. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)
+8. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the `Maestro.Data` project folder
-8. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org)
-9. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault
-10. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
-
-  ```sql
-  INSERT INTO [Repositories] (RepositoryName, InstallationId) VALUES
-      ('https://github.com/maestro-auth-test/maestro-test', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test2', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test3', 289474),
-      ('https://github.com/maestro-auth-test/maestro-test-vmr', 289474),
-      ('https://github.com/maestro-auth-test/arcade', 289474),
-      ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
-  ```
+9. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org)
+10.  Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault
 
 # Configuring the service for local runs
 
@@ -34,32 +23,11 @@ When running locally:
  - The service will attempt to read secrets from the [`ProductConstructionDev`](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/e6b5f9f5-0ca4-4351-879b-014d78400ec2/resourceGroups/product-construction-service/providers/Microsoft.KeyVault/vaults/ProductConstructionDev/overview) KeyVault, using your Microsoft credentials. If you're having some authentication double check the following:
     - In VS, go to `Tools -> Options -> Azure Service Authentication -> Account Selection` and make sure your corp account is selected
     - Check your environmental variables, you might have `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` set, and the `DefaultAzureCredential` is attempting to use `EnvironmentalCredentials` for an app that doesn't have access to the dev KV.
- - The service is configured to use the same SQL Express database Maestro uses. To se it up, follow the [instructions](https://github.com/dotnet/arcade-services/blob/main/docs/DevGuide.md)
- - Configure the `ProductConstructionService.AppHost/Properties/launchSettings`.json file:
+ - Configure the `ProductConstructionService.Api/Properties/launchSettings.json`.json file:
    - `TmpPath`: path to the TMP folder that the service will use to clone other repos (like runtime). If you've already worked with the VMR and have the TMP VMR folder on your machine, you can point the service there and it will reuse the cloned repos you already have.
-   - AppHost's `launchSettings.json` config should look something like this (fill in the VMR paths):
     ```json
     {
-        "$schema": "http://json.schemastore.org/launchsettings.json",
-        "profiles": {
-            "PCS (local)": {
-                "commandName": "Project",
-                "dotnetRunMessages": true,
-                "launchBrowser": true,
-                "applicationUrl": "https://localhost:18848",
-                "environmentVariables": {
-                    "TmpPath": "D:\\tmp\\",
-                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:19265",
-                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:20130"
-                }
-            }
-        }
-    }
-    ```
-    - Modify the `ProductConstructionService.Api/Properties/launchSettings.json` config should look something like this (fill in the VMR paths):
-    ```json
-    {
-        "$schema": "http://json.schemastore.org/launchsettings.json",
+        "$schema": "https://json.schemastore.org/launchsettings.json",
         "profiles": {
             "ProductConstructionService.Api": {
                 "commandName": "Project",
@@ -68,7 +36,6 @@ When running locally:
                 "environmentVariables": {
                     "ASPNETCORE_ENVIRONMENT": "Development",
                     "TmpPath": "D:\\tmp\\"
-                }
             }
         }
     }
@@ -78,17 +45,13 @@ When running locally:
 
 To run the Product Construction Service locally:
 1. Start Docker Desktop.
-2. Set the `ProductConstructionService.AppHost` as Startup Project, and run it.
+2. Run `aspire run` from the repo root or set the `ProductConstructionService.AppHost` as Startup Project in VS, and run it.
 
-# Debugging the front-end locally
+# Debugging the front-end (BarViz) separately
 
-In order to debug the Blazor project, you need to run the server (the `ProductConstructionService.AppHost` project) and the front-end separately. The front-end will be served from a different port but will still be able to communicate with the local server.
+To debug BarViz without running Docker or the full Product Construction Service you can open `src\ProductConstructionService\BarVizBlazor.slnx` and run the `ProductConstructionService.BarViz.Hosting` project.
 
-- Start Docker
-- Run the `ProductConstructionService.AppHost` project (without debugging or using `dotnet run` from `src\ProductConstructionService\ProductConstructionService.AppHost`)
-- Debug the `ProductConstructionService.BarViz` project
-
-It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.Api\appsettings.Development.json`) to point to the production so that the front-end has data to work with:
+It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.BarViz.Hosting\appsettings.Development.json`) to point to the production API so that the front-end has data to work with:
 
 ```json
 {

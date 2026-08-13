@@ -33,6 +33,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 {
     private const string GitHubApiUri = "https://api.github.com";
     private const string DarcLibVersion = "1.0.0";
+    private const string PullRequestRuleType = "pull_request";
     private static readonly ProductHeaderValue _product;
 
     private static readonly string CommentMarker =
@@ -334,6 +335,24 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
         return ToDarcLibPullRequest(pr);
+    }
+
+    public async Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch)
+    {
+        branch = GitHelpers.NormalizeBranchName(branch);
+        (string owner, string repo) = ParseRepoUri(repoUri);
+        var rulesUri = new Uri(
+            $"repos/{owner}/{repo}/rules/branches/{Uri.EscapeDataString(branch)}",
+            UriKind.Relative);
+
+        IApiResponse<IReadOnlyList<GitHubRepositoryRule>> response =
+            await GetClient(owner, repo).Connection.Get<IReadOnlyList<GitHubRepositoryRule>>(
+                rulesUri,
+                new Dictionary<string, string>());
+
+        return response.Body.Any(rule =>
+            rule.Type == PullRequestRuleType
+            && rule.Parameters?.RequireLastPushApproval == true);
     }
 
     /// <summary>

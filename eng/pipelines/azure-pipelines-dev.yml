@@ -24,3 +24,4 @@ extends:
     - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
         isProdPipeline: false
+        enableSigning: true
