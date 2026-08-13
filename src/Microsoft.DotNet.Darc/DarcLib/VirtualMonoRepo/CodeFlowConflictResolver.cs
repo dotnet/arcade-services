@@ -603,14 +603,24 @@ public abstract class CodeFlowConflictResolver
             _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
                 revertedFile);
 
-            if (!await CheckIfRealRevertAsync(
-                revertedFile,
-                codeflowOptions,
-                crossingFlow, vmr,
-                productRepo,
-                cancellationToken))
+            try
             {
-                continue;
+                if (!await CheckIfRealRevertAsync(
+                    revertedFile,
+                    codeflowOptions,
+                    crossingFlow, vmr,
+                    productRepo,
+                    cancellationToken))
+                {
+                    continue;
+                }
+            }
+            catch (DarcException e)
+            {
+                _logger.LogError(e, "Failed to check if {file} was actually reverted: {message}", revertedFile, e.Message);
+                _commentCollector.AddComment(
+                    $"Failed to check if file {revertedFile} actually had some changes or just a false positive, please review carefully. {CommentPlaceholders.NotificationTags}",
+                    CommentType.Caution);
             }
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
