@@ -1,5 +1,6 @@
 ﻿@implements IDisposable
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @inject UrlRedirectManager UrlRedirectManager
 
 <FluentDesignTheme StorageName="theme" />
@@ -22,6 +23,14 @@
     {
         _navigationHandlerRegistration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
         base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("appLoading.remove");
+        }
     }
 
     void IDisposable.Dispose()
