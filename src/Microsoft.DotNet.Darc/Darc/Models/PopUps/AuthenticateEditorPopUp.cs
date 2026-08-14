@@ -61,6 +61,8 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             new(string.Empty),
             new("Maestro API", isComment: true),
             new("===========", isComment: true),
+            new("To have access to the API, you either have to be part of the .NET FTE group,", isComment: true),
+            new("alternatively request to join https://myaccount.microsoft.com/groups/3ac14f1e-80ac-4c8f-a860-58592053bc3a", isComment: true),
             new("- (Recommended) Leave as-is", isComment: true),
             new($"{BarBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate Maestro API URI, otherwise leave as is>", false)}"),
             new(string.Empty),
