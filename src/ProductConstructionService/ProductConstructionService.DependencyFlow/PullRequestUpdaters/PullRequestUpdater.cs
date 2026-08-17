@@ -457,10 +457,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr != null)
         {
+            var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
             await _pullRequestCommenter.PostCollectedCommentsAsync(
                 pr.Url,
                 (await _target.GetTargetAsync()).Repository,
-                [("<subscriptionId>", update.SubscriptionId.ToString())]);
+                [
+                    (CommentPlaceholders.SubscriptionId, update.SubscriptionId.ToString()),
+                    (CommentPlaceholders.NotificationTags, PullRequestCommentBuilder.GetNotificationTags(subscription)),
+                ]);
         }
 
         return result;

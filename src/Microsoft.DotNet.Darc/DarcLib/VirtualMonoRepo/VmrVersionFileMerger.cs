@@ -87,8 +87,9 @@ public abstract class VmrVersionFileMerger
                         was removed in the target branch but added in the source repo.
 
                         We will prefer the target repo change and not add the property.
+                        {CommentPlaceholders.NotificationTags}
                         """;
-                    _commentCollector.AddComment(message, CommentType.Information);
+                    _commentCollector.AddComment(message, CommentType.Caution);
                 }
                 // we don't have to do anything since the property is removed in the repo
                 // even if the property was added in the source repo, we'll take what's in the target repo
@@ -105,6 +106,7 @@ public abstract class VmrVersionFileMerger
                         was added in the target branch but removed in the source repo's branch.
 
                         We will prefer the change from the source branch and not add the property.
+                        {CommentPlaceholders.NotificationTags}
                         """;
                     _commentCollector.AddComment(message, CommentType.Information);
                     continue;

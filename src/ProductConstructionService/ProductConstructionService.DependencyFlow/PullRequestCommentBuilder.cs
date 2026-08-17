@@ -126,7 +126,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     }
 
     public static string BuildOppositeCodeflowMergedNotification() =>
-        """
+        $"""
         While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
         To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
         
@@ -137,12 +137,12 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
           You will lose any manual changes made in this PR.
           You can also manually trigger the new codeflow right away by running:
           ```
-          darc trigger-subscriptions --id <subscriptionId>
+          darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId}
           ```
         - Force a codeflow into this PR at your own risk if you want the new changes.
           User commits made to this PR might be reverted.
           ```
-          darc trigger-subscriptions --id <subscriptionId> --force
+          darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId} --force
           ```
         """;
 
@@ -221,11 +221,11 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return sourceRepoNotificationComment;
     }
 
-    private static string GetNotificationTags(Subscription subscription)
+    public static string GetNotificationTags(Subscription? subscription)
     {
-        var tagsToNotify = (subscription.PullRequestFailureNotificationTags ?? string.Empty)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => t.StartsWith('@') ? t : $"@{t}");
+        var tagsToNotify = (subscription?.PullRequestFailureNotificationTags ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(tag => tag.StartsWith('@') ? tag : $"@{tag}");
 
         return string.Join(Environment.NewLine, tagsToNotify);
     }

@@ -186,7 +186,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             // Nuget.Config from the repo should be preferred as it can contain additional sources that are not in the VMR's Nuget.Config
             await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
-            _commentCollector.AddComment("There was a conflict in Nuget.Config. Resolved by preferring the version from the repo. Please make sure to merge any necessary changes from the VMR's Nuget.Config if needed.",
+            _commentCollector.AddComment($"There was a conflict in Nuget.Config. Resolved by preferring the version from the repo. Please make sure to merge any necessary changes from the VMR's Nuget.Config if needed. {CommentPlaceholders.NotificationTags}",
                 CommentType.Caution);
             return true;
         }
