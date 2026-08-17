@@ -819,6 +819,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
                 {mismatchedFileList}
 
+                Some source changes may already have been present in the VMR before this pull request. 
+                Automatic approval requires each file to either contain the complete source diff in this pull request or already exactly match the file at the source commit.
+                The files listed above met neither condition.
+
                 Please manually review these files to ensure their changes are expected before merging this pull request.
                 """,
                 CommentType.Information);
