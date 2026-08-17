@@ -769,7 +769,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(matches);
+            .ReturnsAsync(matches ? [] : ["unexpected.txt"]);
 
     protected void GivenThePullRequestOnlyHasBotCommits(string prUrl)
         => DarcRemotes[VmrUri]

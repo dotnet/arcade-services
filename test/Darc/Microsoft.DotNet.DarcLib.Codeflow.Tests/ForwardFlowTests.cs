@@ -30,7 +30,7 @@ internal class ForwardFlowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         var newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
         await FinalizeForwardFlow(branchName);
 
         // Flow again - should be a no-op
@@ -47,7 +47,7 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
@@ -77,7 +77,7 @@ internal class ForwardFlowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
         await FinalizeForwardFlow(branchName);
 
         // The file.txt will keep getting changed and conflicting in each flow

@@ -289,11 +289,11 @@ internal abstract class CodeFlowTestsBase
 
     /// <summary>
     /// Runs the source-diff verification (the same check PCS runs after a forward-flow push)
-    /// against the current state of the VMR PR branch and returns whether the PR faithfully
-    /// reflects the source repo's diff (<paramref name="oldSha"/>...<paramref name="newSha"/>).
+    /// against the current state of the VMR PR branch and returns the paths that do not faithfully
+    /// reflect the source repo's diff (<paramref name="oldSha"/>...<paramref name="newSha"/>).
     /// The PR branch must be committed before calling this.
     /// </summary>
-    protected async Task<bool> VerifyForwardFlowSourceDiff(string branchName, string oldSha, string newSha)
+    protected async Task<IReadOnlyList<string>> VerifyForwardFlowSourceDiff(string branchName, string oldSha, string newSha)
     {
         using var scope = ServiceProvider.CreateScope();
         var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();

@@ -101,7 +101,7 @@ internal abstract class Operation(
             enabled: true,
             id: Guid.NewGuid(),
             updateFrequency: ClientUpdateFrequency.None,
-            autoApprove: false)
+            autoApprove: true)
         {
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,

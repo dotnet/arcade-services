@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 /// <summary>
 /// Unit tests for <see cref="CodeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync"/>. The git/VMR
 /// interactions are mocked so each test drives the public verifier with hand-crafted
-/// "source repo" and "VMR PR" diffs and asserts the verdict.
+/// "source repo" and "VMR PR" diffs and asserts the mismatched paths.
 /// </summary>
 [TestFixture]
 internal class CodeflowSourceDiffVerifierTests
@@ -92,7 +92,7 @@ internal class CodeflowSourceDiffVerifierTests
             NullLogger<CodeflowSourceDiffVerifier>.Instance);
     }
 
-    private Task<bool> VerifyAsync() => _verifier.ForwardFlowMatchesSourceDiffAsync(
+    private Task<IReadOnlyList<string>> VerifyAsync() => _verifier.ForwardFlowMatchesSourceDiffAsync(
         SourceRepoUri,
         VmrUri,
         MappingName,
@@ -177,7 +177,7 @@ internal class CodeflowSourceDiffVerifierTests
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().BeEmpty();
     }
 
     [Test]
@@ -188,13 +188,16 @@ internal class CodeflowSourceDiffVerifierTests
         {
             ["data.txt"] = SingleLineDiff("data.txt", "old content", "new content"),
         });
-        SetupDiffs(_vmr, string.Join('\n', VmrPrefix + "data.txt", VmrPrefix + "extra.txt"), new Dictionary<string, string>());
+        SetupDiffs(_vmr, string.Join('\n', VmrPrefix + "data.txt", VmrPrefix + "extra.txt"), new Dictionary<string, string>
+        {
+            [VmrPrefix + "data.txt"] = SingleLineDiff(VmrPrefix + "data.txt", "old content", "new content"),
+        });
 
         // Act
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().Equal("extra.txt");
     }
 
     [Test]
@@ -214,7 +217,7 @@ internal class CodeflowSourceDiffVerifierTests
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeFalse();
+        result.Should().Equal("data.txt");
     }
 
     [Test]
@@ -238,7 +241,7 @@ internal class CodeflowSourceDiffVerifierTests
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().BeEmpty();
     }
 
     [Test]
@@ -264,7 +267,7 @@ internal class CodeflowSourceDiffVerifierTests
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeFalse("the PR removed a different comment line than the source diff and must be rejected");
+        result.Should().Equal(["schema.sql"], "the PR removed a different comment line than the source diff and must be rejected");
     }
 
     [Test]
@@ -284,6 +287,6 @@ internal class CodeflowSourceDiffVerifierTests
         var result = await VerifyAsync();
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().BeEmpty();
     }
 }

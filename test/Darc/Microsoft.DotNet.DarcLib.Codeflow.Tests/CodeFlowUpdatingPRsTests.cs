@@ -54,7 +54,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Forward flow commit");
 
         // The freshly opened FF PR should faithfully reflect the source diff
-        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, previousSourceSha, firstFlowSourceSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, previousSourceSha, firstFlowSourceSha)).Should().BeEmpty();
 
         // 3. Make some changes in the forward flow PR branch
         await GitOperations.Checkout(VmrPath, forwardFlowBranch);
@@ -73,7 +73,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
 
         // The PR now carries an extra manual change (repo.txt) that the source diff doesn't contain,
         // so the verification should fail
-        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, firstFlowSourceSha, secondFlowSourceSha)).Should().BeFalse();
+        (await VerifyForwardFlowSourceDiff(forwardFlowBranch, firstFlowSourceSha, secondFlowSourceSha)).Should().Contain("repo.txt");
 
         // Check that the changes in the PR branch are preserved
         var prFileContent = await File.ReadAllTextAsync(_productRepoVmrPath / "repo.txt");
