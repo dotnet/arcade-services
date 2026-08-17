@@ -69,7 +69,9 @@ public class DeploymentOptions : Tools.Cli.Core.Options
         services.AddTransient(sp =>
             sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value
         );
-        services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
+        services.AddTransient<IWorkItemProcessorReplicaProvider, ContainerAppWorkItemProcessorReplicaProvider>();
+        services.AddSingleton<IWorkItemProcessorStateStore, WorkItemProcessorStateStore>();
+        services.AddTransient<ReplicaStateCoordinator>();
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);
         await redisConfig.ConfigureForAzureWithTokenCredentialAsync(credential);
