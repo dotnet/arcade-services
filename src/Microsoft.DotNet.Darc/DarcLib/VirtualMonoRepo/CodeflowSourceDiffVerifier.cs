@@ -16,11 +16,11 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public interface ICodeflowSourceDiffVerifier
 {
     /// <summary>
-    /// Verifies that a forward-flow codeflow PR (source repo -> VMR) faithfully contains the source
-    /// repo's commit diff (oldSha...newSha), accounting for the expected divergences (path remap,
-    /// excludes, eng/common, version files, no-ops).
+    /// Returns the mapping-relative paths where a forward-flow codeflow PR (source repo -> VMR)
+    /// differs from the source repo's commit diff (oldSha...newSha), accounting for the expected
+    /// divergences (path remap, excludes, eng/common, version files, no-ops).
     /// </summary>
-    Task<bool> ForwardFlowMatchesSourceDiffAsync(
+    Task<IReadOnlyList<string>> ForwardFlowMatchesSourceDiffAsync(
         string sourceRepoUri,
         string vmrUri,
         string mappingName,
@@ -58,7 +58,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         _logger = logger;
     }
 
-    public async Task<bool> ForwardFlowMatchesSourceDiffAsync(
+    public async Task<IReadOnlyList<string>> ForwardFlowMatchesSourceDiffAsync(
         string sourceRepoUri,
         string vmrUri,
         string mappingName,
@@ -104,6 +104,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         var filesChangedInBoth = sourceRepoChangedFiles.Where(vmrPrChangedFiles.Contains).ToList();
         var sourceRepoOnlyChanges = sourceRepoChangedFiles.Where(f => !vmrPrChangedFiles.Contains(f)).ToList();
         var filesChangedInPrOnly = vmrPrChangedFiles.Where(f => !sourceRepoChangedFiles.Contains(f)).ToList();
+        var mismatchedFiles = new List<string>(filesChangedInPrOnly);
 
         if (filesChangedInPrOnly.Count > 0)
         {
@@ -111,7 +112,6 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
                 "Source diff verification for {mappingName} failed: {unexpected} file(s) changed in the PR but not in the source diff",
                 mappingName,
                 filesChangedInPrOnly.Count);
-            return false;
         }
 
         // Per-file content compare on the intersection.
@@ -123,7 +123,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
                     "Source diff verification for {mappingName} failed: changes to {file} don't match the source diff",
                     mappingName,
                     file);
-                return false;
+                mismatchedFiles.Add(file);
             }
         }
 
@@ -136,12 +136,18 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
                     "Source diff verification for {mappingName} failed: {file} changed in the source diff but is not reflected in the PR",
                     mappingName,
                     file);
-                return false;
+                mismatchedFiles.Add(file);
             }
         }
 
-        _logger.LogInformation("Source diff verification for {mappingName} passed", mappingName);
-        return true;
+        if (mismatchedFiles.Count == 0)
+        {
+            _logger.LogInformation("Source diff verification for {mappingName} passed", mappingName);
+        }
+
+        return mismatchedFiles
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     /// <summary>

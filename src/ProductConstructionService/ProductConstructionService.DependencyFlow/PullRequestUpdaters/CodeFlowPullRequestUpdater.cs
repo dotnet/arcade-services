@@ -32,6 +32,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISqlBarClient _sqlClient;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ICommentCollector _commentCollector;
+    private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ICodeflowSourceDiffVerifier _codeflowSourceDiffVerifier;
@@ -70,6 +71,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _sqlClient = sqlClient;
         _telemetryRecorder = telemetryRecorder;
         _commentCollector = commentCollector;
+        _pullRequestCommenter = pullRequestCommenter;
         _logger = logger;
         _stateManager = stateManager;
         _subscriptionEventRecorder = subscriptionEventRecorder;
@@ -763,7 +765,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        bool match = await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
+        IReadOnlyList<string> mismatchedFiles = await _codeflowSourceDiffVerifier.ForwardFlowMatchesSourceDiffAsync(
                 subscription.SourceRepository,
                 subscription.TargetRepository,
                 subscription.TargetDirectory,
@@ -772,7 +774,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription.TargetBranch,
                 pr.HeadBranch,
                 cancellationToken);
-        if (match)
+        if (mismatchedFiles.Count == 0)
         {
             _logger.LogInformation(
                 "Codeflow approval check for PR {prUrl} passed; approving the pull request",
@@ -802,9 +804,31 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
         else
         {
+            var mismatchedFileList = string.Join(
+                Environment.NewLine,
+                mismatchedFiles.Select(path => $"- `{path}`"));
+
             _logger.LogInformation(
-                "Forward flow PR {prUrl} contains unexpected changes, not auto approving",
-                pr.Url);
+                "Forward flow PR {prUrl} contains files that did not match the source diff: {mismatchedFiles}. Not auto approving",
+                pr.Url,
+                string.Join(", ", mismatchedFiles));
+
+            _commentCollector.AddComment(
+                $"""
+                This pull request was not automatically approved because the following files did not match the source diff:
+
+                {mismatchedFileList}
+
+                Automatic approval requires either file changes to match between the repo and the VMR or the destination file to fully match the source file in content
+                The files listed above met neither condition.
+
+                Please manually review these files to ensure their changes are expected before merging this pull request.
+                """,
+                CommentType.Information);
+            await _pullRequestCommenter.PostCollectedCommentsAsync(
+                pr.Url,
+                subscription.TargetRepository,
+                []);
         }
     }
 
