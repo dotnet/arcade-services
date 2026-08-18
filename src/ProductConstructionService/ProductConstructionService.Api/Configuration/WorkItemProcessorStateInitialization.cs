@@ -7,17 +7,20 @@ namespace ProductConstructionService.Api.Configuration;
 
 public static class WorkItemProcessorStateInitialization
 {
+    /// <summary>
+    /// Local bootstrap of the control plane side of the protocol. Deployed environments get their desired
+    /// state from the deployment, locally there is nothing else that would write it.
+    /// </summary>
     public static async Task SetWorkItemProcessorInitialState(this WebApplication app)
     {
-        var state = app.Services.GetRequiredService<WorkItemProcessorState>();
+        if (!app.Environment.IsDevelopment())
+        {
+            return;
+        }
 
-        if (app.Environment.IsDevelopment())
-        {
-            await state.SetStartAsync();
-        }
-        else
-        {
-            await state.SetInitializingAsync();
-        }
+        var stateStore = app.Services.GetRequiredService<IWorkItemProcessorStateStore>();
+        var replicaName = app.Services.GetRequiredService<WorkItemProcessorReplicaName>();
+
+        await stateStore.SetDesiredStateAsync(replicaName.Value, WorkItemProcessorState.Working, CancellationToken.None);
     }
 }

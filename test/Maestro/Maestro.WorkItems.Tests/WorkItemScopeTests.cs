@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
@@ -6,9 +6,7 @@ using AwesomeAssertions;
 using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
-using Maestro.Services.Common.Cache;
 using Maestro.WorkItems;
 
 namespace Maestro.WorkItem.Tests;
@@ -16,8 +14,7 @@ namespace Maestro.WorkItem.Tests;
 public class WorkItemScopeTests
 {
     private ServiceCollection _services = new();
-    private WorkItemProcessorState _state = null!;
-    private WorkItemProcessorStateCache _stateCache = null!;
+    private WorkItemAdmissionGate _admissionGate = null!;
 
     [SetUp]
     public void TestSetup()
@@ -27,23 +24,13 @@ public class WorkItemScopeTests
         _services.AddLogging();
         _services.AddSingleton(new TelemetryClient(new()));
 
-        Mock<IRedisCacheFactory> cacheFactory = new();
-        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
-
-        _stateCache = new(
-            cacheFactory.Object,
-            "testReplica",
-            new Mock<ILogger<WorkItemProcessorStateCache>>().Object);
-
-        _state = new(
-            new AutoResetEvent(false),
-            _stateCache);
+        _admissionGate = new WorkItemAdmissionGate();
+        _admissionGate.Open();
     }
 
     [Test]
     public async Task WorkItemScopeRecordsMetricsTest()
     {
-        await _state.SetStartAsync();
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -59,10 +46,10 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
         var started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(
@@ -82,8 +69,6 @@ public class WorkItemScopeTests
     [Test]
     public async Task WorkItemScopeRecordsMetricsWhenThrowingTest()
     {
-        await _state.SetStartAsync();
-
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -98,10 +83,10 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
         var started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             Func<Task> func =
@@ -118,6 +103,38 @@ public class WorkItemScopeTests
 
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
         started.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task WorkItemScopeReleasesAdmissionWhenDisposedTest()
+    {
+        _services.AddSingleton(new Mock<ITelemetryRecorder>().Object);
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
+
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
+
+        WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None);
+        _admissionGate.ActiveAdmissionCount.Should().Be(1);
+
+        await workItemScope.DisposeAsync();
+        _admissionGate.ActiveAdmissionCount.Should().Be(0);
+    }
+
+    [Test]
+    public async Task WorkItemScopeIsNotCreatedWhileAdmissionIsClosedTest()
+    {
+        _services.AddSingleton(new Mock<ITelemetryRecorder>().Object);
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
+
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
+        _admissionGate.Close();
+
+        Task<WorkItemScope> pendingScope = scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None);
+        pendingScope.IsCompleted.Should().BeFalse();
+
+        _admissionGate.Open();
+        await using WorkItemScope workItemScope = await pendingScope.WaitAsync(TimeSpan.FromSeconds(5));
+        _admissionGate.ActiveAdmissionCount.Should().Be(1);
     }
 
     private class TestWorkItem : WorkItems.WorkItem
@@ -141,11 +158,8 @@ public class WorkItemScopeTests
     [Test]
     public async Task DifferentWorkItemsSameProcessorTest()
     {
-        await _state.SetStartAsync();
-
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
             .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()))
@@ -163,11 +177,11 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
 
         bool started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(
@@ -183,7 +197,7 @@ public class WorkItemScopeTests
         started.Should().BeTrue();
         started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(
@@ -199,15 +213,11 @@ public class WorkItemScopeTests
         started.Should().BeTrue();
     }
 
-
     [Test]
     public async Task MultipleProcessorsWithoutFactoryMethodTest()
     {
-        await _state.SetStartAsync();
-
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
             .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()))
@@ -224,10 +234,10 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _admissionGate);
         var started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(
@@ -243,7 +253,7 @@ public class WorkItemScopeTests
         started.Should().BeTrue();
         started = false;
 
-        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync(CancellationToken.None))
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(
