@@ -108,9 +108,10 @@ public class DeploymentOperation : IOperation
                     WorkItemProcessorState.Stopped,
                     requireAtLeastOneReplica: false))
                 {
-                    _logger.LogError("Revision {revisionName} did not stop before the configured timeout", oldRevisionName);
-                    await Compensate(oldRevisionName, candidateRevisionName);
-                    return -1;
+                    _logger.LogWarning(
+                        "Revision {revisionName} did not confirm it stopped before the configured timeout; continuing with a best effort switch to revision {candidateRevisionName}",
+                        oldRevisionName,
+                        candidateRevisionName);
                 }
             }
 
