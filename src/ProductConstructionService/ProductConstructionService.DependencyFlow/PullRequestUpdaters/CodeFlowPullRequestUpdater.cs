@@ -747,14 +747,14 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             return;
         }
 
-        //if (!await remote.IsLastPushApprovalRequiredAsync(subscription.TargetRepository, prInfo.BaseBranch))
-        //{
-        //    _logger.LogInformation(
-        //        "Skipping codeflow approval check for PR {prUrl} because branch {branch} does not require approval of the most recent push",
-        //        pr.Url,
-        //        prInfo.BaseBranch);
-        //    return;
-        //}
+        if (!await remote.IsLastPushApprovalRequiredAsync(subscription.TargetRepository, prInfo.BaseBranch))
+        {
+            _logger.LogInformation(
+                "Skipping codeflow approval check for PR {prUrl} because branch {branch} does not require approval of the most recent push",
+                pr.Url,
+                prInfo.BaseBranch);
+            return;
+        }
 
         var commits = await remote.GetPullRequestCommitsAsync(pr.Url);
         if (commits.Any(c => !pr.ServiceGeneratedCommits.Contains(c.Sha)))
@@ -819,8 +819,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 
                 {mismatchedFileList}
 
-                Some source changes may already have been present in the VMR before this pull request. 
-                Automatic approval requires each file to either contain the complete source diff in this pull request or already exactly match the file at the source commit.
+                Automatic approval requires either file changes to match between the repo and the VMR or the destination file to fully match the source file in content
                 The files listed above met neither condition.
 
                 Please manually review these files to ensure their changes are expected before merging this pull request.
