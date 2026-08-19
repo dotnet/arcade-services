@@ -53,7 +53,7 @@ public class ForwardFlowConflictResolverTests
         productRepo.Setup(r => r.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlowRepoSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
         // The source repository migrated from .config/dotnet-tools.json to the root manifest.
-        productRepo.Setup(r => r.GetFileFromGitAsync(VersionFiles.DotnetToolsJson, targetBranch, It.IsAny<string>()))
+        productRepo.Setup(r => r.GetFileFromGitAsync(VersionFiles.DotnetToolsJson, currentFlowRepoSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
         productRepo.Setup(r => r.Path).Returns(new NativePath(repoPath));
         vmrRepo.Setup(r => r.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.DotnetToolsConfigJson, lastFlowVmrSha, It.IsAny<string>()))

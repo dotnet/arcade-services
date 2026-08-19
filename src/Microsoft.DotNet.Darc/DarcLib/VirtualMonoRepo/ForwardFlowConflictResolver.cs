@@ -371,9 +371,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             UnixPath vmrManifestPath = relativeSourceMappingPath / manifestPath;
             bool manifestExists =
                 await sourceRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
-                await sourceRepo.GetFileFromGitAsync(manifestPath, targetBranch) != null ||
-                await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null ||
-                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null;
+                await sourceRepo.GetFileFromGitAsync(manifestPath, codeflowOptions.CurrentFlow.RepoSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null;
 
             if (manifestExists)
             {
