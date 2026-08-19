@@ -459,6 +459,8 @@ public class DependencyFileManagerTests
             .ReturnsAsync(() => versionDetailsProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
                 .Throws<DependencyFileNotFoundException>();
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsJson, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
         assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
@@ -898,6 +900,8 @@ public class DependencyFileManagerTests
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(GlobalJson);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsJson, It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new DependencyFileNotFoundException());
         foreach (var nugetConfigName in VersionFiles.NugetConfigNames)
         {

@@ -161,12 +161,12 @@ public class DependencyFileManager : IDependencyFileManager
             relativeBasePath);
 
     private async Task<JObject> TryGetDotNetToolsManifestAsync(
-        string manifestPath,
+        string jsonPath,
         string repoUri,
         string branch,
         UnixPath relativeBasePath)
     {
-        var path = GetVersionFilePath(manifestPath, relativeBasePath);
+        var path = GetVersionFilePath(jsonPath, relativeBasePath);
 
         _logger.LogDebug(
             "Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
@@ -177,10 +177,11 @@ public class DependencyFileManager : IDependencyFileManager
         try
         {
             var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(path, repoUri, branch);
-            return fileContent == null ? null : JObject.Parse(fileContent);
+            return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
         {
+            // Not exceptional: just means this repo doesn't have a .config/dotnet-tools.json, we'll skip the update.
             return null;
         }
     }
@@ -359,14 +360,14 @@ public class DependencyFileManager : IDependencyFileManager
                 await RemoveDependencyFromVersionPropsAsync(dependencyName, repoUri, branch, relativeBasePath)));
         }
 
-        JObject dotnetToolsConfigJson = await TryGetDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
+        var dotnetToolsConfigJson = await TryGetDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         if (TryRemoveDotNetToolsDependency(dependencyName, dotnetToolsConfigJson))
         {
             gitFiles.Add(new GitFile(
                 GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath),
                 dotnetToolsConfigJson));
         }
-        JObject dotnetToolsJson = await TryGetDotNetToolsJsonAsync(repoUri, branch, relativeBasePath);
+        var dotnetToolsJson = await TryGetDotNetToolsJsonAsync(repoUri, branch, relativeBasePath);
         if (TryRemoveDotNetToolsDependency(dependencyName, dotnetToolsJson))
         {
             gitFiles.Add(new GitFile(
@@ -1416,38 +1417,25 @@ public class DependencyFileManager : IDependencyFileManager
         }
         catch (Exception e)
         {
-            _logger.LogError(
-                e,
-                "Failed to read one of the dotnet tool manifests");
+            _logger.LogError(e, "Failed to read one of the dotnet tool manifests");
             return false;
         }
 
-        IReadOnlyCollection<DependencyDetail> dependencies = (await versionDetails).Dependencies;
         List<Task<bool>> verificationTasks =
         [
             VerifyNoDuplicatedProperties(await versionProps),
-            VerifyNoDuplicatedDependencies(dependencies),
+            VerifyNoDuplicatedDependencies((await versionDetails).Dependencies),
             VerifyMatchingGlobalJson(
-                dependencies,
+                (await versionDetails).Dependencies,
                 await globalJson,
-                out Task<HashSet<string>> utilizedGlobalJsonDependencies)
+                out Task<HashSet<string>> utilizedGlobalJsonDependencies),
+            VerifyMatchingDotNetToolsJson(
+                (await versionDetails).Dependencies,
+                dotnetToolsConfigJson),
+            VerifyMatchingDotNetToolsJson(
+                (await versionDetails).Dependencies,
+                dotnetToolsJson)
         ];
-
-        if (dotnetToolsConfigJson != null)
-        {
-            verificationTasks.Add(VerifyMatchingDotNetToolsJson(
-                dependencies,
-                dotnetToolsConfigJson,
-                VersionFiles.DotnetToolsConfigJson));
-        }
-
-        if (dotnetToolsJson != null)
-        {
-            verificationTasks.Add(VerifyMatchingDotNetToolsJson(
-                dependencies,
-                dotnetToolsJson,
-                VersionFiles.DotnetToolsJson));
-        }
 
         if (await VersionDetailsPropsExistsAsync(repo, branch))
         {
@@ -1650,56 +1638,50 @@ public class DependencyFileManager : IDependencyFileManager
 
     /// <summary>
     ///     Verify that any dependency details we're flowing have a matching version number
-    ///     in a dotnet-tools.json file.
+    ///     in the .config/dotnet-tools.json file (but only if it exists)
     /// </summary>
     /// <param name="dependencies">Parsed dependencies in the repository.</param>
-    /// <param name="manifest">The dotnet tool manifest to verify.</param>
-    /// <param name="manifestPath">The path of the dotnet tool manifest.</param>
+    /// <param name="rootToken">Root global.json token.</param>
     /// <returns></returns>
     private Task<bool> VerifyMatchingDotNetToolsJson(
         IEnumerable<DependencyDetail> dependencies,
-        JObject manifest,
-        string manifestPath)
+        JObject rootToken)
     {
         var result = true;
-        foreach (var dependency in dependencies)
+        // If there isn't a .config/dotnet-tools.json, skip checking
+        if (rootToken != null)
         {
-            var versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
-            JToken dependencyNode = FindJsonDependency(manifest, versionedName);
-            if (dependencyNode != null)
+            foreach (var dependency in dependencies)
             {
-                var specifiedVersion = dependencyNode.Children().FirstOrDefault()?["version"];
+                var versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
+                JToken dependencyNode = FindJsonDependency(rootToken, versionedName);
+                if (dependencyNode != null)
+                {
+                    var specifiedVersion = dependencyNode.Children().FirstOrDefault()?["version"];
 
-                if (specifiedVersion == null)
-                {
-                    _logger.LogError("The element 'version' in '{manifestPath}' was not found.", manifestPath);
-                    result = false;
-                    continue;
-                }
+                    if (specifiedVersion == null)
+                    {
+                        _logger.LogError($"The element 'version' in '{VersionFiles.DotnetToolsConfigJson}' was not found.'");
+                        result = false;
+                        continue;
+                    }
 
-                var property = (JProperty)dependencyNode;
-                // Validate that the casing matches for consistency
-                if (property.Name != versionedName)
-                {
-                    _logger.LogError(
-                        "The dependency '{dependencyName}' has a case mismatch between '{manifestPath}' and '{versionDetailsPath}' ('{manifestName}' vs. '{expectedName}')",
-                        dependency.Name,
-                        manifestPath,
-                        VersionFiles.VersionDetailsXml,
-                        property.Name,
-                        versionedName);
-                    result = false;
-                }
-                // Validate version
-                if (specifiedVersion.Value<string>() != dependency.Version)
-                {
-                    _logger.LogError(
-                        "The dependency '{dependencyName}' has a version mismatch between '{manifestPath}' and '{versionDetailsPath}' ('{manifestVersion}' vs. '{dependencyVersion}')",
-                        dependency.Name,
-                        manifestPath,
-                        VersionFiles.VersionDetailsXml,
-                        specifiedVersion.Value<string>(),
-                        dependency.Version);
+                    var property = (JProperty)dependencyNode;
+                    // Validate that the casing matches for consistency
+                    if (property.Name != versionedName)
+                    {
+                        _logger.LogError($"The dependency '{dependency.Name}' has a case mismatch between " +
+                                         $"'{VersionFiles.GlobalJson}' and '{VersionFiles.VersionDetailsXml}' " +
+                                         $"('{property.Name}' vs. '{versionedName}')");
+                        result = false;
+                    }
+                    // Validate version
+                    if (specifiedVersion.Value<string>() != dependency.Version)
+                    {
+                        _logger.LogError($"The dependency '{dependency.Name}' has a version mismatch between " +
+                                         $"'{VersionFiles.GlobalJson}' and '{VersionFiles.VersionDetailsXml}' " +
+                                         $"('{specifiedVersion.Value<string>()}' vs. '{dependency.Version}')");
+                    }
                 }
             }
         }
