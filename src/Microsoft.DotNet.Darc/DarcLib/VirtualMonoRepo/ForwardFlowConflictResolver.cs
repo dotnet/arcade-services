@@ -363,25 +363,31 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             repoComparisonSha,
             codeflowOptions.CurrentFlow.RepoSha);
 
-        // and handle dotnet-tools.json if it exists
-        bool dotnetToolsConfigExists =
-            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
-            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, vmrComparisonSha) != null));
+        await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
+        await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsJson);
 
-        if (dotnetToolsConfigExists)
+        async Task MergeDotNetToolsManifestIfExistsAsync(string manifestPath)
         {
-            await _jsonFileMerger.MergeJsonsAsync(
-                vmr,
-                relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
-                vmrComparisonSha,
-                targetBranch,
-                sourceRepo,
-                VersionFiles.DotnetToolsConfigJson,
-                repoComparisonSha,
-                codeflowOptions.CurrentFlow.RepoSha,
-                allowMissingFiles: true);
+            UnixPath vmrManifestPath = relativeSourceMappingPath / manifestPath;
+            bool manifestExists =
+                await sourceRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
+                await sourceRepo.GetFileFromGitAsync(manifestPath, targetBranch) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null;
+
+            if (manifestExists)
+            {
+                await _jsonFileMerger.MergeJsonsAsync(
+                    vmr,
+                    vmrManifestPath,
+                    vmrComparisonSha,
+                    targetBranch,
+                    sourceRepo,
+                    manifestPath,
+                    repoComparisonSha,
+                    codeflowOptions.CurrentFlow.RepoSha,
+                    allowMissingFiles: true);
+            }
         }
 
         // If Version.Details.props exists in the source repo, but not in the VMR, we create it and fill it out later.

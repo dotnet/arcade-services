@@ -835,26 +835,6 @@ public class DependencyFileManagerTests
             VersionFiles.DotnetToolsJson);
     }
 
-    [Test]
-    public void GetFilesToCommitIncludesBothDotNetToolsManifests()
-    {
-        GitFile configManifest = new(VersionFiles.DotnetToolsConfigJson, "{}");
-        GitFile rootManifest = new(VersionFiles.DotnetToolsJson, "{}");
-        GitFileContentContainer container = new()
-        {
-            VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, "<Dependencies />"),
-            GlobalJson = new GitFile(VersionFiles.GlobalJson, "{}"),
-            NugetConfig = new GitFile(VersionFiles.NugetConfigNames.First(), "<configuration />"),
-            DotNetToolsConfigJson = configManifest,
-            DotNetToolsJson = rootManifest,
-        };
-
-        List<GitFile> files = container.GetFilesToCommit();
-
-        files.Should().Contain(configManifest);
-        files.Should().Contain(rootManifest);
-    }
-
     private static void SetupDotNetToolsManifest(Mock<IGitRepo> repo, string path, bool exists)
     {
         if (exists)

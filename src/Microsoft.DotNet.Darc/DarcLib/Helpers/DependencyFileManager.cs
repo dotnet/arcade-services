@@ -100,6 +100,7 @@ public class DependencyFileManager : IDependencyFileManager
         VersionFiles.VersionsProps,
         VersionFiles.GlobalJson,
         VersionFiles.DotnetToolsConfigJson,
+        VersionFiles.DotnetToolsJson,
     ];
 
     // In VMR repos, Versions.props doesn't contain any dependency versions maintained by automation, so every change is meaningful

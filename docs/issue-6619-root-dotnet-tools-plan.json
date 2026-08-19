@@ -1,0 +1,210 @@
+{
+  "issue": {
+    "number": 6619,
+    "title": "Support root dotnet-tools.json",
+    "url": "https://github.com/dotnet/arcade-services/issues/6619",
+    "problem": "Arcade dependency updates and codeflow currently recognize only .config/dotnet-tools.json. They must also support dotnet-tools.json at the repository root."
+  },
+  "decisions": {
+    "supportedPaths": [
+      ".config/dotnet-tools.json",
+      "dotnet-tools.json"
+    ],
+    "whenNeitherExists": "Do not create a manifest.",
+    "whenOneExists": "Update or merge the existing manifest.",
+    "whenBothExist": "Update and merge both manifests independently, without precedence.",
+    "dependencyScope": "Only modify a manifest when it contains the dependency being updated or removed.",
+    "invalidJson": "Preserve the existing failure behavior for malformed manifests.",
+    "processingOrder": [
+      ".config/dotnet-tools.json",
+      "dotnet-tools.json"
+    ]
+  },
+  "reviewChunks": [
+    {
+      "id": 1,
+      "title": "Support multiple manifests in dependency updates",
+      "goal": "Allow DependencyFileManager operations to discover and process either or both supported manifests.",
+      "changes": [
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/Helpers/VersionFiles.cs",
+          "work": [
+            "Define constants for both supported manifest paths."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/Helpers/IDependencyFileManager.cs",
+          "work": [
+            "Remove the singular manifest read API; manifest discovery is an internal DependencyFileManager implementation detail."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/Helpers/DependencyFileManager.cs",
+          "work": [
+            "Add separate private TryGet methods for the root and .config manifests.",
+            "Discover manifests at both supported paths.",
+            "Update, remove, and verify dependencies in every existing manifest.",
+            "Include the concrete manifest path in diagnostics.",
+            "Do not create a missing manifest."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/Helpers/GitFileContentContainer.cs",
+          "work": [
+            "Represent the root and .config manifests with separate properties.",
+            "Return every changed manifest from GetFilesToCommit."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/VirtualMonoRepo/BackflowConflictResolver.cs",
+          "work": [
+            "Update build-update snapshots and change detection to account for multiple manifests."
+          ]
+        }
+      ],
+      "tests": [
+        "Neither manifest exists.",
+        "Only .config/dotnet-tools.json exists.",
+        "Only root dotnet-tools.json exists.",
+        "Both manifests exist.",
+        "A dependency exists in only one manifest.",
+        "A dependency exists in both manifests.",
+        "Unrelated tools remain unchanged.",
+        "Relative base paths are applied to both manifest paths.",
+        "Malformed JSON identifies the failing path.",
+        "Every changed manifest is committed exactly once."
+      ],
+      "acceptanceCriteria": [
+        "Dependency updates, removals, and verification work at either location.",
+        "Both existing manifests are processed independently.",
+        "No manifest is created when neither exists.",
+        "Existing .config/dotnet-tools.json behavior is preserved."
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Support both manifests during codeflow",
+      "dependsOn": [
+        1
+      ],
+      "goal": "Exclude both manifests from ordinary patches and merge each one through the version-file conflict-resolution path.",
+      "changes": [
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/Helpers/DependencyFileManager.cs",
+          "work": [
+            "Include both manifest paths in the codeflow dependency-file and patch-exclusion sets."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/VirtualMonoRepo/ForwardFlowConflictResolver.cs",
+          "work": [
+            "Three-way merge each supported manifest path independently.",
+            "Retain missing-file support for additions and deletions."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/VirtualMonoRepo/BackflowConflictResolver.cs",
+          "work": [
+            "Three-way merge each supported manifest path independently.",
+            "Recognize conflicts at either path as version-file conflicts."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/VirtualMonoRepo/CodeflowChangeAnalyzer.cs",
+          "work": [
+            "Treat both paths as dependency files rather than ordinary source changes."
+          ]
+        },
+        {
+          "file": "src/Microsoft.DotNet.Darc/DarcLib/VirtualMonoRepo/CodeflowSourceDiffVerifier.cs",
+          "work": [
+            "Allow expected dependency-file divergence at either path."
+          ]
+        }
+      ],
+      "tests": [
+        "Forward flow with neither, either, and both manifests.",
+        "Backflow with neither, either, and both manifests.",
+        "Existence in any compared ref triggers merging for that path.",
+        "Additions and deletions use existing JSON merge semantics.",
+        "Root-manifest conflicts use version-file conflict handling.",
+        "Root-manifest dependency bumps are not classified as ordinary source changes.",
+        "Unrelated manifest edits remain meaningful changes.",
+        "Repositories using different locations on opposite sides do not implicitly delete either manifest."
+      ],
+      "acceptanceCriteria": [
+        "Neither supported manifest is included in an ordinary codeflow patch.",
+        "Each existing manifest is independently merged in forward flow and backflow.",
+        "Root manifests participate in conflict resolution and change analysis like legacy manifests.",
+        "Existing legacy-path codeflow behavior remains unchanged."
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Add end-to-end codeflow coverage",
+      "dependsOn": [
+        2
+      ],
+      "goal": "Verify the behavior with real temporary Git repositories and complete forward-flow and backflow operations.",
+      "changes": [
+        {
+          "file": "test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests/CodeFlowTestsBase.cs",
+          "work": [
+            "Add helpers for creating manifests at either or both supported paths."
+          ]
+        },
+        {
+          "file": "test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests",
+          "work": [
+            "Add focused forward-flow, backflow, concurrent-change, and location-migration scenarios."
+          ]
+        }
+      ],
+      "tests": [
+        "Root-only forward flow.",
+        "Root-only backflow.",
+        "Both manifests with a shared dependency.",
+        "A dependency present in only one manifest.",
+        "Migration from .config/dotnet-tools.json to root dotnet-tools.json.",
+        "Concurrent changes on both sides are merged rather than overwritten.",
+        "Neither manifest is staged through the ordinary patch path.",
+        "No duplicate staged paths or conflict markers remain."
+      ],
+      "acceptanceCriteria": [
+        "Real Git codeflow tests pass for root-only, both-path, and migration scenarios.",
+        "DARC local forward-flow and backflow paths use the shared implementation.",
+        "Source-diff verification passes for legitimate dependency changes."
+      ]
+    }
+  ],
+  "validation": {
+    "commands": [
+      "scripts/verify.ps1",
+      "dotnet test test/Darc/Microsoft.DotNet.DarcLib.Tests",
+      "dotnet test test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests"
+    ],
+    "notes": [
+      "The default verification excludes the slow codeflow test project, so it must be run explicitly for review chunks 2 and 3.",
+      "Do not run test/ProductConstructionService.ScenarioTests.",
+      "No Product Construction Service API contract or generated client change is expected."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Singular APIs and containers may cause one manifest to be dropped.",
+      "mitigation": "Keep the root and .config manifests explicit throughout discovery, mutation, commit generation, and change detection."
+    },
+    {
+      "risk": "A root manifest may accidentally flow through the ordinary source patch.",
+      "mitigation": "Use the two centralized path constants consistently for exclusions, conflict recognition, analysis, and verification."
+    },
+    {
+      "risk": "Location migration may be interpreted as cross-path semantic merging.",
+      "mitigation": "Treat each path independently; an explicit deletion and addition remain distinct file changes."
+    },
+    {
+      "risk": "Processing both manifests could produce unstable commit ordering.",
+      "mitigation": "Use deterministic legacy-then-root ordering."
+    }
+  ]
+}
