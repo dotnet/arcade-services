@@ -19,6 +19,10 @@ elseif ($prDetail.title -match "\[\w+\] Update dependencies from") {
 	Write-Host "Dependency update PRs don't need release notes. Check passed."
 	exit 0
 }
+elseif ($prDetail.title -match "\[\w+\] Source code updates from") {
+	Write-Host "Source code update PRs don't need release notes. Check passed."
+	exit 0
+}
 elseif ($prDetail.title -match "\[automated\]") {
 	Write-Host "Automated PRs don't need release notes. Check passed."
 	exit 0
