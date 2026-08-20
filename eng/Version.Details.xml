@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
-  <Source Uri="https://dev.azure.com/dnceng/internal/_git/dotnet-build-insights" Mapping="arcade-services" Sha="2b33d97d423c150360e2b119b8e65219a36cb120" BarId="327863" />
+  <Source Uri="https://dev.azure.com/dnceng/internal/_git/dotnet-build-insights" Mapping="arcade-services" Sha="155046d9ac405c3dd508a72bb4395eea31f135c5" BarId="327908" />
   <ProductDependencies>
     <Dependency Name="Microsoft.DotNet.Internal.Logging" Version="1.1.0-beta.26418.2">
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
