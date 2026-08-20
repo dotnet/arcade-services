@@ -394,12 +394,8 @@ public class DependencyFileManager : IDependencyFileManager
         // we have to do this because JObject is case sensitive
         var toolProperty = tools.Properties().FirstOrDefault(
             p => p.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase));
-        if (toolProperty != null)
-        {
-            tools.Remove(toolProperty.Name);
-        }
 
-        return true;
+        return toolProperty != null && tools.Remove(toolProperty.Name);
     }
 
     private async Task<XmlDocument> RemoveDependencyFromVersionPropsAsync(string dependencyName, string repoUri, string branch, UnixPath relativeBasePath = null)
