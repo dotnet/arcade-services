@@ -19,8 +19,8 @@ elseif ($prDetail.title -match "\[\w+\] Update dependencies from") {
 	Write-Host "Dependency update PRs don't need release notes. Check passed."
 	exit 0
 }
-elseif ($prDetail.title -match "^\[[^\]]+\] Source code updates from") {
-	Write-Host "Source code update PRs don't need a GitHub/AzDO issue link. Check passed."
+elseif ($prDetail.user.login -eq "dotnet-maestro[bot]") {
+	Write-Host "Maestro PRs don't need a GitHub/AzDO issue link. Check passed."
 	exit 0
 }
 elseif ($prDetail.title -match "\[automated\]") {
