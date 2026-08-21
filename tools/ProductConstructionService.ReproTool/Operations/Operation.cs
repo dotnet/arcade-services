@@ -96,12 +96,14 @@ internal abstract class Operation(
             sourceRepository: sourceRepository,
             targetRepository: targetRepository,
             targetBranch: targetBranch,
+
+
             sourceEnabled: sourceEnabled,
             batchable: false,
             enabled: true,
             id: Guid.NewGuid(),
             updateFrequency: ClientUpdateFrequency.None,
-            autoApprove: true)
+            autoApprove: sourceEnabled && !string.IsNullOrEmpty(targetDirectory))
         {
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
