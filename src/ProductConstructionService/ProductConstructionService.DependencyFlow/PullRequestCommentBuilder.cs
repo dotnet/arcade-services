@@ -125,6 +125,63 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
+    internal static string BuildNotificationAboutRecreationFallbackLimitReachedComment(
+        SubscriptionUpdateWorkItem update,
+        Subscription subscription,
+        bool prIsEmpty)
+    {
+        string manualFlowStep = subscription.IsForwardFlow()
+            ? $"""
+                2. Run the following command from the source repository directory, replacing `<vmrPath>` with the path to your local VMR clone:
+                ```bash
+                darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
+                ```
+                """
+            : $"""
+                2. Run the following command, replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones:
+                ```bash
+                darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
+                ```
+                """;
+
+        var comment = new StringBuilder()
+            .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
+            .AppendLine(" — Codeflow rewind limit reached")
+            .Append($"The service could not update this PR with changes from build `{update.BuildId}` of ")
+            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
+            .AppendLine(" because reconstructing the previous codeflows reached the maximum number of rewind attempts allowed for a work item.")
+            .AppendLine()
+            .AppendLine("No changes from this build were pushed to this PR.");
+
+        if (!prIsEmpty)
+        {
+            comment
+                .AppendLine()
+                .Append("**:bulb: You can either merge the PR without getting these new updates ")
+                .AppendLine("or manually flow them in so that automated codeflow can resume for this PR.**");
+        }
+
+        var notificationTags = GetNotificationTags(subscription);
+        if (!string.IsNullOrEmpty(notificationTags))
+        {
+            comment
+                .AppendLine()
+                .Append(notificationTags)
+                .AppendLine(" please help complete the codeflow manually.");
+        }
+
+        comment
+            .AppendLine()
+            .AppendLine("**:warning: Completing this codeflow manually can take a long time, potentially more than an hour. We recommend using a persistent development environment, such as a dev box, where the operation can continue uninterrupted.**")
+            .AppendLine()
+            .AppendLine("#### :information_source: To complete the codeflow manually, please follow these steps:")
+            .AppendLine("1. Prepare local clones of the repositories required by the codeflow.")
+            .AppendLine(manualFlowStep)
+            .AppendLine("3. Commit and push the resulting changes to this PR's branch.");
+
+        return comment.ToString();
+    }
+
     public static string BuildOppositeCodeflowMergedNotification() =>
         $"""
         While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).

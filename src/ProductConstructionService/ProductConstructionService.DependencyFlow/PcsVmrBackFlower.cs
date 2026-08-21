@@ -31,6 +31,7 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
         string targetBranch,
         bool forceUpdate,
         bool unsafeFlow,
+        int maxRecreationFallbackAttempts,
         CancellationToken cancellationToken = default);
 }
 
@@ -62,6 +63,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         string headBranch,
         bool forceUpdate,
         bool unsafeFlow,
+        int maxRecreationFallbackAttempts,
         CancellationToken cancellationToken = default)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -85,7 +87,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 KeepConflicts: true,
                 forceUpdate,
                 unsafeFlow,
-                UseRecreationFallback: true),
+                UseRecreationFallback: true,
+                maxRecreationFallbackAttempts),
             targetRepo,
             lastFlows,
             headBranchExisted,

@@ -38,7 +38,8 @@ public record CodeflowOptions(
     bool KeepConflicts,
     bool ForceUpdate,
     bool UnsafeFlow,
-    bool UseRecreationFallback);
+    bool UseRecreationFallback,
+    int? MaxRecreationFallbackAttempts = null);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -531,7 +532,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (flowsToRecreate < 50)
+        while (codeflowOptions.MaxRecreationFallbackAttempts is null
+            || flowsToRecreate <= codeflowOptions.MaxRecreationFallbackAttempts)
         {
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
@@ -617,7 +619,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
 
-        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
+        NativePath targetRepoPath = currentIsBackflow ? repo.Path : _vmrInfo.VmrPath;
+        throw new RecreationFallbackLimitReachedException(targetRepoPath);
     }
 
     /// <summary>

@@ -143,7 +143,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool headBranchExisted,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? maxRecreationFallbackAttempts = null)
     {
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
@@ -161,7 +162,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             KeepConflicts: true,
             forceUpdate,
             unsafeFlow,
-            UseRecreationFallback: true);
+            UseRecreationFallback: true,
+            maxRecreationFallbackAttempts);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
