@@ -662,6 +662,46 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
     }
 
+    protected void WithForwardFlowRecreationFallbackTimeout(Mock<IRemote> remote, bool setUpMergeStatusUpdate = true)
+    {
+        remote
+            .Setup(x => x.CommentPullRequestAsync(
+                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                It.Is<string>(content => content.Contains("service timed out while processing the work item"))))
+            .Returns(Task.CompletedTask);
+
+        if (setUpMergeStatusUpdate)
+        {
+            remote
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
+                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                    It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Returns(Task.CompletedTask);
+        }
+
+        _forwardFlower
+            .Setup(x => x.FlowForwardAsync(
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RecreationFallbackTimeoutException(new NativePath(VmrPath)));
+    }
+
+    protected void AndEmptyCodeFlowBranchShouldHaveBeenPushed()
+    {
+        _gitClient.Verify(
+            g => g.Push(
+                VmrPath,
+                It.IsAny<string>(),
+                VmrUri,
+                It.IsAny<LibGit2Sharp.Identity>(),
+                true),
+            Times.Once);
+    }
+
     /// <summary>
     /// Sets up the forward flower to throw NonLinearCodeflowException on safe flow,
     /// then succeed on unsafe flow.

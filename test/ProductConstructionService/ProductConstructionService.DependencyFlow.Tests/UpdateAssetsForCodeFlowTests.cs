@@ -206,6 +206,65 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
+    public async Task UpdateCodeFlowWithNoPrWhenRecreationFallbackTimesOut()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build build = GivenANewBuild(true);
+
+        GivenPendingUpdates(build);
+        CreatePullRequestShouldReturnAValidValue();
+        WithForwardFlowRecreationFallbackTimeout(DarcRemotes[Subscription.TargetRepository]);
+
+        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
+
+        ThenUpdateReminderIsRemoved();
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndEmptyCodeFlowBranchShouldHaveBeenPushed();
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(build, expectedState: CreateExpectedNewPullRequestState(build));
+        AndPendingUpdateIsRemoved();
+    }
+
+    [Test]
+    public async Task UpdateExistingCodeFlowPrWhenRecreationFallbackTimesOut()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        GivenPendingUpdates(newBuild);
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            ExpectPrMetadataToBeUpdated();
+            WithForwardFlowRecreationFallbackTimeout(
+                DarcRemotes[Subscription.TargetRepository],
+                setUpMergeStatusUpdate: false);
+
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+            ThenShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHavePullRequestCheckReminder();
+            AndPendingUpdateIsRemoved();
+        }
+    }
+
+    [Test]
     public async Task UpdateWithManuallyMergedPrAndNewBuild()
     {
         GivenATestChannel();

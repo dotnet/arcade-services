@@ -125,6 +125,60 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
+    internal static string BuildNotificationAboutRecreationFallbackTimeoutComment(
+        SubscriptionUpdateWorkItem update,
+        Subscription subscription,
+        bool prIsEmpty)
+    {
+        string manualFlowInstructions = subscription.IsForwardFlow()
+            ? $"""
+                Run the following command from the source repository directory:
+                ```bash
+                darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
+                ```
+                """
+            : $"""
+                Run the following command, replacing `<targetRepoPath>` with the path to a local clone of the target repository:
+                ```bash
+                darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
+                ```
+                """;
+
+        var comment = new StringBuilder()
+            .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
+            .AppendLine(" — Codeflow work item timed out")
+            .Append($"The service timed out while processing the work item for build `{update.BuildId}` of ")
+            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
+            .AppendLine(" because it exceeded the maximum amount of time allocated to a work item.")
+            .AppendLine()
+            .AppendLine("No changes from this build were pushed to this PR.")
+            .AppendLine()
+            .AppendLine("Completing this operation locally may take more than an hour. We recommend running it in a persistent development environment, such as a dev box, where it can continue uninterrupted.")
+            .AppendLine()
+            .AppendLine("Please complete the codeflow locally:")
+            .AppendLine(manualFlowInstructions);
+
+        if (prIsEmpty)
+        {
+            comment.AppendLine("Push the resulting changes to this PR's branch.");
+        }
+        else
+        {
+            comment.AppendLine("Push the resulting changes to the existing PR branch.");
+        }
+
+        var notificationTags = GetNotificationTags(subscription);
+        if (!string.IsNullOrEmpty(notificationTags))
+        {
+            comment
+                .AppendLine()
+                .Append(notificationTags)
+                .AppendLine(" please complete the codeflow manually.");
+        }
+
+        return comment.ToString();
+    }
+
     public static string BuildOppositeCodeflowMergedNotification() =>
         $"""
         While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).

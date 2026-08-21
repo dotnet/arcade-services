@@ -46,6 +46,8 @@ public record CodeflowOptions(
 /// </summary>
 public abstract class VmrCodeFlower : IVmrCodeFlower
 {
+    private static readonly TimeSpan RecreationFallbackTimeoutInterval = TimeSpan.FromHours(1);
+
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -528,11 +530,17 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         Codeflow? previousFlow = null;
         LastFlows? previousFlows = null;
+        using CancellationTokenSource timeoutCts = new(RecreationFallbackTimeoutInterval);
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (flowsToRecreate < 50)
+        while (true)
         {
+            if (timeoutCts.IsCancellationRequested)
+            {
+                NativePath targetRepoPath = currentIsBackflow ? repo.Path : _vmrInfo.VmrPath;
+                throw new RecreationFallbackTimeoutException(targetRepoPath);
+            }
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there

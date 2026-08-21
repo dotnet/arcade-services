@@ -101,6 +101,12 @@ public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrS
 /// This exception is used when the current codeflow cannot be applied, and if a codeflow PR already exists, then it
 /// is blocked from receiving new flows.
 /// </summary>
-public class BlockingCodeflowException(string msg) : DarcException(msg)
+public class BlockingCodeflowException(string msg) : DarcException(msg);
+
+/// <summary>
+/// Thrown when recreating previous codeflows exceeds the allowed time.
+/// </summary>
+public class RecreationFallbackTimeoutException(NativePath targetRepoPath) : DarcException()
 {
+    public NativePath TargetRepoPath { get; } = targetRepoPath;
 }

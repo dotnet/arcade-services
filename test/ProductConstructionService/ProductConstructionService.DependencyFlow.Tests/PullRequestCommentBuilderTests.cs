@@ -227,6 +227,80 @@ public class PullRequestCommentBuilderTests
         comment.Should().NotContain("git-info");
     }
 
+    [Test]
+    public void RecreationFallbackTimeoutCommentProvidesForwardFlowCommand()
+    {
+        var subscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true,
+            $"https://github.com/{FakeOrgName}/source-repo",
+            $"https://github.com/{FakeOrgName}/vmr",
+            "main",
+            null,
+            "sdk",
+            "@notifiedUser1",
+            excludedAssets: []);
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = subscription.Id,
+            BuildId = 12345,
+            SourceSha = "abcdef123",
+            SourceRepo = subscription.SourceRepository,
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackTimeoutComment(
+            update,
+            subscription,
+            prIsEmpty: true);
+
+        comment.Should().Contain("Codeflow work item timed out");
+        comment.Should().Contain("service timed out while processing the work item");
+        comment.Should().Contain("exceeded the maximum amount of time allocated to a work item");
+        comment.Should().Contain("may take more than an hour");
+        comment.Should().Contain("persistent development environment, such as a dev box");
+        comment.Should().Contain("No changes from this build were pushed");
+        comment.Should().Contain("Run the following command from the source repository directory");
+        comment.Should().Contain($"darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}");
+        comment.Should().NotContain("<targetRepoPath>");
+        comment.Should().NotContain("Conflict detected");
+    }
+
+    [Test]
+    public void RecreationFallbackTimeoutCommentProvidesBackflowCommand()
+    {
+        var subscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true,
+            $"https://github.com/{FakeOrgName}/vmr",
+            $"https://github.com/{FakeOrgName}/target-repo",
+            "main",
+            "sdk",
+            null,
+            "@notifiedUser1",
+            excludedAssets: []);
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = subscription.Id,
+            BuildId = 12345,
+            SourceSha = "abcdef123",
+            SourceRepo = subscription.SourceRepository,
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackTimeoutComment(
+            update,
+            subscription,
+            prIsEmpty: false);
+
+        comment.Should().Contain(
+            $"darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>");
+        comment.Should().Contain("replacing `<targetRepoPath>` with the path to a local clone of the target repository");
+        comment.Should().NotContain("from the source repository directory");
+    }
+
     private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
     [
         new ClientModels.Subscription(
