@@ -16,6 +16,7 @@ public static class VersionFiles
     public const string VersionDetailsProps = $"eng/{Constants.VersionDetailsProps}";
     public const string GlobalJson = "global.json";
     public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
+    public const string DotnetToolsJson = "dotnet-tools.json";
     public static readonly IReadOnlyCollection<string> NugetConfigNames = ["NuGet.config", "nuget.config", "NuGet.Config"];
 
     private static string GetVersionPropsElementBaseName(string dependencyName)
