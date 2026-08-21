@@ -220,6 +220,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             It.IsAny<bool>(),
+            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CodeFlowResult(false, [], new NativePath(VmrPath), []));
     }
@@ -233,6 +234,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -250,6 +252,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 forceUpdate,
                 It.IsAny<bool>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -657,17 +660,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             It.IsAny<bool>(),
+            It.IsAny<int>(),
             It.IsAny<CancellationToken>()));
 
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
     }
 
-    protected void WithForwardFlowRecreationFallbackTimeout(Mock<IRemote> remote, bool setUpMergeStatusUpdate = true)
+    protected void WithForwardFlowRecreationFallbackLimitReached(Mock<IRemote> remote, bool setUpMergeStatusUpdate = true)
     {
         remote
             .Setup(x => x.CommentPullRequestAsync(
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.Is<string>(content => content.Contains("service timed out while processing the work item"))))
+                It.Is<string>(content => content.Contains("Codeflow rewind limit reached"))))
             .Returns(Task.CompletedTask);
 
         if (setUpMergeStatusUpdate)
@@ -686,8 +690,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new RecreationFallbackTimeoutException(new NativePath(VmrPath)));
+            .ThrowsAsync(new RecreationFallbackLimitReachedException(new NativePath(VmrPath)));
     }
 
     protected void AndEmptyCodeFlowBranchShouldHaveBeenPushed()
@@ -715,6 +720,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             false,
+            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ThrowsAsync(new NonLinearCodeflowException());
 
@@ -725,6 +731,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             true,
+            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
     }

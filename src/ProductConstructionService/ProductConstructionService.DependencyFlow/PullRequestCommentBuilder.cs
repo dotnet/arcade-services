@@ -125,20 +125,20 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
-    internal static string BuildNotificationAboutRecreationFallbackTimeoutComment(
+    internal static string BuildNotificationAboutRecreationFallbackLimitReachedComment(
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         bool prIsEmpty)
     {
-        string manualFlowInstructions = subscription.IsForwardFlow()
+        string manualFlowStep = subscription.IsForwardFlow()
             ? $"""
-                Run the following command from the source repository directory:
+                2. Run the following command from the source repository directory, replacing `<vmrPath>` with the path to your local VMR clone:
                 ```bash
                 darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
                 ```
                 """
             : $"""
-                Run the following command, replacing `<targetRepoPath>` with the path to a local clone of the target repository:
+                2. Run the following command, replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones:
                 ```bash
                 darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
                 ```
@@ -146,25 +146,19 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         var comment = new StringBuilder()
             .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
-            .AppendLine(" — Codeflow work item timed out")
-            .Append($"The service timed out while processing the work item for build `{update.BuildId}` of ")
+            .AppendLine(" — Codeflow rewind limit reached")
+            .Append($"The service could not update this PR with changes from build `{update.BuildId}` of ")
             .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
-            .AppendLine(" because it exceeded the maximum amount of time allocated to a work item.")
+            .AppendLine(" because reconstructing the previous codeflows reached the maximum number of rewind attempts allowed for a work item.")
             .AppendLine()
-            .AppendLine("No changes from this build were pushed to this PR.")
-            .AppendLine()
-            .AppendLine("Completing this operation locally may take more than an hour. We recommend running it in a persistent development environment, such as a dev box, where it can continue uninterrupted.")
-            .AppendLine()
-            .AppendLine("Please complete the codeflow locally:")
-            .AppendLine(manualFlowInstructions);
+            .AppendLine("No changes from this build were pushed to this PR.");
 
-        if (prIsEmpty)
+        if (!prIsEmpty)
         {
-            comment.AppendLine("Push the resulting changes to this PR's branch.");
-        }
-        else
-        {
-            comment.AppendLine("Push the resulting changes to the existing PR branch.");
+            comment
+                .AppendLine()
+                .Append("**:bulb: You can either merge the PR without getting these new updates ")
+                .AppendLine("or manually flow them in so that automated codeflow can resume for this PR.**");
         }
 
         var notificationTags = GetNotificationTags(subscription);
@@ -173,8 +167,17 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             comment
                 .AppendLine()
                 .Append(notificationTags)
-                .AppendLine(" please complete the codeflow manually.");
+                .AppendLine(" please help complete the codeflow manually.");
         }
+
+        comment
+            .AppendLine()
+            .AppendLine("**:warning: Completing this codeflow manually can take a long time, potentially more than an hour. We recommend using a persistent development environment, such as a dev box, where the operation can continue uninterrupted.**")
+            .AppendLine()
+            .AppendLine("#### :information_source: To complete the codeflow manually, please follow these steps:")
+            .AppendLine("1. Prepare local clones of the repositories required by the codeflow.")
+            .AppendLine(manualFlowStep)
+            .AppendLine("3. Commit and push the resulting changes to this PR's branch.");
 
         return comment.ToString();
     }

@@ -104,9 +104,9 @@ public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrS
 public class BlockingCodeflowException(string msg) : DarcException(msg);
 
 /// <summary>
-/// Thrown when recreating previous codeflows exceeds the allowed time.
+/// Thrown when recreating previous codeflows reaches the configured attempt limit.
 /// </summary>
-public class RecreationFallbackTimeoutException(NativePath targetRepoPath) : DarcException()
+public class RecreationFallbackLimitReachedException(NativePath targetRepoPath) : DarcException()
 {
     public NativePath TargetRepoPath { get; } = targetRepoPath;
 }

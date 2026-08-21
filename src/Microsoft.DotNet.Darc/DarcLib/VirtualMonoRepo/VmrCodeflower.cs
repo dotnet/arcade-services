@@ -38,7 +38,8 @@ public record CodeflowOptions(
     bool KeepConflicts,
     bool ForceUpdate,
     bool UnsafeFlow,
-    bool UseRecreationFallback);
+    bool UseRecreationFallback,
+    int? MaxRecreationFallbackAttempts = null);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -46,8 +47,6 @@ public record CodeflowOptions(
 /// </summary>
 public abstract class VmrCodeFlower : IVmrCodeFlower
 {
-    private static readonly TimeSpan RecreationFallbackTimeoutInterval = TimeSpan.FromHours(1);
-
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -530,17 +529,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         Codeflow? previousFlow = null;
         LastFlows? previousFlows = null;
-        using CancellationTokenSource timeoutCts = new(RecreationFallbackTimeoutInterval);
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (true)
+        while (codeflowOptions.MaxRecreationFallbackAttempts is null
+            || flowsToRecreate <= codeflowOptions.MaxRecreationFallbackAttempts)
         {
-            if (timeoutCts.IsCancellationRequested)
-            {
-                NativePath targetRepoPath = currentIsBackflow ? repo.Path : _vmrInfo.VmrPath;
-                throw new RecreationFallbackTimeoutException(targetRepoPath);
-            }
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there
@@ -625,7 +619,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
 
-        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
+        NativePath targetRepoPath = currentIsBackflow ? repo.Path : _vmrInfo.VmrPath;
+        throw new RecreationFallbackLimitReachedException(targetRepoPath);
     }
 
     /// <summary>

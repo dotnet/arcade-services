@@ -228,7 +228,7 @@ public class PullRequestCommentBuilderTests
     }
 
     [Test]
-    public void RecreationFallbackTimeoutCommentProvidesForwardFlowCommand()
+    public void RecreationFallbackLimitReachedCommentProvidesForwardFlowCommand()
     {
         var subscription = new ClientModels.Subscription(
             new Guid("12345678-1234-1234-1234-123456789012"),
@@ -250,25 +250,25 @@ public class PullRequestCommentBuilderTests
             SourceRepo = subscription.SourceRepository,
         };
 
-        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackTimeoutComment(
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
             update,
             subscription,
             prIsEmpty: true);
 
-        comment.Should().Contain("Codeflow work item timed out");
-        comment.Should().Contain("service timed out while processing the work item");
-        comment.Should().Contain("exceeded the maximum amount of time allocated to a work item");
-        comment.Should().Contain("may take more than an hour");
+        comment.Should().Contain("Codeflow rewind limit reached");
+        comment.Should().Contain("reached the maximum number of rewind attempts allowed for a work item");
+        comment.Should().Contain("potentially more than an hour");
         comment.Should().Contain("persistent development environment, such as a dev box");
         comment.Should().Contain("No changes from this build were pushed");
         comment.Should().Contain("Run the following command from the source repository directory");
         comment.Should().Contain($"darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}");
+        comment.Should().Contain("Commit and push the resulting changes to this PR's branch");
         comment.Should().NotContain("<targetRepoPath>");
         comment.Should().NotContain("Conflict detected");
     }
 
     [Test]
-    public void RecreationFallbackTimeoutCommentProvidesBackflowCommand()
+    public void RecreationFallbackLimitReachedCommentProvidesBackflowCommand()
     {
         var subscription = new ClientModels.Subscription(
             new Guid("12345678-1234-1234-1234-123456789012"),
@@ -290,14 +290,16 @@ public class PullRequestCommentBuilderTests
             SourceRepo = subscription.SourceRepository,
         };
 
-        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackTimeoutComment(
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
             update,
             subscription,
             prIsEmpty: false);
 
         comment.Should().Contain(
             $"darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>");
-        comment.Should().Contain("replacing `<targetRepoPath>` with the path to a local clone of the target repository");
+        comment.Should().Contain(
+            "replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones");
+        comment.Should().Contain("You can either merge the PR without getting these new updates");
         comment.Should().NotContain("from the source repository directory");
     }
 

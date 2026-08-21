@@ -206,7 +206,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
-    public async Task UpdateCodeFlowWithNoPrWhenRecreationFallbackTimesOut()
+    public async Task UpdateCodeFlowWithNoPrWhenRecreationFallbackLimitIsReached()
     {
         GivenATestChannel();
         GivenACodeFlowSubscription(
@@ -220,7 +220,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         GivenPendingUpdates(build);
         CreatePullRequestShouldReturnAValidValue();
-        WithForwardFlowRecreationFallbackTimeout(DarcRemotes[Subscription.TargetRepository]);
+        WithForwardFlowRecreationFallbackLimitReached(DarcRemotes[Subscription.TargetRepository]);
 
         await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
@@ -233,7 +233,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
-    public async Task UpdateExistingCodeFlowPrWhenRecreationFallbackTimesOut()
+    public async Task UpdateExistingCodeFlowPrWhenRecreationFallbackLimitIsReached()
     {
         GivenATestChannel();
         GivenACodeFlowSubscription(
@@ -252,7 +252,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
         {
             ExpectPrMetadataToBeUpdated();
-            WithForwardFlowRecreationFallbackTimeout(
+            WithForwardFlowRecreationFallbackLimitReached(
                 DarcRemotes[Subscription.TargetRepository],
                 setUpMergeStatusUpdate: false);
 

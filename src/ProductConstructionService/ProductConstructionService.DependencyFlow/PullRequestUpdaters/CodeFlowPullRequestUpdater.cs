@@ -478,8 +478,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     prHeadBranch,
                     prIsEmpty,
                     unsafeFlown),
-            CodeFlowManualInterventionReason.RecreationFallbackTimeout =>
-                PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackTimeoutComment(
+            CodeFlowManualInterventionReason.RecreationFallbackLimitReached =>
+                PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
                     update,
                     subscription,
                     prIsEmpty),
