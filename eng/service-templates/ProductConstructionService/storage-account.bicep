@@ -4,6 +4,7 @@ param pcsIdentityPrincipalId string
 param subscriptionTriggererIdentityPrincipalId string
 param storageQueueContrubutorRole string
 param blobContributorRole string
+param allowedSubnetId string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageAccountName
@@ -17,7 +18,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
       publicNetworkAccess: 'Enabled'
       allowSharedKeyAccess: false
       networkAcls: {
+          bypass: 'AzureServices'
           defaultAction: 'Deny'
+          virtualNetworkRules: [
+              {
+                  action: 'Allow'
+                  id: allowedSubnetId
+              }
+          ]
       }
   }
 }
