@@ -18,7 +18,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
       publicNetworkAccess: 'Enabled'
       allowSharedKeyAccess: false
       networkAcls: {
-          bypass: 'AzureServices'
           defaultAction: 'Deny'
           virtualNetworkRules: [
               {
