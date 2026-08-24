@@ -31,7 +31,7 @@ public class TelemetryRecorderTests
 
         // Assert
         RecordedMeasurement measurement = measurements.Should().ContainSingle().Subject;
-        measurement.InstrumentName.Should().Be("pcs.queue.wait_time");
+        measurement.InstrumentName.Should().Be("queue.wait_time");
         measurement.Value.Should().Be(10);
     }
 
