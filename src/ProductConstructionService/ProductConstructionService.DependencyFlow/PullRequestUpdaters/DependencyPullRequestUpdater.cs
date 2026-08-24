@@ -339,7 +339,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
 
         Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = [];
 
-// Get subscription to access excluded assets
+        // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new InvalidOperationException($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
