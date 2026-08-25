@@ -30,6 +30,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="forceUpdate">Apply updates always, even when no or non-meaningful changes only are flown</param>
     /// <param name="unsafeFlow">If true, ignores non-linear flow errors (flowing from a different branch etc)</param>
+    /// <param name="maxRecreationFallbackAttempts">Maximum number of codeflow rewind attempts, or <see langword="null"/> for no limit</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -39,7 +40,8 @@ public interface IVmrBackFlower : IVmrCodeFlower
         string headBranch,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        int? maxRecreationFallbackAttempts = 50);
 }
 
 public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
@@ -98,7 +100,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string headBranch,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int? maxRecreationFallbackAttempts = 50)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
             mappingName,
@@ -121,7 +124,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 KeepConflicts: true,
                 forceUpdate,
                 unsafeFlow,
-                UseRecreationFallback: true),
+                UseRecreationFallback: true,
+                MaxRecreationFallbackAttempts: maxRecreationFallbackAttempts),
             targetRepo,
             lastFlows,
             headBranchExisted,

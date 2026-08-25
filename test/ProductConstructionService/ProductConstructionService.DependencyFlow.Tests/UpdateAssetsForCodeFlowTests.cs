@@ -222,9 +222,11 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         CreatePullRequestShouldReturnAValidValue();
         WithForwardFlowRecreationFallbackLimitReached(DarcRemotes[Subscription.TargetRepository]);
 
-        await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
+        var result = await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
         ThenUpdateReminderIsRemoved();
+        result.OutcomeMessage.Should().Be(
+            "The conflict occurred too far back in the codeflow history for the service to resolve it automatically. Manual intervention is required");
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndEmptyCodeFlowBranchShouldHaveBeenPushed();
         AndShouldHavePullRequestCheckReminder();

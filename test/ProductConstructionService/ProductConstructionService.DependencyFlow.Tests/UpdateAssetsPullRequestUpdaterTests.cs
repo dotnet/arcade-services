@@ -18,8 +18,12 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
         services.AddSingleton(MergePolicyEvaluator.Object);
     }
 
-    protected async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild, bool shouldGetUpdates = false, bool isCodeflow = false)
+    protected async Task<PullRequestUpdaters.SubscriptionUpdateResult> WhenUpdateAssetsAsyncIsCalled(
+        Build forBuild,
+        bool shouldGetUpdates = false,
+        bool isCodeflow = false)
     {
+        PullRequestUpdaters.SubscriptionUpdateResult? result = null;
         await Execute(
             async context =>
             {
@@ -30,11 +34,13 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                 }
 
                 IPullRequestUpdater updater = CreatePullRequestActor(context, isCodeflow);
-                await updater.UpdateAssetsAsync(
+                result = await updater.UpdateAssetsAsync(
                     Subscription.Id,
                     Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                     forBuild.Id,
                     applyNewestOnly: false);
             });
+
+        return result!;
     }
 }

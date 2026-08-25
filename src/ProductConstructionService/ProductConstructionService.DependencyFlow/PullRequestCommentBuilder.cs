@@ -130,20 +130,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         Subscription subscription,
         bool prIsEmpty)
     {
-        string manualFlowStep = subscription.IsForwardFlow()
-            ? $"""
-                2. Run the following command from the source repository directory, replacing `<vmrPath>` with the path to your local VMR clone:
-                ```bash
-                darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
-                ```
-                """
-            : $"""
-                2. Run the following command, replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones:
-                ```bash
-                darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
-                ```
-                """;
-
         var comment = new StringBuilder()
             .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
             .AppendLine(" — Codeflow rewind limit reached")
@@ -170,14 +156,32 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 .AppendLine(" please help complete the codeflow manually.");
         }
 
+        string manualFlowStep = subscription.IsForwardFlow()
+           ? $"""
+                3. Run the following command from the source repository directory, replacing `<vmrPath>` with the path to your local VMR clone:
+                ```bash
+                darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
+                ```
+                """
+           : $"""
+                3. Run the following command, replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones:
+                ```bash
+                darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
+                ```
+                """;
+
         comment
             .AppendLine()
             .AppendLine("**:warning: Completing this codeflow manually can take a long time, potentially more than an hour. We recommend using a persistent development environment, such as a dev box, where the operation can continue uninterrupted.**")
             .AppendLine()
             .AppendLine("#### :information_source: To complete the codeflow manually, please follow these steps:")
             .AppendLine("1. Prepare local clones of the repositories required by the codeflow.")
+            .AppendLine($"2. In the target repository clone, check out the subscription's target branch:")
+            .AppendLine("    ```bash")
+            .AppendLine($"    git checkout {subscription.TargetBranch}")
+            .AppendLine("    ```")
             .AppendLine(manualFlowStep)
-            .AppendLine("3. Commit and push the resulting changes to this PR's branch.");
+            .AppendLine("4. Commit and push the resulting changes to this PR's branch.");
 
         return comment.ToString();
     }

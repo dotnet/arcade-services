@@ -29,7 +29,6 @@ internal interface IPcsVmrForwardFlower
         string headBranch,
         bool forceUpdate,
         bool unsafeFlow,
-        int maxRecreationFallbackAttempts,
         CancellationToken cancellationToken = default);
 }
 
@@ -70,7 +69,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         string headBranch,
         bool forceUpdate,
         bool unsafeFlow,
-        int maxRecreationFallbackAttempts,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -99,8 +97,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranchExisted,
             forceUpdate,
             unsafeFlow,
-            cancellationToken,
-            maxRecreationFallbackAttempts);
+            cancellationToken);
 
         result = result with
         {

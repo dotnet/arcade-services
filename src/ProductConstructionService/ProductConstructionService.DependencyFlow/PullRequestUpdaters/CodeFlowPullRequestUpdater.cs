@@ -195,13 +195,16 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 executionResult.UnsafeFlown,
                 manualInterventionReason.Value);
 
-            return manualInterventionReason == CodeFlowManualInterventionReason.Conflict
-                ? new SubscriptionUpdateResult(
+            return manualInterventionReason.Value switch
+            {
+                CodeFlowManualInterventionReason.Conflict => new SubscriptionUpdateResult(
                     "Conflict resolution is required by user",
-                    SubscriptionOutcomeType.HasConflict)
-                : new SubscriptionUpdateResult(
-                    "Recreation fallback timed out, user intervention is required",
-                    SubscriptionOutcomeType.UserError);
+                    SubscriptionOutcomeType.HasConflict),
+                CodeFlowManualInterventionReason.RecreationFallbackLimitReached => new SubscriptionUpdateResult(
+                    "A codeflow conflict occurred too far back in the codeflow history for the service to resolve it automatically. Manual intervention is required",
+                    SubscriptionOutcomeType.UserError),
+                _ => throw new ArgumentOutOfRangeException($"Manual intervention reason {manualInterventionReason} is not supported")
+            };
         }
 
         if (codeFlowRes == null)

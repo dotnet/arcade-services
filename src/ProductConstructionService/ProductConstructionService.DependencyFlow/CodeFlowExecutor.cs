@@ -43,7 +43,6 @@ internal record CodeFlowExecutionResult(
 
 internal class CodeFlowExecutor : ICodeFlowExecutor
 {
-    private const int MaximumRecreationFallbackAttempts = 50;
     private static readonly TimeSpan AutoForceCodeFlowAfter = TimeSpan.FromDays(30);
 
     private readonly IVmrInfo _vmrInfo;
@@ -228,7 +227,7 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                 targetRepoPath,
                 ManualInterventionReason: null);
         }
-        catch (RecreationFallbackLimitReachedException e)
+        catch (RecreationLimitReachedException e)
         {
             return new CodeFlowExecutionResult(
                 CodeFlowResult: null,
@@ -304,7 +303,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                     branch,
                     forceUpdate,
                     unsafeFlow: unsafeFlow,
-                    maxRecreationFallbackAttempts: MaximumRecreationFallbackAttempts,
                     cancellationToken: default)
                 : await _vmrBackFlower.FlowBackAsync(
                     subscription,
@@ -312,7 +310,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                     branch,
                     forceUpdate,
                     unsafeFlow: unsafeFlow,
-                    maxRecreationFallbackAttempts: MaximumRecreationFallbackAttempts,
                     cancellationToken: default);
         }
         catch (Exception e) when (e is not NonLinearCodeflowException)

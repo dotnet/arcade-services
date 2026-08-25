@@ -220,7 +220,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             It.IsAny<bool>(),
-            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CodeFlowResult(false, [], new NativePath(VmrPath), []));
     }
@@ -234,7 +233,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>(),
-                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -252,7 +250,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 forceUpdate,
                 It.IsAny<bool>(),
-                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -660,7 +657,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             It.IsAny<bool>(),
-            It.IsAny<int>(),
             It.IsAny<CancellationToken>()));
 
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
@@ -690,9 +686,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>(),
-                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new RecreationFallbackLimitReachedException(new NativePath(VmrPath)));
+            .ThrowsAsync(new RecreationLimitReachedException(new NativePath(VmrPath)));
     }
 
     protected void AndEmptyCodeFlowBranchShouldHaveBeenPushed()
@@ -720,7 +715,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             false,
-            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ThrowsAsync(new NonLinearCodeflowException());
 
@@ -731,7 +725,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<string>(),
             It.IsAny<bool>(),
             true,
-            It.IsAny<int>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
     }

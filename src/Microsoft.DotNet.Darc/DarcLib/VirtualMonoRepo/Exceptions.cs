@@ -106,7 +106,7 @@ public class BlockingCodeflowException(string msg) : DarcException(msg);
 /// <summary>
 /// Thrown when recreating previous codeflows reaches the configured attempt limit.
 /// </summary>
-public class RecreationFallbackLimitReachedException(NativePath targetRepoPath) : DarcException()
+public class RecreationLimitReachedException(NativePath targetRepoPath) : DarcException($"Codeflow rewind limit reached for repository '{targetRepoPath}'.")
 {
     public NativePath TargetRepoPath { get; } = targetRepoPath;
 }
