@@ -468,7 +468,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             ToCommitSha = "xyz890"
         };
 
-        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+        string dependencyBlock = await CreateDependencyUpdateBlockForRepositoryAsync(
             [newDependency, removedDependency, updatedDependency],
             "https://github.com/Foo");
 
@@ -520,7 +520,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             ToCommitSha = "xyz890"
         };
 
-        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+        string dependencyBlock = await CreateDependencyUpdateBlockForRepositoryAsync(
             [groupedDependency1, groupedDependency2, separateDependency],
             "https://github.com/Foo");
 
@@ -569,7 +569,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         // Pass dependencies in Z, A, M order to verify alphabetical sorting
-        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+        string dependencyBlock = await CreateDependencyUpdateBlockForRepositoryAsync(
             [dependencyZ, dependencyA, dependencyM],
             "https://github.com/Foo");
 
@@ -969,7 +969,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         // Pass dependencies in non-alphabetical order to verify sorting within groups
-        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+        string dependencyBlock = await CreateDependencyUpdateBlockForRepositoryAsync(
             [
                 newDep2, newDep1, newDep3,  // new deps out of order
                 removedDep1, removedDep3, removedDep2,  // removed deps out of order
@@ -1021,6 +1021,46 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             });
 
         return description;
+    }
+
+    private async Task<string> CreateDependencyUpdateBlockForRepositoryAsync(
+        List<DependencyUpdateSummary> dependencies,
+        string repository)
+    {
+        List<Asset> assets = dependencies
+            .Where(dependency => !string.IsNullOrEmpty(dependency.ToVersion))
+            .Select((dependency, index) => new Asset(
+                index + 1,
+                1,
+                false,
+                dependency.DependencyName,
+                dependency.ToVersion,
+                []))
+            .ToList();
+        Build build = new(
+            id: 1,
+            dateProduced: DateTimeOffset.Now,
+            staleness: 0,
+            released: false,
+            stable: false,
+            commit: "commit",
+            channels: [],
+            assets: assets,
+            dependencies: [],
+            incoherencies: [])
+        {
+            GitHubRepository = repository
+        };
+
+        string dependencyBlock = null!;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                dependencyBlock = await builder.CreateDependencyUpdateBlockAsync(dependencies, build);
+            });
+
+        return dependencyBlock;
     }
 
     [Test]

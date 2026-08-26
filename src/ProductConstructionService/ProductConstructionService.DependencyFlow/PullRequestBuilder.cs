@@ -428,18 +428,97 @@ internal class PullRequestBuilder : IPullRequestBuilder
             """;
     }
 
-    private async Task<string> CreateDependencyUpdateBlockAsync(
+    internal async Task<string> CreateDependencyUpdateBlockAsync(
         List<DependencyUpdateSummary> dependencyUpdateSummaries,
         BuildDTO sourceBuild)
     {
-       Dictionary<int, BuildDTO> builds = new()
+        if (dependencyUpdateSummaries.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        Dictionary<int, BuildDTO> builds = new()
         {
             [sourceBuild.Id] = sourceBuild
         };
 
-        return await CreateDependencyUpdateBlockAsync(
-            dependencyUpdateSummaries,
-            async dependency => (await GetProducingBuildAsync(dependency, builds)).GetRepository());
+        StringBuilder stringBuilder = new();
+
+        // Group all dependencies by FromCommitSha, FromVersion, ToCommitSha, and ToVersion
+        var dependencyGroups = dependencyUpdateSummaries
+            .GroupBy(dep => new
+            {
+                dep.FromCommitSha,
+                dep.FromVersion,
+                dep.ToCommitSha,
+                dep.ToVersion
+            })
+            .ToList();
+
+        // Separate groups by dependency type
+        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion) && !string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
+        var updatedDependencyGroups = dependencyGroups.Where(g => !string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+
+        if (newDependencyGroups.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**New Dependencies**");
+            foreach (var group in newDependencyGroups)
+            {
+                DependencyUpdateSummary representative = group.First();
+                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
+                string? diffLink = GetLinkForDependencyItem(
+                    repository,
+                    representative.FromCommitSha,
+                    representative.ToCommitSha);
+                
+                stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
+                }
+            }
+        }
+
+        if (removedDependencyGroups.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Removed Dependencies**");
+            foreach (var group in removedDependencyGroups)
+            {
+                DependencyUpdateSummary representative = group.First();
+                
+                stringBuilder.AppendLine($"- Removed {representative.FromVersion}");
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
+                }
+            }
+        }
+
+        if (updatedDependencyGroups.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Updated Dependencies**");
+
+            foreach (var group in updatedDependencyGroups)
+            {
+                DependencyUpdateSummary representative = group.First();
+                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
+                string? diffLink = GetLinkForDependencyItem(
+                    repository,
+                    representative.FromCommitSha,
+                    representative.ToCommitSha);
+                
+                stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
+                }
+            }
+        }
+        return stringBuilder.ToString();
     }
 
     private async Task<BuildDTO> GetProducingBuildAsync(
@@ -482,103 +561,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
         build.Assets.Any(asset =>
             asset.Name == dependency.DependencyName &&
             asset.Version == dependency.ToVersion);
-
-    internal static Task<string> CreateDependencyUpdateBlockForRepositoryAsync(
-        List<DependencyUpdateSummary> dependencyUpdateSummaries,
-        string repository) =>
-        CreateDependencyUpdateBlockAsync(
-            dependencyUpdateSummaries,
-            _ => Task.FromResult(repository));
-
-    private static async Task<string> CreateDependencyUpdateBlockAsync(
-        List<DependencyUpdateSummary> dependencyUpdateSummaries,
-        Func<DependencyUpdateSummary, Task<string>> getRepositoryAsync)
-    {
-        if (dependencyUpdateSummaries.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        StringBuilder stringBuilder = new();
-
-        // Group all dependencies by FromCommitSha, FromVersion, ToCommitSha, and ToVersion
-        var dependencyGroups = dependencyUpdateSummaries
-            .GroupBy(dep => new
-            {
-                dep.FromCommitSha,
-                dep.FromVersion,
-                dep.ToCommitSha,
-                dep.ToVersion
-            })
-            .ToList();
-
-        // Separate groups by dependency type
-        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
-        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion) && !string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
-        var updatedDependencyGroups = dependencyGroups.Where(g => !string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
-
-        if (newDependencyGroups.Count > 0)
-        {
-            stringBuilder.AppendLine();
-            stringBuilder.AppendLine("**New Dependencies**");
-            foreach (var group in newDependencyGroups)
-            {
-                DependencyUpdateSummary representative = group.First();
-                string repository = await getRepositoryAsync(representative);
-                string? diffLink = GetLinkForDependencyItem(
-                    repository,
-                    representative.FromCommitSha,
-                    representative.ToCommitSha);
-                
-                stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
-                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
-                {
-                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
-                }
-            }
-        }
-
-        if (removedDependencyGroups.Count > 0)
-        {
-            stringBuilder.AppendLine();
-            stringBuilder.AppendLine("**Removed Dependencies**");
-            foreach (var group in removedDependencyGroups)
-            {
-                DependencyUpdateSummary representative = group.First();
-                
-                stringBuilder.AppendLine($"- Removed {representative.FromVersion}");
-                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
-                {
-                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
-                }
-            }
-        }
-
-        if (updatedDependencyGroups.Count > 0)
-        {
-            stringBuilder.AppendLine();
-            stringBuilder.AppendLine("**Updated Dependencies**");
-
-            foreach (var group in updatedDependencyGroups)
-            {
-                DependencyUpdateSummary representative = group.First();
-                string repository = await getRepositoryAsync(representative);
-                string? diffLink = GetLinkForDependencyItem(
-                    repository,
-                    representative.FromCommitSha,
-                    representative.ToCommitSha);
-                
-                stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
-                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
-                {
-                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
-                }
-            }
-        }
-        return stringBuilder.ToString();
-    }
-
-
 
     private static string? GetLinkForDependencyItem(string repoUri, string? fromCommitSha, string? toCommitSha)
     {
