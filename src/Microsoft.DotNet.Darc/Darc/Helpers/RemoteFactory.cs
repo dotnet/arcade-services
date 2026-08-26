@@ -4,8 +4,8 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;

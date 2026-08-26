@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
@@ -7,7 +7,8 @@ using System.Text;
 using Azure.Core;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -30,6 +31,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.BarViz.Hosting;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using Maestro.Services.Common.Cache;
@@ -54,6 +56,10 @@ internal static class PcsStartup
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
 
+        // Credentials of the dedicated GitHub App used to approve codeflow pull requests
+        public const string ApprovalGitHubClientId = $"{KeyVaultSecretPrefix}maestro-approval-github-app-id";
+        public const string ApprovalGitHubClientSecret = $"{KeyVaultSecretPrefix}maestro-approval-github-app-private-key";
+
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -68,6 +74,7 @@ internal static class PcsStartup
         public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
         public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
         public const string DefaultWorkItemConsumerCount = "DefaultWorkItemConsumerCount";
+        public const string TelemetryMetricNamespace = "Telemetry:MetricNamespace";
     }
 
     static PcsStartup()
@@ -99,7 +106,8 @@ internal static class PcsStartup
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
-        builder.Services.AddTelemetry();
+        string metricNamespace = builder.Configuration.GetRequiredValue(ConfigurationKeys.TelemetryMetricNamespace);
+        builder.Services.AddTelemetry(options => options.MetricNamespace = metricNamespace);
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
@@ -159,6 +167,9 @@ internal static class PcsStartup
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddCodeflowPullRequestApprover(
+            builder.Configuration[ConfigurationKeys.ApprovalGitHubClientId],
+            builder.Configuration[ConfigurationKeys.ApprovalGitHubClientSecret]);
         builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
         builder.Services.AddScoped<IDependencyFileManagerFactory, DependencyFileManagerFactory>();
         builder.Services.AddScoped<ILocalFactory, LocalFactory>();
@@ -179,7 +190,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
+        builder.AddServiceDefaults([metricNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(
@@ -191,7 +202,6 @@ internal static class PcsStartup
                     : CookieSecurePolicy.Always;
             });
         builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
-        builder.ConfigureApiRedirection();
         builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
@@ -242,22 +252,11 @@ internal static class PcsStartup
             builder.ConfigureSwagger();
         }
 
-        if (isDevelopment)
-        {
-            builder.Services.AddCors(policy =>
-            {
-                policy.AddDefaultPolicy(p =>
-                    // These come from BarViz project's launchsettings.json
-                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod());
-            });
-        }
     }
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseApiRedirection(requireAuth: !isDevelopment);
+        app.UseApiRedirection(isDevelopment ? null : context => context.IsAuthenticated());
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {

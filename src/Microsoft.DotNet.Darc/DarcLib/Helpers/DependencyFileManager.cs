@@ -93,14 +93,15 @@ public class DependencyFileManager : IDependencyFileManager
         _logger = logger;
     }
 
-    public static ImmutableHashSet<string> NonCodeflowDependencyFiles { get; } = new HashSet<string>()
-    {
+    public static ImmutableHashSet<string> NonCodeflowDependencyFiles { get; } =
+    [
         VersionFiles.VersionDetailsXml,
         VersionFiles.VersionDetailsProps,
         VersionFiles.VersionsProps,
         VersionFiles.GlobalJson,
-        VersionFiles.DotnetToolsConfigJson
-    }.ToImmutableHashSet();
+        VersionFiles.DotnetToolsConfigJson,
+        VersionFiles.DotnetToolsJson,
+    ];
 
     // In VMR repos, Versions.props doesn't contain any dependency versions maintained by automation, so every change is meaningful
     public static ImmutableHashSet<string> CodeflowDependencyFiles { get; } = NonCodeflowDependencyFiles.Except([VersionFiles.VersionsProps]);
@@ -139,11 +140,36 @@ public class DependencyFileManager : IDependencyFileManager
         return JObject.Parse(fileContent);
     }
 
-    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, UnixPath relativeBasePath = null)
-    {
-        var path = GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath);
+    private Task<JObject> TryGetDotNetToolsConfigJsonAsync(
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null)
+        => TryGetDotNetToolsManifestAsync(
+            VersionFiles.DotnetToolsConfigJson,
+            repoUri,
+            branch,
+            relativeBasePath);
 
-        _logger.LogDebug("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+    private Task<JObject> TryGetDotNetToolsJsonAsync(
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null)
+        => TryGetDotNetToolsManifestAsync(
+            VersionFiles.DotnetToolsJson,
+            repoUri,
+            branch,
+            relativeBasePath);
+
+    private async Task<JObject> TryGetDotNetToolsManifestAsync(
+        string jsonPath,
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath)
+    {
+        var path = GetVersionFilePath(jsonPath, relativeBasePath);
+
+        _logger.LogDebug(
+            "Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
             path,
             repoUri,
             branch);
@@ -159,7 +185,6 @@ public class DependencyFileManager : IDependencyFileManager
             return null;
         }
     }
-
 
     /// <summary>
     /// Get the tools.dotnet section of the global.json from a target repo URI
@@ -335,12 +360,19 @@ public class DependencyFileManager : IDependencyFileManager
                 await RemoveDependencyFromVersionPropsAsync(dependencyName, repoUri, branch, relativeBasePath)));
         }
 
-        var updatedDotnetTools = await RemoveDotnetToolsDependencyAsync(dependencyName, repoUri, branch, relativeBasePath);
-        if (updatedDotnetTools != null)
+        var dotnetToolsConfigJson = await TryGetDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
+        if (TryRemoveDotNetToolsDependency(dependencyName, dotnetToolsConfigJson))
         {
-            gitFiles.Add(new(GetVersionFilePath(
-                VersionFiles.DotnetToolsConfigJson, relativeBasePath),
-                updatedDotnetTools));
+            gitFiles.Add(new GitFile(
+                GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath),
+                dotnetToolsConfigJson));
+        }
+        var dotnetToolsJson = await TryGetDotNetToolsJsonAsync(repoUri, branch, relativeBasePath);
+        if (TryRemoveDotNetToolsDependency(dependencyName, dotnetToolsJson))
+        {
+            gitFiles.Add(new GitFile(
+                GetVersionFilePath(VersionFiles.DotnetToolsJson, relativeBasePath),
+                dotnetToolsJson));
         }
 
         await GetGitClient(repoUri).CommitFilesAsync(
@@ -352,28 +384,18 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation("Dependency '{dependencyName}' removed from " + VersionFiles.VersionDetailsXml, dependencyName);
     }
 
-    private async Task<JObject> RemoveDotnetToolsDependencyAsync(string dependencyName, string repoUri, string branch, UnixPath relativeBasePath)
+    private static bool TryRemoveDotNetToolsDependency(string dependencyName, JObject manifest)
     {
-        var dotnetTools = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
-
-        if (dotnetTools == null)
+        if (manifest?["tools"] is not JObject tools)
         {
-            return null;
-        }
-
-        if (dotnetTools["tools"] is not JObject tools)
-        {
-            return null;
+            return false;
         }
 
         // we have to do this because JObject is case sensitive
-        var toolProperty = tools.Properties().FirstOrDefault(p => p.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase));
-        if (toolProperty != null)
-        {
-            tools.Remove(toolProperty.Name);
-        }
+        var toolProperty = tools.Properties().FirstOrDefault(
+            p => p.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase));
 
-        return dotnetTools;
+        return toolProperty != null && tools.Remove(toolProperty.Name);
     }
 
     private async Task<XmlDocument> RemoveDependencyFromVersionPropsAsync(string dependencyName, string repoUri, string branch, UnixPath relativeBasePath = null)
@@ -494,7 +516,10 @@ public class DependencyFileManager : IDependencyFileManager
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
         XmlDocument versionProps = null;
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
+        JObject dotnetToolsConfigJson =
+            await TryGetDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
+        JObject dotnetToolsJson =
+            await TryGetDotNetToolsJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
 
         if (!repoHasVersionDetailsProps.HasValue)
@@ -529,10 +554,14 @@ public class DependencyFileManager : IDependencyFileManager
             // it was listed in both
             UpdateVersionGlobalJson(itemToUpdate, globalJson);
 
-            // If there is a .config/dotnet-tools.json file and this dependency exists there, update it too
-            if (toolsConfigurationJson != null)
+            if (dotnetToolsConfigJson != null)
             {
-                UpdateDotNetToolsManifest(itemToUpdate, toolsConfigurationJson);
+                UpdateDotNetToolsManifest(itemToUpdate, dotnetToolsConfigJson);
+            }
+
+            if (dotnetToolsJson != null)
+            {
+                UpdateDotNetToolsManifest(itemToUpdate, dotnetToolsJson);
             }
         }
 
@@ -572,10 +601,18 @@ public class DependencyFileManager : IDependencyFileManager
             NugetConfig = new GitFile(GetVersionFilePath(nugetConfigName, relativeBasePath), nugetConfig),
         };
 
-        // dotnet-tools.json is optional, so only include it if it was found.
-        if (toolsConfigurationJson != null)
+        if (dotnetToolsConfigJson != null)
         {
-            fileContainer.DotNetToolsJson = new GitFile(GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath), toolsConfigurationJson);
+            fileContainer.DotNetToolsConfigJson = new GitFile(
+                GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath),
+                dotnetToolsConfigJson);
+        }
+
+        if (dotnetToolsJson != null)
+        {
+            fileContainer.DotNetToolsJson = new GitFile(
+                GetVersionFilePath(VersionFiles.DotnetToolsJson, relativeBasePath),
+                dotnetToolsJson);
         }
 
         if (repoHasVersionDetailsProps.Value)
@@ -1196,7 +1233,14 @@ public class DependencyFileManager : IDependencyFileManager
             fileContent = fileContent.Substring(3);
         }
 
-        document.LoadXml(fileContent);
+        var readerSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null
+        };
+
+        using var reader = XmlReader.Create(new StringReader(fileContent), readerSettings);
+        document.Load(reader);
 
         return document;
     }
@@ -1327,7 +1371,8 @@ public class DependencyFileManager : IDependencyFileManager
         Task<VersionDetails> versionDetails;
         Task<XmlDocument> versionProps;
         Task<JObject> globalJson;
-        Task<JObject> dotnetToolsJson;
+        JObject dotnetToolsConfigJson;
+        JObject dotnetToolsJson;
         // This operation doesn't support VMR verification
         UnixPath relativeBasePath = null;
 
@@ -1363,11 +1408,12 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            dotnetToolsJson = ReadDotNetToolsConfigJsonAsync(repo, branch, relativeBasePath);
+            dotnetToolsConfigJson = await TryGetDotNetToolsConfigJsonAsync(repo, branch, relativeBasePath);
+            dotnetToolsJson = await TryGetDotNetToolsJsonAsync(repo, branch, relativeBasePath);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Failed to read {VersionFiles.DotnetToolsConfigJson}");
+            _logger.LogError(e, "Failed to read one of the dotnet tool manifests");
             return false;
         }
 
@@ -1381,7 +1427,10 @@ public class DependencyFileManager : IDependencyFileManager
                 out Task<HashSet<string>> utilizedGlobalJsonDependencies),
             VerifyMatchingDotNetToolsJson(
                 (await versionDetails).Dependencies,
-                await dotnetToolsJson)
+                dotnetToolsConfigJson),
+            VerifyMatchingDotNetToolsJson(
+                (await versionDetails).Dependencies,
+                dotnetToolsJson)
         ];
 
         if (await VersionDetailsPropsExistsAsync(repo, branch))

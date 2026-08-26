@@ -26,5 +26,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("latestOutcome")]
         public SubscriptionTriggerOutcome LatestOutcome { get; set; }
+
+        [JsonProperty("hasFailingCodeflowCheck")]
+        public bool HasFailingCodeflowCheck { get; set; }
     }
 }

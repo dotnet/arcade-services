@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -35,10 +36,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected string InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
     protected const string InProgressPrHeadBranchSha = "pr.head.branch.sha";
     protected const string ConflictPRRemoteSha = "sha3333";
+    protected const string BotCommitSha = "bot.commit.sha";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
     private Mock<ILocalLibGit2Client> _gitClient = null!;
+    private Mock<ICodeflowSourceDiffVerifier> _codeflowSourceDiffVerifier = null!;
+    private Mock<IRepositoryCloneManager> _repositoryCloneManager = null!;
+    private Mock<IVmrCloneManager> _vmrCloneManager = null!;
+    protected Mock<IPullRequestApprover> PullRequestApprover = null!;
 
     [SetUp]
     public void PullRequestUpdaterTests_SetUp()
@@ -46,6 +52,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _backFlower = new();
         _forwardFlower = new();
         _gitClient = new();
+        _codeflowSourceDiffVerifier = new();
+        _repositoryCloneManager = new();
+        _vmrCloneManager = new();
+        PullRequestApprover = new();
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -55,6 +65,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_backFlower.Object);
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
+        services.AddSingleton(_codeflowSourceDiffVerifier.Object);
+        services.AddSingleton(_repositoryCloneManager.Object);
+        services.AddSingleton(_vmrCloneManager.Object);
+        services.AddSingleton(PullRequestApprover.Object);
 
         CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
@@ -227,14 +241,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Times.Once);
     }
 
-    protected void ThenCodeShouldHaveBeenFlownForward(Build build)
+    protected void AndCodeShouldHaveBeenFlownForward(Build build, bool forceUpdate = false)
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
-                It.IsAny<bool>(),
+                forceUpdate,
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -243,9 +257,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>(), It.IsAny<bool>()),
             Times.Once);
     }
-
-    protected void AndCodeShouldHaveBeenFlownForward(Build build)
-        => ThenCodeShouldHaveBeenFlownForward(build);
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
@@ -477,26 +488,80 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? VmrUri
             : TargetRepo;
 
+        string resolvedHeadBranchSha = headBranchSha
+            ?? (flowerWillHaveConflict ? ConflictPRRemoteSha : InProgressPrHeadBranchSha);
+
         AfterDbUpdateActions.Add(() =>
         {
             var pr = CreatePullRequestState(
                 forBuild,
                 prUrl,
                 nextBuildToProcess,
-                headBranchSha: InProgressPrHeadBranchSha,
+                headBranchSha: resolvedHeadBranchSha,
                 sourceRepoNotified: sourceRepoNotified,
                 blockedFromFutureUpdates: blockedFromFutureUpdates);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
 
-        headBranchSha ??= flowerWillHaveConflict
-            ? ConflictPRRemoteSha
-            : InProgressPrHeadBranchSha;
+        const string remoteName = "origin";
+        const string latestTargetBranchSha = "target.branch.sha";
+        NativePath existingPrRepoPath = Subscription.TargetDirectory != null
+            ? new NativePath(VmrPath)
+            : new NativePath(TmpPath);
+
+        var clonedRepo = new Mock<ILocalGitRepo>();
+        clonedRepo.SetupGet(x => x.Path).Returns(existingPrRepoPath);
+
+        if (Subscription.TargetDirectory != null)
+        {
+            _vmrCloneManager
+                .Setup(x => x.PrepareVmrAsync(
+                    It.Is<IReadOnlyCollection<string>>(remotes =>
+                        remotes.SequenceEqual(new[] { Subscription.TargetRepository })),
+                    It.Is<IReadOnlyCollection<string>>(refs =>
+                        refs.SequenceEqual(new[] { InProgressPrHeadBranch, TargetBranch })),
+                    InProgressPrHeadBranch,
+                    true,
+                    CancellationToken.None))
+                .ReturnsAsync(clonedRepo.Object);
+        }
+        else
+        {
+            _repositoryCloneManager
+                .Setup(x => x.PrepareCloneAsync(
+                    Subscription.TargetRepository,
+                    resolvedHeadBranchSha,
+                    false,
+                    CancellationToken.None))
+                .ReturnsAsync(clonedRepo.Object);
+        }
+        _gitClient
+            .Setup(x => x.GetRemotesAsync(existingPrRepoPath))
+            .ReturnsAsync([(remoteName, Subscription.TargetRepository)]);
+        _gitClient
+            .Setup(x => x.UpdateRemoteAsync(existingPrRepoPath, remoteName, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+        _gitClient
+            .Setup(x => x.GetShaForRefAsync(existingPrRepoPath, $"{remoteName}/{InProgressPrHeadBranch}"))
+            .ReturnsAsync(resolvedHeadBranchSha);
+        _gitClient
+            .Setup(x => x.GetShaForRefAsync(existingPrRepoPath, $"{remoteName}/{TargetBranch}"))
+            .ReturnsAsync(latestTargetBranchSha);
+        _gitClient
+            .Setup(x => x.RunGitCommandAsync(
+                existingPrRepoPath,
+                It.Is<string[]>(args => args.SequenceEqual(new[] { "log", "-1", "--pretty=%B", resolvedHeadBranchSha })),
+                CancellationToken.None))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                ExitCode = 0,
+                StandardOutput = "Ordinary codeflow update"
+            });
 
         _gitClient
-            .Setup(x => x.GetShaForRefAsync(It.IsAny<string>(), InProgressPrHeadBranch))
-            .ReturnsAsync(headBranchSha);
+            .Setup(x => x.GetShaForRefAsync(new NativePath(VmrPath), InProgressPrHeadBranch))
+            .ReturnsAsync(resolvedHeadBranchSha);
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
@@ -505,7 +570,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
-                HeadBranchSha = headBranchSha,
+                HeadBranchSha = resolvedHeadBranchSha,
                 BaseBranch = TargetBranch,
             });
 
@@ -624,6 +689,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .ReturnsAsync(new CodeFlowResult(true, [], new NativePath(VmrPath), []));
     }
 
+
+    protected void WithNewPrCreated()
+    {
+        // Because we don't set up matching FF & BF subscriptions in tests, we expect a comment about the missing opposite direction subscription
+        DarcRemotes[Subscription.TargetRepository]
+                .Setup(x => x.CommentPullRequestAsync(
+                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                    It.Is<string>(content => content.Contains("No subscription flowing code in the opposite direction"))))
+                .Returns(Task.CompletedTask);
+    }
+
     protected void AndOldPullRequestShouldHaveBeenClosed(string oldPrUrl, string newPrUrl)
     {
         var (owner, repo, id) = GitHubClient.ParsePullRequestUri(newPrUrl);
@@ -666,6 +742,108 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         RemoveExpectedReminder<PullRequestCheck>(Subscription);
     }
+
+    protected void AndShouldHaveCodeflowApprovalCheckReminder(
+        string previousSourceSha,
+        string currentSourceSha,
+        string pullRequestUrl)
+    {
+        SetExpectedReminder(Subscription, new CodeflowApprovalCheck()
+        {
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
+            SubscriptionId = Subscription.Id,
+            PreviousSourceSha = previousSourceSha,
+            CurrentSourceSha = currentSourceSha,
+            PullRequestUrl = pullRequestUrl
+        });
+    }
+
+    protected void GivenTheForwardFlowMatchesTheSourceDiff(bool matches)
+        => _codeflowSourceDiffVerifier
+            .Setup(x => x.ForwardFlowMatchesSourceDiffAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(matches ? [] : ["unexpected.txt"]);
+
+    protected void GivenThePullRequestOnlyHasBotCommits(string prUrl)
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.GetPullRequestCommitsAsync(prUrl))
+            .ReturnsAsync([new Commit(Constants.DarcBotName, BotCommitSha, "Bot commit")]);
+
+    protected void GivenThePullRequestHasANonServiceCommit(string prUrl)
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.GetPullRequestCommitsAsync(prUrl))
+            .ReturnsAsync(
+            [
+                new Commit(Constants.DarcBotName, BotCommitSha, "Bot commit"),
+                new Commit("attacker", "attacker.commit.sha", "Sneaky commit"),
+            ]);
+
+    protected void GivenAnOpenInProgressCodeFlowPullRequest(Build forBuild)
+    {
+        AfterDbUpdateActions.Add(() =>
+        {
+            var pr = CreatePullRequestState(
+                forBuild,
+                VmrPullRequestUrl,
+                headBranchSha: InProgressPrHeadBranchSha,
+                serviceGeneratedCommits: [BotCommitSha]);
+            SetState(Subscription, pr);
+            SetExpectedPullRequestState(Subscription, pr);
+        });
+
+        DarcRemotes.GetOrAddValue(VmrUri, () => CreateMock<IRemote>())
+            .Setup(x => x.GetPullRequestAsync(VmrPullRequestUrl))
+            .ReturnsAsync(new PullRequest()
+            {
+                Status = PrStatus.Open,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                BaseBranch = TargetBranch,
+            });
+    }
+
+    protected async Task WhenRunCodeflowApprovalCheckAsyncIsCalled(CodeflowApprovalCheck approvalCheck)
+        => await Execute(
+            async context =>
+            {
+                var updater = (CodeFlowPullRequestUpdater)CreatePullRequestActor(context, isCodeflow: true);
+                await updater.RunCodeflowApprovalCheckAsync(
+                    SqlBarClient.ToClientModelSubscription(Subscription),
+                    approvalCheck,
+                    CancellationToken.None);
+            });
+
+    protected void ThenThePullRequestShouldHaveBeenApproved(string prUrl)
+    {
+        PullRequestApprover.Verify(
+            x => x.ApprovePullRequestAsync(prUrl, InProgressPrHeadBranchSha, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    protected void ThenThePullRequestShouldNotHaveBeenApproved()
+        => PullRequestApprover.Verify(
+            x => x.ApprovePullRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    protected void ThenTheSourceDiffShouldNotHaveBeenVerified()
+        => _codeflowSourceDiffVerifier.Verify(
+            x => x.ForwardFlowMatchesSourceDiffAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
 
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
@@ -760,12 +938,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             bool? sourceRepoNotified = null,
             UnixPath? relativeBasePath = null,
             List<DependencyUpdateSummary>? dependencyUpdates = null,
-            bool blockedFromFutureUpdates = false)
+            bool blockedFromFutureUpdates = false,
+            List<string>? serviceGeneratedCommits = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
             HeadBranchSha = headBranchSha ?? InProgressPrHeadBranchSha,
+            ServiceGeneratedCommits = serviceGeneratedCommits ?? [],
             SourceSha = forBuild.Commit,
             ContainedSubscriptions =
             [

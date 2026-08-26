@@ -473,6 +473,9 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AutoApprove")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ChannelId")
                         .HasColumnType("int");
 
@@ -535,6 +538,9 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("SubscriptionId")

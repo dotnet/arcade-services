@@ -59,6 +59,8 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-repository-policies](#get-repository-policies) - Retrieves information about repository merge policies.
   - [get-subscriptions](#get-subscriptions) - Get information about
     subscriptions.
+  - [get-subscription-history](#get-subscription-history) - Get the history of
+    subscription trigger outcomes matching the given filters.
   - [trigger-subscriptions](#trigger-subscriptions) - Trigger a subscription or set of subscriptions matching criteria.
   - [update-dependencies](#update-dependencies) - Update local dependencies from
     a channel.
@@ -75,6 +77,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
   - [push](#push) - Pushes given VMR branch to a given remote.
   - [reset](#reset) - Resets the contents of a VMR mapping to match a specific source repository state, effectively restoring the mapping to a known good state. Changes are staged only.
+  - [reset-submodule](#reset-submodule) - Resets the contents of a single VMR submodule to match the current HEAD of the submodule repository you run the command from, and updates its record in source-manifest.json. Changes are staged only.
   - [diff](#diff) - Diffs the VMR and the product repositories.
 
 ## Scenarios
@@ -138,38 +141,16 @@ If the PowerShell script doesn't work for your environment, you can install darc
 dotnet tool install --global Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
 ```
 
-**DNX Alternative Installation:**
-
-For environments where the standard installation doesn't work, you can use DNX (dotnet execute) to run darc without a global installation:
+If you prefer to run darc without installing it as a global tool, you can use DNX to execute the package directly. For example:
 
 ```
-dnx tool install Microsoft.DotNet.Darc --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+dnx --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease Microsoft.DotNet.Darc -- get-subscriptions
 ```
-
-After installation with DNX, you can run darc commands using:
-
-```
-dnx Microsoft.DotNet.Darc --help
-```
-
-Or create an alias in your shell profile for convenience:
-
-**PowerShell:**
-```powershell
-Set-Alias -Name darc -Value "dnx Microsoft.DotNet.Darc"
-```
-
-**Bash/Zsh:**
-```bash
-alias darc="dnx Microsoft.DotNet.Darc"
-```
-
-**Note:** DNX is useful in containerized environments or CI/CD scenarios where you want to avoid global tool installations but still need to use darc functionality.
 
 #### Step 2: Authentication:
 Darc talks to the Maestro API which requires authentication.
 Devs on the .NET team should have access to it through the "all FTE" security group. You can test this by running `darc get-channels` or by visiting [https://maestro.dot.net/](https://maestro.dot.net/).
-If you don't have access (because you are not part of the .NET team directly), request the access to https://coreidentity.microsoft.com/manage/Entitlement/entitlement/dotnetesmaes-z54r.
+If you don't have access (because you are not part of the .NET team directly), request the access [in MyAccount](https://myaccount.microsoft.com/groups/3ac14f1e-80ac-4c8f-a860-58592053bc3a).
 
 #### Step 3: Set additional PATs for Azure DevOps and GitHub operations (Optional)
 
@@ -1508,6 +1489,14 @@ Key features:
 **Note**: This feature is only available for dependency flow subscriptions. For source-enabled 
 (VMR code flow) subscriptions, `--source-directory` or `--target-directory` specify 
 a single VMR source mapping.
+
+**Auto-approval**:
+
+Passing `--auto-approve` marks the subscription so that its codeflow pull requests are
+automatically approved when they only contain the source updates flowed from the source
+repository (i.e. the PR's changes match the source diff and it has no commits authored by
+someone other than the bot). This is only allowed on forward flow subscriptions
+(source-enabled subscriptions that specify a target directory).
 
 **Examples**:
 
@@ -2917,6 +2906,50 @@ https://github.com/aspnet/AspNetCore (.NET Core 3.1 Dev) ==> 'https://github.com
 - [get-subscriptions](#get-subscriptions)
 - [trigger-subscriptions](#trigger-subscriptions)
 
+### **`get-subscription-history`**
+
+Retrieves the history of subscription trigger outcomes recorded by Maestro.
+Each outcome describes what happened the last time a subscription was triggered
+(for example whether a pull request was opened/updated, there was nothing to
+update, or the update failed).
+
+When run without any filters, the command returns the most recent outcomes
+(up to `--limit`, default 10). The result set can be narrowed with the filters
+below, all of which can be combined:
+
+- `--id` - Filter by a specific subscription id (GUID). Obtain the id from
+  [get-subscriptions](#get-subscriptions).
+- `--build` - Filter by the build id that triggered the outcome.
+- `--type` - Filter by outcome type. Valid values: `Updated`, `NoUpdate`,
+  `NotUpdatable`, `Failure`, `UserError`, `HasConflict`, `Rescheduled`.
+- `--search` - Free-text filter matched against the subscription's source repo,
+  target repo and target branch.
+- `--after` / `--before` - Restrict to outcomes on or after / on or before the
+  given date (e.g. `"2025-01-15T12:00:00Z"`).
+- `--limit` - Maximum number of outcomes to return (1-1000, default 100).
+
+The command supports both `text` (default) and `json` `--output-format`.
+
+**Sample**:
+```
+PS D:\enlistments\arcade-services> darc get-subscription-history --search core-sdk --type Failure --limit 2
+
+2025-01-15 12:34:56Z  [Failure]  build 1234567
+  Subscription: https://github.com/aspnet/AspNetCore ==> 'https://github.com/dotnet/core-sdk' ('main')
+  Subscription Id: 510286a9-8cd5-47bd-a259-08d68641480a
+  PR: https://github.com/dotnet/core-sdk/pull/4242
+  Failed to update dependencies: <details>
+
+2025-01-14 09:10:11Z  [Failure]  build 1234560
+  Subscription: https://github.com/aspnet/AspNetCore ==> 'https://github.com/dotnet/core-sdk' ('release/8.0')
+  Subscription Id: 0a2d0ca4-5d87-4bfd-2808-08d690bc5860
+  Failed to update dependencies: <details>
+```
+
+**See also**:
+- [get-subscriptions](#get-subscriptions)
+- [trigger-subscriptions](#trigger-subscriptions)
+
 ### **`set-repository-policies`**
 
 Set merge policies for the specific repository and branch. These policies only
@@ -3166,6 +3199,12 @@ multiple directories (e.g., `src/*`).
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
 
+**Auto-approval**: Use `--auto-approve` to toggle whether the subscription's codeflow pull
+requests are automatically approved when they only contain the source updates flowed from
+the source repository (the PR's changes match the source diff and it has no commits authored
+by someone other than the bot). This is only allowed on forward flow subscriptions
+(source-enabled subscriptions that specify a target directory).
+
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
@@ -3319,6 +3358,18 @@ darc vmr reset runtime --channel ".NET 10"
 # Invalid format - shows clear error
 darc vmr reset invalid-format
 # Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
+```
+
+### **`reset-submodule`**
+
+Resets the contents of a single VMR submodule to match the current `HEAD` of the submodule repository you run the command from, and updates that submodule's record in `source-manifest.json`. Changes are staged only.
+
+Run this command from a local clone of the submodule's own repository. The target commit and content are taken from that local clone's `HEAD`, and the local clone itself is recorded as the submodule's remote in `source-manifest.json` (its `HEAD` may not exist on any public remote yet). The single positional argument is the submodule's path exactly as it appears in `source-manifest.json`, in the form `[mapping]/[path within the mapping]`. Being a positional argument, it should come last on the command line, after any options such as `--vmr`.
+
+**Sample**
+```
+# From within a local clone of the submodule repository:
+darc vmr reset-submodule --vmr C:\Path\VMR runtime/src/external/foo
 ```
 
 ### **`diff`**

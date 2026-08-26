@@ -3,6 +3,7 @@
 @using ProductConstructionService.BarViz.Model
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
+@inject NavigationManager NavigationManager
 @implements IDialogContentComponent<SubscriptionDetailData>
 
 <style>
@@ -116,6 +117,10 @@
                         <td>Target directory</td>
                         <td>@_subscription.TargetDirectory</td>
                     </tr>
+                    <tr>
+                        <td>Auto-approve</td>
+                        <td>@(_subscription.AutoApprove ? "Yes" : "No")</td>
+                    </tr>
                 }
                 @if (_subscription.SourceEnabled && !string.IsNullOrEmpty(_subscription.SourceDirectory))
                 {
@@ -152,6 +157,9 @@
 </FluentDialogBody>
 
 <FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="ShowHistoryAsync" Disabled="@(_subscription == null)">
+        Show history
+    </FluentButton>
     <FluentButton Appearance="Appearance.Accent" OnClick="TriggerSubscriptionAsync" Disabled="@(_subscription == null)">
         Trigger Subscription
     </FluentButton>
@@ -209,6 +217,21 @@
         {
             ToastService.ShowError("Failed to trigger the subscription");
         }
+    }
+
+    private async Task ShowHistoryAsync()
+    {
+        if (_subscription == null)
+        {
+            return;
+        }
+
+        if (Dialog != null)
+        {
+            await Dialog.CloseAsync();
+        }
+
+        NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={_subscription.Id}");
     }
 
     private async Task CloseAsync()

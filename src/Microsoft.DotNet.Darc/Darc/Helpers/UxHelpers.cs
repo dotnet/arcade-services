@@ -205,6 +205,7 @@ public static class UxHelpers
         if (!string.IsNullOrEmpty(subscription.TargetDirectory))
         {
             subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
+            subInfo.AppendLine($"  - Auto-approve: {subscription.AutoApprove}");
         }
 
         if (subscription.SourceEnabled && !string.IsNullOrEmpty(subscription.SourceDirectory))

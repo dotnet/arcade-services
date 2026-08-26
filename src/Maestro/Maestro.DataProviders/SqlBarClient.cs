@@ -41,6 +41,7 @@ public class SqlBarClient : ISqlBarClient
     {
         var sub = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
+            .Include(s => s.LastAppliedBuild)
             .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
 
         if (sub == null)
@@ -58,7 +59,11 @@ public class SqlBarClient : ISqlBarClient
             sub.SourceDirectory,
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            [.. sub.ExcludedAssets.Select(s => s.Filter)]);
+            [.. sub.ExcludedAssets.Select(s => s.Filter)],
+            sub.AutoApprove)
+        {
+            LastAppliedBuild = sub.LastAppliedBuild != null ? ToClientModelBuild(sub.LastAppliedBuild) : null,
+        };
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
@@ -305,7 +310,8 @@ public class SqlBarClient : ISqlBarClient
             sourceDirectory: other.SourceDirectory,
             targetDirectory: other.TargetDirectory,
             pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
-            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList(),
+            autoApprove: other.AutoApprove)
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
@@ -415,14 +421,21 @@ public class SqlBarClient : ISqlBarClient
         return results.Select(ToClientModelSubscription);
     }
 
-    public async Task<Build> GetBuildAsync(int buildId)
+    public async Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false)
     {
-        var build = await _context.Builds.Where(b => b.Id == buildId)
+        IQueryable<Data.Models.Build> query = _context.Builds.Where(b => b.Id == buildId)
             .Include(b => b.BuildChannels)
             .ThenInclude(b => b.Channel)
-            .Include(b => b.Assets)
-            .ThenInclude(b => b.Locations)
-            .FirstOrDefaultAsync();
+            .Include(b => b.Assets);
+
+        if (includeAssetLocation)
+        {
+            query = query.Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
+                .AsSplitQuery();
+        }
+
+        var build = await query.FirstOrDefaultAsync();
 
         if (build != null)
         {
@@ -627,6 +640,11 @@ public class SqlBarClient : ISqlBarClient
         if (existingSubscription.SourceEnabled != subscription.SourceEnabled)
         {
             existingSubscription.SourceEnabled = subscription.SourceEnabled;
+        }
+
+        if (existingSubscription.AutoApprove != subscription.AutoApprove)
+        {
+            existingSubscription.AutoApprove = subscription.AutoApprove;
         }
 
         if (!StringEquivalent(existingSubscription.SourceDirectory, subscription.SourceDirectory))

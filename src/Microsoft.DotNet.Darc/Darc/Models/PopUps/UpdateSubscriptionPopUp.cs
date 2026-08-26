@@ -77,6 +77,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdatePop
                   FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false),
                   MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies),
                   SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+                  AutoApprove = GetCurrentSettingForDisplay(subscription.AutoApprove.ToString(), subscription.AutoApprove.ToString(), false),
                   SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, subscription.SourceDirectory, false),
                   TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, subscription.TargetDirectory, false),
                   ExcludedAssets = excludedAssets,

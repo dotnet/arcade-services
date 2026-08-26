@@ -25,6 +25,7 @@ public class SubscriptionTriggerOutcome
         SourceRepository = sourceRepository;
         TargetRepository = targetRepository;
         TargetBranch = targetBranch;
+        PrUrl = other.PrUrl;
     }
 
     public string OperationId { get; }
@@ -44,6 +45,8 @@ public class SubscriptionTriggerOutcome
     public string TargetRepository { get; }
 
     public string TargetBranch { get; }
+
+    public string PrUrl { get; }
 }
 
 public enum OutcomeType

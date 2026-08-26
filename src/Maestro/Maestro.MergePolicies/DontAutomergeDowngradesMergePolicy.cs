@@ -1,12 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using NuGet.Versioning;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies;
 
@@ -50,14 +51,11 @@ The following dependency updates appear to be downgrades or invalid versions: {s
     {
         List<string> messages = [];
 
-        foreach (var dependency in pr.RequiredUpdates)
+        foreach (var dependency in pr.RequiredUpdates
+            .Where(u => u.FromVersion != null && u.ToVersion != null))
         {
             bool gotValidVersions = true;
-            // check if the dependency was just added (this can happen in a backflow)
-            if (dependency.FromVersion == null)
-            {
-                continue;
-            }
+
             if (!SemanticVersion.TryParse(dependency.FromVersion, out var fromVersion))
             {
                 messages.Add($" Could not parse the 'from' version '{dependency.FromVersion}' of {dependency.DependencyName} as a Semantic Version string");

@@ -19,6 +19,7 @@ public class Subscription
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
         SourceEnabled = other.SourceEnabled;
+        AutoApprove = other.AutoApprove;
         SourceDirectory = other.SourceDirectory;
         TargetDirectory = other.TargetDirectory;
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
@@ -43,6 +44,8 @@ public class Subscription
     public bool Enabled { get; }
 
     public bool SourceEnabled { get; }
+
+    public bool AutoApprove { get; }
 
     public string SourceDirectory { get; }
 

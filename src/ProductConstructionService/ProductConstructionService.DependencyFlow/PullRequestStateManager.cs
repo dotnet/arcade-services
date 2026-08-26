@@ -21,6 +21,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
     private readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
     private readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     private readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
+    private readonly IReminderManager<CodeflowApprovalCheck> _codeflowApprovalCheckReminders;
 
     public PullRequestStateManager(
         IPullRequestTarget pullRequestTarget,
@@ -33,6 +34,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
+        _codeflowApprovalCheckReminders = reminderManagerFactory.CreateReminderManager<CodeflowApprovalCheck>(cacheKey);
     }
 
     public Task<InProgressPullRequest?> GetInProgressPullRequestAsync() =>
@@ -40,16 +42,6 @@ internal class PullRequestStateManager : IPullRequestStateManager
 
     public Task SetInProgressPullRequestAsync(InProgressPullRequest pr) =>
         _pullRequestState.SetAsync(pr);
-
-    public async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
-    {
-        // TODO (https://github.com/dotnet/arcade-services/issues/6146): Temporary solution to update existing PRs; can be removed after all existing PRs get a creation date
-        if (pr.CreationDate != creationDate)
-        {
-            pr.CreationDate = creationDate;
-            await _pullRequestState.SetAsync(pr);
-        }
-    }
 
     public Task<MergePolicyEvaluationResults?> GetMergePolicyEvaluationResultsAsync() =>
         _mergePolicyEvaluationState.TryGetStateAsync();
@@ -92,7 +84,9 @@ internal class PullRequestStateManager : IPullRequestStateManager
     public async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
     {
         await _pullRequestState.TryDeleteAsync();
+        await _mergePolicyEvaluationState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        await _codeflowApprovalCheckReminders.UnsetReminderAsync(isCodeFlow);
         if (clearPendingUpdates)
         {
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow); 
@@ -106,4 +100,7 @@ internal class PullRequestStateManager : IPullRequestStateManager
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await SetInProgressPullRequestAsync(pr);
     }
+
+    public async Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check) =>
+        await _codeflowApprovalCheckReminders.SetReminderAsync(check, PullRequestUpdater.DefaultReminderDelay, isCodeFlow: true);
 }

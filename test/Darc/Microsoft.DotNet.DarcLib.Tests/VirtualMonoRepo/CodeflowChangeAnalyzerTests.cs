@@ -23,6 +23,7 @@ public class CodeflowChangeAnalyzerTests
     private const string TestHeadBranch = "feature-branch";
     private const string TestTargetBranch = "main";
     private const string TestAncestorCommit = "ee69bb149b4824b93abb3d6b029aeacfa30d6207";
+    private const string TestProposedTree = "ba1f433a7881beacfea40f5e9403f7309eaae132";
     private static readonly NativePath TestVmrPath = new("/path/to/vmr");
 
     private Mock<ILocalGitRepoFactory> _localGitRepoFactory = null!;
@@ -48,6 +49,16 @@ public class CodeflowChangeAnalyzerTests
         _localGitRepo
             .Setup(x => x.GetMergeBaseAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(TestAncestorCommit);
+
+        _localGitRepo
+            .Setup(x => x.ExecuteGitCommand(It.Is<string[]>(args =>
+                args.Length == 1 &&
+                args[0] == "write-tree")))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                StandardOutput = TestProposedTree,
+                ExitCode = 0,
+            });
 
         _analyzer = new CodeflowChangeAnalyzer(
             _localGitRepoFactory.Object,
@@ -206,7 +217,7 @@ public class CodeflowChangeAnalyzerTests
     private void SetChangedFiles(IReadOnlyCollection<string> changedFiles)
     {
         _localGitRepo
-            .Setup(x => x.GetChangedFilesAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(x => x.GetChangedFilesAsync(TestAncestorCommit, TestProposedTree))
             .ReturnsAsync(changedFiles);
     }
 
@@ -223,7 +234,7 @@ public class CodeflowChangeAnalyzerTests
                 args.Length > 2 &&
                 args[0] == "diff" &&
                 args[1] == "-U0" &&
-                args[2] == $"{TestAncestorCommit}..{TestHeadBranch}")))
+                args[2] == $"{TestAncestorCommit}..{TestProposedTree}")))
             .ReturnsAsync(result);
     }
 
@@ -242,7 +253,7 @@ public class CodeflowChangeAnalyzerTests
             .ReturnsAsync("<Dependencies><Source BarId=\"270662\" /></Dependencies>");
 
         _localGitRepo
-            .Setup(x => x.GetFileFromGitAsync("src/test-repo/eng/Version.Details.xml", TestHeadBranch, null))
+            .Setup(x => x.GetFileFromGitAsync("src/test-repo/eng/Version.Details.xml", TestProposedTree, null))
             .ReturnsAsync("<Dependencies><Source BarId=\"271018\" /></Dependencies>");
 
         _versionDetailsParser
@@ -291,7 +302,7 @@ public class CodeflowChangeAnalyzerTests
             GitHubRepository = "https://github.com/dotnet/dotnet"
         };
 
-        _barClient.Setup(x => x.GetBuildAsync(270662)).ReturnsAsync(build1);
-        _barClient.Setup(x => x.GetBuildAsync(271018)).ReturnsAsync(build2);
+        _barClient.Setup(x => x.GetBuildAsync(270662, true)).ReturnsAsync(build1);
+        _barClient.Setup(x => x.GetBuildAsync(271018, true)).ReturnsAsync(build2);
     }
 }

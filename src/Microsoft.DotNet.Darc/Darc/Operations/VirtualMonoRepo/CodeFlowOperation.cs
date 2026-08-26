@@ -202,7 +202,7 @@ internal abstract class CodeFlowOperation(
             targetRepoUri = remotes.First().Uri;
         }
 
-        CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
+        return await _forwardFlower.FlowForwardAsync(
             mapping.Name,
             productRepo.Path,
             build,
@@ -213,15 +213,6 @@ internal abstract class CodeFlowOperation(
             forceUpdate: true,
             unsafeFlow: _options.UnsafeFlow,
             cancellationToken);
-
-        // Update source-manifest.json by getting the latest and overwriting the entry for the flowed repo
-        var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
-        var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
-        sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
-        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
-        await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
-
-        return result;
     }
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
@@ -340,7 +331,7 @@ internal abstract class CodeFlowOperation(
         {
             _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
 
-            build = await _barApiClient.GetBuildAsync(_options.Build)
+            build = await _barApiClient.GetBuildAsync(_options.Build, includeAssetLocation: false)
                 ?? throw new DarcException($"Build with ID '{_options.Build}' not found.");
         }
 
@@ -392,7 +383,7 @@ internal abstract class CodeFlowOperation(
     {
         if (_options.Build != 0 && build == null)
         {
-            build = await _barApiClient.GetBuildAsync(_options.Build);
+            build = await _barApiClient.GetBuildAsync(_options.Build, includeAssetLocation: false);
         }
 
         if (build == null)

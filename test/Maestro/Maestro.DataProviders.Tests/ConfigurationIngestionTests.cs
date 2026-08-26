@@ -249,6 +249,9 @@ public class ConfigurationIngestorTests
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
             Enabled = false, // Changed from true to false
+            SourceEnabled = true,
+            TargetDirectory = "runtime", // Forward flow subscription
+            AutoApprove = true, // Changed from false to true
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
         };
 
@@ -262,6 +265,15 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         result.Subscriptions.Updates.Should().HaveCount(1);
+
+        var updated = await _context.Subscriptions
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+        updated.Should().NotBeNull();
+        updated.Enabled.Should().BeFalse();
+        updated.SourceEnabled.Should().BeTrue();
+        updated.TargetDirectory.Should().Be("runtime");
+        updated.AutoApprove.Should().BeTrue();
     }
 
     [Test]

@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using GitRepoUrlUtils = Maestro.Common.GitRepoUrlUtils;
+using GitRepoType = Maestro.Common.GitRepoType;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;

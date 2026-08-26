@@ -75,14 +75,20 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var commonAncestor = await vmr.GetMergeBaseAsync(headBranch, targetBranch);
-        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, headBranch);
+        // Codeflow changes may be committed on the checked-out branch (service) or staged in the index (darc).
+        // write-tree gives us the current index tree in either case for comparison with the common ancestor.
+        var writeTreeResult = await vmr.ExecuteGitCommand(["write-tree"]);
+        writeTreeResult.ThrowIfFailed("Failed to create a tree from the proposed code flow changes");
+        var indexTree = writeTreeResult.StandardOutput.Trim();
+
+        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, indexTree);
 
         if (HasSourceChanges(mappingName, changedFiles))
         {
             return true;
         }
 
-        if (await HasMeaningfulVersioningChanges(mappingName, headBranch, commonAncestor))
+        if (await HasMeaningfulVersioningChanges(mappingName, indexTree, commonAncestor))
         {
             return true;
         }
@@ -129,12 +135,13 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
     private async Task<bool> HasMeaningfulVersioningChanges(
         string mappingName,
-        string headBranch,
+        string indexTree,
         string ancestorCommit)
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var versionFileInclusionRules = DependencyFileManager.CodeflowDependencyFiles
+            .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).ToString())
             .Select(VmrPatchHandler.GetInclusionRule)
             .ToList();
 
@@ -142,16 +149,16 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         [
             "diff",
             "-U0",
-            $"{ancestorCommit}..{headBranch}",
+            $"{ancestorCommit}..{indexTree}",
             "--",
             ..versionFileInclusionRules
         ]);
 
-        result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and {headBranch}");
+        result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and the proposed code flow tree");
 
         // We load all different pieces of build information that would be expected in the diff output
         Build? build1 = await GetBuildFromSourceTag(vmr, mappingName, ancestorCommit);
-        Build? build2 = await GetBuildFromSourceTag(vmr, mappingName, headBranch);
+        Build? build2 = await GetBuildFromSourceTag(vmr, mappingName, indexTree);
 
         List<string> expectedContents =
         [
@@ -188,7 +195,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         return versionDetails.Source?.BarId == null
             ? null
-            : await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+            : await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value, includeAssetLocation: true);
     }
 
     private static bool ContainsUnexpectedChange(string line, IEnumerable<string> expectedContents)
@@ -224,13 +231,14 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .Select(l => l.Location)
             .Distinct();
 
-        return
-        [
+        IEnumerable<string> ret = [
             b.Id.ToString(),
             b.Commit,
             b.GetRepository(),
             ..b.Assets.Select(a => a.Version).Distinct(),
             ..darcFeeds,
         ];
+
+        return ret.Where(s => !string.IsNullOrEmpty(s));
     }
 }

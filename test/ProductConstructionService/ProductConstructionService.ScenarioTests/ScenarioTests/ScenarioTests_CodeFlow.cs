@@ -58,7 +58,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             targetBranchName,
             UpdateFrequency.None.ToString(),
             TestParameters.GitHubTestOrg,
-            targetDirectory: TestRepository.TestRepo1Name);
+            targetDirectory: TestRepository.TestRepo1Name,
+            autoApprove: true);
 
         TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
@@ -103,12 +104,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             [$"src/{TestRepository.TestRepo1Name}/{TestFile1Name}"],
-                            TestFilePatches);
+                            TestFilePatches,
+                            cleanUp: false);
 
                         await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
                             pr,
                             [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
+
+                        await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
                     }
                 }
             }
@@ -158,8 +162,10 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo2Name, TestFile1Name);
 
-        await CreateBuildAsync(sourceRepoUri, branchName, RepoSideDependencyCommit, "repo-side-location", repoSideAssets);
-        await CreateBuildAsync(sourceRepoUri, branchName, VmrSideDependencyCommit, "vmr-side-location", vmrSideAssets);
+        Build repoSideBuild = await CreateBuildAsync(sourceRepoUri, branchName, RepoSideDependencyCommit, "repo-side-location", repoSideAssets);
+        Build vmrSideBuild = await CreateBuildAsync(sourceRepoUri, branchName, VmrSideDependencyCommit, "vmr-side-location", vmrSideAssets);
+        await AddBuildToChannelAsync(repoSideBuild.Id, channelName);
+        await AddBuildToChannelAsync(vmrSideBuild.Id, channelName);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {

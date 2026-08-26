@@ -1,9 +1,9 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
 using AwesomeAssertions;
-using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights;

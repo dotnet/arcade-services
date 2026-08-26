@@ -69,6 +69,13 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     Task<PullRequest> GetPullRequestAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Determines whether the effective rules for a branch require approval of the most recent push.
+    /// </summary>
+    /// <param name="repoUri">URI of the repository.</param>
+    /// <param name="branch">Branch whose effective rules should be checked.</param>
+    Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch);
+
+    /// <summary>
     ///     Retrieve information on commits of a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>

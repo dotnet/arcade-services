@@ -223,7 +223,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 ShouldResetVmr,
                 cancellationToken);
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, baseBranch, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
             return (headBranchExisted, lastFlows);
         }
         catch (NotFoundException)
@@ -246,7 +246,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, baseBranch, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted);
 
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
@@ -502,7 +502,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
 
         await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, targetBranch, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow, headBranchExisted: true);
         previousFlow = previousFlows.LastForwardFlow;
 
         await vmr.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);

@@ -69,6 +69,7 @@ public static partial class GitRepoUrlUtils
     }
 
     private const string GitHubComString = "github.com";
+    private const string GitHubApiString = "api.github.com";
     private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
@@ -90,12 +91,53 @@ public static partial class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Scheme: "https" or "http", Host: GitHubComString } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: GitHubComString or GitHubApiString } => GitRepoType.GitHub,
             { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
             { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,
         };
     }
+
+    public static bool IsValidRemoteRepoUri(string pathOrUri)
+    {
+        if (string.IsNullOrEmpty(pathOrUri))
+        {
+            return false;
+        }
+
+        // Reject values git could interpret as command-line options.
+        if (pathOrUri.StartsWith('-'))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? uri))
+        {
+            // Local file paths are allowed.
+            if (uri.IsFile)
+            {
+                return true;
+            }
+
+            // Of the remote schemes, only https on an allowlisted host is allowed.
+            // This rejects http, ssh, git, and transport helpers such as ext::/fd::.
+            return string.Equals(uri.Scheme, "https", StringComparison.Ordinal)
+                && (uri.Host == GitHubComString
+                    || uri.Host == "dev.azure.com"
+                    || uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Not an absolute URI: only accept absolute/rooted local filesystem paths (e.g. "/tmp/repo").
+        // Everything else (relative paths, scp-like SSH targets such as "git@host:path") is rejected.
+        return Path.IsPathRooted(pathOrUri) || IsWindowsPathRooted(pathOrUri);
+    }
+
+    private static bool IsWindowsPathRooted(string pathOrUri)
+        => pathOrUri.Length >= 3
+            && char.IsAsciiLetter(pathOrUri[0])
+            && pathOrUri[1] == ':'
+            && (pathOrUri[2] == '\\' || pathOrUri[2] == '/')
+        || pathOrUri.StartsWith(@"\\", StringComparison.Ordinal);
 
     /// <summary>
     /// Sorts so that we go Local -> GitHub -> AzDO.

@@ -11,7 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -70,8 +70,8 @@ internal abstract class CodeFlowTestsBase
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
 
-        _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
-             .ReturnsAsync((int id) => _builds[id]);
+        _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>(), It.IsAny<bool>()))
+             .ReturnsAsync((int id, bool _) => _builds[id]);
     }
 
     [TearDown]
@@ -286,6 +286,30 @@ internal abstract class CodeFlowTestsBase
     }
 
     protected IReadOnlyList<string> GetLastFlowCollectedComments() => _lastFlowCollectedComments;
+
+    /// <summary>
+    /// Runs the source-diff verification (the same check PCS runs after a forward-flow push)
+    /// against the current state of the VMR PR branch and returns the paths that do not faithfully
+    /// reflect the source repo's diff (<paramref name="oldSha"/>...<paramref name="newSha"/>).
+    /// The PR branch must be committed before calling this.
+    /// </summary>
+    protected async Task<IReadOnlyList<string>> VerifyForwardFlowSourceDiff(string branchName, string oldSha, string newSha)
+    {
+        using var scope = ServiceProvider.CreateScope();
+        var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
+        await cloneManager.RegisterCloneAsync(VmrPath);
+
+        var verifier = scope.ServiceProvider.GetRequiredService<ICodeflowSourceDiffVerifier>();
+        return await verifier.ForwardFlowMatchesSourceDiffAsync(
+            sourceRepoUri: ProductRepoPath,
+            vmrUri: VmrPath,
+            mappingName: Constants.ProductRepoName,
+            oldSha: oldSha,
+            newSha: newSha,
+            vmrTargetBranch: "main",
+            vmrHeadBranch: branchName,
+            cancellationToken: _cancellationToken.Token);
+    }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {

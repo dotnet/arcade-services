@@ -6,7 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
+using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Microsoft.Extensions.Logging;
 
 #nullable enable

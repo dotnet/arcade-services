@@ -603,13 +603,24 @@ public abstract class CodeFlowConflictResolver
             _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
                 revertedFile);
 
-            if (!await CheckIfRealRevertAsync(
-                revertedFile,
-                codeflowOptions,
-                crossingFlow, vmr,
-                productRepo,
-                cancellationToken))
+            try
             {
+                if (!await CheckIfRealRevertAsync(
+                    revertedFile,
+                    codeflowOptions,
+                    crossingFlow, vmr,
+                    productRepo,
+                    cancellationToken))
+                {
+                    continue;
+                }
+            }
+            catch (DarcException e)
+            {
+                _logger.LogError(e, "Failed to check if {file} was actually reverted: {message}", revertedFile, e.Message);
+                _commentCollector.AddComment(
+                    $"Failed to check if file {revertedFile} actually had some changes or just a false positive, please review carefully. {CommentPlaceholders.NotificationTags}",
+                    CommentType.Caution);
                 continue;
             }
 
@@ -618,7 +629,7 @@ public abstract class CodeFlowConflictResolver
             var result = await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken);
             if (!result.Succeeded)
             {
-                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually.", CommentType.Caution);
+                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually. {CommentPlaceholders.NotificationTags}", CommentType.Caution);
                 return;
             }
 

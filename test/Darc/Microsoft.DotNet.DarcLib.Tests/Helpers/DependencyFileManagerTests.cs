@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -13,6 +14,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
@@ -83,10 +85,13 @@ public class DependencyFileManagerTests
         }
         """;
 
-    [Test]
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task RemoveDependencyShouldRemoveDependency(bool dotnetToolsExists)
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public async Task RemoveDependencyShouldRemoveDependency(
+        bool dotnetToolsConfigExists,
+        bool dotnetToolsExists)
     {
         var expectedVersionDetails = """
         <?xml version="1.0" encoding="utf-8"?>
@@ -135,6 +140,7 @@ public class DependencyFileManagerTests
 
         var tmpVersionDetailsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var tmpVersionPropsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var tmpDotnetToolsConfigPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var tmpDotnetToolsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         DependencyDetail dependency = new()
         {
@@ -151,31 +157,36 @@ public class DependencyFileManagerTests
             .ReturnsAsync(VersionProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
             .Throws<DependencyFileNotFoundException>();
-        if (!dotnetToolsExists)
-        {
-            repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
-                .Throws<DependencyFileNotFoundException>();
-        }
-        else
-        {
-            repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(DotnetTools);
-        }
+        SetupDotNetToolsManifest(repo, VersionFiles.DotnetToolsConfigJson, dotnetToolsConfigExists);
+        SetupDotNetToolsManifest(repo, VersionFiles.DotnetToolsJson, dotnetToolsExists);
 
         repo.Setup(r => r.CommitFilesAsync(
             It.Is<List<GitFile>>(files =>
-                files.Count == (dotnetToolsExists ? 3 : 2) &&
+                files.Count == 2 + (dotnetToolsConfigExists ? 1 : 0) + (dotnetToolsExists ? 1 : 0) &&
                 files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml) && files.Any(f => f.FilePath == VersionFiles.VersionsProps)),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()))
             .Callback<List<GitFile>, string, string, string>((files, repoUri, branch, commitMessage) =>
             {
-                File.WriteAllText(tmpVersionDetailsPath, files[0].Content);
-                File.WriteAllText(tmpVersionPropsPath, files[1].Content);
-                if (dotnetToolsExists)
+                foreach (GitFile file in files)
                 {
-                    File.WriteAllText(tmpDotnetToolsPath, files[2].Content);
+                    if (file.FilePath == VersionFiles.VersionDetailsXml)
+                    {
+                        File.WriteAllText(tmpVersionDetailsPath, file.Content);
+                    }
+                    else if (file.FilePath == VersionFiles.VersionsProps)
+                    {
+                        File.WriteAllText(tmpVersionPropsPath, file.Content);
+                    }
+                    else if (file.FilePath == VersionFiles.DotnetToolsConfigJson)
+                    {
+                        File.WriteAllText(tmpDotnetToolsConfigPath, file.Content);
+                    }
+                    else if (file.FilePath == VersionFiles.DotnetToolsJson)
+                    {
+                        File.WriteAllText(tmpDotnetToolsPath, file.Content);
+                    }
                 }
             });
 
@@ -198,6 +209,11 @@ public class DependencyFileManagerTests
                 .Be(NormalizeLineEndings(expectedVersionDetails ));
             NormalizeLineEndings(File.ReadAllText(tmpVersionPropsPath)).Should()
                 .Be(NormalizeLineEndings(expectedVersionProps));
+            if (dotnetToolsConfigExists)
+            {
+                NormalizeLineEndings(File.ReadAllText(tmpDotnetToolsConfigPath)).Should()
+                    .Be(NormalizeLineEndings(expectedDotNetTools));
+            }
             if (dotnetToolsExists)
             {
                 NormalizeLineEndings(File.ReadAllText(tmpDotnetToolsPath)).Should()
@@ -213,6 +229,10 @@ public class DependencyFileManagerTests
             if (File.Exists(tmpVersionPropsPath))
             {
                 File.Delete(tmpVersionPropsPath);
+            }
+            if (File.Exists(tmpDotnetToolsConfigPath))
+            {
+                File.Delete(tmpDotnetToolsConfigPath);
             }
             if (File.Exists(tmpDotnetToolsPath))
             {
@@ -403,6 +423,24 @@ public class DependencyFileManagerTests
     }
 
     [Test]
+    public void GetXmlDocumentRejectsDtdEntityExpansion()
+    {
+        const string billionLaughs =
+            """
+            <?xml version="1.0"?>
+            <!DOCTYPE lolz [
+              <!ENTITY lol "lol">
+              <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+              <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+            ]>
+            <Dependencies>&lol3;</Dependencies>
+            """;
+
+        var f = () => DependencyFileManager.GetXmlDocument(billionLaughs);
+        f.Should().Throw<XmlException>();
+    }
+
+    [Test]
     public async Task AddDependencyShouldAddToVersionDetailsPropsWhenItExists()
     {
         Mock<IGitRepo> repo = new();
@@ -421,6 +459,8 @@ public class DependencyFileManagerTests
             .ReturnsAsync(() => versionDetailsProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
                 .Throws<DependencyFileNotFoundException>();
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsJson, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
         assetLocationResolver.Setup(r => r.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
@@ -720,6 +760,110 @@ public class DependencyFileManagerTests
             Times.Once);
     }
 
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public async Task UpdateDependencyFilesUpdatesEachExistingDotNetToolsManifest(
+        bool dotnetToolsConfigExists,
+        bool dotnetToolsExists)
+    {
+        const string globalJson = """
+            {
+              "tools": {
+                "dotnet": "9.0.100"
+              }
+            }
+            """;
+        const string nugetConfig = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <packageSources>
+                <clear />
+              </packageSources>
+            </configuration>
+            """;
+
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+        Mock<IAssetLocationResolver> assetLocationResolver = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(globalJson);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.NugetConfigNames.First(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(nugetConfig);
+        SetupDotNetToolsManifest(repo, VersionFiles.DotnetToolsConfigJson, dotnetToolsConfigExists);
+        SetupDotNetToolsManifest(repo, VersionFiles.DotnetToolsJson, dotnetToolsExists);
+
+        repoFactory.Setup(factory => factory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+        assetLocationResolver
+            .Setup(resolver => resolver.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(Task.CompletedTask);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            assetLocationResolver.Object,
+            NullLogger.Instance);
+
+        GitFileContentContainer result = await manager.UpdateDependencyFiles(
+            [
+                new DependencyDetail
+                {
+                    Name = "Foo",
+                    Version = "2.0.0",
+                    Commit = "sha2",
+                    RepoUri = "https://github.com/dotnet/foo",
+                    Type = DependencyType.Product,
+                }
+            ],
+            sourceDependency: null,
+            repoUri: "repo",
+            branch: "main",
+            incomingDotNetSdkVersion: null,
+            repoHasVersionDetailsProps: false);
+
+        AssertDotNetToolsManifest(
+            result.DotNetToolsConfigJson,
+            dotnetToolsConfigExists,
+            VersionFiles.DotnetToolsConfigJson);
+        AssertDotNetToolsManifest(
+            result.DotNetToolsJson,
+            dotnetToolsExists,
+            VersionFiles.DotnetToolsJson);
+    }
+
+    private static void SetupDotNetToolsManifest(Mock<IGitRepo> repo, string path, bool exists)
+    {
+        if (exists)
+        {
+            repo.Setup(r => r.GetFileContentsAsync(path, It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(DotnetTools);
+        }
+        else
+        {
+            repo.Setup(r => r.GetFileContentsAsync(path, It.IsAny<string>(), It.IsAny<string>()))
+                .ThrowsAsync(new DependencyFileNotFoundException());
+        }
+    }
+
+    private static void AssertDotNetToolsManifest(GitFile manifest, bool shouldExist, string expectedPath)
+    {
+        if (!shouldExist)
+        {
+            manifest.Should().BeNull();
+            return;
+        }
+
+        manifest.Should().NotBeNull();
+        manifest.FilePath.Should().Be(expectedPath);
+        JObject.Parse(manifest.Content).SelectToken("tools.foo.version")?.Value<string>().Should().Be("2.0.0");
+    }
+
     private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 
     [Test]
@@ -756,6 +900,8 @@ public class DependencyFileManagerTests
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(GlobalJson);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsJson, It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new DependencyFileNotFoundException());
         foreach (var nugetConfigName in VersionFiles.NugetConfigNames)
         {

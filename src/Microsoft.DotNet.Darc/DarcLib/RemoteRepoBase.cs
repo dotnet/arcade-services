@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Maestro.Common;
+using Microsoft.DotNet.Internal.Credentials;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Caching.Memory;
@@ -173,7 +173,7 @@ public class RemoteRepoBase : GitRepoCloner
         await ExecuteGitCommand(["config", "user.name", user], workingDirectory);
         await ExecuteGitCommand(["config", "user.email", email], workingDirectory);
 
-        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), ["eng/", ".config/", $"{VersionFiles.NugetConfigNames.First()}", $"{VersionFiles.GlobalJson}"]);
+        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), ["eng/", ".config/", $"{VersionFiles.NugetConfigNames.First()}", $"{VersionFiles.GlobalJson}", $"{VersionFiles.DotnetToolsJson}"]);
 
         await ExecuteGitCommand([$"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch], workingDirectory, secretToMask: pat);
         await ExecuteGitCommand([$"checkout", branch], workingDirectory);

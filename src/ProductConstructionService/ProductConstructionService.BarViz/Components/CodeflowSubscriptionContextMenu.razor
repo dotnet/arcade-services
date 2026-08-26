@@ -8,6 +8,7 @@
 @inject IToastService ToastService
 @inject IClipboard Clipboard
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <FluentMenuItem ChildContent="@MenuHeader">
     <MenuItems>
@@ -22,6 +23,13 @@
             Copy subscription ID
             <span slot="start">
                 <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+
+        <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo($"/subscription-trigger-history?subscriptionId={Subscription.Id}"))">
+            Show history
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.History())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
 

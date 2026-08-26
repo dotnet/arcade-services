@@ -9,49 +9,41 @@ namespace Maestro.WorkItems;
 public class WorkItemScopeManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly WorkItemProcessorState _state;
-    private readonly int _pollingRateSeconds;
-
-    private int _activeWorkItems = 0;
+    private readonly WorkItemAdmissionGate _admissionGate;
 
     public WorkItemScopeManager(
         IServiceProvider serviceProvider,
-        WorkItemProcessorState state,
-        int pollingRateSeconds)
+        WorkItemAdmissionGate admissionGate)
     {
         _serviceProvider = serviceProvider;
-        _state = state;
-        _pollingRateSeconds = pollingRateSeconds;
+        _admissionGate = admissionGate;
     }
 
     /// <summary>
-    /// Creates a new scope for the currently executing WorkItem, when the the WorkItemsProcessor is in the `Working` state.
+    /// Creates a new scope for the currently executing WorkItem once this replica admits new work.
+    /// The admission lease is held until the scope is disposed, so it also covers an empty queue poll.
     /// </summary>
-    public async Task<WorkItemScope> BeginWorkItemScopeWhenReadyAsync()
+    public async Task<WorkItemScope> BeginWorkItemScopeWhenReadyAsync(CancellationToken cancellationToken)
     {
-        await _state.ReturnWhenWorkingAsync(_pollingRateSeconds);
+        WorkItemAdmissionLease lease = await _admissionGate.AdmitWhenOpenAsync(cancellationToken);
 
-        var scope = _serviceProvider.CreateScope();
-        Interlocked.Increment(ref _activeWorkItems);
-
-        return new WorkItemScope(
-            scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
-            WorkItemFinishedAsync,
-            scope);
-    }
-
-    private async Task WorkItemFinishedAsync()
-    {
-        if (Interlocked.Decrement(ref _activeWorkItems) == 0)
+        try
         {
-            await _state.SetStoppedIfStoppingAsync();
+            IServiceScope scope = _serviceProvider.CreateScope();
+
+            return new WorkItemScope(
+                scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
+                () =>
+                {
+                    lease.Dispose();
+                    return Task.CompletedTask;
+                },
+                scope);
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
         }
     }
-
-    public async Task InitializationFinished()
-    {
-        await _state.InitializationFinished();
-    }
-
-    public async Task<string> GetStateAsync() => await _state.GetStateAsync();
 }

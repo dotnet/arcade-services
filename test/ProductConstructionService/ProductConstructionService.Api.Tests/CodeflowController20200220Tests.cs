@@ -4,6 +4,8 @@
 using System.Net;
 using AwesomeAssertions;
 using Maestro.Data;
+using Maestro.MergePolicyEvaluation;
+using Maestro.Services.Common.Cache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -15,7 +17,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 using DataModels = Maestro.Data.Models;
 
@@ -572,9 +573,15 @@ public partial class CodeflowController20200220Tests
             });
 
             var mockCacheFactory = new Mock<IRedisCacheFactory>();
+
             mockCacheFactory
                 .Setup(f => f.Create<InProgressPullRequest>(It.IsAny<string>(), It.IsAny<bool>()))
                 .Returns((string key, bool includeTypeInKey) => new MockRedisCache<InProgressPullRequest>(key, CacheData));
+
+            mockCacheFactory
+                .Setup(f => f.Create<MergePolicyEvaluationResults>(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns((string key, bool includeTypeInKey) => new MockRedisCache<MergePolicyEvaluationResults>(key, CacheData));
+
             collection.AddSingleton(mockCacheFactory.Object);
         }
 

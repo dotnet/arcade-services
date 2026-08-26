@@ -145,7 +145,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var locationResolver = new AssetLocationResolver(_barClient);
         IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var update = requiredUpdates.SubscriptionUpdate;
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _barClient.GetBuildAsync(update.BuildId, includeAssetLocation: false);
 
         StringBuilder nonCoherencyCommitMessage = new();
         StringBuilder coherencyCommitMessage = new();
@@ -276,7 +276,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the new subscription update section along with the PR header
-            string fromBranch = subscription.LastAppliedBuild != null ? $"`{subscription.LastAppliedBuild.GetBranch()}`" : "branch";
+            string? lastAppliedBranch = subscription.LastAppliedBuild?.GetBranch();
+            string fromBranch = string.IsNullOrEmpty(lastAppliedBranch) ? "<branch not available>" : lastAppliedBranch;
             var prHeader = unsafeFlow
                 ? $"""
 

@@ -14,65 +14,51 @@ namespace ProductConstructionService.Api.Controllers;
 [Route("status")]
 [ApiVersion("2020-02-20")]
 [Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
-public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateCacheFactory) : ControllerBase
+public class StatusController(
+    IWorkItemProcessorReplicaProvider replicaProvider,
+    IWorkItemProcessorStateStore stateStore) : ControllerBase
 {
-    private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateCacheFactory = replicaWorkItemProcessorStateCacheFactory;
-
     [AllowAnonymous]
     [HttpGet(Name = "Status")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Returns PCS replica states")]
     public async Task<IActionResult> GetPcsWorkItemProcessorStatus()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateCache =>
-        {
-            var state = await stateCache.GetStateAsync();
-            return (stateCache.ReplicaName, state ?? WorkItemProcessorState.Stopped);
-        }));
+        return Ok(await GetObservedStatesAsync(HttpContext.RequestAborted));
     }
 
     [HttpPut("start", Name = "Start")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Starts all PCS replicas")]
     public async Task<IActionResult> StartPcsWorkItemProcessors()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateCache =>
-        {
-            await stateCache.SetStateAsync(WorkItemProcessorState.Working);
-            return (stateCache.ReplicaName, WorkItemProcessorState.Working);
-        }));
+        return Ok(await SetDesiredStateAsync(WorkItemProcessorState.Working, HttpContext.RequestAborted));
     }
 
     [HttpPut("stop", Name = "Stop")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Tells all PCS replicas to stop after finishing their current work item")]
     public async Task<IActionResult> StopPcsWorkItemProcessors()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateCache =>
-        {
-            var state = await stateCache.GetStateAsync();
-            switch (state)
-            {
-                case WorkItemProcessorState.Stopping:
-                case WorkItemProcessorState.Working:
-                    await stateCache.SetStateAsync(WorkItemProcessorState.Stopping);
-                    return (stateCache.ReplicaName, WorkItemProcessorState.Stopping);
-                case WorkItemProcessorState.Initializing:
-                    throw new BadHttpRequestException("Can't stop the service while initializing, try again later");
-                case WorkItemProcessorState.Stopped:
-                    return (stateCache.ReplicaName, WorkItemProcessorState.Stopped);
-                default:
-                    throw new Exception("PCS is in an unsupported state");
-            }
-        }));
+        return Ok(await SetDesiredStateAsync(WorkItemProcessorState.Stopped, HttpContext.RequestAborted));
     }
 
-    private async Task<Dictionary<string, string>> PerformActionOnAllProcessors(Func<WorkItemProcessorStateCache, Task<(string replicaName, string state)>> action)
+    private async Task<Dictionary<string, string>> SetDesiredStateAsync(WorkItemProcessorState state, CancellationToken cancellationToken)
     {
-        var tasks = (await _replicaWorkItemProcessorStateCacheFactory.GetAllWorkItemProcessorStateCachesAsync())
-            .Select(async processorStateCache => await action(processorStateCache))
-            .ToArray();
+        IReadOnlyList<string> replicaNames = await replicaProvider.GetReplicaNamesAsync();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(replicaNames.Select(replicaName => stateStore.SetDesiredStateAsync(replicaName, state, cancellationToken)));
 
-        return tasks.Select(task => task.Result)
-            .ToDictionary(res => res.replicaName, res => res.state);
+        return await GetObservedStatesAsync(cancellationToken);
+    }
+
+    private async Task<Dictionary<string, string>> GetObservedStatesAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<string> replicaNames = await replicaProvider.GetReplicaNamesAsync();
+
+        var states = await Task.WhenAll(replicaNames.Select(async replicaName =>
+        {
+            WorkItemProcessorState? state = await stateStore.GetObservedStateAsync(replicaName, cancellationToken);
+            return (ReplicaName: replicaName, State: state ?? WorkItemProcessorState.Stopped);
+        }));
+
+        return states.ToDictionary(state => state.ReplicaName, state => state.State.ToString());
     }
 }
