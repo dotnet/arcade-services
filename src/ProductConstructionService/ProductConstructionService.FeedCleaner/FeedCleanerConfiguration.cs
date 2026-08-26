@@ -42,6 +42,8 @@ public static class FeedCleanerConfiguration
         builder.Services.AddKustoClientProvider("Kusto");
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
 
+        builder.Services.Configure<TelemetryOptions>(
+            builder.Configuration.GetSection(TelemetryOptions.ConfigurationKey));
         builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
         builder.Services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));

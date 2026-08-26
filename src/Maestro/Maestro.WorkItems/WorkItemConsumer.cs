@@ -45,7 +45,11 @@ internal class WorkItemConsumer(
             WorkItemScope workItemScope;
             try
             {
-                workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync();
+                workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
             catch (Exception ex)
             {

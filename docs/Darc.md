@@ -150,7 +150,7 @@ dnx --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuge
 #### Step 2: Authentication:
 Darc talks to the Maestro API which requires authentication.
 Devs on the .NET team should have access to it through the "all FTE" security group. You can test this by running `darc get-channels` or by visiting [https://maestro.dot.net/](https://maestro.dot.net/).
-If you don't have access (because you are not part of the .NET team directly), request the access [in MyAccount](https://myaccount.microsoft.com/groups/58528df9-46b0-4821-9bcd-db0010694627).
+If you don't have access (because you are not part of the .NET team directly), request the access [in MyAccount](https://myaccount.microsoft.com/groups/3ac14f1e-80ac-4c8f-a860-58592053bc3a).
 
 #### Step 3: Set additional PATs for Azure DevOps and GitHub operations (Optional)
 

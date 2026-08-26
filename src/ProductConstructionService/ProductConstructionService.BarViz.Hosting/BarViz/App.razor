@@ -18,7 +18,21 @@
 
 <body>
     <script src="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/js/loading-theme.js"]"></script>
-    <loading-theme storage-name="theme"></loading-theme>
+
+    <div id="app-loading" class="loading-progress-wrap">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+        <loading-theme storage-name="theme"></loading-theme>
+    </div>
+
+    <script>
+        window.appLoading = {
+            remove: () => document.getElementById("app-loading")?.remove(),
+        };
+    </script>
 
     <ClientApp @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
 

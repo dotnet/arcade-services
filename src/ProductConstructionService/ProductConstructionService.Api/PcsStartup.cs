@@ -74,6 +74,7 @@ internal static class PcsStartup
         public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
         public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
         public const string DefaultWorkItemConsumerCount = "DefaultWorkItemConsumerCount";
+        public const string TelemetryMetricNamespace = "Telemetry:MetricNamespace";
     }
 
     static PcsStartup()
@@ -105,7 +106,8 @@ internal static class PcsStartup
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
-        builder.Services.AddTelemetry();
+        string metricNamespace = builder.Configuration.GetRequiredValue(ConfigurationKeys.TelemetryMetricNamespace);
+        builder.Services.AddTelemetry(options => options.MetricNamespace = metricNamespace);
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
@@ -188,7 +190,7 @@ internal static class PcsStartup
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();
-        builder.AddServiceDefaults([MetricRecorder.PcsMetricsNamespace]);
+        builder.AddServiceDefaults([metricNamespace]);
 
         // Configure API
         builder.Services.Configure<CookiePolicyOptions>(

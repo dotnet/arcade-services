@@ -61,10 +61,12 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         GivenTheTargetBranchRequiresLastPushApproval(true);
         GivenThePullRequestOnlyHasBotCommits(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(false);
+        GivenTheMismatchCommentCanBePosted();
 
         await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
 
         ThenThePullRequestShouldNotHaveBeenApproved();
+        ThenTheMismatchCommentWasPosted();
         ThenTheInProgressPullRequestWasChecked();
     }
 
@@ -130,6 +132,18 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         => DarcRemotes[VmrUri]
             .Setup(x => x.IsLastPushApprovalRequiredAsync(VmrUri, TargetBranch))
             .ReturnsAsync(required);
+
+    private void GivenTheMismatchCommentCanBePosted()
+        => DarcRemotes[VmrUri]
+            .Setup(x => x.CommentPullRequestAsync(
+                VmrPullRequestUrl,
+                It.Is<string>(comment => comment.Contains("unexpected.txt"))))
+            .Returns(Task.CompletedTask);
+
+    private void ThenTheMismatchCommentWasPosted()
+        => DarcRemotes[VmrUri].Verify(x => x.CommentPullRequestAsync(
+            VmrPullRequestUrl,
+            It.Is<string>(comment => comment.Contains("unexpected.txt"))));
 
     private void ThenTheInProgressPullRequestWasChecked()
     {

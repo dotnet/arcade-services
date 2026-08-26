@@ -24,14 +24,38 @@ internal class ForwardFlowTests : CodeFlowTests
         await EnsureTestRepoIsInitialized();
 
         const string branchName = nameof(OnlyForwardflowsTest);
+        const string toolManifest =
+            """
+            {
+              "version": 1,
+              "isRoot": true,
+              "tools": {
+                "dotnet-format": {
+                  "version": "8.0.453106",
+                  "commands": [
+                    "dotnet-format"
+                  ]
+                }
+              }
+            }
+            """;
+        NativePath configToolManifestPath = ProductRepoPath / ".config" / "dotnet-tools.json";
+        NativePath vmrConfigToolManifestPath = _productRepoVmrPath / ".config" / "dotnet-tools.json";
+        NativePath rootToolManifestPath = ProductRepoPath / "dotnet-tools.json";
+        NativePath vmrRootToolManifestPath = _productRepoVmrPath / "dotnet-tools.json";
 
         var oldSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        Directory.CreateDirectory(ProductRepoPath / ".config");
+        await File.WriteAllTextAsync(configToolManifestPath, toolManifest);
+        await GitOperations.CommitAll(ProductRepoPath, "Add config tool manifest");
+
         var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
         var newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
         await FinalizeForwardFlow(branchName);
+        await VerifyJsonFile(vmrConfigToolManifestPath, toolManifest);
 
         // Flow again - should be a no-op
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
@@ -47,7 +71,7 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
@@ -73,12 +97,19 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Make another flow to VMR to have flows both ways ready
         oldSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        File.Delete(configToolManifestPath);
+        await File.WriteAllTextAsync(rootToolManifestPath, toolManifest);
+        await GitOperations.CommitAll(ProductRepoPath, "Move tool manifest to the repository root");
+
         codeFlowResult = await ChangeRepoFileAndFlowIt("Again some content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
         newSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         await GitOperations.CommitAll(VmrPath, "Commit codeflow");
-        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeTrue();
+        (await VerifyForwardFlowSourceDiff(branchName, oldSha, newSha)).Should().BeEmpty();
         await FinalizeForwardFlow(branchName);
+
+        VerifyFileDoesNotExist(vmrConfigToolManifestPath);
+        await VerifyJsonFile(vmrRootToolManifestPath, toolManifest);
 
         // The file.txt will keep getting changed and conflicting in each flow
         await GitOperations.Checkout(VmrPath, "main");
@@ -124,6 +155,18 @@ internal class ForwardFlowTests : CodeFlowTests
             CheckFileContents(_productRepoVmrPath / $"file_{i}.txt", $"New content {i}");
             CheckFileContents(_productRepoVmrPath / $"conflicting_file_{i}.txt", $"New content {i}");
         }
+    }
+
+    private static async Task VerifyJsonFile(NativePath filePath, string expectedJson)
+    {
+        File.Exists(filePath).Should().BeTrue();
+        string actualJson = await File.ReadAllTextAsync(filePath);
+        actualJson.TrimEnd().Should().Be(expectedJson.TrimEnd());
+    }
+
+    private static void VerifyFileDoesNotExist(NativePath filePath)
+    {
+        File.Exists(filePath).Should().BeFalse();
     }
 
     [Test]

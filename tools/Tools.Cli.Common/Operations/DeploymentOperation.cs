@@ -23,24 +23,37 @@ public class DeploymentOperation : IOperation
     private ContainerAppResource _containerApp;
     private readonly IProcessManager _processManager;
     private readonly ILogger<DeploymentOperation> _logger;
-    private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateFactory;
+    private readonly ReplicaStateCoordinator _replicaStateCoordinator;
 
-    private const int SleepTimeSeconds = 10;
-    private const int MaxStopAttempts = 100;
+    private const int SleepTimeSeconds = ReplicaStateCoordinator.PollIntervalSeconds;
+    private const int MaxStopAttempts = ReplicaStateCoordinator.MaxPollAttempts;
+
+    /// <summary>
+    /// How long a candidate revision may stay non failed but unhealthy before we warn about a slow natural start.
+    /// </summary>
+    private const int RevisionNaturalStartWarningThresholdSeconds = 180;
+
+    /// <summary>
+    /// How long a stale failed or inactive revision status is tolerated after an explicit activation.
+    /// </summary>
+    private const int RevisionActivationPropagationGracePeriodSeconds = 60;
+
+    private const string BlueLabel = "blue";
+    private const string GreenLabel = "green";
 
     public DeploymentOperation(
         DeploymentOptions options,
         IProcessManager processManager,
         ILogger<DeploymentOperation> logger,
         ResourceGroupResource resourceGroup,
-        IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateFactory,
+        ReplicaStateCoordinator replicaStateCoordinator,
         ContainerAppResource containerApp)
     {
         _options = options;
         _processManager = processManager;
         _logger = logger;
         _resourceGroup = resourceGroup;
-        _replicaWorkItemProcessorStateFactory = replicaWorkItemProcessorStateFactory;
+        _replicaStateCoordinator = replicaStateCoordinator;
         _containerApp = containerApp;
     }
 
@@ -48,107 +61,303 @@ public class DeploymentOperation : IOperation
         "--name", _options.ContainerAppName,
         "--resource-group", _options.ResourceGroupName,
         ];
+
     private readonly RevisionRunningState _runningAtMaxScaleState = new("RunningAtMaxScale");
 
     public async Task<int> RunAsync()
     {
-        var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
+        string? oldRevisionName = null;
+        string? candidateRevisionName = null;
+        var oldRevisionStopRequested = false;
 
-        var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
-            throw new ArgumentException("Container app has no active revision, please investigate manually");
-
-        bool newRevisionDeployed;
-        // When we create the ACA, the first revision won't have a name
-        if (activeRevisionTrafficWeight.RevisionName == null)
+        try
         {
-            newRevisionDeployed = await DeployNewRevision(inactiveRevisionLabel: "blue");
-        }
-        else
-        {
-            var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
-            var replicas = activeRevision.GetContainerAppReplicas().ToList();
+            var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
+            var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
+                throw new ArgumentException("Container app has no active revision, please investigate manually");
 
-            _logger.LogInformation("Currently active revision {revisionName} with label {label}",
-                activeRevisionTrafficWeight.RevisionName,
-                activeRevisionTrafficWeight.Label);
+            oldRevisionName = activeRevisionTrafficWeight.RevisionName;
+            var oldRevisionLabel = activeRevisionTrafficWeight.Label;
+            var inactiveRevisionLabel = oldRevisionLabel == BlueLabel ? GreenLabel : BlueLabel;
 
-            // Determine the label of the inactive revision
-            var inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
-
+            _logger.LogInformation("Currently active revision {revisionName} with label {label}", oldRevisionName, oldRevisionLabel);
             _logger.LogInformation("Next revision will be deployed with label {inactiveLabel}", inactiveRevisionLabel);
-            _logger.LogInformation("Removing label {inactiveLabel} from inactive revision", inactiveRevisionLabel);
 
-            // Cleanup all revisions except the currently active one
+            var revisionsBeforeUpdate = _containerApp.GetContainerAppRevisions()
+                .AsEnumerable()
+                .ToDictionary(revision => revision.Data.Name, revision => revision.Data.IsActive ?? false, StringComparer.OrdinalIgnoreCase);
+
             await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
-            // Finish current work items and stop processing new ones
-            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+            var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
+            candidateRevisionName = await DeployContainerApp(newImageFullUrl);
+            var wasReusedInactiveCandidate = revisionsBeforeUpdate.TryGetValue(candidateRevisionName, out var wasActive) && !wasActive;
 
-            newRevisionDeployed = await DeployNewRevision(inactiveRevisionLabel);
-            if (newRevisionDeployed)
+            if (!await WaitForRevisionToBecomeHealthy(candidateRevisionName, wasReusedInactiveCandidate))
             {
-                await DeactivateCurrentRevision(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
+                _logger.LogError("Check logs to see the failure reason: {logsUri}", GetLogsUri());
+                await StopDeactivateAndCleanupRevision(candidateRevisionName);
+                return -1;
             }
-        }
 
-        return newRevisionDeployed ? 0 : -1;
-    }
+            if (!string.IsNullOrEmpty(oldRevisionName))
+            {
+                oldRevisionStopRequested = true;
+                if (!await _replicaStateCoordinator.SetDesiredStateAndWaitAsync(
+                    oldRevisionName,
+                    WorkItemProcessorState.Stopped,
+                    requireAtLeastOneReplica: false))
+                {
+                    _logger.LogWarning(
+                        "Revision {revisionName} did not confirm it stopped before the configured timeout; continuing with a best effort switch to revision {candidateRevisionName}",
+                        oldRevisionName,
+                        candidateRevisionName);
+                }
+            }
 
-    private async Task<bool> DeployNewRevision(string inactiveRevisionLabel)
-    {
-        var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
-        try
-        {
-            // Kick off the deployment of the new image
-            var newRevisionName = await DeployContainerApp(newImageFullUrl);
+            if (!await _replicaStateCoordinator.SetDesiredStateAndWaitAsync(
+                candidateRevisionName,
+                WorkItemProcessorState.Working,
+                requireAtLeastOneReplica: true))
+            {
+                _logger.LogError("Revision {revisionName} did not start processing before the configured timeout", candidateRevisionName);
+                await Compensate(oldRevisionName, candidateRevisionName);
+                return -1;
+            }
 
-            // While we're waiting for the new revision to become active, deploy container jobs
+            if (!await TransferTraffic(candidateRevisionName, oldRevisionName, inactiveRevisionLabel))
+            {
+                return -1;
+            }
+
+            if (!string.IsNullOrEmpty(oldRevisionName))
+            {
+                if (!string.IsNullOrEmpty(oldRevisionLabel))
+                {
+                    await RemoveRevisionLabel(oldRevisionName, oldRevisionLabel);
+                }
+
+                await StopDeactivateAndCleanupRevision(oldRevisionName);
+            }
+
             await DeployContainerJobs(newImageFullUrl);
 
-            // Wait for the new app revision to become active
-            var newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
-
-            // If the new revision is active, the rollout succeeded, assign a label, transfer all traffic to it,
-            // and deactivate the previously running revision
-            if (newRevisionActive)
-            {
-                await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
-            }
-            // If the new revision is not active, deactivate it and get print log link
-            else
-            {
-                await DeactivateFailedRevisionAndGetLogs(newRevisionName);
-                return false;
-            }
+            _logger.LogInformation("Deployment completed successfully. Active revision is {revisionName}", candidateRevisionName);
+            return 0;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("An error occurred: {exception}", ex);
-            return false;
-        }
-        finally
-        {
-            // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
-            _logger.LogInformation("Starting the service again");
-            await StartActiveRevision();
-        }
+            _logger.LogError(ex, "An error occurred during deployment");
 
-        return true;
+            if (oldRevisionStopRequested)
+            {
+                await Compensate(oldRevisionName, candidateRevisionName);
+            }
+
+            return -1;
+        }
     }
 
-    private async Task DeactivateCurrentRevision(string revisionName, string revisionLabel)
+    private async Task<bool> TransferTraffic(string candidateRevisionName, string? oldRevisionName, string label)
     {
         try
         {
-            await WaitForRevisionToStop(revisionName);
-
-            await RemoveRevisionLabel(revisionName, revisionLabel);
-            await DeactivateRevision(revisionName);
+            await AssignLabelAndTransferTraffic(candidateRevisionName, label);
+            return true;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to deactivate revision {revisionName}: {exception}", revisionName, ex);
+            _logger.LogError(ex, "Failed to transfer traffic to revision {revisionName}", candidateRevisionName);
+
+            _containerApp = await _containerApp.GetAsync();
+            var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
+
+            if (HasAllTraffic(trafficWeights, candidateRevisionName))
+            {
+                _logger.LogInformation(
+                    "Revision {revisionName} already holds all traffic, continuing the deployment",
+                    candidateRevisionName);
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(oldRevisionName) && HasAllTraffic(trafficWeights, oldRevisionName))
+            {
+                await Compensate(oldRevisionName, candidateRevisionName);
+            }
+            else
+            {
+                _logger.LogError("Traffic ownership is ambiguous after the failed transfer, leaving both revisions untouched");
+            }
+
+            return false;
         }
+    }
+
+    /// <summary>
+    /// Returns the old revision to work after the candidate failed. The candidate is stopped, deactivated and
+    /// cleaned up first; if that cannot be confirmed, nothing is resumed and the candidate keeps its keys.
+    /// </summary>
+    private async Task Compensate(string? oldRevisionName, string? candidateRevisionName)
+    {
+        if (!string.IsNullOrEmpty(candidateRevisionName) && !await StopDeactivateAndCleanupRevision(candidateRevisionName))
+        {
+            _logger.LogError(
+                "Revision {revisionName} could not be confirmed stopped, it stays active and revision {oldRevisionName} is not resumed",
+                candidateRevisionName,
+                oldRevisionName);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(oldRevisionName))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Resuming queue processing on revision {revisionName}", oldRevisionName);
+        if (!await _replicaStateCoordinator.SetDesiredStateAndWaitAsync(
+            oldRevisionName,
+            WorkItemProcessorState.Working,
+            requireAtLeastOneReplica: true))
+        {
+            _logger.LogError("Revision {revisionName} did not resume queue processing", oldRevisionName);
+        }
+    }
+
+    /// <summary>
+    /// Observes the natural provisioning of the candidate revision. At most one explicit activation is issued,
+    /// either because a reused candidate was inactive before the update, or as a one time failure recovery.
+    /// </summary>
+    private async Task<bool> WaitForRevisionToBecomeHealthy(string revisionName, bool wasReusedInactiveCandidate)
+    {
+        _logger.LogInformation("Waiting for revision {revisionName} to become healthy", revisionName);
+
+        var naturalStartWarningPolls = ToPollCount(RevisionNaturalStartWarningThresholdSeconds);
+        var activationGracePolls = ToPollCount(RevisionActivationPropagationGracePeriodSeconds);
+
+        var explicitActivationRequested = false;
+        var activationWasFailureRecovery = false;
+        var recoveryProgressObserved = false;
+        var slowStartWarningLogged = false;
+        var deactivationWarningLogged = false;
+        var wasObservedActive = false;
+        var activationPoll = 0;
+        var nonFailedStreakStart = 0;
+
+        for (var attempt = 0; attempt < MaxStopAttempts; attempt++)
+        {
+            var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value.Data;
+            var isActive = revision.IsActive ?? false;
+            var hasFailed = revision.RunningState == RevisionRunningState.Failed
+                || revision.ProvisioningState == ContainerAppRevisionProvisioningState.Failed
+                || !string.IsNullOrEmpty(revision.ProvisioningError);
+
+            if (hasFailed)
+            {
+                nonFailedStreakStart = attempt + 1;
+
+                if (!explicitActivationRequested)
+                {
+                    _logger.LogWarning(
+                        "Revision {revisionName} reported a terminal failure, requesting a single recovery activation",
+                        revisionName);
+                    await ActivateRevision(revisionName);
+                    explicitActivationRequested = true;
+                    activationWasFailureRecovery = true;
+                    activationPoll = attempt;
+                }
+                else if (activationWasFailureRecovery && !recoveryProgressObserved && attempt - activationPoll < activationGracePolls)
+                {
+                    _logger.LogInformation(
+                        "Revision {revisionName} still reports a failure after the recovery activation, waiting for the status to propagate",
+                        revisionName);
+                }
+                else
+                {
+                    _logger.LogError("Revision {revisionName} failed to start", revisionName);
+                    return false;
+                }
+            }
+            else
+            {
+                if (isActive && revision.RunningState == _runningAtMaxScaleState)
+                {
+                    _logger.LogInformation("Revision {revisionName} is active and running at max scale", revisionName);
+                    return true;
+                }
+
+                if (activationWasFailureRecovery && !recoveryProgressObserved)
+                {
+                    _logger.LogInformation("Revision {revisionName} recovered from the reported failure", revisionName);
+                    recoveryProgressObserved = true;
+                }
+
+                if (isActive)
+                {
+                    wasObservedActive = true;
+                }
+                else if (wasObservedActive && !deactivationWarningLogged)
+                {
+                    _logger.LogWarning(
+                        "Revision {revisionName} became inactive without reporting a failure, continuing to observe it",
+                        revisionName);
+                    deactivationWarningLogged = true;
+                }
+
+                if (wasReusedInactiveCandidate && !isActive && !explicitActivationRequested)
+                {
+                    _logger.LogInformation(
+                        "Revision {revisionName} was reused while inactive and cannot start naturally, activating it",
+                        revisionName);
+                    await ActivateRevision(revisionName);
+                    explicitActivationRequested = true;
+                    activationPoll = attempt;
+                }
+                else if (explicitActivationRequested && !activationWasFailureRecovery && !isActive && attempt - activationPoll >= activationGracePolls)
+                {
+                    _logger.LogError(
+                        "Revision {revisionName} stayed inactive for {graceSeconds} seconds after it was activated",
+                        revisionName,
+                        RevisionActivationPropagationGracePeriodSeconds);
+                    return false;
+                }
+                else if (!slowStartWarningLogged && attempt - nonFailedStreakStart >= naturalStartWarningPolls)
+                {
+                    _logger.LogWarning(
+                        "Revision {revisionName} has not become healthy within {warningSeconds} seconds but reports no failure, continuing to observe it",
+                        revisionName,
+                        RevisionNaturalStartWarningThresholdSeconds);
+                    slowStartWarningLogged = true;
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
+        }
+
+        _logger.LogError(
+            "Revision {revisionName} did not become healthy within {timeoutSeconds} seconds",
+            revisionName,
+            MaxStopAttempts * SleepTimeSeconds);
+        return false;
+    }
+
+    /// <summary>
+    /// Confirms that every replica of the revision stopped processing before deactivating it and removing its keys.
+    /// A revision whose stop cannot be confirmed stays active and keeps its keys.
+    /// </summary>
+    private async Task<bool> StopDeactivateAndCleanupRevision(string revisionName)
+    {
+        if (!await _replicaStateCoordinator.SetDesiredStateAndWaitAsync(
+            revisionName,
+            WorkItemProcessorState.Stopped,
+            requireAtLeastOneReplica: false))
+        {
+            _logger.LogError("Revision {revisionName} was not confirmed stopped and stays active", revisionName);
+            return false;
+        }
+
+        await DeactivateRevision(revisionName);
+        await _replicaStateCoordinator.DeleteStateAsync(revisionName);
+        return true;
     }
 
     private async Task RemoveRevisionLabel(string revisionName, string label)
@@ -169,7 +378,8 @@ public class DeploymentOperation : IOperation
         var revisionsToDeactivate = activeRevisions
             .Select(revision => (
                 revision.Data.Name,
-                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label));
+                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label))
+            .ToList();
 
         foreach (var revision in revisionsToDeactivate)
         {
@@ -177,7 +387,8 @@ public class DeploymentOperation : IOperation
             {
                 await RemoveRevisionLabel(revision.Name, revision.Label);
             }
-            await DeactivateRevision(revision.Name);
+
+            await StopDeactivateAndCleanupRevision(revision.Name);
         }
     }
 
@@ -227,22 +438,6 @@ public class DeploymentOperation : IOperation
         }
     }
 
-    private async Task<bool> WaitForRevisionToBecomeActive(string revisionName)
-    {
-        _logger.LogInformation("Waiting for revision {revisionName} to become active", revisionName);
-        RevisionRunningState status;
-        do
-        {
-            var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
-            status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
-        }
-        while (await SleepIfTrue(
-            () => status != _runningAtMaxScaleState && status != RevisionRunningState.Failed,
-            SleepTimeSeconds));
-
-        return status == _runningAtMaxScaleState;
-    }
-
     private async Task AssignLabelAndTransferTraffic(string revisionName, string label)
     {
         _logger.LogInformation("Assigning label {label} to the new revision", label);
@@ -269,18 +464,18 @@ public class DeploymentOperation : IOperation
             label);
     }
 
+    private async Task ActivateRevision(string revisionName)
+    {
+        var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
+        await revision.ActivateRevisionAsync();
+        _logger.LogInformation("Activated revision {revisionName}", revisionName);
+    }
+
     private async Task DeactivateRevision(string revisionName)
     {
         var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         await revision.DeactivateRevisionAsync();
         _logger.LogInformation("Deactivated revision {revisionName}", revisionName);
-    }
-
-    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
-    {
-        await DeactivateRevision(revisionName);
-
-        _logger.LogInformation("Check logs too see failure reason: {logsUri}", GetLogsUri());
     }
 
     private string GetLogsUri()
@@ -308,77 +503,11 @@ public class DeploymentOperation : IOperation
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
-    private async Task WaitForRevisionToStop(string revisionName)
-    {
-        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(revisionName);
+    private static bool HasAllTraffic(IEnumerable<ContainerAppRevisionTrafficWeight> trafficWeights, string revisionName)
+        => trafficWeights.Any(weight => weight.Weight == 100
+            && string.Equals(weight.RevisionName, revisionName, StringComparison.OrdinalIgnoreCase));
 
-        int count;
-        for (count = 0; count < MaxStopAttempts; count++)
-        {
-            var states = replicaStateCaches.Select(replica => replica.GetStateAsync()).ToArray();
-
-            await Task.WhenAll(states);
-
-            if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
-            {
-                break;
-            }
-
-            _logger.LogInformation("Waiting for revision {revisionName} to stop", revisionName);
-            await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
-        }
-
-        if (count == MaxStopAttempts)
-        {
-            _logger.LogError("Revision {revisionName} failed to stop after {attempts} seconds.", revisionName, MaxStopAttempts * SleepTimeSeconds);
-        }
-    }
-
-    private async Task StopProcessingNewJobs(string revisionName)
-    {
-        _logger.LogInformation("Stopping the service from processing new jobs");
-
-        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(revisionName);
-        try
-        {
-            foreach (var replicaStateCache in replicaStateCaches)
-            {
-                await replicaStateCache.SetStateAsync(WorkItemProcessorState.Stopping);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("An error occurred: {ex}. Deploying the new revision without stopping the service", ex);
-        }
-    }
-
-    private async Task StartActiveRevision()
-    {
-        // refresh the containerApp resource
-        _containerApp = await _containerApp.GetAsync();
-
-        // Get the name of the currently active revision
-        var activeRevisionName = _containerApp.Data.Configuration.Ingress.Traffic
-            .Single(trafficWeight => trafficWeight.Weight == 100)
-            .RevisionName;
-
-        _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionName);
-        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(activeRevisionName);
-        var tasks = replicaStateCaches.Select(replicaStateCache => replicaStateCache.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
-
-        await Task.WhenAll(tasks);
-    }
-
-    private static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds)
-    {
-        if (condition())
-        {
-            await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
-            return true;
-        }
-
-        return false;
-    }
+    private static int ToPollCount(int seconds) => (int)Math.Ceiling(seconds / (double)SleepTimeSeconds);
 
     private static string ConvertStringToCompressedBase64EncodedQuery(string query)
     {
