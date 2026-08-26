@@ -163,7 +163,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         GivenACodeFlowSubscription(new());
         Subscription.ChannelId = 1234;
 
-        List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries();
+        List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries(build);
 
         List<UpstreamRepoDiff> upstreamRepoDiffs =
         [
@@ -258,6 +258,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             FromVersion = u.FromVersion,
             ToVersion = "3.0.0",
         })];
+        build.Assets.AddRange(dependencyUpdates.Select((dependency, index) =>
+            new Asset(
+                index + 1,
+                build.Id,
+                false,
+                dependency.DependencyName,
+                dependency.ToVersion,
+                [])));
 
         await Execute(
             async context =>
@@ -324,7 +332,114 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     [Test]
-    public void ShouldReturnCorrectDependencyUpdateBlock()
+    public async Task ShouldUseProducingBuildRepositoriesForDependencyLinksAndReuseBuild()
+    {
+        const string sourceRepository = "https://github.com/dotnet/dotnet";
+        const string firstProducingRepository = "https://github.com/dotnet/runtime";
+        const string secondProducingRepository = "https://github.com/dotnet/roslyn";
+        const string firstProducingCommit = "firstNewCommit";
+        const string secondProducingCommit = "secondNewCommit";
+        const string toVersion = "2.0.0";
+
+        Build sourceBuild = GivenANewBuildId(101, "sourceCommit");
+        sourceBuild.GitHubRepository = sourceRepository;
+        sourceBuild.GitHubBranch = "main";
+        sourceBuild.AzureDevOpsBuildNumber = "source-build";
+
+        Asset firstAsset = new(1, 202, false, "First.Dependency", toVersion, []);
+        Asset secondAsset = new(2, 202, false, "Second.Dependency", toVersion, []);
+        Build firstProducingBuild = GivenANewBuildId(202, firstProducingCommit);
+        firstProducingBuild.GitHubRepository = firstProducingRepository;
+        firstProducingBuild.Assets.AddRange([firstAsset, secondAsset]);
+
+        Asset thirdAsset = new(3, 303, false, "Third.Dependency", toVersion, []);
+        Build secondProducingBuild = GivenANewBuildId(303, secondProducingCommit);
+        secondProducingBuild.GitHubRepository = secondProducingRepository;
+        secondProducingBuild.Assets.Add(thirdAsset);
+        const string removedDependencyName = "Removed.Dependency";
+        const string removedDependencyVersion = "1.0.0";
+
+        _barClient
+            .Setup(client => client.GetAssetsAsync(firstAsset.Name, firstAsset.Version, null, null))
+            .ReturnsAsync([firstAsset]);
+        _barClient
+            .Setup(client => client.GetAssetsAsync(thirdAsset.Name, thirdAsset.Version, null, null))
+            .ReturnsAsync([thirdAsset]);
+
+        GivenACodeFlowSubscription(new());
+
+        List<DependencyUpdateSummary> dependencyUpdates =
+        [
+            new()
+            {
+                DependencyName = firstAsset.Name,
+                FromVersion = "1.0.0",
+                ToVersion = firstAsset.Version,
+                FromCommitSha = "oldCommit",
+                ToCommitSha = firstProducingCommit
+            },
+            new()
+            {
+                DependencyName = secondAsset.Name,
+                FromVersion = "1.0.0",
+                ToVersion = secondAsset.Version,
+                FromCommitSha = "oldCommit",
+                ToCommitSha = firstProducingCommit
+            },
+            new()
+            {
+                DependencyName = thirdAsset.Name,
+                FromVersion = "1.0.0",
+                ToVersion = thirdAsset.Version,
+                FromCommitSha = "oldCommit",
+                ToCommitSha = secondProducingCommit
+            },
+            new()
+            {
+                DependencyName = removedDependencyName,
+                FromVersion = removedDependencyVersion,
+                ToVersion = null,
+                FromCommitSha = "oldCommit",
+                ToCommitSha = null
+            }
+        ];
+
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = await builder.GenerateCodeFlowPRDescription(
+                    sourceBuild,
+                    ToClientModelSubscription(Subscription),
+                    "pr-branch",
+                    "previousSourceCommit",
+                    dependencyUpdates,
+                    upstreamRepoDiffs: [],
+                    currentDescription: null,
+                    unsafeFlow: false);
+            });
+
+        description.Should().Contain(
+            $"{firstProducingRepository}/compare/oldCommit...{firstProducingCommit[..PullRequestBuilder.GitHubComparisonShaLength]}");
+        description.Should().Contain(
+            $"{secondProducingRepository}/compare/oldCommit...{secondProducingCommit[..PullRequestBuilder.GitHubComparisonShaLength]}");
+        description.Should().NotContain($"{sourceRepository}/compare/oldCommit...");
+        _barClient.Verify(
+            client => client.GetAssetsAsync(firstAsset.Name, firstAsset.Version, null, null),
+            Times.Once);
+        _barClient.Verify(
+            client => client.GetAssetsAsync(secondAsset.Name, secondAsset.Version, null, null),
+            Times.Never);
+        _barClient.Verify(
+            client => client.GetAssetsAsync(removedDependencyName, removedDependencyVersion, null, null),
+            Times.Never);
+        _barClient.Verify(client => client.GetBuildAsync(firstProducingBuild.Id), Times.Once);
+        _barClient.Verify(client => client.GetBuildAsync(secondProducingBuild.Id), Times.Once);
+    }
+
+    [Test]
+    public async Task ShouldReturnCorrectDependencyUpdateBlock()
     {
         DependencyUpdateSummary newDependency = new()
         {
@@ -353,7 +468,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             ToCommitSha = "xyz890"
         };
 
-        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([newDependency, removedDependency, updatedDependency], "https://github.com/Foo");
+        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+            [newDependency, removedDependency, updatedDependency],
+            "https://github.com/Foo");
 
         dependencyBlock.Should().Be(
             """
@@ -374,7 +491,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     [Test]
-    public void ShouldGroupDependenciesWithSameVersionRange()
+    public async Task ShouldGroupDependenciesWithSameVersionRange()
     {
         DependencyUpdateSummary groupedDependency1 = new()
         {
@@ -403,7 +520,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             ToCommitSha = "xyz890"
         };
 
-        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([groupedDependency1, groupedDependency2, separateDependency], "https://github.com/Foo");
+        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+            [groupedDependency1, groupedDependency2, separateDependency],
+            "https://github.com/Foo");
 
         dependencyBlock.Should().Be(
             """
@@ -419,7 +538,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     [Test]
-    public void ShouldOrderDependenciesAlphabeticallyWithinGroups()
+    public async Task ShouldOrderDependenciesAlphabeticallyWithinGroups()
     {
         // Create dependencies in non-alphabetical order to verify sorting
         DependencyUpdateSummary dependencyZ = new()
@@ -450,7 +569,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         // Pass dependencies in Z, A, M order to verify alphabetical sorting
-        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([dependencyZ, dependencyA, dependencyM], "https://github.com/Foo");
+        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+            [dependencyZ, dependencyA, dependencyM],
+            "https://github.com/Foo");
 
         dependencyBlock.Should().Be(
             """
@@ -627,9 +748,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         return dependencies;
     }
 
-    private static List<DependencyUpdateSummary> GivenDependencyUpdateSummaries()
+    private List<DependencyUpdateSummary> GivenDependencyUpdateSummaries(Build build)
     {
-        return [
+        List<DependencyUpdateSummary> dependencies = [
             new DependencyUpdateSummary
             {
                 DependencyName = "Foo.Bar",
@@ -655,6 +776,32 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 ToCommitSha = "xyz890"
             }
         ];
+
+        int nextBuildId = build.Id + 1;
+        foreach (IGrouping<string, DependencyUpdateSummary> dependencyGroup in dependencies.GroupBy(dependency => dependency.ToCommitSha))
+        {
+            List<Asset> assets = dependencyGroup
+                .Select((dependency, index) => new Asset(
+                    index + 1,
+                    nextBuildId,
+                    false,
+                    dependency.DependencyName,
+                    dependency.ToVersion,
+                    []))
+                .ToList();
+            Build producingBuild = GivenANewBuildId(nextBuildId, dependencyGroup.Key);
+            producingBuild.GitHubRepository = build.GitHubRepository;
+            producingBuild.Assets.AddRange(assets);
+
+            Asset firstAsset = assets[0];
+            _barClient
+                .Setup(client => client.GetAssetsAsync(firstAsset.Name, firstAsset.Version, null, null))
+                .ReturnsAsync([firstAsset]);
+
+            nextBuildId++;
+        }
+
+        return dependencies;
     }
 
     private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(
@@ -735,7 +882,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     [Test]
-    public void ShouldGroupAllTypesOfDependencyChanges()
+    public async Task ShouldGroupAllTypesOfDependencyChanges()
     {
         // New Dependencies - multiple packages with same version
         DependencyUpdateSummary newDep1 = new()
@@ -822,11 +969,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         // Pass dependencies in non-alphabetical order to verify sorting within groups
-        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([
-            newDep2, newDep1, newDep3,  // new deps out of order
-            removedDep1, removedDep3, removedDep2,  // removed deps out of order
-            updatedDep2, updatedDep3, updatedDep1   // updated deps out of order
-        ], "https://github.com/Test");
+        string dependencyBlock = await PullRequestBuilder.CreateDependencyUpdateBlockForRepositoryAsync(
+            [
+                newDep2, newDep1, newDep3,  // new deps out of order
+                removedDep1, removedDep3, removedDep2,  // removed deps out of order
+                updatedDep2, updatedDep3, updatedDep1   // updated deps out of order
+            ],
+            "https://github.com/Test");
 
         dependencyBlock.Should().Be(
             """
