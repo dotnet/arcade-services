@@ -129,12 +129,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        CodeFlowResult codeFlowRes;
-        bool isUnsafeFlow;
-        string? prHeadBranch;
+        CodeFlowExecutionResult executionResult;
         try
         {
-            (codeFlowRes, isUnsafeFlow, prHeadBranch) = await _codeFlowExecutor.ExecuteCodeFlowAsync(
+            executionResult = await _codeFlowExecutor.ExecuteCodeFlowAsync(
                 pr,
                 prInfo,
                 update,
@@ -150,7 +148,10 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 SubscriptionOutcomeType.NotUpdatable);
         }
 
-        if (!codeFlowRes.HadUpdates)
+        CodeFlowResult? codeFlowRes = executionResult.CodeFlowResult;
+        CodeFlowManualInterventionReason? manualInterventionReason = executionResult.ManualInterventionReason;
+
+        if (manualInterventionReason == null && codeFlowRes?.HadUpdates != true)
         {
             var msg = pr !=  null
                 ? "No source code updates detected"
@@ -180,27 +181,39 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
         }
 
-        NativePath localTargetRepoPath = isForwardFlow ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
-
-        if (codeFlowRes.HadConflicts)
+        if (manualInterventionReason != null)
         {
-            var prUrl = await HandleConflictsAsync(
+            await HandleManualInterventionAsync(
                 update,
                 pr,
                 previousSourceSha,
                 subscription,
-                prHeadBranch,
-                localTargetRepoPath,
+                executionResult.PullRequestHeadBranch,
+                executionResult.TargetRepoPath,
                 codeFlowRes,
                 upstreamRepoDiffs,
-                isUnsafeFlow);
-            return new SubscriptionUpdateResult(
-                "Conflict resolution is required by user",
-                SubscriptionOutcomeType.HasConflict);
+                executionResult.UnsafeFlown,
+                manualInterventionReason.Value);
+
+            return manualInterventionReason.Value switch
+            {
+                CodeFlowManualInterventionReason.Conflict => new SubscriptionUpdateResult(
+                    "Conflict resolution is required by user",
+                    SubscriptionOutcomeType.HasConflict),
+                CodeFlowManualInterventionReason.RecreationFallbackLimitReached => new SubscriptionUpdateResult(
+                    "A codeflow conflict occurred too far back in the codeflow history for the service to resolve it automatically. Manual intervention is required",
+                    SubscriptionOutcomeType.UserError),
+                _ => throw new ArgumentOutOfRangeException($"Manual intervention reason {manualInterventionReason} is not supported")
+            };
+        }
+
+        if (codeFlowRes == null)
+        {
+            throw new InvalidOperationException("Completed codeflow did not return a result");
         }
 
         string? oldPrUrl = null;
-        if (isUnsafeFlow && pr != null)
+        if (executionResult.UnsafeFlown && pr != null)
         {
             oldPrUrl = pr.Url;
             await _stateManager.ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
@@ -215,11 +228,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 update,
                 previousSourceSha,
                 subscription,
-                prHeadBranch,
-                localTargetRepoPath,
+                executionResult.PullRequestHeadBranch,
+                executionResult.TargetRepoPath,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs,
-                isUnsafeFlow);
+                executionResult.UnsafeFlown);
 
             if (oldPrUrl != null)
             {
@@ -243,7 +256,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 prInfo,
                 previousSourceSha,
                 subscription,
-                localTargetRepoPath,
+                executionResult.TargetRepoPath,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs);
 
@@ -282,7 +295,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task<bool> IsExistingUnsafeConflictPrStillEmptyAsync(
+    private async Task<bool> IsExistingUnsafeManualInterventionPrStillEmptyAsync(
         InProgressPullRequest pr,
         SubscriptionDTO subscription,
         NativePath localTargetRepoPath)
@@ -298,7 +311,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 localTargetRepoPath,
                 pr.HeadBranch,
-                GetManualConflictResolutionInitialCommitMessage(subscription));
+                GetManualInterventionInitialCommitMessage(subscription));
 
         return prIsEmpty;
     }
@@ -341,23 +354,24 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return upstreamRepoDiffs;
     }
 
-    private async Task<string> HandleConflictsAsync(
+    private async Task HandleManualInterventionAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         string? previousSourceSha,
         SubscriptionDTO subscription,
         string prHeadBranch,
         NativePath localTargetRepoPath,
-        CodeFlowResult codeFlowRes,
+        CodeFlowResult? codeFlowRes,
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
-        bool unsafeFlow)
+        bool unsafeFlow,
+        CodeFlowManualInterventionReason reason)
     {
         var manualResolutionBranch = prHeadBranch;
         string? oldPrUrl = null;
 
         if (unsafeFlow && pr != null)
         {
-            var shouldReuseExistingPr = await IsExistingUnsafeConflictPrStillEmptyAsync(pr, subscription, localTargetRepoPath);
+            var shouldReuseExistingPr = await IsExistingUnsafeManualInterventionPrStillEmptyAsync(pr, subscription, localTargetRepoPath);
 
             if (shouldReuseExistingPr)
             {
@@ -374,7 +388,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             }
         }
 
-        string newPrUrl = await RequestManualConflictResolutionAsync(
+        string newPrUrl = await RequestManualInterventionAsync(
             update,
             pr,
             previousSourceSha,
@@ -383,36 +397,36 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             localTargetRepoPath,
             codeFlowRes,
             upstreamRepoDiffs,
-            unsafeFlow);
+            unsafeFlow,
+            reason);
 
         if (oldPrUrl != null)
         {
             await ClosePullRequestAfterUnsafeFlowAsync(oldPrUrl, subscription, newPrUrl);
         }
-
-        return newPrUrl;
     }
 
-    private async Task<string> RequestManualConflictResolutionAsync(
+    private async Task<string> RequestManualInterventionAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         string? previousSourceSha,
         SubscriptionDTO subscription,
         string prHeadBranch,
         NativePath localTargetRepoPath,
-        CodeFlowResult codeFlowResult,
+        CodeFlowResult? codeFlowResult,
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs,
-        bool unsafeFlown)
+        bool unsafeFlown,
+        CodeFlowManualInterventionReason reason)
     {
         PullRequest prInfo;
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         bool prIsEmpty;
-        string initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
+        string initialCommitMessage = GetManualInterventionInitialCommitMessage(subscription);
 
         if (pr == null)
         {
             prIsEmpty = true;
-            _logger.LogInformation("Creating PR that requires manual conflict resolution for build {buildId}...", update.BuildId);
+            _logger.LogInformation("Creating PR that requires manual intervention for build {buildId}...", update.BuildId);
             await CreateEmptyPrBranch(subscription, localTargetRepoPath, prHeadBranch, subscription.TargetBranch, initialCommitMessage);
 
             (pr, prInfo) = await CreateCodeFlowPullRequestAsync(
@@ -421,7 +435,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 subscription,
                 prHeadBranch,
                 localTargetRepoPath,
-                codeFlowResult.DependencyUpdates,
+                codeFlowResult?.DependencyUpdates ?? [],
                 upstreamRepoDiffs,
                 unsafeFlown,
                 skipCodeflowApprovalCheck: true);
@@ -437,9 +451,9 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                     initialCommitMessage);
 
             prInfo = await remote.GetPullRequestAsync(pr.Url)
-                ?? throw new DarcException($"Failed to retrieve PR info for existing PR {pr.Url} while requesting manual conflict resolution");
+                ?? throw new DarcException($"Failed to retrieve PR info for existing PR {pr.Url} while requesting manual intervention");
 
-            _logger.LogInformation("Notifying PR that it requires manual conflict resolution for build {buildId}...", update.BuildId);
+            _logger.LogInformation("Notifying PR that it requires manual intervention for build {buildId}...", update.BuildId);
 
             await UpdateCodeFlowPullRequestAsync(
                 update,
@@ -448,7 +462,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 previousSourceSha,
                 subscription,
                 localTargetRepoPath,
-                codeFlowResult.DependencyUpdates,
+                codeFlowResult?.DependencyUpdates ?? [],
                 upstreamRepoDiffs,
                 skipCodeflowApprovalCheck: true);
 
@@ -457,15 +471,25 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             await _stateManager.ClearMergePolicyEvaluationStateAsync();
         }
 
-        _commentCollector.AddComment(
-            PullRequestCommentBuilder.BuildNotificationAboutManualConflictResolutionComment(
-                update,
-                subscription,
-                codeFlowResult.ConflictedFiles,
-                prHeadBranch,
-                prIsEmpty,
-                unsafeFlown),
-            CommentType.Caution);
+        string comment = reason switch
+        {
+            CodeFlowManualInterventionReason.Conflict =>
+                PullRequestCommentBuilder.BuildNotificationAboutManualConflictResolutionComment(
+                    update,
+                    subscription,
+                    codeFlowResult?.ConflictedFiles ?? [],
+                    prHeadBranch,
+                    prIsEmpty,
+                    unsafeFlown),
+            CodeFlowManualInterventionReason.RecreationFallbackLimitReached =>
+                PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
+                    update,
+                    subscription,
+                    prIsEmpty),
+            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
+        };
+
+        _commentCollector.AddComment(comment, CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
@@ -474,7 +498,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         return pr.Url;
     }
 
-    private static string GetManualConflictResolutionInitialCommitMessage(SubscriptionDTO subscription)
+    private static string GetManualInterventionInitialCommitMessage(SubscriptionDTO subscription)
         => $"Initial commit for subscription {subscription.Id}";
 
     /// <summary>
