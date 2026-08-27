@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -25,8 +26,8 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly ISqlBarClient _sqlClient;
     private readonly IPullRequestStateManager _stateManager;
-    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
+    private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
@@ -37,11 +38,11 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         ISqlBarClient sqlClient,
-        ILogger<DependencyPullRequestUpdater> logger,
         IPullRequestCommenter pullRequestCommenter,
-        ISubscriptionEventRecorder subscriptionEventRecorder,
-        ISubscriptionUpdateOutcomeRecorder outcomeRecorder)
-        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
+        ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
+        BuildAssetRegistryContext context,
+        ILogger<DependencyPullRequestUpdater> logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, outcomeRecorder, context, logger)
     {
         _target = target;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -50,7 +51,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _sqlClient = sqlClient;
         _stateManager = stateManager;
         _logger = logger;
-        _subscriptionEventRecorder = subscriptionEventRecorder;
+        _context = context;
         _outcomeRecorder = outcomeRecorder;
     }
 
@@ -402,7 +403,7 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
             if (dependenciesToUpdate.Count < 1)
             {
                 // No dependencies need to be updated.
-                await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(
+                await UpdateSubscriptionsForMergedPRAsync(
                     new List<SubscriptionPullRequestUpdate>
                     {
                     new()

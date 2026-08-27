@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -32,8 +33,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestStateManager _stateManager;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
+    private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<PullRequestUpdater> _logger;
 
     public PullRequestUpdater(
@@ -43,8 +44,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         ISqlBarClient sqlClient,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
-        ISubscriptionEventRecorder subscriptionEventRecorder,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
+        BuildAssetRegistryContext context,
         ILogger<PullRequestUpdater> logger)
     {
         _target = target;
@@ -53,8 +54,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _sqlClient = sqlClient;
         _pullRequestCommenter = pullRequestCommenter;
         _stateManager = stateManager;
-        _subscriptionEventRecorder = subscriptionEventRecorder;
         _outcomeRecorder = outcomeRecorder;
+        _context = context;
         _logger = logger;
     }
 
@@ -137,7 +138,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
                         await _stateManager.ClearAllStateAsync(isCodeFlow, false);
@@ -171,7 +172,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 // If the PR has been merged, update the subscription information
                 if (prInfo.Status == PrStatus.Merged)
                 {
-                    await _subscriptionEventRecorder.UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                 }
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
@@ -449,6 +450,63 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     }
 
     #endregion
+
+    public async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
+    {
+        _logger.LogInformation("Updating subscriptions for merged PR");
+        foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
+        {
+            await UpdateForMergedPullRequestAsync(update);
+        }
+    }
+
+    private async Task UpdateForMergedPullRequestAsync(SubscriptionPullRequestUpdate update)
+    {
+        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", update.SubscriptionId, update.BuildId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(update.SubscriptionId);
+
+        if (subscription != null)
+        {
+            subscription.LastAppliedBuildId = subscription.SourceEnabled
+                ? await GetLastCodeflownBuild(subscription)
+                : update.BuildId;
+            _context.Subscriptions.Update(subscription);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", update.SubscriptionId);
+        }
+    }
+
+    private async Task<int> GetLastCodeflownBuild(Subscription subscription)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            if (sourceTag?.BarId == null)
+            {
+                throw new DarcException($"Failed to determine last flown VMR build to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+            }
+
+            return sourceTag.BarId.Value;
+        }
+        else
+        {
+            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
+            var barId = sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId;
+
+            if (barId == null)
+            {
+                throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} to" +
+                    $" {subscription.TargetRepository} @ {subscription.TargetBranch}");
+            }
+
+            return barId.Value;
+        }
+    }
 
     /// <summary>
     /// Merges the list of existing updates in a PR with a list of incoming updates

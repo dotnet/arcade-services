@@ -39,7 +39,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly ITelemetryRecorder _telemetryRecorder;
-    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ILogger<CodeFlowExecutor> _logger;
 
     public CodeFlowExecutor(
@@ -50,7 +49,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         IRepositoryCloneManager repositoryCloneManager,
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
-        ISubscriptionEventRecorder subscriptionEventRecorder,
         ILogger<CodeFlowExecutor> logger)
     {
         _vmrInfo = vmrInfo;
@@ -60,7 +58,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         _repositoryCloneManager = repositoryCloneManager;
         _gitClient = gitClient;
         _telemetryRecorder = telemetryRecorder;
-        _subscriptionEventRecorder = subscriptionEventRecorder;
         _logger = logger;
     }
 
@@ -150,8 +147,6 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         }
 
         prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(localTargetRepoPath, prHeadBranch);
-
-        await _subscriptionEventRecorder.RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
