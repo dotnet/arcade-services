@@ -19,7 +19,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal interface ICodeFlowExecutor
 {
-    Task<(CodeFlowResult codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
+    Task<CodeFlowExecutionResult> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -27,6 +27,19 @@ internal interface ICodeFlowExecutor
         BuildDTO build,
         bool forceUpdate);
 }
+
+internal enum CodeFlowManualInterventionReason
+{
+    Conflict,
+    RecreationFallbackLimitReached,
+}
+
+internal record CodeFlowExecutionResult(
+    CodeFlowResult? CodeFlowResult,
+    bool UnsafeFlown,
+    string PullRequestHeadBranch,
+    NativePath TargetRepoPath,
+    CodeFlowManualInterventionReason? ManualInterventionReason);
 
 internal class CodeFlowExecutor : ICodeFlowExecutor
 {
@@ -61,7 +74,7 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         _logger = logger;
     }
 
-    public async Task<(CodeFlowResult codeFlowRes, bool unsafeFlown, string prHeadBranch)> ExecuteCodeFlowAsync(
+    public async Task<CodeFlowExecutionResult> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
         PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
@@ -92,12 +105,59 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
             subscription.TargetBranch,
             prHeadBranch);
 
-        CodeFlowResult codeFlowRes;
-        bool unsafeFlown = false;
+        CodeFlowExecutionResult executionResult = await ExecuteWithUnsafeFallbackAsync(
+            subscription,
+            build,
+            prHeadBranch,
+            forceUpdate);
 
+        if (executionResult.ManualInterventionReason != null)
+        {
+            return executionResult;
+        }
+
+        CodeFlowResult codeFlowRes = executionResult.CodeFlowResult
+            ?? throw new InvalidOperationException("Completed codeflow did not return a result");
+        bool unsafeFlown = executionResult.UnsafeFlown;
+        prHeadBranch = executionResult.PullRequestHeadBranch;
+
+        NativePath targetRepoPath = executionResult.TargetRepoPath;
+
+        if (!codeFlowRes.HadUpdates)
+        {
+            _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+            return new CodeFlowExecutionResult(codeFlowRes, unsafeFlown, prHeadBranch, targetRepoPath, null);
+        }
+
+        _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
+            subscription.Id,
+            prHeadBranch);
+
+        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+        {
+            await _gitClient.Push(targetRepoPath, prHeadBranch, subscription.TargetRepository);
+            scope.SetSuccess();
+        }
+
+        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(targetRepoPath, prHeadBranch);
+
+        return new CodeFlowExecutionResult(codeFlowRes, unsafeFlown, prHeadBranch, targetRepoPath, null);
+    }
+
+    private async Task<CodeFlowExecutionResult> ExecuteWithUnsafeFallbackAsync(
+            SubscriptionDTO subscription,
+            BuildDTO build,
+            string prHeadBranch,
+            bool forceUpdate)
+    {
         try
         {
-            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlown);
+            return await ExecuteFlowAttemptAsync(
+                subscription,
+                build,
+                prHeadBranch,
+                forceUpdate,
+                unsafeFlow: false);
         }
         catch (NonLinearCodeflowException e)
         {
@@ -106,8 +166,7 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                 throw new SubscriptionUpdateInputException("The commit of the build being triggered is older than the already applied commit.");
             }
 
-            unsafeFlown = true;
-            prHeadBranch = GetNewBranchName(subscription.TargetBranch);
+            string unsafeFlowBranch = GetNewBranchName(subscription.TargetBranch);
 
             _logger.LogInformation(
                 "Unsafe {direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
@@ -117,38 +176,61 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                 subscription.Id,
                 subscription.TargetRepository,
                 subscription.TargetBranch,
-                prHeadBranch);
+                unsafeFlowBranch);
 
-            codeFlowRes = await InvokeFlowAsync(subscription, build, prHeadBranch, forceUpdate, unsafeFlown);
+            return await ExecuteFlowAttemptAsync(
+                subscription,
+                build,
+                unsafeFlowBranch,
+                forceUpdate,
+                unsafeFlow: true);
         }
+    }
 
-        NativePath localTargetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
-
-        if (codeFlowRes.HadConflicts)
+    private async Task<CodeFlowExecutionResult> ExecuteFlowAttemptAsync(
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        string prHeadBranch,
+        bool forceUpdate,
+        bool unsafeFlow)
+    {
+        try
         {
-            _logger.LogInformation("Detected conflicts while rebasing new changes");
-            return (codeFlowRes, unsafeFlown, prHeadBranch);
-        }
+            CodeFlowResult result = await InvokeFlowAsync(
+                subscription,
+                build,
+                prHeadBranch,
+                forceUpdate,
+                unsafeFlow);
+            NativePath targetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : result.RepoPath;
 
-        if (!codeFlowRes.HadUpdates)
+            if (result.HadConflicts)
+            {
+                _logger.LogInformation("Detected conflicts while rebasing new changes");
+                return new CodeFlowExecutionResult(
+                    result,
+                    unsafeFlow,
+                    prHeadBranch,
+                    targetRepoPath,
+                    CodeFlowManualInterventionReason.Conflict);
+            }
+
+            return new CodeFlowExecutionResult(
+                result,
+                unsafeFlow,
+                prHeadBranch,
+                targetRepoPath,
+                ManualInterventionReason: null);
+        }
+        catch (RecreationLimitReachedException e)
         {
-            _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            return (codeFlowRes, unsafeFlown, prHeadBranch);
+            return new CodeFlowExecutionResult(
+                CodeFlowResult: null,
+                unsafeFlow,
+                prHeadBranch,
+                e.TargetRepoPath,
+                CodeFlowManualInterventionReason.RecreationFallbackLimitReached);
         }
-
-        _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
-            subscription.Id,
-            prHeadBranch);
-
-        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
-        {
-            await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
-            scope.SetSuccess();
-        }
-
-        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(localTargetRepoPath, prHeadBranch);
-
-        return (codeFlowRes, unsafeFlown, prHeadBranch);
     }
 
     private async Task CreateEmptyPrBranch(
@@ -184,14 +266,14 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
                 pr.HeadBranchSha)).Path;
         }
 
-        var initialCommitMessage = GetManualConflictResolutionInitialCommitMessage(subscription);
+        var initialCommitMessage = GetManualInterventionInitialCommitMessage(subscription);
         var (prIsEmpty, latestPrCommit, latestTargetBranchCommit) =
             await ManualConflictResolutionHelper.GetManualConflictResolutionPrStateAsync(
-            _gitClient,
-            subscription,
-            targetRepoPath,
-            pr.HeadBranch,
-            initialCommitMessage);
+                _gitClient,
+                subscription,
+                targetRepoPath,
+                pr.HeadBranch,
+                initialCommitMessage);
 
         if (prIsEmpty && !await _gitClient.IsAncestorCommit(targetRepoPath, latestTargetBranchCommit, latestPrCommit))
         {
@@ -234,7 +316,7 @@ internal class CodeFlowExecutor : ICodeFlowExecutor
         }
     }
 
-    private static string GetManualConflictResolutionInitialCommitMessage(SubscriptionDTO subscription)
+    private static string GetManualInterventionInitialCommitMessage(SubscriptionDTO subscription)
         => $"Initial commit for subscription {subscription.Id}";
 
     private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";

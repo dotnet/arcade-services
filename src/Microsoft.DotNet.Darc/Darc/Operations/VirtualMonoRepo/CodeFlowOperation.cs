@@ -124,7 +124,8 @@ internal abstract class CodeFlowOperation(
                     currentTargetRepoBranch,
                     forceUpdate: true,
                     unsafeFlow: _options.UnsafeFlow,
-                    cancellationToken);
+                    cancellationToken,
+                    maxRecreationFallbackAttempts: null);
         }
         finally
         {
@@ -212,7 +213,8 @@ internal abstract class CodeFlowOperation(
             targetRepoUri,
             forceUpdate: true,
             unsafeFlow: _options.UnsafeFlow,
-            cancellationToken);
+            cancellationToken,
+            maxRecreationFallbackAttempts: null);
     }
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)

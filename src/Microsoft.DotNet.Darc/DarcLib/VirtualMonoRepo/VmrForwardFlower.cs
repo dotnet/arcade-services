@@ -34,6 +34,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <param name="unsafeFlow">If true, ignores non-linear flow errors (flowing from a different branch etc)</param>
+    /// <param name="maxRecreationFallbackAttempts">Maximum number of codeflow rewind attempts, or <see langword="null"/> for no limit</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -45,7 +46,8 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetVmrUri,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        int? maxRecreationFallbackAttempts = 50);
 }
 
 public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
@@ -106,7 +108,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetVmrUri,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int? maxRecreationFallbackAttempts = 50)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         (bool headBranchExisted, LastFlows lastFlows) = await PrepareHeadBranch(
@@ -129,7 +132,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranchExisted,
             forceUpdate,
             unsafeFlow,
-            cancellationToken);
+            cancellationToken,
+            maxRecreationFallbackAttempts);
     }
 
     protected async Task<CodeFlowResult> FlowForwardAsync(
@@ -143,7 +147,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool headBranchExisted,
         bool forceUpdate,
         bool unsafeFlow,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? maxRecreationFallbackAttempts = 50)
     {
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
@@ -161,7 +166,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             KeepConflicts: true,
             forceUpdate,
             unsafeFlow,
-            UseRecreationFallback: true);
+            UseRecreationFallback: true,
+            MaxRecreationFallbackAttempts: maxRecreationFallbackAttempts);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 

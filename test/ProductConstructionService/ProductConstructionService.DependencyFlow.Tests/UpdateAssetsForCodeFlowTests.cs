@@ -206,6 +206,67 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
+    public async Task UpdateCodeFlowWithNoPrWhenRecreationFallbackLimitIsReached()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build build = GivenANewBuild(true);
+
+        GivenPendingUpdates(build);
+        CreatePullRequestShouldReturnAValidValue();
+        WithForwardFlowRecreationFallbackLimitReached(DarcRemotes[Subscription.TargetRepository]);
+
+        var result = await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
+
+        ThenUpdateReminderIsRemoved();
+        result.OutcomeMessage.Should().Be(
+            "A codeflow conflict occurred too far back in the codeflow history for the service to resolve it automatically. Manual intervention is required");
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndEmptyCodeFlowBranchShouldHaveBeenPushed();
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(build, expectedState: CreateExpectedNewPullRequestState(build));
+        AndPendingUpdateIsRemoved();
+    }
+
+    [Test]
+    public async Task UpdateExistingCodeFlowPrWhenRecreationFallbackLimitIsReached()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        GivenPendingUpdates(newBuild);
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            ExpectPrMetadataToBeUpdated();
+            WithForwardFlowRecreationFallbackLimitReached(
+                DarcRemotes[Subscription.TargetRepository],
+                setUpMergeStatusUpdate: false);
+
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+            ThenShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHavePullRequestCheckReminder();
+            AndPendingUpdateIsRemoved();
+        }
+    }
+
+    [Test]
     public async Task UpdateWithManuallyMergedPrAndNewBuild()
     {
         GivenATestChannel();
