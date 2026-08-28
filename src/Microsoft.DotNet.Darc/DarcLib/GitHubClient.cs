@@ -929,13 +929,31 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
     private async Task<Commit?> GetCommitAsync(string owner, string repo, string sha)
     {
-        Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
-        Octokit.GitHubCommit commit = await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
-        if (commit == null)
+        try
+        {
+            // Transient errors (e.g. GitHub returning a 5xx / gateway timeout) should not be
+            // mistaken for the commit not existing. Retry those a few times before giving up,
+            // and let genuine "not found" responses (404) bubble up as a null result below.
+            Octokit.GitHubCommit? commit = await ExponentialRetry.Default.RetryAsync(
+                async () =>
+                {
+                    Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
+                    return await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
+                },
+                ex => _logger.LogWarning(ex, "Failed to get commit {sha} in {owner}/{repo}, retrying...", sha, owner, repo),
+                ex => ex is ApiException apiException && apiException.StatusCode >= HttpStatusCode.InternalServerError);
+
+            if (commit == null)
+            {
+                return null;
+            }
+
+            return new Commit(commit.Author?.Login, commit.Commit.Sha, commit.Commit.Message);
+        }
+        catch (NotFoundException)
         {
             return null;
         }
-        return new Commit(commit.Author?.Login, commit.Commit.Sha, commit.Commit.Message);
     }
 
     /// <summary>
