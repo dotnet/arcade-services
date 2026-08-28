@@ -39,7 +39,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestApprover _pullRequestApprover;
     private readonly IPullRequestTarget _target;
-    private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
 
     public CodeFlowPullRequestUpdater(
@@ -78,7 +77,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
         _pullRequestApprover = pullRequestApprover;
-        _context = context;
         _target = target;
     }
 

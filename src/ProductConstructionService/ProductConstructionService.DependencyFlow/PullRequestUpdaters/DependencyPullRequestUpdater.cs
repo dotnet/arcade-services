@@ -26,7 +26,6 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
     private readonly ISqlBarClient _sqlClient;
     private readonly IPullRequestStateManager _stateManager;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
-    private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<DependencyPullRequestUpdater> _logger;
 
     public DependencyPullRequestUpdater(
@@ -50,7 +49,6 @@ internal class DependencyPullRequestUpdater : PullRequestUpdater
         _sqlClient = sqlClient;
         _stateManager = stateManager;
         _logger = logger;
-        _context = context;
         _outcomeRecorder = outcomeRecorder;
     }
 
