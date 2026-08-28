@@ -934,12 +934,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             // Transient errors (e.g. GitHub returning a 5xx / gateway timeout) should not be
             // mistaken for the commit not existing. Retry those a few times before giving up,
             // and let genuine "not found" responses (404) bubble up as a null result below.
+            Repository repository = await ExponentialRetry.Default.RetryAsync(
+                async () => await GetClient(owner, repo).Repository.Get(owner, repo),
+                ex => _logger.LogWarning(ex, "Failed to get repository {owner}/{repo}, retrying...", owner, repo),
+                ex => ex is ApiException apiException && apiException.StatusCode >= HttpStatusCode.InternalServerError);
+
             Octokit.GitHubCommit? commit = await ExponentialRetry.Default.RetryAsync(
-                async () =>
-                {
-                    Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
-                    return await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
-                },
+                async () => await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha),
                 ex => _logger.LogWarning(ex, "Failed to get commit {sha} in {owner}/{repo}, retrying...", sha, owner, repo),
                 ex => ex is ApiException apiException && apiException.StatusCode >= HttpStatusCode.InternalServerError);
 
