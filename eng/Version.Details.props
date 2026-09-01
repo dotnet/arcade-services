@@ -6,8 +6,8 @@ This file should be imported by eng/Versions.props
 <Project>
   <PropertyGroup>
     <!-- dotnet-arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26423.1</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26423.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26429.1</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26429.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26421.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
@@ -29,7 +29,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26425.2</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26425.2</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26410.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26428.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>

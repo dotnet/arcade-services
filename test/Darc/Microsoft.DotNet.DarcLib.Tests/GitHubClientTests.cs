@@ -164,6 +164,7 @@ public class GitHubClientTests
     protected Mock<IPullRequestReviewsClient> OctoKitPullRequestReviewsClient;
     protected Mock<IGitDatabaseClient> OctoKitGitDatabaseClient;
     protected Mock<IBlobsClient> OctoKitGitBlobsClient;
+    protected Mock<IRepositoryCommitsClient> OctoKitRepositoryCommitsClient;
     private TestGitHubClient _gitHubClientForTest;
 
     [SetUp]
@@ -174,8 +175,11 @@ public class GitHubClientTests
         OctoKitPullRequestsClient = new Mock<IPullRequestsClient>();
         OctoKitPullRequestsClient.SetupGet(x => x.Review).Returns(OctoKitPullRequestReviewsClient.Object);
 
+        OctoKitRepositoryCommitsClient = new Mock<IRepositoryCommitsClient>();
+
         OctoKitRepositoriesClient = new Mock<IRepositoriesClient>();
         OctoKitRepositoriesClient.SetupGet(x => x.PullRequest).Returns(OctoKitPullRequestsClient.Object);
+        OctoKitRepositoriesClient.SetupGet(x => x.Commit).Returns(OctoKitRepositoryCommitsClient.Object);
 
         OctoKitGitBlobsClient = new Mock<IBlobsClient>();
 
@@ -344,6 +348,50 @@ public class GitHubClientTests
         resultGitFile.Mode.Should().Be(treeItem.Mode);
 
         OctoKitGitBlobsClient.Verify(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task GetCommitAsyncRetriesOnTransientFailureAndSucceeds()
+    {
+        string owner = "dotnet";
+        string repo = "roslyn";
+        string sha = "1d4c0ff6b7d7d0b42ab174386c4545679d416fe8";
+        var repository = new Repository(1234);
+        var innerCommit = new Octokit.Commit(
+            null, null, null, null, sha, null, null, "test message", null, null, null, new List<GitReference>(), 0, null);
+        var commit = new GitHubCommit(
+            null, null, null, null, sha, null, null, null, null,
+            innerCommit, null, null, null, null, null);
+        var gatewayTimeoutException = new ApiException("Gateway Timeout", HttpStatusCode.GatewayTimeout);
+
+        OctoKitRepositoriesClient.Setup(m => m.Get(owner, repo)).ReturnsAsync(repository);
+        OctoKitRepositoryCommitsClient.SetupSequence(m => m.Get(repository.Id, sha))
+            .ThrowsAsync(gatewayTimeoutException)
+            .ReturnsAsync(commit);
+
+        var result = await _gitHubClientForTest.GetCommitAsync($"https://github.com/{owner}/{repo}", sha);
+
+        result.Should().NotBeNull();
+        result.Sha.Should().Be(sha);
+        OctoKitRepositoryCommitsClient.Verify(m => m.Get(repository.Id, sha), Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task GetCommitAsyncReturnsNullWhenCommitDoesNotExist()
+    {
+        string owner = "dotnet";
+        string repo = "roslyn";
+        string sha = "1d4c0ff6b7d7d0b42ab174386c4545679d416fe8";
+        var repository = new Repository(1234);
+        var notFoundException = new NotFoundException("Not Found", HttpStatusCode.NotFound);
+
+        OctoKitRepositoriesClient.Setup(m => m.Get(owner, repo)).ReturnsAsync(repository);
+        OctoKitRepositoryCommitsClient.Setup(m => m.Get(repository.Id, sha)).ThrowsAsync(notFoundException);
+
+        var result = await _gitHubClientForTest.GetCommitAsync($"https://github.com/{owner}/{repo}", sha);
+
+        result.Should().BeNull();
+        OctoKitRepositoryCommitsClient.Verify(m => m.Get(repository.Id, sha), Times.Once);
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 10, 10, false)] // Happy path: 10 approvals
