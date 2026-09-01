@@ -42,6 +42,10 @@ public class Subscription
     [Column("Policy")]
     public string PolicyString { get; set; }
 
+    public bool MergePrs { get; set; }
+
+    public List<string> IgnoredChecks { get; set; } = [];
+
     public bool Enabled { get; set; } = true;
 
     /// <summary>

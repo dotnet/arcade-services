@@ -8,10 +8,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class ClientBranchMergePoliciesYaml
     {
-        public ClientBranchMergePoliciesYaml(string branch, string repository)
+        public ClientBranchMergePoliciesYaml(string branch, string repository, bool mergePrs)
         {
             Branch = branch;
             Repository = repository;
+            MergePrs = mergePrs;
         }
 
         [JsonProperty("branch")]
@@ -22,6 +23,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("mergePolicies")]
         public List<ClientMergePolicyYaml> MergePolicies { get; set; }
+
+        [JsonProperty("mergePrs")]
+        public bool MergePrs { get; set; }
+
+        [JsonProperty("ignoredChecks")]
+        public List<string> IgnoredChecks { get; set; }
 
         [JsonIgnore]
         public bool IsValid

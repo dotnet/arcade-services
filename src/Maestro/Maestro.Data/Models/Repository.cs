@@ -36,6 +36,10 @@ public class RepositoryBranch
     [Column("Policy")]
     public string PolicyString { get; set; }
 
+    public bool MergePrs { get; set; }
+
+    public List<string> IgnoredChecks { get; set; } = [];
+
     [NotMapped]
     public Policy PolicyObject
     {

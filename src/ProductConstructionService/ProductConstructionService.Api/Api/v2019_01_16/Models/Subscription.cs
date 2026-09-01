@@ -19,6 +19,8 @@ public class Subscription
         TargetRepository = other.TargetRepository;
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
+        MergePrs = other.MergePrs;
+        IgnoredChecks = [.. other.IgnoredChecks];
         Policy = new SubscriptionPolicy(other.PolicyObject);
     }
 
@@ -32,6 +34,12 @@ public class Subscription
 
     public string TargetBranch { get; }
 
+    public bool MergePrs { get; }
+
+    public IReadOnlyCollection<string> IgnoredChecks { get; }
+
+    // TODO: Remove the legacy policy model after the configuration migration.
+    // https://github.com/dotnet/arcade-services/issues/6426
     public SubscriptionPolicy Policy { get; }
 
     public Build LastAppliedBuild { get; }

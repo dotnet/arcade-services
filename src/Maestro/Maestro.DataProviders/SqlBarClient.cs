@@ -50,17 +50,19 @@ public class SqlBarClient : ISqlBarClient
         }
 
         return new Subscription(
-            sub.Id,
-            sub.Enabled,
-            sub.SourceEnabled,
-            sub.SourceRepository,
-            sub.TargetRepository,
-            sub.TargetBranch,
-            sub.SourceDirectory,
-            sub.TargetDirectory,
-            sub.PullRequestFailureNotificationTags,
-            [.. sub.ExcludedAssets.Select(s => s.Filter)],
-            sub.AutoApprove)
+            id: sub.Id,
+            mergePrs: sub.MergePrs,
+            enabled: sub.Enabled,
+            sourceEnabled: sub.SourceEnabled,
+            autoApprove: sub.AutoApprove,
+            sourceRepository: sub.SourceRepository,
+            targetRepository: sub.TargetRepository,
+            targetBranch: sub.TargetBranch,
+            ignoredChecks: [.. sub.IgnoredChecks],
+            sourceDirectory: sub.SourceDirectory,
+            targetDirectory: sub.TargetDirectory,
+            pullRequestFailureNotificationTags: sub.PullRequestFailureNotificationTags,
+            excludedAssets: [.. sub.ExcludedAssets.Select(s => s.Filter)])
         {
             LastAppliedBuild = sub.LastAppliedBuild != null ? ToClientModelBuild(sub.LastAppliedBuild) : null,
         };
@@ -187,10 +189,11 @@ public class SqlBarClient : ISqlBarClient
 
     public static RepositoryBranch ToClientModelRepositoryBranch(Data.Models.RepositoryBranch other)
     {
-        return new RepositoryBranch
+        return new RepositoryBranch(other.MergePrs)
         {
             Repository = other.RepositoryName,
             Branch = other.BranchName,
+            IgnoredChecks = [.. other.IgnoredChecks],
             MergePolicies = [.. (other.PolicyObject?.MergePolicies ?? [])
             .Select(p => new MergePolicy
             {
@@ -302,16 +305,18 @@ public class SqlBarClient : ISqlBarClient
     {
         return new Subscription(
             id: other.Id,
+            mergePrs: other.MergePrs,
             enabled: other.Enabled,
             sourceEnabled: other.SourceEnabled,
+            autoApprove: other.AutoApprove,
             sourceRepository: other.SourceRepository,
             targetRepository: other.TargetRepository,
             targetBranch: other.TargetBranch,
+            ignoredChecks: [.. other.IgnoredChecks],
             sourceDirectory: other.SourceDirectory,
             targetDirectory: other.TargetDirectory,
             pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
-            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList(),
-            autoApprove: other.AutoApprove)
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
