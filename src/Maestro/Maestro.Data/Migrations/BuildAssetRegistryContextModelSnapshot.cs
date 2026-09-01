@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -390,50 +390,6 @@ namespace Maestro.Data.Migrations
                     b.ToTable("DefaultChannels");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.DependencyFlowEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("BuildId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ChannelId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Event")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FlowType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SourceRepository")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("TargetRepository")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuildId");
-
-                    b.ToTable("DependencyFlowEvents");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
                 {
                     b.Property<int>("DefinitionId")
@@ -497,12 +453,6 @@ namespace Maestro.Data.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.PrimitiveCollection<string>("IgnoredChecks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("MergePrs")
-                        .HasColumnType("bit");
-
                     b.Property<int?>("NamespaceId")
                         .HasColumnType("int");
 
@@ -532,14 +482,8 @@ namespace Maestro.Data.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 
-                    b.PrimitiveCollection<string>("IgnoredChecks")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int?>("LastAppliedBuildId")
                         .HasColumnType("int");
-
-                    b.Property<bool>("MergePrs")
-                        .HasColumnType("bit");
 
                     b.Property<int?>("NamespaceId")
                         .HasColumnType("int");
@@ -617,87 +561,6 @@ namespace Maestro.Data.Migrations
                         .IsDescending(false, true);
 
                     b.ToTable("SubscriptionOutcomes");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdate", b =>
-                {
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Arguments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Method")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("Success")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("SysEndTime")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("SysEndTime");
-
-                    b.Property<DateTime>("SysStartTime")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("SysStartTime");
-
-                    b.HasKey("SubscriptionId");
-
-                    b.ToTable("SubscriptionUpdates");
-
-                    b.ToTable(tb => tb.IsTemporal(ttb =>
-                            {
-                                ttb.UseHistoryTable("SubscriptionUpdateHistory");
-                                ttb
-                                    .HasPeriodStart("SysStartTime")
-                                    .HasColumnName("SysStartTime");
-                                ttb
-                                    .HasPeriodEnd("SysEndTime")
-                                    .HasColumnName("SysEndTime");
-                            }));
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdateHistory", b =>
-                {
-                    b.Property<string>("Action")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Arguments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Method")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Success")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("SysEndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("SysStartTime")
-                        .HasColumnType("datetime2");
-
-                    b.HasIndex("SysEndTime", "SysStartTime");
-
-                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("SysEndTime", "SysStartTime"));
-
-                    b.HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
-
-                    b.ToTable("SubscriptionUpdateHistory", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
@@ -940,17 +803,6 @@ namespace Maestro.Data.Migrations
                     b.Navigation("Namespace");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.DependencyFlowEvent", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Build", "Build")
-                        .WithMany()
-                        .HasForeignKey("BuildId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Build");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Channel", "Channel")
@@ -1002,17 +854,6 @@ namespace Maestro.Data.Migrations
                     b.Navigation("LastAppliedBuild");
 
                     b.Navigation("Namespace");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdate", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Subscription", "Subscription")
-                        .WithOne()
-                        .HasForeignKey("Maestro.Data.Models.SubscriptionUpdate", "SubscriptionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
