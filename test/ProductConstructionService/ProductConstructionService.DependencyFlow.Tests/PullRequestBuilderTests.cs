@@ -198,7 +198,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             
             > [!NOTE]
             > This is a codeflow update. It may contain both source code changes from
-            > [the VMR]({build.GetRepository()})
+            > [the source repo]({build.GetRepository()})
             > as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
@@ -287,7 +287,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             
             > [!NOTE]
             > This is a codeflow update. It may contain both source code changes from
-            > [the VMR]({build.GetRepository()})
+            > [the source repo]({build.GetRepository()})
             > as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
