@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
-  <Source Uri="https://dev.azure.com/dnceng/internal/_git/dotnet-build-insights" Mapping="arcade-services" Sha="fd4ab80148c6fe31234689ffb4673e4afdf5ba91" BarId="328352" />
+  <Source Uri="https://dev.azure.com/dnceng/internal/_git/dotnet-build-insights" Mapping="arcade-services" Sha="78da828f558557085fbc64d576ba1f6eebab5b2e" BarId="329694" />
   <ProductDependencies>
     <Dependency Name="Microsoft.DotNet.Internal.Logging" Version="1.1.0-beta.26425.2">
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
@@ -76,13 +76,13 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>048a8c0ba5b72234301a3605c424ee9f9ff99772</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26421.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26425.2">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>81e19c5faa4dd033d0c1be8fb6d74b9dac7aac92</Sha>
+      <Sha>eb583d0664328fb0d370586c4d4e974212687cb0</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26421.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26425.2">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>81e19c5faa4dd033d0c1be8fb6d74b9dac7aac92</Sha>
+      <Sha>eb583d0664328fb0d370586c4d4e974212687cb0</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26428.1">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
