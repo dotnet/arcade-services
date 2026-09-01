@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.Telemetry;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -34,7 +35,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly IPullRequestStateManager _stateManager;
-    private readonly ISubscriptionEventRecorder _subscriptionEventRecorder;
     private readonly ICodeflowSourceDiffVerifier _codeflowSourceDiffVerifier;
     private readonly ISubscriptionUpdateOutcomeRecorder _outcomeRecorder;
     private readonly IPullRequestApprover _pullRequestApprover;
@@ -55,12 +55,12 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestStateManager stateManager,
-        ISubscriptionEventRecorder subscriptionEventRecorder,
         ICodeflowSourceDiffVerifier codeflowSourceDiffVerifier,
         ISubscriptionUpdateOutcomeRecorder outcomeRecorder,
         IPullRequestApprover pullRequestApprover,
+        BuildAssetRegistryContext context,
         ILogger<CodeFlowPullRequestUpdater> logger)
-        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, subscriptionEventRecorder, outcomeRecorder, logger)
+        : base(target, mergePolicyEvaluator, remoteFactory, sqlClient, pullRequestCommenter, stateManager, outcomeRecorder, context, logger)
     {
         _vmrInfo = vmrInfo;
         _codeFlowExecutor = codeFlowExecutor;
@@ -74,7 +74,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         _pullRequestCommenter = pullRequestCommenter;
         _logger = logger;
         _stateManager = stateManager;
-        _subscriptionEventRecorder = subscriptionEventRecorder;
         _codeflowSourceDiffVerifier = codeflowSourceDiffVerifier;
         _outcomeRecorder = outcomeRecorder;
         _pullRequestApprover = pullRequestApprover;
@@ -584,13 +583,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 CreationDate = DateTime.UtcNow,
                 UnsafeFlow = unsafeFlow
             };
-
-            await _subscriptionEventRecorder.AddDependencyFlowEventsAsync(
-                inProgressPr.ContainedSubscriptions,
-                DependencyFlowEventType.Created,
-                DependencyFlowEventReason.New,
-                MergePolicyCheckResult.PendingPolicies,
-                pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await _stateManager.SetCheckReminderAsync(inProgressPr, pr, isCodeFlow: true);
