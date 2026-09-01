@@ -18,7 +18,7 @@ public class Subscription
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
         MergePrs = other.MergePrs;
-        IgnoredChecks = [.. other.IgnoredChecks];
+        IgnoredChecks = [.. (other.IgnoredChecks ?? [])];
         Policy = new SubscriptionPolicy(other.PolicyObject);
     }
 

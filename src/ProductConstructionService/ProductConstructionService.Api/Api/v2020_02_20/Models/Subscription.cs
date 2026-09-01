@@ -19,7 +19,7 @@ public class Subscription
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
         MergePrs = other.MergePrs;
-        IgnoredChecks = [.. other.IgnoredChecks];
+        IgnoredChecks = [.. (other.IgnoredChecks ?? [])];
         SourceEnabled = other.SourceEnabled;
         AutoApprove = other.AutoApprove;
         SourceDirectory = other.SourceDirectory;

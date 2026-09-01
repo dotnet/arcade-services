@@ -193,7 +193,7 @@ public class SqlBarClient : ISqlBarClient
         {
             Repository = other.RepositoryName,
             Branch = other.BranchName,
-            IgnoredChecks = [.. other.IgnoredChecks],
+            IgnoredChecks = [.. (other.IgnoredChecks ?? [])],
             MergePolicies = [.. (other.PolicyObject?.MergePolicies ?? [])
             .Select(p => new MergePolicy
             {

@@ -14,7 +14,7 @@ public class RepositoryBranch : IValidatableObject
         Repository = other.RepositoryName;
         Branch = other.BranchName;
         MergePrs = other.MergePrs;
-        IgnoredChecks = [.. other.IgnoredChecks];
+        IgnoredChecks = [.. (other.IgnoredChecks ?? [])];
         MergePolicies = (other.PolicyObject?.MergePolicies ?? []).Select(p => new MergePolicy(p)).ToImmutableList();
     }
 
