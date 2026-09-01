@@ -9,6 +9,8 @@
     "sourceRepository": "source",
     "targetRepository": "target",
     "targetBranch": "test",
+    "mergePrs": false,
+    "ignoredChecks": [],
     "policy": {
       "batchable": false,
       "updateFrequency": "everyDay",
@@ -17,13 +19,13 @@
     "lastAppliedBuild": null,
     "enabled": true,
     "sourceEnabled": false,
+    "autoApprove": false,
     "sourceDirectory": null,
     "targetDirectory": null,
     "pullRequestFailureNotificationTags": "",
     "excludedAssets": [
       "Foo.Bar",
       "Bar.Xyz"
-    ],
-    "autoApprove": false
+    ]
   }
 ]

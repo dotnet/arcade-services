@@ -155,11 +155,14 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         // Setup an existing equivalent subscription returned by BAR
         var existingSubscription = new Subscription(
             id: Guid.NewGuid(),
+            mergePrs: false,
             enabled: true,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: expectedSubscription.SourceRepository,
             targetRepository: expectedSubscription.TargetRepository,
             targetBranch: expectedSubscription.TargetBranch,
+            ignoredChecks: [],
             pullRequestFailureNotificationTags: null,
             sourceDirectory: null,
             targetDirectory: null,
@@ -300,11 +303,14 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         var sourceChannel = new Channel(42, "test-channel", "test");
         var sourceSubscription = new Subscription(
             id: sourceSubscriptionId,
+            mergePrs: false,
             enabled: true,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: "https://github.com/dotnet/source-repo",
             targetRepository: "https://github.com/dotnet/target-repo",
             targetBranch: "main",
+            ignoredChecks: [],
             pullRequestFailureNotificationTags: "tag1;tag2",
             sourceDirectory: null,
             targetDirectory: null,
@@ -390,11 +396,14 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         var targetChannel = new Channel(43, "target-channel", "test");
         var sourceSubscription = new Subscription(
             id: sourceSubscriptionId,
+            mergePrs: false,
             enabled: true,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: "https://github.com/dotnet/source-repo",
             targetRepository: "https://github.com/dotnet/original-target",
             targetBranch: "main",
+            ignoredChecks: [],
             pullRequestFailureNotificationTags: "tag1",
             sourceDirectory: null,
             targetDirectory: null,

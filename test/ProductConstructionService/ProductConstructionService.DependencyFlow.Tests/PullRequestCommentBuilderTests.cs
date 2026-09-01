@@ -182,11 +182,14 @@ public class PullRequestCommentBuilderTests
         // Create a forward flow subscription (has TargetDirectory set)
         var forwardFlowSubscription = new ClientModels.Subscription(
             new Guid("12345678-1234-1234-1234-123456789012"),
+            false,
             true,
             true, // sourceEnabled = true
+            false,
             $"https://github.com/{FakeOrgName}/source-repo",
             $"https://github.com/{FakeOrgName}/vmr",
             "main",
+            [],
             null, // sourceDirectory
             "sdk", // targetDirectory - makes this a forward flow
             "@notifiedUser1",
@@ -232,11 +235,14 @@ public class PullRequestCommentBuilderTests
     {
         var subscription = new ClientModels.Subscription(
             new Guid("12345678-1234-1234-1234-123456789012"),
+            false,
             true,
             true,
+            false,
             $"https://github.com/{FakeOrgName}/source-repo",
             $"https://github.com/{FakeOrgName}/vmr",
             "main",
+            [],
             null,
             "sdk",
             "@notifiedUser1",
@@ -274,11 +280,14 @@ public class PullRequestCommentBuilderTests
     {
         var subscription = new ClientModels.Subscription(
             new Guid("12345678-1234-1234-1234-123456789012"),
+            false,
             true,
             true,
+            false,
             $"https://github.com/{FakeOrgName}/vmr",
             $"https://github.com/{FakeOrgName}/target-repo",
             "main",
+            [],
             "sdk",
             null,
             "@notifiedUser1",
@@ -311,33 +320,42 @@ public class PullRequestCommentBuilderTests
     [
         new ClientModels.Subscription(
             new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
+            false,
             true,
+            false,
             false,
             $"https://github.com/{FakeOrgName}/source-repo1",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
+            [],
             null,
             null,
             "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
             excludedAssets: []),
         new ClientModels.Subscription(
             new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
+            false,
             true,
+            false,
             false,
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
+            [],
             null,
             null,
             "@notifiedUser3;@notifiedUser4",
             excludedAssets: []),
         new ClientModels.Subscription(
             new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
+            false,
             true,
+            false,
             false,
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
+            [],
             null,
             null,
             string.Empty,

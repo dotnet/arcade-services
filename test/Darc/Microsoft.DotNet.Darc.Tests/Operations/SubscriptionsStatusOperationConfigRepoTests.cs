@@ -266,11 +266,14 @@ public class SubscriptionsStatusOperationConfigRepoTests : ConfigurationManageme
     {
         return new Subscription(
             id: id,
+            mergePrs: false,
             enabled: enabled,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: sourceRepo,
             targetRepository: targetRepo,
             targetBranch: targetBranch,
+            ignoredChecks: [],
             pullRequestFailureNotificationTags: null,
             sourceDirectory: null,
             targetDirectory: null,

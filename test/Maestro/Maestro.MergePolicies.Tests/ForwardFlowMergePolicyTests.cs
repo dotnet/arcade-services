@@ -47,11 +47,14 @@ public class ForwardFlowMergePolicyTests
         _mockBarClient.Setup(b => b.GetSubscriptionAsync(SubscriptionId))
             .ReturnsAsync(new Subscription(
                 id: SubscriptionId,
+                mergePrs: false,
                 enabled: true,
                 sourceEnabled: true,
+                autoApprove: false,
                 sourceRepository: "https://github.com/test/source",
                 targetRepository: RepoUrl,
                 targetBranch: TargetBranch,
+                ignoredChecks: [],
                 sourceDirectory: null,
                 targetDirectory: Mapping,
                 pullRequestFailureNotificationTags: null,

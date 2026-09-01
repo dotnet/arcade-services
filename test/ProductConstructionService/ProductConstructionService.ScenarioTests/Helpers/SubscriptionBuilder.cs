@@ -26,11 +26,14 @@ public class SubscriptionBuilder
     {
         var expectedSubscription = new Subscription(
             Guid.Parse(subscriptionId),
+            false,
             true,
+            false,
             false,
             repo1Uri,
             repo2Uri,
             targetBranch,
+            [],
             pullRequestFailureNotificationTags: failureNotificationTags,
             sourceDirectory: null,
             targetDirectory: null,

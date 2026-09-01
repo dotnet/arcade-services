@@ -250,11 +250,14 @@ public class ExportConfigurationOperationTests
     {
         var subscription = new Subscription(
             id: TestSubscriptionGuid,
+            mergePrs: false,
             enabled: true,
             sourceEnabled: true,
+            autoApprove: false,
             sourceRepository: "https://github.com/test/repo",
             targetRepository: "https://github.com/target/repo",
             targetBranch: "main",
+            ignoredChecks: [],
             sourceDirectory: "src",
             targetDirectory: "target",
             pullRequestFailureNotificationTags: "test-tag",
@@ -275,11 +278,14 @@ public class ExportConfigurationOperationTests
     {
         var subscription = new Subscription(
             id: TestSubscriptionGuid,
+            mergePrs: false,
             enabled: false,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: "https://github.com/test/repo",
             targetRepository: "https://github.com/target/repo",
             targetBranch: "main",
+            ignoredChecks: [],
             sourceDirectory: null,
             targetDirectory: null,
             pullRequestFailureNotificationTags: null,

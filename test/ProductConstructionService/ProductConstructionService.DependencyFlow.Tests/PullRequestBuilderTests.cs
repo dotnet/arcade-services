@@ -1207,14 +1207,17 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     {
         return new Subscription(
             other.Id,
+            other.MergePrs,
             other.Enabled,
             other.SourceEnabled,
+            other.AutoApprove,
             other.SourceRepository,
             other.TargetRepository,
             other.TargetBranch,
-            other.PullRequestFailureNotificationTags,
+            other.IgnoredChecks,
             other.SourceDirectory,
             other.TargetDirectory,
+            other.PullRequestFailureNotificationTags,
             other.ExcludedAssets?.Select(a => a.Filter).ToList());
     }
 }
