@@ -3,7 +3,6 @@
 
 using System.Net;
 using Maestro.Data;
-using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +14,7 @@ using Maestro.WorkItems;
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
 /// <summary>
+///
 ///   Exposes methods to Read <see cref="Subscription"/>s
 /// </summary>
 [Route("subscriptions")]
@@ -256,29 +256,5 @@ public class SubscriptionsController : ControllerBase
         }
 
         return Accepted();
-    }
-
-    /// <summary>
-    ///   Gets a paginated list of the Subscription history for the given Subscription
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Subscription"/> to get history for</param>
-    [HttpGet("{id}/history")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>), Description = "The list of Subscription history")]
-    [Paginated(typeof(SubscriptionHistoryItem))]
-    public virtual async Task<IActionResult> GetSubscriptionHistory(Guid id)
-    {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
-            .FirstOrDefaultAsync();
-
-        if (subscription == null)
-        {
-            return NotFound();
-        }
-
-        IOrderedQueryable<SubscriptionUpdateHistoryEntry> query = _context.SubscriptionUpdateHistory
-            .Where(u => u.SubscriptionId == id)
-            .OrderByDescending(u => u.Timestamp);
-
-        return Ok(query);
     }
 }
