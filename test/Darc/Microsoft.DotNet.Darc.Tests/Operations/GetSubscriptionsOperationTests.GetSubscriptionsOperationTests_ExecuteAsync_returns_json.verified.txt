@@ -13,8 +13,7 @@
     "ignoredChecks": [],
     "policy": {
       "batchable": false,
-      "updateFrequency": "everyDay",
-      "mergePolicies": []
+      "updateFrequency": "everyDay"
     },
     "lastAppliedBuild": null,
     "enabled": true,

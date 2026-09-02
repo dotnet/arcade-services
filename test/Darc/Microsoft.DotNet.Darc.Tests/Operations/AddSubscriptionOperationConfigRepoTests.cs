@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AwesomeAssertions;
-using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -170,9 +169,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         {
             Channel = new Channel(channelId, expectedSubscription.Channel, "test"),
             Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
 
         BarClientMock
@@ -303,14 +299,14 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         var sourceChannel = new Channel(42, "test-channel", "test");
         var sourceSubscription = new Subscription(
             id: sourceSubscriptionId,
-            mergePrs: false,
+            mergePrs: true,
             enabled: true,
             sourceEnabled: false,
             autoApprove: false,
             sourceRepository: "https://github.com/dotnet/source-repo",
             targetRepository: "https://github.com/dotnet/target-repo",
             targetBranch: "main",
-            ignoredChecks: [],
+            ignoredChecks: ["license/cla"],
             pullRequestFailureNotificationTags: "tag1;tag2",
             sourceDirectory: null,
             targetDirectory: null,
@@ -318,16 +314,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         {
             Channel = sourceChannel,
             Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = new List<MergePolicy>
-                {
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                        Properties = []
-                    }
-                }
-            }
         };
 
         // Setup the mock to return the source subscription
@@ -383,8 +369,9 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         actualSubscription.Enabled.Should().Be(sourceSubscription.Enabled);
         actualSubscription.FailureNotificationTags.Should().Be(sourceSubscription.PullRequestFailureNotificationTags);
         actualSubscription.ExcludedAssets.Should().BeEquivalentTo(sourceSubscription.ExcludedAssets);
-        actualSubscription.MergePolicies.Should().HaveCount(1);
-        actualSubscription.MergePolicies[0].Name.Should().Be(MergePolicyConstants.AllCheckSuccessfulMergePolicyName);
+        actualSubscription.MergePrs.Should().BeTrue();
+        actualSubscription.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
+        actualSubscription.MergePolicies.Should().BeEmpty();
     }
 
     [Test]
@@ -411,9 +398,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         {
             Channel = sourceChannel,
             Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = new List<MergePolicy>()
-            }
         };
 
         // Setup the mocks

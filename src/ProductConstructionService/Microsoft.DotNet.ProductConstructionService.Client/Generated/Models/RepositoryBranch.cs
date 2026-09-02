@@ -24,8 +24,5 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("ignoredChecks")]
         public List<string> IgnoredChecks { get; set; }
-
-        [JsonProperty("mergePolicies")]
-        public List<MergePolicy> MergePolicies { get; set; }
     }
 }

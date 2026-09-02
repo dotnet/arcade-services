@@ -254,9 +254,6 @@ public class DeleteSubscriptionsOperationConfigRepoTests : ConfigurationManageme
         {
             Channel = new Channel(1, channel, "test"),
             Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
     }
 

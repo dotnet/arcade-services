@@ -1,17 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
 namespace Maestro.MergePolicies;
 
 public interface IMergePolicyBuilder
 {
-    IReadOnlyList<IMergePolicy> BuildBatchedSubscriptionMergePolicies(RepositoryBranch repositoryBranch);
+    IReadOnlyList<IMergePolicy> BuildBatchedSubscriptionMergePolicies(RepositoryBranch? repositoryBranch);
     IReadOnlyList<IMergePolicy> BuildNonBatchedSubscriptionMergePolicies(Subscription subscription);
 }
 
@@ -29,11 +29,11 @@ public class MergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy>
             new VersionDetailsPropsMergePolicy()
         ];
 
-    public IReadOnlyList<IMergePolicy> BuildBatchedSubscriptionMergePolicies(RepositoryBranch repositoryBranch)
+    public IReadOnlyList<IMergePolicy> BuildBatchedSubscriptionMergePolicies(RepositoryBranch? repositoryBranch)
     {
         var policies = CommonMergePolicies;
 
-        if (repositoryBranch.MergePrs)
+        if (repositoryBranch != null && repositoryBranch.MergePrs)
         {
             policies.Add(new AllChecksSuccessfulMergePolicy([.. repositoryBranch.IgnoredChecks]));
         }

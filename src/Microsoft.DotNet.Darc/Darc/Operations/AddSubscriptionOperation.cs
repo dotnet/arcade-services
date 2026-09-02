@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
@@ -16,7 +14,6 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -46,113 +43,15 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     /// </summary>
     protected override async Task<int> ExecuteInternalAsync()
     {
-        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
+        if (_options.IgnoreChecks.Any() && !_options.MergePrs)
         {
-            _logger.LogError("--ignore-checks must be combined with --all-checks-passed or --standard-automerge");
+            _logger.LogError("--ignore-checks requires --merge-prs");
             return Constants.ErrorCode;
-        }
-        if (_options.CodeFlowCheckMergePolicy && !_options.SourceEnabled)
-        {
-            _logger.LogError("--code-flow-check can only be used with --source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
-
-        // Parse the merge policies
-        List<MergePolicy> mergePolicies = [];
-
-        if (_options.AllChecksSuccessfulMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
-                });
-        }
-
-        if (_options.NoRequestedChangesMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.DontAutomergeDowngradesMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.StandardAutoMergePolicies)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
-                });
-        }
-
-        if (_options.ValidateCoherencyCheckMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy {
-                    Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.CodeFlowCheckMergePolicy)
-        {
-            if (_options.StandardAutoMergePolicies)
-            {
-                _logger.LogInformation("Code flow check merge policy is already included in standard auto-merge policies. Skipping");
-            }
-            else
-            {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.CodeflowMergePolicyName,
-                        Properties = []
-                    });
-            }
-        }
-
-        if (_options.VersionDetailsPropsMergePolicy)
-        {
-            if (_options.StandardAutoMergePolicies)
-            {
-                _logger.LogError("Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
-                               "The Version Details Props policy is already included in standard auto-merge policies.");
-                return Constants.ErrorCode;
-            }
-            
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.VersionDetailsPropsMergePolicyName,
-                    Properties = []
-                });
         }
 
         if (_options.Batchable && _options.SourceEnabled)
         {
             _logger.LogError("Batched codeflow subscriptions are not supported.");
-            return Constants.ErrorCode;
-        }
-
-        if (_options.Batchable && mergePolicies.Count > 0)
-        {
-            Console.WriteLine("Batchable subscriptions cannot be combined with merge policies. " +
-                              "Merge policies are specified at a repository+branch level.");
             return Constants.ErrorCode;
         }
 
@@ -186,6 +85,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
         bool autoApprove = _options.AutoApprove;
+        bool mergePrs = _options.MergePrs;
+        List<string> ignoredChecks = [.. _options.IgnoreChecks];
         string sourceDirectory = _options.SourceDirectory;
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
@@ -232,30 +133,31 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 excludedAssets = [..copyFromSubscription.ExcludedAssets];
             }
             
-            // Copy merge policies if none were specified via command-line options
-            // This must happen before copying boolean values, as merge policies affect batchable validation
-            if (mergePolicies.Count == 0 && copyFromSubscription.Policy.MergePolicies != null)
-            {
-                mergePolicies = [..copyFromSubscription.Policy.MergePolicies];
-            }
-            
-            // For boolean values, we copy them from the source subscription only if no merge policies 
+            // For boolean values, we copy them from the source subscription only if no merge settings
             // were specified via command-line (which would indicate the user is making intentional changes).
             // Note: Due to limitations in CommandLine library, we cannot distinguish between explicit 
             // false values and default false values, so copied boolean values take precedence.
             // Users must explicitly specify boolean flags to override them when using --subscription.
-            if (!HasUserSpecifiedMergePolicies())
+            if (!HasUserSpecifiedMergeSettings())
             {
                 enabled = copyFromSubscription.Enabled;
                 batchable = copyFromSubscription.Policy.Batchable;
                 sourceEnabled = copyFromSubscription.SourceEnabled;
                 autoApprove = copyFromSubscription.AutoApprove;
+                mergePrs = copyFromSubscription.MergePrs;
+                ignoredChecks = [.. copyFromSubscription.IgnoredChecks];
             }
         }
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
         {
             _logger.LogError("Only one of source or target directory can be specified for source-enabled subscriptions.");
+            return Constants.ErrorCode;
+        }
+
+        if (batchable && mergePrs)
+        {
+            _logger.LogError("Batchable subscriptions cannot enable Merge PRs. Configure merging for the repository and branch instead.");
             return Constants.ErrorCode;
         }
 
@@ -303,11 +205,11 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 targetBranch,
                 updateFrequency,
                 batchable,
-                mergePolicies,
+                mergePrs,
+                ignoredChecks,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                 (await suggestedRepos).SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
-                Constants.AvailableMergePolicyYamlHelp,
                 failureNotificationTags,
                 sourceEnabled,
                 autoApprove,
@@ -330,8 +232,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             targetRepository = addSubscriptionPopup.TargetRepository;
             targetBranch = addSubscriptionPopup.TargetBranch;
             updateFrequency = addSubscriptionPopup.UpdateFrequency;
-            mergePolicies = addSubscriptionPopup.MergePolicies;
             batchable = addSubscriptionPopup.Batchable;
+            mergePrs = addSubscriptionPopup.MergePrs;
+            ignoredChecks = [.. addSubscriptionPopup.IgnoredChecks];
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
             sourceEnabled = addSubscriptionPopup.SourceEnabled;
             autoApprove = addSubscriptionPopup.AutoApprove;
@@ -346,13 +249,16 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             // target repo/branch, warn the user.
             if (batchable)
             {
-                var existingMergePolicies = await _barClient.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
-                if (!existingMergePolicies.Any())
+                RepositoryBranch existingRepositoryBranch = (await _barClient.GetRepositoriesAsync(targetRepository, targetBranch))
+                    .FirstOrDefault(repositoryBranch =>
+                        repositoryBranch.Repository.Equals(targetRepository, StringComparison.OrdinalIgnoreCase) &&
+                        repositoryBranch.Branch.Equals(targetBranch, StringComparison.OrdinalIgnoreCase));
+                if (existingRepositoryBranch?.MergePrs != true)
                 {
-                    Console.WriteLine("Warning: Batchable subscription doesn't have any repository merge policies. " +
+                    Console.WriteLine("Warning: Batchable subscription doesn't have Merge PRs enabled for its repository and branch. " +
                                       "PRs will not be auto-merged.");
                     Console.WriteLine($"Please use 'darc set-repository-policies --repo {targetRepository} --branch {targetBranch}' " +
-                                      $"to set policies.{Environment.NewLine}");
+                                      $"to configure merging.{Environment.NewLine}");
                 }
 
                 if (!string.IsNullOrEmpty(failureNotificationTags))
@@ -417,7 +323,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 TargetBranch = targetBranch,
                 UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
                 Batchable = batchable,
-                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                MergePolicies = [],
+                MergePrs = mergePrs,
+                IgnoredChecks = ignoredChecks,
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
                 AutoApprove = autoApprove,
@@ -454,19 +362,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         }
     }
 
-    /// <summary>
-    /// Checks if the user has specified any merge policy options via command line.
-    /// </summary>
-    private bool HasUserSpecifiedMergePolicies()
-    {
-        return _options.AllChecksSuccessfulMergePolicy ||
-               _options.NoRequestedChangesMergePolicy ||
-               _options.DontAutomergeDowngradesMergePolicy ||
-               _options.StandardAutoMergePolicies ||
-               _options.ValidateCoherencyCheckMergePolicy ||
-               _options.CodeFlowCheckMergePolicy ||
-               _options.VersionDetailsPropsMergePolicy;
-    }
+    private bool HasUserSpecifiedMergeSettings() => _options.MergePrs || _options.IgnoreChecks.Any();
 
     private async Task ValidateNoEquivalentSubscription(SubscriptionYamlParameters subscriptionYamlParameters)
     {

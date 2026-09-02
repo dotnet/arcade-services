@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Operations;
@@ -96,9 +97,6 @@ public class GetSubscriptionsOperationTests
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
 
         List<Subscription> subscriptions =
@@ -127,9 +125,6 @@ public class GetSubscriptionsOperationTests
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
 
         List<Subscription> subscriptions =
@@ -151,24 +146,57 @@ public class GetSubscriptionsOperationTests
     }
 
     [Test]
+    public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_repository_merge_settings_for_batchable_subscription_json()
+    {
+        Subscription subscription = new(Guid.Empty, false, true, false, false, "source", "target", "test", [], null, null, string.Empty, [])
+        {
+            Channel = new(id: 1, name: "name", classification: "classification"),
+            Policy = new(batchable: true, updateFrequency: UpdateFrequency.EveryDay)
+        };
+        RepositoryBranch repositoryBranch = new(mergePrs: true)
+        {
+            Repository = "target",
+            Branch = "test",
+            IgnoredChecks = ["WIP", "license/cla"],
+        };
+
+        _barMock
+            .Setup(client => client.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync([subscription]);
+        _barMock
+            .Setup(client => client.GetRepositoryBranch("target", "test"))
+            .ReturnsAsync(repositoryBranch);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json },
+            _barMock.Object,
+            _loggerMock.Object);
+
+        int result = await operation.ExecuteAsync();
+
+        result.Should().Be(Constants.SuccessCode);
+        using JsonDocument output = JsonDocument.Parse(_consoleOutput.GetOutput());
+        JsonElement outputSubscription = output.RootElement.EnumerateArray().Single();
+        outputSubscription.GetProperty("mergePrs").GetBoolean().Should().BeTrue();
+        outputSubscription.GetProperty("ignoredChecks")
+            .EnumerateArray()
+            .Select(check => check.GetString())
+            .Should().BeEquivalentTo(["WIP", "license/cla"]);
+        _barMock.Verify(client => client.GetRepositoryBranch("target", "test"), Times.Once);
+    }
+
+    [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_sorted_text()
     {
         Subscription subscription1 = new(Guid.Empty, false, true, true, false, "source2", "target2", "test", [], "repo-name", null, null, [])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
 
         Subscription subscription2 = new(Guid.Empty, false, true, false, false, "source1", "target1", "test", [], string.Empty, null, null, [])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
 
         List<Subscription> subscriptions =

@@ -36,7 +36,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
     - [update-subscription](#update-subscription) - Update an existing subscription.
     - [delete-subscriptions](#delete-subscriptions) - Delete a subscription or set of subscriptions matching criteria.
     - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
-    - [set-repository-policies](#set-repository-policies) - Set merge policies for the specific repository and branch.
+    - [set-repository-policies](#set-repository-policies) - Set Merge PRs options for the specific repository and branch.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
   - [add-build-to-channel](#add-build-to-channel) - Adds an existing build to a channel
   - [authenticate](#authenticate) - Stores the Azure DevOps and GitHub tokens
@@ -56,7 +56,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-latest-build](#get-latest-build) - Retrieves the latest builds matching
     the specified criteria. If more than one build matches then multiple builds
     are returned.
-  - [get-repository-policies](#get-repository-policies) - Retrieves information about repository merge policies.
+  - [get-repository-policies](#get-repository-policies) - Retrieves Merge PRs settings for repositories and branches.
   - [get-subscriptions](#get-subscriptions) - Get information about
     subscriptions.
   - [get-subscription-history](#get-subscription-history) - Get the history of
@@ -792,9 +792,9 @@ A subscription has a few parts:
 - An update rate (e.g. every day, every build, not at all)
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
-- A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository branch level rather than a per-subscription
-  level, using [set-repository-policies](#set-repository-policies).
+- Whether pull requests should be merged automatically, and any checks to ignore.
+  Batchable subscriptions configure these settings at the repository branch level
+  using [set-repository-policies](#set-repository-policies).
 
 For additional information and samples, see [add-subscription](#add-subscription)
 
@@ -880,13 +880,10 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/core-setup' ('main')
   - Id: 21e611eb-ab71-410e-ca98-08d61f236c94
   - Update Frequency: everyDay
-  - Merge Policies:
-    AllChecksSuccessful
-      ignoreChecks =
-                     [
-                       "WIP",
-                       "license/cla"
-                     ]
+  - Merge PRs: True
+  - Ignored Checks:
+    - WIP
+    - license/cla
   - Last Build: N/A
 
   PS C:\enlistments\arcade> darc delete-subscriptions --id 21e611eb-ab71-410e-ca98-08d61f236c94
@@ -897,7 +894,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
 
   ```
   PS C:\enlistments\arcade> darc add-subscription --channel '.NET Tools - Latest' --target-repo https://github.com/dotnet/core-setup
-                            --target-branch main --update-frequency everyDay --all-checks-passed
+                            --target-branch main --update-frequency everyDay --merge-prs
                             --source-repo https://github.com/dotnet/arcade --ignore-checks 'WIP,license/cli'
 
   Successfully created new subscription with id '689a946e-2c12-4b0c-ccf6-08d688804ce4'.
@@ -1106,7 +1103,22 @@ To locate the BAR build ID for a build
 
 ### Checking Merge Policies on Github
 
-You will find them on the `Checks` tab of each updates PRs created by maestro. Depending on the merge policies set for the repository, you will find one or multiple check(s) (in a failed or successful state). 
+Most merge policies run by default on every subscription and publish their
+results to the tracked pull request. Maestro validates `Version.Details.props`,
+prevents automatic merging of dependency downgrades, and validates dependency
+coherency. Codeflow subscriptions also run the applicable forward-flow or
+backflow validation.
+
+When `Merge PRs` is enabled, Maestro additionally runs the `All Checks
+Successful` policy. This policy evaluates the other checks reported on the pull
+request, such as PR builds, and succeeds only when every non-ignored check is
+green. Maestro's own policy checks are evaluated separately, and Maestro merges
+the pull request only after all of them pass. For non-batched subscriptions,
+`Merge PRs` and `Ignored Checks` belong to the subscription. For batched
+subscriptions, they belong to the target repository and branch.
+
+All policy results are available on the `Checks` tab of each update pull
+request created by Maestro.
 
 ![Checks Merge Policies](ChecksMergePolicies.png)
 
@@ -1164,7 +1176,7 @@ darc add-subscription `
 darc set-repository-policies `
   --repo https://github.com/dotnet/target-repo `
   --branch main `
-  --all-checks-passed `
+  --merge-prs `
   --configuration-branch net11-preview4-config
 ```
 
@@ -1192,7 +1204,7 @@ Several darc commands manage configuration through a dedicated configuration rep
 
 **Configuration Repository Workflow:**
 
-The configuration for Subscriptions, Channels, Default Channels, and Repository Branch Merge Policies are now all stored in the configuration repository. This repository contains YAML files that define these entities.
+The configuration for subscriptions, channels, default channels, and repository branch merge settings is stored in the configuration repository. This repository contains YAML files that define these entities.
 
 When you run configuration management commands, darc creates pull requests with the requested changes. After these PRs are merged, an ingestion pipeline is triggered, refreshing the service configuration with the latest data from the repository.
 
@@ -1448,9 +1460,9 @@ A subscription has a few parts:
 - An update rate (e.g. every day, every build, not at all)
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
-- A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository branch level rather than a per-subscription
-  level, using [set-repository-policies](#set-repository-policies).
+- Whether pull requests should be merged automatically, and any checks to ignore.
+  Batchable subscriptions configure these settings at the repository branch level
+  using [set-repository-policies](#set-repository-policies).
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1467,7 +1479,7 @@ line mode (`-q`), the darc tool submits the new subscription to the configuratio
 PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
                                    --source-repo https://github.com/dotnet/arcade
                                    --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization
-                                   --target-branch main --update-frequency everyDay --all-checks-passed -q
+                                   --target-branch main --update-frequency everyDay --merge-prs -q
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
 ```
@@ -1506,21 +1518,21 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --source-repo https://github.com/dotnet/runtime
                        --target-repo https://github.com/dotnet/sdk
                        --target-branch main --update-frequency everyBuild
-                       --target-directory "src/sdk,src/runtime" --standard-automerge -q
+                       --target-directory "src/sdk,src/runtime" --merge-prs -q
 
 # Use wildcards to target multiple directories
 PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --source-repo https://github.com/dotnet/runtime
                        --target-repo https://github.com/dotnet/sdk
                        --target-branch main --update-frequency everyBuild
-                       --target-directory "src/*" --standard-automerge -q
+                       --target-directory "src/*" --merge-prs -q
 
 # Target repository root
 PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --source-repo https://github.com/dotnet/runtime
                        --target-repo https://github.com/dotnet/sdk
                        --target-branch main --update-frequency everyBuild
-                       --target-directory "." --standard-automerge -q
+                       --target-directory "." --merge-prs -q
 ```
 
 When using `--target-directory`, you can also use `--excluded-assets` to exclude specific 
@@ -1536,53 +1548,14 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
 ```
 
-**Available merge policies**
+**Merge settings**
 
-- Standard - This is the recommended merge policy. It encompasses two existing
-  merge policies:
-  - All PR checks must be successful, ignoring typical checks in GitHub in AzDO
-    that do not indicate the quality of the PR (e.g. the WIP check) as well as a
-    check that no changes have been requested on the PR. For codeflow subscriptions,
-    it also adds additional validation for version files.
-
-  YAML format for interactive mode:
-  ```
-   - Name: Standard
-  ```
-
-- AllChecksSuccessful - All PR checks must be successful, potentially ignoring a
-  specified set of checks. Checks might be ignored if they are unrelated to PR
-  validation. The check name corresponds to the string that shows up in GitHub/Azure DevOps.
-
-  YAML format for interactive mode:
-  ```
-   - Name: AllChecksSuccessful
-     Properties:
-       ignoreChecks:
-       - WIP
-       - license/cla
-       - <other check names>
-  ```
-
-- RequireChecks - Require that a specific set of checks pass. The check name
-  corresponds to the string that shows up in GitHub/Azure DevOps.
-
-  YAML format for interactive mode:
-  ```
-   - Name: RequireChecks
-     Properties:
-       checks:
-       - MyCIValidation
-       - CI
-       - <other check names>
-  ```
-
-- NoExtraCommits - If additional non-bot commits appear in the PR, the PR should not be merged.
-
-  YAML format for interactive mode:
-  ```
-   - Name: NoExtraCommits
-  ```
+Use `--merge-prs` to add the `All Checks Successful` policy and have Maestro
+merge pull requests after all Maestro policies pass. The policy evaluates every
+other check reported on the pull request, such as PR builds. Use
+`--ignore-checks` with `--merge-prs` to provide a comma-separated list of checks
+that should not block merging. In interactive mode these settings are shown as
+`Merge PRs` and `Ignored Checks`.
 
 **See also**:
 - [Configuration Management Commands](#configuration-management-commands)
@@ -2831,11 +2804,9 @@ Channels:
 
 ### **`get-repository-policies`**
 
-Retrieves information about repository merge policies. Merge policies dictate
-the checks that must be satisfied for a pull request to be automatically merged.
-These merge policies come from two sources:
-- Non-batchable subscriptions specify their own merge policies.
-- Batchable subscriptions share a merge policy per repo+branch combination.
+Retrieves Merge PRs and ignored-check settings for repository branches.
+Batchable subscriptions targeting the same repository and branch share these
+settings.
 
 **Sample**:
 ```
@@ -2843,11 +2814,12 @@ S D:\enlistments\websdk> darc get-repository-policies --repo extensions
 Filtered 3 policies for branches not targeted by an active batchable subscription. To include, pass --all.
 
 https://github.com/aspnet/Extensions @ main
-- Merge Policies:
-  Standard
+  Merge PRs: True
+  Ignored Checks:
+    - WIP
 https://github.com/aspnet/Extensions @ release/3.0-preview6
-- Merge Policies:
-  Standard
+  Merge PRs: False
+  Ignored Checks:
 ```
 
 **See also**:
@@ -2883,22 +2855,19 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet
   - Update Frequency: EveryBuild
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 https://github.com/aspnet/AspNetCore (.NET Core 3 Release) ==> 'https://github.com/dotnet/core-sdk' ('release/3.0.1xx')
   - Id: 0a2d0ca4-5d87-4bfd-2808-08d690bc5860
   - Update Frequency: EveryBuild
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 https://github.com/aspnet/AspNetCore (.NET Core 3.1 Dev) ==> 'https://github.com/dotnet/core-sdk' ('release/3.1.1xx')
   - Id: 7fc4cbba-590c-4071-5029-08d727dabd66
   - Update Frequency: EveryBuild
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 ```
 
 **See also**:
@@ -2952,38 +2921,40 @@ PS D:\enlistments\arcade-services> darc get-subscription-history --search core-s
 
 ### **`set-repository-policies`**
 
-Set merge policies for the specific repository and branch. These policies only
-apply to batchable subscriptions. When all repository policies are satisfied,
-the dependency update pull request is automatically merged.
+Set Merge PRs and ignored-check settings for a repository and branch. These
+settings apply to batchable subscriptions. When Merge PRs is enabled, Maestro
+adds the `All Checks Successful` policy. It evaluates every other check on the
+pull request, such as PR builds, and succeeds when every non-ignored check is
+green. Maestro merges the pull request after all Maestro policies pass.
 
 This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
 
-If `-q` is not passed, the command pops up an edit dialog so that the repository
-policies may be edited.
+If `-q` is not passed, the command opens an editor where the repository settings
+may be edited.
 
 **Parameters:**
-- `--repo` (required) - Name of repository to set merge policies for
-- `--branch` (required) - Name of branch to set merge policies for
-- `--standard-automerge` - Use standard auto-merge policies
-- `--all-checks-passed` - PR is automatically merged if there is at least one check and all are passed
-- `--ignore-checks` - For use with `--all-checks-passed`. A comma-separated list of checks that are ignored
-- `--no-requested-changes` - PR is not merged if there are changes requested or the PR has been rejected
-- `--no-downgrades` - PR is not merged if there are version downgrades
+- `--repo` (required) - Repository URL to configure
+- `--branch` (required) - Branch to configure
+- `--merge-prs` - Whether Maestro should merge pull requests after all Maestro checks pass
+- `--ignore-checks` - A comma-separated list of checks ignored when merging pull requests. Requires `--merge-prs`
 - `-q, --quiet` - Non-interactive mode (requires all elements to be passed on the command line)
 - See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx \
-                          --branch main --standard-automerge -q
+                          --branch main --merge-prs --ignore-checks WIP,license/cla -q
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12353
 
 PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch main --all
 https://github.com/dotnet/corefx @ main
-- Merge Policies:
-  Standard
+  Merge PRs: True
+  Ignored Checks:
+    - WIP
+    - license/cla
 https://github.com/dotnet/corefxlab @ main
-- Merge Policies: []
+  Merge PRs: False
+  Ignored Checks:
 ```
 
 **See also**:
@@ -3016,8 +2987,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Update Frequency: EveryDay
   - Enabled: False
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --enable
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12355
@@ -3028,8 +2998,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 ```
 
 **See also**:
@@ -3213,9 +3182,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    AllChecksSuccessful
-      ignoreChecks = []
+  - Merge PRs: True
 
 PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12356
@@ -3226,8 +3193,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
-  - Merge Policies:
-    Standard
+  - Merge PRs: True
 ```
 
 **See also**:

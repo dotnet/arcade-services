@@ -267,9 +267,6 @@ public class UpdateSubscriptionOperationConfigRepoTests : ConfigurationManagemen
         {
             Channel = new Channel(1, channel, "test"),
             Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
     }
 

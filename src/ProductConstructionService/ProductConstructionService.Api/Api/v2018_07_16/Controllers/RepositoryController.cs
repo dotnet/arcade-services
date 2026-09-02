@@ -62,39 +62,36 @@ public class RepositoryController : ControllerBase
         return Ok(query.AsEnumerable().Select(r => new RepositoryBranch(r)).ToList());
     }
 
-    // TODO do we want this to return MergePrs and ignored checks????
-    // <summary>
-    //   Gets the list of <see cref="MergePolicy">MergePolicies</see> set up for the given repository and branch.
-    // </summary>
-    // <param name="repository">The repository</param>
-    // <param name="branch">The branch</param>
-    //[HttpGet("merge-policy")]
-    //[SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(IList<MergePolicy>), Description = "The list of MergePolicies")]
-    //public async Task<IActionResult> GetMergePolicies([Required] string repository, [Required] string branch)
-    //{
-    //    if (string.IsNullOrEmpty(repository))
-    //    {
-    //        ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
-    //    }
+    /// <summary>
+    ///   Gets the repository branch matching the provided parameters
+    /// </summary>
+    /// <param name="repository">The repository</param>
+    /// <param name="branch">The branch</param>
+    [HttpGet("merge-policy")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(RepositoryBranch), Description = "The repository branch")]
+    public async Task<IActionResult> GetRepositoryBranch([Required] string repository, [Required] string branch)
+    {
+        if (string.IsNullOrEmpty(repository))
+        {
+            ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
+        }
 
-    //    if (string.IsNullOrEmpty(branch))
-    //    {
-    //        ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
-    //    }
+        if (string.IsNullOrEmpty(branch))
+        {
+            ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
+        }
 
-    //    if (!ModelState.IsValid)
-    //    {
-    //        return BadRequest(ModelState);
-    //    }
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-    //    Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
-    //    if (repoBranch == null)
-    //    {
-    //        return NotFound();
-    //    }
+        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
+        if (repoBranch == null)
+        {
+            return NotFound();
+        }
 
-    //    List<Maestro.Data.Models.MergePolicyDefinition> policies =
-    //        repoBranch.PolicyObject?.MergePolicies ?? [];
-    //    return Ok(policies.Select(p => new MergePolicy(p)));
-    //}
+        return Ok(repoBranch);
+    }
 }

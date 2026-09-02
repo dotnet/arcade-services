@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
@@ -24,7 +23,6 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
     private readonly IEnumerable<string> _suggestedChannels;
     private readonly IEnumerable<string> _suggestedRepositories;
     private readonly IEnumerable<string> _availableUpdateFrequencies;
-    private readonly IEnumerable<string> _availableMergePolicyHelp;
     private readonly ILogger _logger;
     private readonly IGitRepoFactory _gitRepoFactory;
 
@@ -33,7 +31,8 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
     public string TargetRepository => _data.TargetRepository;
     public string TargetBranch => _data.TargetBranch;
     public string UpdateFrequency => _data.UpdateFrequency;
-    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
+    public bool MergePrs => bool.Parse(_data.MergePrs);
+    public IReadOnlyCollection<string> IgnoredChecks => _data.IgnoredChecks;
     public bool Batchable => bool.Parse(_data.Batchable);
     public string? FailureNotificationTags => _data.FailureNotificationTags;
     public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
@@ -48,7 +47,6 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
-        IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
         IGitRepoFactory gitRepoFactory,
         TData data,
@@ -60,7 +58,6 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
         _suggestedChannels = suggestedChannels;
         _suggestedRepositories = suggestedRepositories;
         _availableUpdateFrequencies = availableUpdateFrequencies;
-        _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
         _gitRepoFactory = gitRepoFactory;
         GeneratePopUpContent(header);
@@ -107,23 +104,23 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
         Contents.Add(new("Suggested Channels:", true));
         Contents.Add(new($"  {string.Join(", ", _suggestedChannels)}", true));
 
-        Contents.Add(Line.Empty);
-        Contents.Add(new("Available Merge Policies", true));
-
-        foreach (string mergeHelp in _availableMergePolicyHelp)
-        {
-            Contents.Add(new($"  {mergeHelp}", true));
-        }
     }
 
     protected virtual async Task<int> ParseAndValidateData(TData outputYamlData)
     {
-        if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
+        _data.MergePrs = ParseSetting(outputYamlData.MergePrs, _data.MergePrs, false);
+        if (!bool.TryParse(_data.MergePrs, out bool mergePrs))
         {
+            _logger.LogError("Merge PRs is not a valid boolean value.");
             return Constants.ErrorCode;
         }
 
-        _data.MergePolicies = outputYamlData.MergePolicies;
+        _data.IgnoredChecks = outputYamlData.IgnoredChecks ?? [];
+        if (!mergePrs && _data.IgnoredChecks.Count != 0)
+        {
+            _logger.LogError("Ignored Checks can only be specified when Merge PRs is enabled.");
+            return Constants.ErrorCode;
+        }
 
         _data.Channel = ParseSetting(outputYamlData.Channel, _data.Channel, false);
         if (string.IsNullOrEmpty(_data.Channel))
@@ -167,9 +164,15 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         _data.Batchable = ParseSetting(outputYamlData.Batchable, _data.Batchable, false);
 
-        if (!bool.TryParse(outputYamlData.Batchable, out bool _))
+        if (!bool.TryParse(_data.Batchable, out bool batchable))
         {
             _logger.LogError("Batchable is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
+        if (batchable && mergePrs)
+        {
+            _logger.LogError("Batchable subscriptions cannot enable Merge PRs. Configure merging for the repository and branch instead.");
             return Constants.ErrorCode;
         }
 

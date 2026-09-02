@@ -42,8 +42,7 @@ internal class BatchedPullRequestTarget : IPullRequestTarget
     {
         RepositoryBranch? repositoryBranch = await _context.RepositoryBranches.FindAsync(_id.Repository, _id.Branch);
 
-        return _mergePolicyBuilder.BuildBatchedSubscriptionMergePolicies(SqlBarClient.ToClientModelRepositoryBranch(repositoryBranch
-            ?? throw new DarcException($"Repository branch {_id.Repository}/{_id.Branch} doesn't exist in BAR")));
+        return _mergePolicyBuilder.BuildBatchedSubscriptionMergePolicies(repositoryBranch == null ? null : SqlBarClient.ToClientModelRepositoryBranch(repositoryBranch));
     }
 
     // For batched subscriptions we don't know which source repo to tag

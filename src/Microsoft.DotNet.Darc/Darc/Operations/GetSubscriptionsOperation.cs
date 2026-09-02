@@ -4,6 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -11,7 +14,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
@@ -21,6 +23,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal class GetSubscriptionsOperation : Operation
 {
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
     private readonly GetSubscriptionsCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly ILogger<GetSubscriptionsOperation> _logger;
@@ -39,21 +43,23 @@ internal class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(_barClient);
+            IReadOnlyList<Subscription> subscriptions = [.. await _options.FilterSubscriptions(_barClient)];
 
-            if (!subscriptions.Any())
+            if (subscriptions.Count == 0)
             {
                 Console.WriteLine("No subscriptions found matching the specified criteria.");
                 return Constants.ErrorCode;
             }
 
+            subscriptions = await ApplyRepositoryMergeSettingsAsync(subscriptions, _barClient);
+
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
-                    await OutputJsonAsync(subscriptions, _barClient);
+                    OutputJson(subscriptions);
                     break;
                 case DarcOutputType.text:
-                    await OutputTextAsync(subscriptions, _barClient);
+                    OutputText(subscriptions);
                     break;
                 default:
                     throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by get-subscriptions");
@@ -73,39 +79,56 @@ internal class GetSubscriptionsOperation : Operation
         }
     }
 
-    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IBarApiClient barClient)
+    private static async Task<IReadOnlyList<Subscription>> ApplyRepositoryMergeSettingsAsync(
+        IEnumerable<Subscription> subscriptions,
+        IBarApiClient barClient)
     {
-        foreach (var subscription in Sort(subscriptions))
-        {
-            // If batchable, the merge policies come from the repository
-            if (subscription.Policy.Batchable)
-            {
-                IEnumerable<MergePolicy> repoMergePolicies = await barClient.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
-                if (!repoMergePolicies.Any())
-                {
-                    continue;
-                }
+        List<Subscription> subscriptionsWithMergeSettings = [];
 
-                IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
-                subscription.Policy.MergePolicies = [.. mergePolicies.Union(repoMergePolicies)];
+        foreach (Subscription subscription in subscriptions)
+        {
+            if (!subscription.Policy.Batchable)
+            {
+                subscriptionsWithMergeSettings.Add(subscription);
+                continue;
             }
+
+            RepositoryBranch repositoryBranch = await barClient.GetRepositoryBranch(
+                subscription.TargetRepository,
+                subscription.TargetBranch);
+
+            subscriptionsWithMergeSettings.Add(new Subscription(
+                subscription.Id,
+                repositoryBranch.MergePrs,
+                subscription.Enabled,
+                subscription.SourceEnabled,
+                subscription.AutoApprove,
+                subscription.SourceRepository,
+                subscription.TargetRepository,
+                subscription.TargetBranch,
+                [.. repositoryBranch.IgnoredChecks ?? []],
+                subscription.SourceDirectory,
+                subscription.TargetDirectory,
+                subscription.PullRequestFailureNotificationTags,
+                subscription.ExcludedAssets)
+            {
+                Channel = subscription.Channel,
+                Policy = subscription.Policy,
+                LastAppliedBuild = subscription.LastAppliedBuild,
+            });
         }
 
-        Console.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
+        return subscriptionsWithMergeSettings;
     }
 
-    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IBarApiClient barClient)
+    private static void OutputJson(IEnumerable<Subscription> subscriptions)
+        => Console.WriteLine(JsonSerializer.Serialize(subscriptions, JsonOptions));
+
+    private static void OutputText(IEnumerable<Subscription> subscriptions)
     {
         foreach (var subscription in Sort(subscriptions))
         {
-            // If batchable, the merge policies come from the repository
-            IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
-            if (subscription.Policy.Batchable)
-            {
-                mergePolicies = await barClient.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
-            }
-
-            string subscriptionInfo = UxHelpers.GetTextSubscriptionDescription(subscription, mergePolicies);
+            string subscriptionInfo = UxHelpers.GetTextSubscriptionDescription(subscription);
             Console.Write(subscriptionInfo);
         }
     }
@@ -114,4 +137,29 @@ internal class GetSubscriptionsOperation : Operation
     // Concat the input strings as a simple sorting mechanism.
     private static IEnumerable<Subscription> Sort(IEnumerable<Subscription> subscriptions)
         => subscriptions.OrderBy(subscription => $"{subscription.SourceRepository}{subscription.Channel}{subscription.TargetRepository}{subscription.TargetBranch}");
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        DefaultJsonTypeInfoResolver typeInfoResolver = new();
+        typeInfoResolver.Modifiers.Add(typeInfo =>
+        {
+            List<JsonPropertyInfo> ignoredProperties = [.. typeInfo.Properties.Where(property =>
+                property.AttributeProvider is System.Reflection.MemberInfo memberInfo &&
+                memberInfo.GetCustomAttributesData().Any(attribute =>
+                    attribute.AttributeType.FullName == "Newtonsoft.Json.JsonIgnoreAttribute"))];
+            foreach (JsonPropertyInfo ignoredProperty in ignoredProperties)
+            {
+                typeInfo.Properties.Remove(ignoredProperty);
+            }
+        });
+
+        JsonSerializerOptions options = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = typeInfoResolver,
+            WriteIndented = true,
+        };
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        return options;
+    }
 }
