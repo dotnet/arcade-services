@@ -206,7 +206,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequest prInfo,
         IRemote remote)
     {
-        (IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult) = await RunMergePolicyEvaluation(pr, prInfo, remote);
+        MergePolicyEvaluationResults updatedResult = await RunMergePolicyEvaluation(pr, prInfo, remote);
 
         // As soon as one policy is actively failed, we enter a failed state.
         if (updatedResult.Failed)
@@ -240,8 +240,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
 
-            var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
-            _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
+            _logger.LogInformation("Merged: PR '{url}'", pr.Url);
             return MergePolicyCheckResult.Merged;
         }
         catch (PullRequestNotMergeableException notMergeableException)
@@ -256,20 +255,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    protected async Task<(IReadOnlyList<MergePolicyDefinition> policyDefinitions, MergePolicyEvaluationResults updatedResult)> RunMergePolicyEvaluation(
+    protected async Task<MergePolicyEvaluationResults> RunMergePolicyEvaluation(
         InProgressPullRequest pr,
         PullRequest prInfo,
         IRemote remote)
     {
         (var targetRepository, _) = await _target.GetTargetAsync();
-        IReadOnlyList<MergePolicyDefinition> policyDefinitions = await _target.GetMergePolicyDefinitionsAsync();
+        IReadOnlyList<IMergePolicy> mergePolicies = await _target.GetMergePoliciesAsync();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _stateManager.GetMergePolicyEvaluationResultsAsync();
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(
             prSummary,
             remote,
-            policyDefinitions,
+            mergePolicies,
             cachedResults,
             prInfo.HeadBranchSha);
 
@@ -280,7 +279,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _stateManager.SetMergePolicyEvaluationResultsAsync(updatedResult);
 
         await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
-        return (policyDefinitions, updatedResult);
+        return updatedResult;
     }
 
     /// <summary>

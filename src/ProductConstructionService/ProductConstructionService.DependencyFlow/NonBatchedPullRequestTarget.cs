@@ -3,6 +3,8 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
@@ -20,6 +22,7 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
     private readonly BuildAssetRegistryContext _context;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
+    private readonly MergePolicyBuilder _mergePolicyBuilder;
     private readonly ILogger<NonBatchedPullRequestTarget> _logger;
 
     private readonly Lazy<Task<Subscription?>> _subscription;
@@ -31,12 +34,14 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
         BuildAssetRegistryContext context,
         ICommentCollector commentCollector,
         IPullRequestCommentBuilder commentBuilder,
+        MergePolicyBuilder mergePolicyBuilder,
         ILogger<NonBatchedPullRequestTarget> logger)
     {
         _id = id;
         _context = context;
         _commentCollector = commentCollector;
         _commentBuilder = commentBuilder;
+        _mergePolicyBuilder = mergePolicyBuilder;
         _logger = logger;
         _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscriptionAsync);
     }
@@ -48,10 +53,12 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
         return (subscription.TargetRepository, subscription.TargetBranch);
     }
 
-    public async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitionsAsync()
+    public async Task<IReadOnlyList<IMergePolicy>> GetMergePoliciesAsync()
     {
         Subscription? subscription = await _subscription.Value;
-        return subscription?.PolicyObject?.MergePolicies ?? [];
+
+        return _mergePolicyBuilder.BuildNonBatchedSubscriptionMergePolicies(SqlBarClient.ToClientModelSubscription(subscription ??
+            throw new DarcException($"Subscription {_id.SubscriptionId} does not exist in BAR")));
     }
 
     public async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)

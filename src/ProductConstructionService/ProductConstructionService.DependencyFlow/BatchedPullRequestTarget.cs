@@ -3,6 +3,9 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
+using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -16,15 +19,18 @@ internal class BatchedPullRequestTarget : IPullRequestTarget
 {
     private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
+    private readonly IMergePolicyBuilder _mergePolicyBuilder;
 
     public string UpdaterId => _id.Id;
 
     public BatchedPullRequestTarget(
         BatchedPullRequestUpdaterId id,
-        BuildAssetRegistryContext context)
+        BuildAssetRegistryContext context,
+        IMergePolicyBuilder mergePolicyBuilder)
     {
         _id = id;
         _context = context;
+        _mergePolicyBuilder = mergePolicyBuilder;
     }
 
     public Task<(string Repository, string Branch)> GetTargetAsync()
@@ -32,10 +38,12 @@ internal class BatchedPullRequestTarget : IPullRequestTarget
         return Task.FromResult((_id.Repository, _id.Branch));
     }
 
-    public async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitionsAsync()
+    public async Task<IReadOnlyList<IMergePolicy>> GetMergePoliciesAsync()
     {
         RepositoryBranch? repositoryBranch = await _context.RepositoryBranches.FindAsync(_id.Repository, _id.Branch);
-        return repositoryBranch?.PolicyObject?.MergePolicies ?? [];
+
+        return _mergePolicyBuilder.BuildBatchedSubscriptionMergePolicies(SqlBarClient.ToClientModelRepositoryBranch(repositoryBranch
+            ?? throw new DarcException($"Repository branch {_id.Repository}/{_id.Branch} doesn't exist in BAR")));
     }
 
     // For batched subscriptions we don't know which source repo to tag

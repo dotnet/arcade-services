@@ -636,7 +636,6 @@ public class ConfigurationIngestorTests
             .FirstOrDefault(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
 
         updated.Should().NotBeNull();
-        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     #endregion
@@ -1333,7 +1332,6 @@ public class ConfigurationIngestorTests
         
         var updatedBranch = namespaceEntity.RepositoryBranches.First(rb => 
             rb.RepositoryName == "https://github.com/dotnet/repo-update-1" && rb.BranchName == "release");
-        updatedBranch.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     #endregion
@@ -1621,7 +1619,6 @@ public class ConfigurationIngestorTests
             .FirstOrDefaultAsync(rb => rb.Namespace!.Name == _testNamespace);
 
         updated.Should().NotBeNull();
-        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     [Test]
@@ -1753,7 +1750,6 @@ public class ConfigurationIngestorTests
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
                 Batchable = false,
-                MergePolicies = [],
             },
             Namespace = namespaceEntity,
             ExcludedAssets = excludedAssets ?? [],
@@ -1789,23 +1785,11 @@ public class ConfigurationIngestorTests
             await _context.SaveChangesAsync();
         }
 
-        var policyObject = new RepositoryBranch.Policy
-        {
-            MergePolicies = mergePolicies
-                .Select(mp => new MergePolicyDefinition
-                {
-                    Name = mp.Name,
-                    Properties = mp.Properties?.ToDictionary(p => p.Key, p => Newtonsoft.Json.Linq.JToken.FromObject(p.Value)),
-                })
-                .ToList(),
-        };
-
         return new RepositoryBranch
         {
             Repository = repository,
             RepositoryName = repository.RepositoryName,
             BranchName = branchName,
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(policyObject),
             Namespace = namespaceEntity,
         };
     }
@@ -1913,8 +1897,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-                Batchable = false,
-                MergePolicies = [],
+                Batchable = false
             },
             Namespace = _namespace,
             ExcludedAssets = [new AssetFilter { Filter = "Old.Package" }],
@@ -1932,8 +1915,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryDay,
-                Batchable = true,
-                MergePolicies = [],
+                Batchable = true
             },
             Namespace = _namespace,
             ExcludedAssets = [],
@@ -1951,8 +1933,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-                Batchable = false,
-                MergePolicies = [],
+                Batchable = false
             },
             Namespace = _namespace,
             ExcludedAssets = [],
@@ -2005,10 +1986,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoUpdate1,
             RepositoryName = repoUpdate1.RepositoryName,
             BranchName = "release",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
-            }),
             Namespace = _namespace,
         };
 
@@ -2017,10 +1994,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoUpdate2,
             RepositoryName = repoUpdate2.RepositoryName,
             BranchName = "main",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "RequireReviews" }],
-            }),
             Namespace = _namespace,
         };
 
@@ -2029,10 +2002,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoDelete1,
             RepositoryName = repoDelete1.RepositoryName,
             BranchName = "main",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
-            }),
             Namespace = _namespace,
         };
 

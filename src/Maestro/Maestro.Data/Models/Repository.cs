@@ -33,24 +33,9 @@ public class RepositoryBranch
     [MaxLength(Repository.BranchNameLength)]
     public string BranchName { get; set; }
 
-    [Column("Policy")]
-    public string PolicyString { get; set; }
-
     public bool MergePrs { get; set; }
 
     public List<string> IgnoredChecks { get; set; } = [];
 
-    [NotMapped]
-    public Policy PolicyObject
-    {
-        get => PolicyString == null ? null : JsonConvert.DeserializeObject<Policy>(PolicyString);
-        set => PolicyString = value == null ? null : JsonConvert.SerializeObject(value);
-    }
-
     public Namespace Namespace { get; set; }
-
-    public class Policy
-    {
-        public List<MergePolicyDefinition> MergePolicies { get; set; }
-    }
 }

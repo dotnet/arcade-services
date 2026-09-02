@@ -193,13 +193,7 @@ public class SqlBarClient : ISqlBarClient
         {
             Repository = other.RepositoryName,
             Branch = other.BranchName,
-            IgnoredChecks = [.. (other.IgnoredChecks ?? [])],
-            MergePolicies = [.. (other.PolicyObject?.MergePolicies ?? [])
-            .Select(p => new MergePolicy
-            {
-                Name = p.Name,
-                Properties = p.Properties ?? [],
-            })],
+            IgnoredChecks = [.. (other.IgnoredChecks ?? [])]
         };
     }
     public static Channel ToClientModelChannel(Data.Models.Channel other)
@@ -370,14 +364,7 @@ public class SqlBarClient : ISqlBarClient
         => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
-        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency)
-        {
-            MergePolicies = other.MergePolicies?.Select(mp => new MergePolicy
-            {
-                Name = mp.Name,
-                Properties = mp.Properties
-            }).ToList()
-        };
+        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
         string sourceRepo = null, 

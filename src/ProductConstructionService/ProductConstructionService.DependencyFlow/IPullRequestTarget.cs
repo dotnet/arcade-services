@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.MergePolicies;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
@@ -20,9 +21,9 @@ internal interface IPullRequestTarget
     Task<(string Repository, string Branch)> GetTargetAsync();
 
     /// <summary>
-    ///     Returns the merge policy definitions applicable to this target.
+    ///     Returns the merge policies applicable to this target.
     /// </summary>
-    Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitionsAsync();
+    Task<IReadOnlyList<IMergePolicy>> GetMergePoliciesAsync();
 
     /// <summary>
     ///     Tags the source repository's GitHub contacts when merge policies fail.

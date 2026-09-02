@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 #nullable disable
 namespace ProductConstructionService.Api.v2018_07_16.Models;
 
-public class RepositoryBranch : IValidatableObject
+public class RepositoryBranch
 {
     public RepositoryBranch(Maestro.Data.Models.RepositoryBranch other)
     {
@@ -15,26 +15,10 @@ public class RepositoryBranch : IValidatableObject
         Branch = other.BranchName;
         MergePrs = other.MergePrs;
         IgnoredChecks = [.. (other.IgnoredChecks ?? [])];
-        MergePolicies = (other.PolicyObject?.MergePolicies ?? []).Select(p => new MergePolicy(p)).ToImmutableList();
     }
 
     public string Repository { get; set; }
     public string Branch { get; set; }
     public bool MergePrs { get; set; }
     public IReadOnlyCollection<string> IgnoredChecks { get; set; }
-
-    // TODO: Remove legacy merge policy support after the configuration migration.
-    // https://github.com/dotnet/arcade-services/issues/6426
-    public ImmutableList<MergePolicy> MergePolicies { get; set; }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (MergePolicies != null &&
-            MergePolicies.Select(policy => policy.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != MergePolicies.Count)
-        {
-            yield return new ValidationResult(
-                "Repositories may not have duplicates of merge policies.",
-                new[] { nameof(MergePolicies) });
-        }
-    }
 }

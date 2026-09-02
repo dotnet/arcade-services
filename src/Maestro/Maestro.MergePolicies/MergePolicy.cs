@@ -56,16 +56,3 @@ public interface IMergePolicy : IMergePolicyInfo
 {
     Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc);
 }
-
-public interface IMergePolicyBuilder
-{
-    string Name { get; }
-
-    /// <summary>
-    /// Creates list of instances of concrete merge policies which shall be evaluated 
-    /// for particular merge policy definition
-    /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
-    /// it will return multiple pre-configured policies which that policies template consist of
-    /// </summary>
-    Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr);
-}

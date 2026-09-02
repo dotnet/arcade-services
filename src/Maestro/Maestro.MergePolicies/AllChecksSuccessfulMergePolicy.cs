@@ -71,14 +71,3 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
         return SucceedTransiently($"{ListChecksCount(CheckState.Success)} successful check(s)");
     }
 }
-
-public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.AllCheckSuccessfulMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new AllChecksSuccessfulMergePolicy(ignoreChecks)]);
-    }
-}

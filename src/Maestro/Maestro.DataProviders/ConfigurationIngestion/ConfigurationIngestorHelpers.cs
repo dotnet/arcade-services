@@ -132,12 +132,6 @@ internal partial class ConfigurationIngestor
             SourceRepository = subscription.Values.SourceRepository,
             TargetRepository = subscription.Values.TargetRepository,
             TargetBranch = subscription.Values.TargetBranch,
-            PolicyObject = new SubscriptionPolicy
-            {
-                UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
-                Batchable = subscription.Values.Batchable,
-                MergePolicies = [.. subscription.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
-            },
             Enabled = subscription.Values.Enabled,
             SourceEnabled = subscription.Values.SourceEnabled,
             AutoApprove = subscription.Values.AutoApprove,
@@ -187,30 +181,15 @@ internal partial class ConfigurationIngestor
         IngestedBranchMergePolicies branchMergePolicies,
         Namespace namespaceEntity)
     {
-        var policyObject = new RepositoryBranch.Policy
-        {
-            MergePolicies = [.. branchMergePolicies.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
-        };
-
         var branchMergePolicyDao = new RepositoryBranch
         {
             RepositoryName = branchMergePolicies.Values.Repository,
             BranchName = branchMergePolicies.Values.Branch,
-            PolicyString = JsonConvert.SerializeObject(policyObject),
             Namespace = namespaceEntity,
         };
 
         return branchMergePolicyDao;
     }
-
-    private static MergePolicyDefinition ConvertMergePolicyYamlToDao(MergePolicyYaml mergePolicy)
-        => new()
-        {
-            Name = mergePolicy.Name,
-            Properties = mergePolicy.Properties?.ToDictionary(
-                p => p.Key,
-                p => JToken.FromObject(p.Value)), // todo: this seems fragile. Can we change MergePolicyYaml to be <string, JToken> like the DAO & DTO?
-        };
 }
 
 internal class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>

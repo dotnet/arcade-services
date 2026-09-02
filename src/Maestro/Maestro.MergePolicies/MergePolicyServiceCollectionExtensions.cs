@@ -7,15 +7,9 @@ namespace Maestro.MergePolicies;
 
 public static class MergePolicyServiceCollectionExtensions
 {
-    public static IServiceCollection AddMergePolicies(this IServiceCollection services)
+    public static IServiceCollection AddMergePolicyBuilder(this IServiceCollection services)
     {
-        services.AddTransient<IMergePolicyBuilder, AllChecksSuccessfulMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, DontAutomergeDowngradesMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, ValidateCoherencyMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, CodeFlowMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, VersionDetailsPropsMergePolicyBuilder>();
+        services.AddTransient<MergePolicyBuilder>();
         return services;
     }
 }
