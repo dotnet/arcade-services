@@ -1148,7 +1148,7 @@ public class ConfigurationIngestorTests
     }
 
     [Test]
-    public async Task IngestConfigurationAsync_RepositoryBranchWithPolicyChanges_ReportedAsUpdate()
+    public async Task IngestConfigurationAsync_RepositoryBranchWithMergeConfigurationChanges_ReportedAsUpdate()
     {
         // Arrange
         var namespaceEntity = await CreateNamespace();
@@ -1166,11 +1166,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
+            MergePrs = true,
+            IgnoredChecks = ["license/cla"],
         };
 
         var configData = new ConfigurationData(
@@ -1604,11 +1601,7 @@ public class ConfigurationIngestorTests
         {
             Repository = "HTTPS://GITHUB.COM/DOTNET/RUNTIME",
             Branch = "MAIN",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
+            MergePrs = true,
         };
 
         var configData = new ConfigurationData(
@@ -2131,21 +2124,13 @@ internal class LargeScaleTestDataBuilder
             {
                 Repository = "https://github.com/dotnet/repo-update-1",
                 Branch = "release",
-                MergePolicies =
-                [
-                    new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                    new MergePolicyYaml { Name = "RequireReviews" },
-                ],
+                MergePrs = true,
             },
             new()
             {
                 Repository = "https://github.com/dotnet/repo-update-2",
                 Branch = "main",
-                MergePolicies =
-                [
-                    new MergePolicyYaml { Name = "RequireReviews" },
-                    new MergePolicyYaml { Name = "NoExtraCommits" },
-                ],
+                IgnoredChecks = ["license/cla"],
             },
             // Creates
             new()

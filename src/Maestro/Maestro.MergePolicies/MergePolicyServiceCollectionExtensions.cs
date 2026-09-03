@@ -9,7 +9,7 @@ public static class MergePolicyServiceCollectionExtensions
 {
     public static IServiceCollection AddMergePolicyBuilder(this IServiceCollection services)
     {
-        services.AddTransient<MergePolicyBuilder>();
+        services.AddTransient<IMergePolicyBuilder, MergePolicyBuilder>();
         return services;
     }
 }

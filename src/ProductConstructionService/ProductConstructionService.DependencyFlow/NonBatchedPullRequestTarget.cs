@@ -22,7 +22,7 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
     private readonly BuildAssetRegistryContext _context;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
-    private readonly MergePolicyBuilder _mergePolicyBuilder;
+    private readonly IMergePolicyBuilder _mergePolicyBuilder;
     private readonly ILogger<NonBatchedPullRequestTarget> _logger;
 
     private readonly Lazy<Task<Subscription?>> _subscription;
@@ -34,7 +34,7 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
         BuildAssetRegistryContext context,
         ICommentCollector commentCollector,
         IPullRequestCommentBuilder commentBuilder,
-        MergePolicyBuilder mergePolicyBuilder,
+        IMergePolicyBuilder mergePolicyBuilder,
         ILogger<NonBatchedPullRequestTarget> logger)
     {
         _id = id;

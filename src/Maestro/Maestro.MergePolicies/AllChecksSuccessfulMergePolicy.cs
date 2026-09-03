@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,25 @@ namespace Maestro.MergePolicies;
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
+    private const string GitHubHost = "github.com";
+    private const string AzureDevOpsHost = "dev.azure.com";
+
+    private static readonly HashSet<string> s_githubIgnoreChecks =
+    [
+        "WIP",
+        "license/cla",
+        "auto-merge.config.enforce",
+        "Build Analysis",
+    ];
+
+    private static readonly HashSet<string> s_azureDevOpsIgnoreChecks =
+    [
+        "Comment requirements",
+        "Minimum number of reviewers",
+        "auto-merge.config.enforce",
+        "Work item linking",
+    ];
+
     private readonly HashSet<string> _ignoreChecks;
 
     public const string WaitingForChecksMsg = "Waiting for checks.";
@@ -33,7 +53,11 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Check> checks = await darc.GetPullRequestChecksAsync(pr.Url);
-        IEnumerable<Check> notIgnoredChecks = checks.Where(c => !_ignoreChecks.Contains(c.Name) && !c.IsMaestroMergePolicy);
+        HashSet<string> defaultIgnoreChecks = GetDefaultIgnoreChecks(pr.Url);
+        IEnumerable<Check> notIgnoredChecks = checks.Where(c =>
+            !_ignoreChecks.Contains(c.Name)
+            && !defaultIgnoreChecks.Contains(c.Name)
+            && !c.IsMaestroMergePolicy);
 
         if (!notIgnoredChecks.Any())
         {
@@ -69,5 +93,20 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
         }
 
         return SucceedTransiently($"{ListChecksCount(CheckState.Success)} successful check(s)");
+    }
+
+    private static HashSet<string> GetDefaultIgnoreChecks(string pullRequestUrl)
+    {
+        if (pullRequestUrl.Contains(GitHubHost, StringComparison.OrdinalIgnoreCase))
+        {
+            return s_githubIgnoreChecks;
+        }
+
+        if (pullRequestUrl.Contains(AzureDevOpsHost, StringComparison.OrdinalIgnoreCase))
+        {
+            return s_azureDevOpsIgnoreChecks;
+        }
+
+        throw new NotImplementedException($"Unknown pull request repository URL: {pullRequestUrl}");
     }
 }

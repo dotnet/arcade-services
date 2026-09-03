@@ -79,6 +79,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
+        services.AddMergePolicyBuilder();
         services.AddCodeflow(TmpPath, VmrPath);
     }
 

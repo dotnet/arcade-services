@@ -166,6 +166,11 @@ internal partial class ConfigurationIngestor
             SourceRepository = subscription.Values.SourceRepository,
             TargetRepository = subscription.Values.TargetRepository,
             TargetBranch = subscription.Values.TargetBranch,
+            PolicyObject = new SubscriptionPolicy
+            {
+                UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
+                Batchable = subscription.Values.Batchable,
+            },
             MergePrs = subscription.Values.MergePrs,
             IgnoredChecks = [.. subscription.Values.IgnoredChecks],
             Enabled = subscription.Values.Enabled,
