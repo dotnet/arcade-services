@@ -247,14 +247,3 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         return (missingProperties, orphanedProperties);
     }
 }
-
-public class VersionDetailsPropsMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.VersionDetailsPropsMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new VersionDetailsPropsMergePolicy() };
-        return Task.FromResult(policies);
-    }
-}

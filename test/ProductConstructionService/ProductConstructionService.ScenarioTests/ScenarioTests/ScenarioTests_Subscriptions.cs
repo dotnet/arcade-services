@@ -47,7 +47,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             false);
 
-        var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
+        var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1);
 
         await ValidateSubscriptionInfo(subscription1Id, expectedSubscription1Info);
 
@@ -63,10 +63,10 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             subscription2Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
             false,
-            [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
+            true,
             ["WIP", "license/cla"]);
 
-        var expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
+        var expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2);
 
         await ValidateSubscriptionInfo(subscription2Id, expectedSubscription2Info);
 
@@ -82,10 +82,10 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             subscription3Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
             false,
-            [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
+            true,
             ["WIP", "license/cla"]);
 
-        var expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);
+        var expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3);
 
         await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
 
@@ -137,7 +137,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             true);
 
-        var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
+        var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription);
 
         await ValidateSubscriptionInfo(batchSubscriptionId, expectedBatchedSubscriptionInfo);
         await DeleteSubscriptionById(batchSubscriptionId);
@@ -167,9 +167,9 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             yamlSubscriptionId,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             false,
-            [MergePolicyConstants.StandardMergePolicyName]);
+            true);
 
-        var expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
+        var expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription);
 
         await ValidateSubscriptionInfo(yamlSubscriptionId, expectedYamlSubscriptionInfo);
         await DeleteSubscriptionById(yamlSubscriptionId);
@@ -198,9 +198,9 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             channel1Name,
             yamlSubscription2Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek, false,
-            [MergePolicyConstants.StandardMergePolicyName]);
+            true);
 
-        var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
+        var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2);
 
         await ValidateSubscriptionInfo(yamlSubscription2Id, expectedYamlSubscriptionInfo2);
         await DeleteSubscriptionById(yamlSubscription2Id);

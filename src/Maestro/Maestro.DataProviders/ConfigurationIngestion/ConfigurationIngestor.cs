@@ -357,9 +357,14 @@ internal partial class ConfigurationIngestor(
             var updatedBranchMergePoliciesDao =
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
-            if (dbRepositoryBranch.PolicyString != updatedBranchMergePoliciesDao.PolicyString)
+            if (!dbRepositoryBranch.IgnoredChecks.SequenceEqual(updatedBranchMergePoliciesDao.IgnoredChecks))
             {
-                dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
+                dbRepositoryBranch.IgnoredChecks = updatedBranchMergePoliciesDao.IgnoredChecks;
+            }
+
+            if (dbRepositoryBranch.MergePrs != updatedBranchMergePoliciesDao.MergePrs)
+            {
+                dbRepositoryBranch.MergePrs = updatedBranchMergePoliciesDao.MergePrs;
             }
         }
     }
@@ -409,7 +414,7 @@ internal partial class ConfigurationIngestor(
             .Where(e => e.State == EntityState.Modified || subscriptionIdsWithAssetFilterChanges.Contains(e.Entity.Id))
             .Select(e => e.Entity)
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
-            .Select(SubscriptionYaml.FromClientModel)
+            .Select(ConvertSubscriptionToYaml)
             .ToList();
 
         var channelUpdates = _context.ChangeTracker.Entries<Channel>()
@@ -430,7 +435,7 @@ internal partial class ConfigurationIngestor(
             .Where(e => e.State == EntityState.Modified)
             .Select(e => e.Entity)
             .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
-            .Select(BranchMergePoliciesYaml.FromClientModel)
+            .Select(ConvertBranchMergePoliciesToYaml)
             .ToList();
 
         return new ConfigurationUpdates(

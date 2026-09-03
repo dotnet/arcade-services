@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -22,18 +21,18 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
         string targetBranch,
         string updateFrequency,
         bool batchable,
-        List<MergePolicy> mergePolicies,
+        bool mergePrs,
+        List<string> ignoredChecks,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
-        IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
         bool autoApprove,
         string? sourceDirectory,
         string? targetDirectory,
         List<string> excludedAssets)
-        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, logger, gitRepoFactory,
             new SubscriptionPopUpData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
@@ -42,7 +41,8 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", availableUpdateFrequencies)}'>", false),
                 Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
-                MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
+                MergePrs = GetCurrentSettingForDisplay(mergePrs.ToString(), mergePrs.ToString(), false),
+                IgnoredChecks = ignoredChecks,
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                 AutoApprove = GetCurrentSettingForDisplay(autoApprove.ToString(), autoApprove.ToString(), false),
@@ -54,8 +54,7 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
                 new("Use this form to create a new subscription.", true),
                 new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
                 new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-                new("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-                new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
+                new("and merge settings. Batchable subscriptions configure merging at the repository and branch level.", true),
                 new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
                 new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
                 Line.Empty,

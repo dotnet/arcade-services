@@ -80,8 +80,8 @@ internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBa
             foreach (Subscription subscription in subscriptionsToDelete)
             {
                 await _configRepositoryManager.DeleteSubscriptionAsync(
-                                parameters,
-                                SubscriptionYaml.FromClientModel(subscription));
+                    parameters,
+                    SubscriptionYamlConverter.FromClientModel(subscription));
             }
 
             Console.WriteLine("done");
