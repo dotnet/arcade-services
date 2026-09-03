@@ -259,6 +259,8 @@ public class ConfigurationIngestorTests
             TargetDirectory = "runtime", // Forward flow subscription
             AutoApprove = true, // Changed from false to true
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
+            MergePrs = true,
+            IgnoredChecks = ["license/cla"],
         };
 
         var configData = new ConfigurationData(
@@ -280,6 +282,8 @@ public class ConfigurationIngestorTests
         updated.SourceEnabled.Should().BeTrue();
         updated.TargetDirectory.Should().Be("runtime");
         updated.AutoApprove.Should().BeTrue();
+        updated.MergePrs.Should().BeTrue();
+        updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
     }
 
     [Test]

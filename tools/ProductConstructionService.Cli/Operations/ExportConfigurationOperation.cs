@@ -66,7 +66,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             subscriptions,
-            SubscriptionYaml.FromClientModel,
+            ConvertSubscriptionToYaml,
             ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
             new SubscriptionYamlComparer(),
             ConfigFilePathResolver.SubscriptionFolderPath);
@@ -103,7 +103,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             repositoryBranches,
-            BranchMergePoliciesYaml.FromClientModel,
+            ConvertBranchMergePoliciesToYaml,
             ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
             new BranchMergePoliciesYamlComparer(),
             ConfigFilePathResolver.RepositoryBranchFolderPath);
@@ -126,4 +126,37 @@ internal class ExportConfigurationOperation : IOperation
     {
         return rawYaml.Replace("\n-", "\n\n-");
     }
+
+    // TODO: Remove these converters and use MaestroConfiguration.Client after updating the package.
+    private static SubscriptionYaml ConvertSubscriptionToYaml(
+        Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription subscription) => new()
+    {
+        Id = subscription.Id,
+        Enabled = subscription.Enabled,
+        Channel = subscription.Channel.Name,
+        SourceRepository = subscription.SourceRepository,
+        TargetRepository = subscription.TargetRepository,
+        TargetBranch = subscription.TargetBranch,
+        UpdateFrequency = subscription.Policy.UpdateFrequency,
+        Batchable = subscription.Policy.Batchable,
+        MergePolicies = [],
+        MergePrs = subscription.MergePrs,
+        IgnoredChecks = [.. subscription.IgnoredChecks],
+        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        SourceEnabled = subscription.SourceEnabled,
+        AutoApprove = subscription.AutoApprove,
+        SourceDirectory = subscription.SourceDirectory,
+        TargetDirectory = subscription.TargetDirectory,
+        ExcludedAssets = [.. subscription.ExcludedAssets],
+    };
+
+    private static BranchMergePoliciesYaml ConvertBranchMergePoliciesToYaml(
+        Microsoft.DotNet.ProductConstructionService.Client.Models.RepositoryBranch repositoryBranch) => new()
+    {
+        Repository = repositoryBranch.Repository,
+        Branch = repositoryBranch.Branch,
+        MergePolicies = [],
+        MergePrs = repositoryBranch.MergePrs,
+        IgnoredChecks = [.. repositoryBranch.IgnoredChecks],
+    };
 }

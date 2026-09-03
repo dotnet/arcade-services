@@ -659,6 +659,16 @@ public class SqlBarClient : ISqlBarClient
             existingSubscription.ChannelId = subscription.Channel.Id;
         }
 
+        if (existingSubscription.MergePrs != subscription.MergePrs)
+        {
+            existingSubscription.MergePrs = subscription.MergePrs;
+        }
+
+        if (!existingSubscription.IgnoredChecks.SequenceEqual(subscription.IgnoredChecks))
+        {
+            existingSubscription.IgnoredChecks = subscription.IgnoredChecks;
+        }
+
         // Compare PolicyString to avoid serialization differences causing false modifications
         var newPolicyString = subscription.PolicyString;
         if (!StringEquivalent(existingSubscription.PolicyString, newPolicyString))
