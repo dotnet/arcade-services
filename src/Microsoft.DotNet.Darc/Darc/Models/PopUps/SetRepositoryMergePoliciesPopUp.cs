@@ -82,11 +82,6 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         }
 
         _yamlData.IgnoredChecks = outputYamlData.IgnoredChecks ?? [];
-        if (!mergePrs && _yamlData.IgnoredChecks.Count != 0)
-        {
-            _logger.LogError("Ignored Checks can only be specified when Merge PRs is enabled.");
-            return Task.FromResult(Constants.ErrorCode);
-        }
 
         _yamlData.Repository = ParseSetting(outputYamlData.Repository, _yamlData.Repository, false);
         if (string.IsNullOrEmpty(_yamlData.Repository))

@@ -1550,11 +1550,11 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
 
 **Merge settings**
 
-Use `--merge-prs` to add the `All Checks Successful` policy and have Maestro
-merge pull requests after all Maestro policies pass. The policy evaluates every
-other check reported on the pull request, such as PR builds. Use
-`--ignore-checks` with `--merge-prs` to provide a comma-separated list of checks
-that should not block merging. In interactive mode these settings are shown as
+The `All Checks Successful` policy evaluates every other check reported on the
+pull request, such as PR builds. Use `--ignore-checks` to provide a
+comma-separated list of checks that should not block policy evaluation. Use
+`--merge-prs` to have Maestro merge pull requests after all policies pass. In
+interactive mode these settings are shown as
 `Merge PRs` and `Ignored Checks`.
 
 **See also**:
@@ -2936,7 +2936,7 @@ may be edited.
 - `--repo` (required) - Repository URL to configure
 - `--branch` (required) - Branch to configure
 - `--merge-prs` - Whether Maestro should merge pull requests after all Maestro checks pass
-- `--ignore-checks` - A comma-separated list of checks ignored when merging pull requests. Requires `--merge-prs`
+- `--ignore-checks` - A comma-separated list of checks ignored when evaluating pull requests
 - `-q, --quiet` - Non-interactive mode (requires all elements to be passed on the command line)
 - See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 

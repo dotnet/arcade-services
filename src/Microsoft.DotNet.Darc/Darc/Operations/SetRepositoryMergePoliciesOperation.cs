@@ -57,12 +57,6 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         bool mergePrs = _options.MergePrs ?? false;
         List<string> ignoredChecks = _options.IgnoreChecks?.ToList() ?? [];
 
-        if (ignoredChecks.Count != 0 && _options.MergePrs != true)
-        {
-            Console.WriteLine("--ignore-checks requires --merge-prs");
-            return Constants.ErrorCode;
-        }
-
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
         if (_options.Quiet)
@@ -147,38 +141,21 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
                 Branch = branch,
                 MergePolicies = [],
                 MergePrs = mergePrs,
-                IgnoredChecks = mergePrs ? ignoredChecks : []
+                IgnoredChecks = ignoredChecks
             };
 
             bool configurationExists = await TryGetRepositoryBranchAsync(repository, branch) != null;
             if (configurationExists)
             {
-                if (mergePrs)
-                {
-                    await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
-                }
-                else
-                {
-                    await _configurationRepositoryManager.DeleteRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
-                }
+                await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    branchMergePoliciesYaml);
             }
             else
             {
-                if (!mergePrs)
-                {
-                    _logger.LogWarning("Merge PRs is disabled for {repo}@{branch}, nothing to add.",
-                        branchMergePoliciesYaml.Repository, 
-                        branchMergePoliciesYaml.Branch);
-                    return Constants.SuccessCode;
-                }
-
                 await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                branchMergePoliciesYaml);
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    branchMergePoliciesYaml);
             }
 
             return Constants.SuccessCode;

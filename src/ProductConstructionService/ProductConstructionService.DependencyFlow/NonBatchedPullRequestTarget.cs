@@ -61,6 +61,8 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
             throw new DarcException($"Subscription {_id.SubscriptionId} does not exist in BAR")));
     }
 
+    public async Task<bool> ShouldPrBeMergedAsync() => (await _subscription.Value)?.MergePrs == true;
+
     public async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
     {
         var comment = await _commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);

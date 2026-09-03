@@ -132,6 +132,8 @@ internal partial class ConfigurationIngestor
             SourceRepository = subscription.Values.SourceRepository,
             TargetRepository = subscription.Values.TargetRepository,
             TargetBranch = subscription.Values.TargetBranch,
+            MergePrs = subscription.Values.MergePrs,
+            IgnoredChecks = [.. subscription.Values.IgnoredChecks],
             Enabled = subscription.Values.Enabled,
             SourceEnabled = subscription.Values.SourceEnabled,
             AutoApprove = subscription.Values.AutoApprove,
@@ -185,6 +187,8 @@ internal partial class ConfigurationIngestor
         {
             RepositoryName = branchMergePolicies.Values.Repository,
             BranchName = branchMergePolicies.Values.Branch,
+            MergePrs = branchMergePolicies.Values.MergePrs,
+            IgnoredChecks = [.. branchMergePolicies.Values.IgnoredChecks],
             Namespace = namespaceEntity,
         };
 

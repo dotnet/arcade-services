@@ -357,9 +357,9 @@ internal partial class ConfigurationIngestor(
             var updatedBranchMergePoliciesDao =
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
-            if (dbRepositoryBranch.MergePrs != updatedBranchMergePoliciesDao.MergePrs)
+            if (!dbRepositoryBranch.IgnoredChecks.SequenceEqual(updatedBranchMergePoliciesDao.IgnoredChecks))
             {
-                dbRepositoryBranch.MergePrs = updatedBranchMergePoliciesDao.MergePrs;
+                dbRepositoryBranch.IgnoredChecks = updatedBranchMergePoliciesDao.IgnoredChecks;
             }
 
             if (dbRepositoryBranch.MergePrs != updatedBranchMergePoliciesDao.MergePrs)

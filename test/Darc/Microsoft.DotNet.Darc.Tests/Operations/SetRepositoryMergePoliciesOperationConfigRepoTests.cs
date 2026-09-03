@@ -85,7 +85,7 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
     }
 
     [Test]
-    public async Task SetRepositoryMergePoliciesOperation_DisablingExistingConfiguration_DeletesFile()
+    public async Task SetRepositoryMergePoliciesOperation_DisablingExistingConfiguration_UpdatesFile()
     {
         // Arrange
         const string repository = "https://github.com/dotnet/test-repo";
@@ -100,40 +100,37 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
                 IgnoredChecks = ["old-check"]
             }
         ]);
-        string filePath = await CreateRepositoryConfigurationAsync(repository, branch);
-        var operation = CreateOperation(CreateOptions(repository, branch, false, [], testBranch));
+        await CreateRepositoryConfigurationAsync(repository, branch);
+        var operation = CreateOperation(CreateOptions(repository, branch, false, ["new-check"], testBranch));
 
         // Act
         int result = await operation.ExecuteAsync();
 
         // Assert
         result.Should().Be(Constants.SuccessCode);
-        await CheckoutBranch(testBranch);
-        File.Exists(Path.Combine(ConfigurationRepoPath, filePath)).Should().BeFalse();
+        BranchMergePoliciesYaml actual = await GetWrittenConfigurationAsync(repository, branch, testBranch);
+        actual.MergePrs.Should().BeFalse();
+        actual.IgnoredChecks.Should().BeEquivalentTo(["new-check"]);
     }
 
     [Test]
-    public async Task SetRepositoryMergePoliciesOperation_DisablingMissingConfiguration_DoesNothing()
+    public async Task SetRepositoryMergePoliciesOperation_DisablingMissingConfiguration_CreatesFile()
     {
         // Arrange
         const string repository = "https://github.com/dotnet/test-repo";
         const string branch = "main";
         string testBranch = GetTestBranch();
         SetupGetRepositoriesAsync(repository, branch, []);
-        var operation = CreateOperation(CreateOptions(repository, branch, false, [], testBranch));
+        var operation = CreateOperation(CreateOptions(repository, branch, false, ["license/cla"], testBranch));
 
         // Act
         int result = await operation.ExecuteAsync();
 
         // Assert
         result.Should().Be(Constants.SuccessCode);
-        await CheckoutBranch(testBranch);
-        string filePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
-        {
-            Repository = repository,
-            Branch = branch
-        });
-        File.Exists(Path.Combine(ConfigurationRepoPath, filePath)).Should().BeFalse();
+        BranchMergePoliciesYaml actual = await GetWrittenConfigurationAsync(repository, branch, testBranch);
+        actual.MergePrs.Should().BeFalse();
+        actual.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
     }
 
     private void SetupGetRepositoriesAsync(string repository, string branch, IEnumerable<RepositoryBranch> repositoryBranches)

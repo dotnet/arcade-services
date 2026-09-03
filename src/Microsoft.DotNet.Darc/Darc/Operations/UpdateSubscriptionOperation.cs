@@ -119,21 +119,11 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             if (_options.MergePrs.HasValue)
             {
                 mergePrs = _options.MergePrs.Value;
-                if (!mergePrs)
-                {
-                    ignoredChecks = [];
-                }
             }
 
             if (_options.IgnoreChecks.Any())
             {
                 ignoredChecks = [.. _options.IgnoreChecks];
-            }
-
-            if (ignoredChecks.Count != 0 && !mergePrs)
-            {
-                _logger.LogError("--ignore-checks requires Merge PRs to be enabled");
-                return Constants.ErrorCode;
             }
 
             if (_options.Batchable.HasValue && _options.Batchable.Value && sourceEnabled)

@@ -116,11 +116,6 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
         }
 
         _data.IgnoredChecks = outputYamlData.IgnoredChecks ?? [];
-        if (!mergePrs && _data.IgnoredChecks.Count != 0)
-        {
-            _logger.LogError("Ignored Checks can only be specified when Merge PRs is enabled.");
-            return Constants.ErrorCode;
-        }
 
         _data.Channel = ParseSetting(outputYamlData.Channel, _data.Channel, false);
         if (string.IsNullOrEmpty(_data.Channel))

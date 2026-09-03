@@ -43,12 +43,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     /// </summary>
     protected override async Task<int> ExecuteInternalAsync()
     {
-        if (_options.IgnoreChecks.Any() && !_options.MergePrs)
-        {
-            _logger.LogError("--ignore-checks requires --merge-prs");
-            return Constants.ErrorCode;
-        }
-
         if (_options.Batchable && _options.SourceEnabled)
         {
             _logger.LogError("Batched codeflow subscriptions are not supported.");

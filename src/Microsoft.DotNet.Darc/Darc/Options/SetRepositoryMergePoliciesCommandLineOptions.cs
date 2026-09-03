@@ -19,7 +19,7 @@ internal class SetRepositoryMergePoliciesCommandLineOptions : ConfigurationManag
     [Option("merge-prs", HelpText = "Whether Maestro should merge pull requests after all Maestro checks pass.")]
     public bool? MergePrs { get; set; }
 
-    [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when merging pull requests. Requires --merge-prs.")]
+    [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when evaluating pull requests.")]
     public IReadOnlyCollection<string> IgnoreChecks { get; set; } = [];
 
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]

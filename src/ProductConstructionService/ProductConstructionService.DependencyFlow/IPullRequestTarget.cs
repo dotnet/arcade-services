@@ -26,6 +26,11 @@ internal interface IPullRequestTarget
     Task<IReadOnlyList<IMergePolicy>> GetMergePoliciesAsync();
 
     /// <summary>
+    ///     Tells us whether the target has Merge PRs enabled.
+    /// </summary>
+    Task<bool> ShouldPrBeMergedAsync();
+
+    /// <summary>
     ///     Tags the source repository's GitHub contacts when merge policies fail.
     /// </summary>
     Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr);

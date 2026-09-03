@@ -162,6 +162,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                         return (PullRequestStatus.InProgressCannotUpdate, prInfo);
 
+                    case MergePolicyCheckResult.MergeNotConfigured:
+                        _logger.LogInformation(
+                            "Pull request {url} passed all policies, but Merge PRs is disabled. The pull request will not be updated",
+                            pr.Url);
+                        await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
+
+                        return (PullRequestStatus.InProgressCannotUpdate, prInfo);
+
                     default:
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
@@ -238,10 +246,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         try
         {
-            await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+            if (await _target.ShouldPrBeMergedAsync())
+            {
+                await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
 
-            _logger.LogInformation("Merged: PR '{url}'", pr.Url);
-            return MergePolicyCheckResult.Merged;
+                _logger.LogInformation("Merged: PR '{url}'", pr.Url);
+                return MergePolicyCheckResult.Merged;
+            }
+            else
+            {
+                _logger.LogInformation("NOT Merged: Merge PRs is disabled for PR '{url}'", pr.Url);
+                return MergePolicyCheckResult.MergeNotConfigured;
+            }
         }
         catch (PullRequestNotMergeableException notMergeableException)
         {

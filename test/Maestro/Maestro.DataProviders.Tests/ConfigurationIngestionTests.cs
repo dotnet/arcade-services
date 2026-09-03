@@ -120,6 +120,12 @@ public class ConfigurationIngestorTests
         namespaceEntity.Should().NotBeNull();
         namespaceEntity.Channels.Should().ContainSingle()
             .Which.Name.Should().Be(".NET 8");
+        namespaceEntity.RepositoryBranches.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new
+            {
+                MergePrs = false,
+                IgnoredChecks = new[] { "license/cla" },
+            });
     }
 
     [Test]
@@ -608,6 +614,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
+            MergePrs = false,
+            IgnoredChecks = ["license/cla"],
             MergePolicies =
             [
                 new MergePolicyYaml { Name = "AllChecksSuccessful" },
@@ -636,6 +644,8 @@ public class ConfigurationIngestorTests
             .FirstOrDefault(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
 
         updated.Should().NotBeNull();
+    updated.MergePrs.Should().BeFalse();
+    updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
     }
 
     #endregion
@@ -1824,6 +1834,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime2",
             Branch = "main",
+            MergePrs = false,
+            IgnoredChecks = ["license/cla"],
             MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
         };
 

@@ -99,7 +99,7 @@ internal class ExportConfigurationOperation : IOperation
     private async Task ExportBranchMergePolicies(NativePath exportPath)
     {
         var repositoryBranches = (await _api.Repository.ListRepositoriesAsync())
-            .Where(rb => rb.MergePolicies.Any());
+            .Where(rb => rb.MergePrs);
         ProcessAndWriteYamlGroups(
             exportPath,
             repositoryBranches,

@@ -31,6 +31,6 @@ internal abstract class SubscriptionCommandLineOptions<T> : ConfigurationManagem
     [Option('f', "force", HelpText = "Force subscription creation even when some checks fail.")]
     public bool ForceCreation { get; set; }
 
-    [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when merging pull requests. Requires --merge-prs.")]
+    [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when evaluating pull requests.")]
     public IEnumerable<string> IgnoreChecks { get; set; } = [];
 }

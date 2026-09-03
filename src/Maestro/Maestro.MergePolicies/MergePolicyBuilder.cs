@@ -21,29 +21,21 @@ public class MergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy>
     private readonly IBasicBarClient _barClient = barClient;
     private readonly ILogger<IMergePolicy> _logger = logger;
 
-    private static List<IMergePolicy> CommonMergePolicies =>
+    private static List<IMergePolicy> BuildCommonMergePolicies(IEnumerable<string> ignoredChecks) =>
         [
             new VersionDetailsPropsMergePolicy(),
             new DontAutomergeDowngradesMergePolicy(),
             new ValidateCoherencyMergePolicy(),
-            new VersionDetailsPropsMergePolicy()
+            new VersionDetailsPropsMergePolicy(),
+            new AllChecksSuccessfulMergePolicy([.. ignoredChecks])
         ];
 
     public IReadOnlyList<IMergePolicy> BuildBatchedSubscriptionMergePolicies(RepositoryBranch? repositoryBranch)
-    {
-        var policies = CommonMergePolicies;
-
-        if (repositoryBranch != null && repositoryBranch.MergePrs)
-        {
-            policies.Add(new AllChecksSuccessfulMergePolicy([.. repositoryBranch.IgnoredChecks]));
-        }
-
-        return policies;
-    }
+        => BuildCommonMergePolicies(repositoryBranch?.IgnoredChecks ?? []);
 
     public IReadOnlyList<IMergePolicy> BuildNonBatchedSubscriptionMergePolicies(Subscription subscription)
     {
-        var policies = CommonMergePolicies;
+        var policies = BuildCommonMergePolicies(subscription.IgnoredChecks);
 
         if (subscription.SourceEnabled)
         {
@@ -55,11 +47,6 @@ public class MergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy>
             {
                 policies.Add(new BackFlowMergePolicy(_barClient, _logger));
             }
-        }
-
-        if (subscription.MergePrs)
-        {
-            policies.Add(new AllChecksSuccessfulMergePolicy([.. subscription.IgnoredChecks]));
         }
 
         return policies;
