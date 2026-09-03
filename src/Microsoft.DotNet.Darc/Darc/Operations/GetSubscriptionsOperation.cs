@@ -93,9 +93,16 @@ internal class GetSubscriptionsOperation : Operation
                 continue;
             }
 
-            RepositoryBranch repositoryBranch = await barClient.GetRepositoryBranch(
+            RepositoryBranch? repositoryBranch = (await barClient.GetRepositoriesAsync(
                 subscription.TargetRepository,
-                subscription.TargetBranch);
+                subscription.TargetBranch))
+                .SingleOrDefault();
+
+            if (repositoryBranch == null)
+            {
+                subscriptionsWithMergeSettings.Add(subscription);
+                continue;
+            }
 
             subscriptionsWithMergeSettings.Add(new Subscription(
                 subscription.Id,

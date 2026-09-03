@@ -164,8 +164,8 @@ public class GetSubscriptionsOperationTests
             .Setup(client => client.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync([subscription]);
         _barMock
-            .Setup(client => client.GetRepositoryBranch("target", "test"))
-            .ReturnsAsync(repositoryBranch);
+            .Setup(client => client.GetRepositoriesAsync("target", "test"))
+            .ReturnsAsync([repositoryBranch]);
         var operation = new GetSubscriptionsOperation(
             new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json },
             _barMock.Object,
@@ -181,7 +181,37 @@ public class GetSubscriptionsOperationTests
             .EnumerateArray()
             .Select(check => check.GetString())
             .Should().BeEquivalentTo(["WIP", "license/cla"]);
-        _barMock.Verify(client => client.GetRepositoryBranch("target", "test"), Times.Once);
+        _barMock.Verify(client => client.GetRepositoriesAsync("target", "test"), Times.Once);
+    }
+
+    [Test]
+    public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_subscription_when_batchable_repository_merge_settings_are_missing()
+    {
+        Subscription subscription = new(Guid.Empty, false, true, false, false, "source", "target", "test", [], null, null, string.Empty, [])
+        {
+            Channel = new(id: 1, name: "name", classification: "classification"),
+            Policy = new(batchable: true, updateFrequency: UpdateFrequency.EveryDay)
+        };
+
+        _barMock
+            .Setup(client => client.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync([subscription]);
+        _barMock
+            .Setup(client => client.GetRepositoriesAsync("target", "test"))
+            .ReturnsAsync([]);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json },
+            _barMock.Object,
+            _loggerMock.Object);
+
+        int result = await operation.ExecuteAsync();
+
+        result.Should().Be(Constants.SuccessCode);
+        using JsonDocument output = JsonDocument.Parse(_consoleOutput.GetOutput());
+        JsonElement outputSubscription = output.RootElement.EnumerateArray().Single();
+        outputSubscription.GetProperty("mergePrs").GetBoolean().Should().BeFalse();
+        outputSubscription.GetProperty("ignoredChecks").EnumerateArray().Should().BeEmpty();
+        _barMock.Verify(client => client.GetRepositoriesAsync("target", "test"), Times.Once);
     }
 
     [Test]

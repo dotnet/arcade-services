@@ -92,6 +92,6 @@ public class RepositoryController : ControllerBase
             return NotFound();
         }
 
-        return Ok(repoBranch);
+        return Ok(new RepositoryBranch(repoBranch));
     }
 }
