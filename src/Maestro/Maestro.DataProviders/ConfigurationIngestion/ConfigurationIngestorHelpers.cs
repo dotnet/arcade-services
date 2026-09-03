@@ -60,13 +60,13 @@ internal partial class ConfigurationIngestor
         Batchable = subscription.Policy.Batchable,
         MergePolicies = [],
         MergePrs = subscription.MergePrs,
-        IgnoredChecks = [.. subscription.IgnoredChecks],
+        IgnoredChecks = [.. (subscription.IgnoredChecks ?? [])],
         FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
         SourceEnabled = subscription.SourceEnabled,
         AutoApprove = subscription.AutoApprove,
         SourceDirectory = subscription.SourceDirectory,
         TargetDirectory = subscription.TargetDirectory,
-        ExcludedAssets = [.. subscription.ExcludedAssets],
+        ExcludedAssets = [.. (subscription.ExcludedAssets ?? [])],
     };
 
     // TODO: Remove this converter and use BranchMergePoliciesYaml.FromClientModel after updating MaestroConfiguration.Client.

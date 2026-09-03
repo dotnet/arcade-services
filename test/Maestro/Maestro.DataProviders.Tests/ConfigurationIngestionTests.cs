@@ -246,6 +246,8 @@ public class ConfigurationIngestorTests
 
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
+        existingSubscription.IgnoredChecks = null!;
+        existingSubscription.ExcludedAssets = null!;
 
         var updatedSubscription = new SubscriptionYaml
         {
@@ -613,6 +615,7 @@ public class ConfigurationIngestorTests
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
         await _context.SaveChangesAsync();
+        existingBranch.IgnoredChecks = null!;
 
         var updatedBranchYaml = new BranchMergePoliciesYaml
         {

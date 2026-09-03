@@ -1299,6 +1299,42 @@ internal abstract partial class ScenarioTestBase
         await PcsApi.Ingestion.IngestNamespaceAsync(
             _testNamespace,
             true,
-            configuration.ToPcsClient());
+            ConvertConfigurationToPcsClient(configuration));
     }
+
+    // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
+    private static ClientYamlConfiguration ConvertConfigurationToPcsClient(
+        Microsoft.DotNet.MaestroConfiguration.Client.Models.YamlConfiguration configuration) => new()
+    {
+        Subscriptions = [.. configuration.Subscriptions.Select(subscription => new ClientSubscriptionYaml(
+            id: subscription.Id,
+            enabled: subscription.Enabled,
+            channel: subscription.Channel,
+            sourceRepository: subscription.SourceRepository,
+            targetRepository: subscription.TargetRepository,
+            targetBranch: subscription.TargetBranch,
+            updateFrequency: Microsoft.DotNet.MaestroConfiguration.Client.Models.SubscriptionYaml.ConvertUpdateFrequency(subscription.UpdateFrequency),
+            batchable: subscription.Batchable,
+            mergePrs: subscription.MergePrs,
+            sourceEnabled: subscription.SourceEnabled,
+            autoApprove: subscription.AutoApprove)
+        {
+            ExcludedAssets = [.. subscription.ExcludedAssets],
+            MergePolicies = [],
+            IgnoredChecks = [.. subscription.IgnoredChecks],
+            FailureNotificationTags = subscription.FailureNotificationTags,
+            SourceDirectory = subscription.SourceDirectory,
+            TargetDirectory = subscription.TargetDirectory,
+        })],
+        Channels = Microsoft.DotNet.MaestroConfiguration.Client.Models.ChannelYaml.ToPcsClientList(configuration.Channels),
+        DefaultChannels = Microsoft.DotNet.MaestroConfiguration.Client.Models.DefaultChannelYaml.ToPcsClientList(configuration.DefaultChannels),
+        BranchMergePolicies = [.. configuration.BranchMergePolicies.Select(repositoryBranch => new ClientBranchMergePoliciesYaml(
+            branch: repositoryBranch.Branch,
+            repository: repositoryBranch.Repository,
+            mergePrs: repositoryBranch.MergePrs)
+        {
+            MergePolicies = [],
+            IgnoredChecks = [.. repositoryBranch.IgnoredChecks],
+        })],
+    };
 }
