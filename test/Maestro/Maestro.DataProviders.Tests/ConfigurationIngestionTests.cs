@@ -648,8 +648,8 @@ public class ConfigurationIngestorTests
             .FirstOrDefault(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
 
         updated.Should().NotBeNull();
-    updated.MergePrs.Should().BeFalse();
-    updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
+        updated.MergePrs.Should().BeFalse();
+        updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
     }
 
     #endregion

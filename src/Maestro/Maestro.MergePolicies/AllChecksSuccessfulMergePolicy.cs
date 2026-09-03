@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
@@ -18,9 +19,6 @@ namespace Maestro.MergePolicies;
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
-    private const string GitHubHost = "github.com";
-    private const string AzureDevOpsHost = "dev.azure.com";
-
     private static readonly HashSet<string> s_githubIgnoreChecks =
     [
         "WIP",
@@ -97,16 +95,12 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
     private static HashSet<string> GetDefaultIgnoreChecks(string pullRequestUrl)
     {
-        if (pullRequestUrl.Contains(GitHubHost, StringComparison.OrdinalIgnoreCase))
+        return GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl) switch
         {
-            return s_githubIgnoreChecks;
-        }
-
-        if (pullRequestUrl.Contains(AzureDevOpsHost, StringComparison.OrdinalIgnoreCase))
-        {
-            return s_azureDevOpsIgnoreChecks;
-        }
-
-        throw new NotImplementedException($"Unknown pull request repository URL: {pullRequestUrl}");
+            GitRepoType.GitHub => s_githubIgnoreChecks,
+            GitRepoType.AzureDevOps => s_azureDevOpsIgnoreChecks,
+            var repositoryType => throw new NotSupportedException(
+                $"Repository type '{repositoryType}' for pull request URL '{pullRequestUrl}' is not supported."),
+        };
     }
 }

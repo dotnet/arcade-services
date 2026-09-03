@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
@@ -65,7 +64,7 @@ internal class GetRepositoryMergePoliciesOperation : Operation
                 Console.WriteLine($"{repository.Repository} @ {repository.Branch}");
                 Console.WriteLine($"  Merge PRs: {repository.MergePrs}");
                 Console.WriteLine("  Ignored Checks:");
-                foreach (string ignoredCheck in repository.IgnoredChecks)
+                foreach (string ignoredCheck in repository.IgnoredChecks ?? [])
                 {
                     Console.WriteLine($"    - {ignoredCheck}");
                 }

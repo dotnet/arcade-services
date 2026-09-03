@@ -24,6 +24,12 @@ public class AllChecksSuccessfulMergePolicyTests
         "Minimum number of reviewers",
         "auto-merge.config.enforce",
         "Work item linking")]
+    [TestCase(
+        "https://dnceng.visualstudio.com/internal/_git/dotnet-runtime/pullrequest/123",
+        "Comment requirements",
+        "Minimum number of reviewers",
+        "auto-merge.config.enforce",
+        "Work item linking")]
     public async Task EvaluateAsync_IgnoresDefaultChecksForProvider(
         string pullRequestUrl,
         params string[] ignoredCheckNames)

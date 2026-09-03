@@ -18,7 +18,7 @@ public interface IBarApiClient : IBasicBarClient
     #region Subscription Operations
 
     /// <summary>
-    ///     Get a repositor branch
+    ///     Get a repository branch
     /// </summary>
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Repository branch</param>
