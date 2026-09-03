@@ -35,6 +35,7 @@ public class RepositoryBranch
 
     public bool MergePrs { get; set; }
 
+    [Required]
     public List<string> IgnoredChecks { get; set; } = [];
 
     public Namespace Namespace { get; set; }
