@@ -1103,17 +1103,17 @@ To locate the BAR build ID for a build
 
 ### Checking Merge Policies on Github
 
-Most merge policies run by default on every subscription and publish their
+All merge policies run by default on every subscription and publish their
 results to the tracked pull request. Maestro validates `Version.Details.props`,
 prevents automatic merging of dependency downgrades, and validates dependency
 coherency. Codeflow subscriptions also run the applicable forward-flow or
 backflow validation.
 
-When `Merge PRs` is enabled, Maestro additionally runs the `All Checks
-Successful` policy. This policy evaluates the other checks reported on the pull
-request, such as PR builds, and succeeds only when every non-ignored check is
-green. Maestro's own policy checks are evaluated separately, and Maestro merges
-the pull request only after all of them pass. For non-batched subscriptions,
+The `All Checks Successful` policy evaluates the other checks reported on the
+pull request, such as PR builds, and succeeds only when every non-ignored check
+is green. Maestro's own policy checks are evaluated separately. When
+`Merge PRs` is enabled, Maestro merges the pull request only after all policies
+pass. For non-batched subscriptions,
 `Merge PRs` and `Ignored Checks` belong to the subscription. For batched
 subscriptions, they belong to the target repository and branch.
 
@@ -2922,10 +2922,10 @@ PS D:\enlistments\arcade-services> darc get-subscription-history --search core-s
 ### **`set-repository-policies`**
 
 Set Merge PRs and ignored-check settings for a repository and branch. These
-settings apply to batchable subscriptions. When Merge PRs is enabled, Maestro
-adds the `All Checks Successful` policy. It evaluates every other check on the
-pull request, such as PR builds, and succeeds when every non-ignored check is
-green. Maestro merges the pull request after all Maestro policies pass.
+settings apply to batchable subscriptions. The `All Checks Successful` policy
+evaluates every other check on the pull request, such as PR builds, and succeeds
+when every non-ignored check is green. When Merge PRs is enabled, Maestro merges
+the pull request after all Maestro policies pass.
 
 This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
 
