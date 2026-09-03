@@ -382,6 +382,7 @@ module storageAccountModule 'storage-account.bicep' = {
         subscriptionTriggererIdentityPrincipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
         blobContributorRole: blobContributorRole
         storageQueueContrubutorRole: storageQueueContrubutorRole
+        allowedSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
     }
 }
 
