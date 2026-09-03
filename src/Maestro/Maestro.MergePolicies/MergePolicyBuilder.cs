@@ -26,7 +26,6 @@ public class MergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy>
             new VersionDetailsPropsMergePolicy(),
             new DontAutomergeDowngradesMergePolicy(),
             new ValidateCoherencyMergePolicy(),
-            new VersionDetailsPropsMergePolicy(),
             new AllChecksSuccessfulMergePolicy([.. ignoredChecks])
         ];
 

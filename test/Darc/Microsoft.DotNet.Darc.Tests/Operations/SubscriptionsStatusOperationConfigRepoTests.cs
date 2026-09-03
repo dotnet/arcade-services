@@ -293,6 +293,9 @@ public class SubscriptionsStatusOperationConfigRepoTests : ConfigurationManageme
               Target Repository URL: {subscription.TargetRepository}
               Target Branch: {subscription.TargetBranch}
               Update Frequency: {subscription.Policy.UpdateFrequency}
+              MergePrs: {subscription.MergePrs}
+              IgnoredChecks: []
+              Merge Policies: []
               Enabled: {subscription.Enabled.ToString().ToLower()}
             """;
     }

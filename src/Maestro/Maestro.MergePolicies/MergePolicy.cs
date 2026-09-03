@@ -1,34 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Newtonsoft.Json.Linq;
 
 namespace Maestro.MergePolicies;
-
-public class MergePolicyProperties
-{
-    public MergePolicyProperties(IReadOnlyDictionary<string, JToken> properties)
-    {
-        Properties = properties;
-    }
-
-    public IReadOnlyDictionary<string, JToken> Properties { get; }
-
-    public T Get<T>(string key)
-    {
-        T result = default;
-        if (Properties != null && Properties.TryGetValue(key, out JToken value))
-        {
-            result = value.ToObject<T>();
-        }
-
-        return result;
-    }
-}
 
 public abstract class MergePolicy : IMergePolicy
 {
