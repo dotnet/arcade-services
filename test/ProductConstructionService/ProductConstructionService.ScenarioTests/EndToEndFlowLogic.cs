@@ -657,6 +657,9 @@ internal abstract class TestLogic : ScenarioTestBase
                     Build build2 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, build2Assets);
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
 
+                    // push a failed check so PR is updatable
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
+
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
 

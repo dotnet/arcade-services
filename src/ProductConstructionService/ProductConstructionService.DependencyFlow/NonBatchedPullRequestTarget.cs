@@ -6,6 +6,7 @@ using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
 
@@ -76,7 +77,9 @@ internal class NonBatchedPullRequestTarget : IPullRequestTarget
 
     private async Task<Subscription?> RetrieveSubscriptionAsync()
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
+        Subscription? subscription = await _context.Subscriptions
+            .Include(subscription => subscription.Channel)
+            .FirstOrDefaultAsync(subscription => subscription.Id == _id.SubscriptionId);
 
         if (subscription == null)
         {
