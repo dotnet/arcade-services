@@ -79,6 +79,50 @@ public class AllChecksSuccessfulMergePolicyTests
         result.Title.Should().Contain("1 successful check(s)");
     }
 
+    [Test]
+    public async Task EvaluateAsync_NonIgnoredPendingCheck_ReturnsPending()
+    {
+        // Arrange
+        const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
+        var remote = new Mock<IRemote>(MockBehavior.Strict);
+        remote.Setup(r => r.GetPullRequestChecksAsync(pullRequestUrl))
+            .ReturnsAsync(
+            [
+                new Check(CheckState.Success, "Completed check", string.Empty),
+                new Check(CheckState.Pending, "Pending check", string.Empty),
+            ]);
+
+        var policy = new AllChecksSuccessfulMergePolicy([]);
+        PullRequestUpdateSummary pullRequest = CreatePullRequestSummary(pullRequestUrl);
+
+        // Act
+        MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.Pending);
+        result.Title.Should().Be("1 pending check(s)");
+    }
+
+    [Test]
+    public async Task EvaluateAsync_NoChecks_ReturnsSuccess()
+    {
+        // Arrange
+        const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
+        var remote = new Mock<IRemote>(MockBehavior.Strict);
+        remote.Setup(r => r.GetPullRequestChecksAsync(pullRequestUrl))
+            .ReturnsAsync([]);
+
+        var policy = new AllChecksSuccessfulMergePolicy([]);
+        PullRequestUpdateSummary pullRequest = CreatePullRequestSummary(pullRequestUrl);
+
+        // Act
+        MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.TransientSuccess);
+        result.Title.Should().Be("0 successful check(s)");
+    }
+
     private static PullRequestUpdateSummary CreatePullRequestSummary(string pullRequestUrl) => new(
         url: pullRequestUrl,
         coherencyCheckSuccessful: null,

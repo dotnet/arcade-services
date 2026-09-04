@@ -1152,16 +1152,73 @@ internal abstract partial class ScenarioTestBase
     }
 
     protected static async Task CreateSuccessfulExternalStatusCheckAsync(string targetRepoName, Octokit.PullRequest pullRequest)
+        => await CreateExternalStatusCheckAsync(
+            targetRepoName,
+            pullRequest,
+            Octokit.CommitState.Success,
+            "scenario-test/auto-check",
+            "Scenario-test status used to satisfy Maestro merge policies");
+
+    private static async Task CreateExternalStatusCheckAsync(
+        string targetRepoName,
+        Octokit.PullRequest pullRequest,
+        Octokit.CommitState state,
+        string context,
+        string description)
     {
         var commitStatus = new Octokit.NewCommitStatus
         {
-            State = Octokit.CommitState.Success,
-            Context = "scenario-test/auto-check",
-            Description = "Scenario-test status used to satisfy Maestro merge policies",
+            State = state,
+            Context = context,
+            Description = description,
             TargetUrl = pullRequest.HtmlUrl
         };
 
         await GitHubApi.Repository.Status.Create(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Head.Sha, commitStatus);
+    }
+
+    protected async Task CreateFailedExternalStatusCheckAsync(
+        string targetRepoName,
+        string targetBranch,
+        bool isAzDoTest)
+    {
+        const string checkName = "scenario-test/batching-blocker";
+
+        if (isAzDoTest)
+        {
+            int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
+            (string accountName, string projectName, string repoName) =
+                AzureDevOpsClient.ParseRepoUri(GetAzDoRepoUrl(targetRepoName));
+            var status = new JObject
+            {
+                ["state"] = "error",
+                ["description"] = "Scenario-test status used to keep the batched pull request updatable",
+                ["context"] = new JObject
+                {
+                    ["genre"] = "scenario-test",
+                    ["name"] = "batching-blocker",
+                },
+            };
+
+            await AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Post,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/statuses",
+                new NUnitLogger(),
+                status.ToString(Newtonsoft.Json.Formatting.None),
+                versionOverride: "7.1");
+        }
+        else
+        {
+            Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+            await CreateExternalStatusCheckAsync(
+                targetRepoName,
+                pullRequest,
+                Octokit.CommitState.Failure,
+                checkName,
+                "Scenario-test status used to keep the batched pull request updatable");
+        }
     }
 
     protected async Task<Octokit.PullRequest> WaitForFileContentInPullRequest(

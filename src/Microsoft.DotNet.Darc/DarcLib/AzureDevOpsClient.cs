@@ -834,25 +834,37 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <returns>List of status checks.</returns>
     public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, _, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
+        // Azure DevOps exposes branch-policy evaluations and externally published PR statuses through separate APIs.
+        IList<Check> policyChecks = await GetPullRequestPolicyChecksAsync(accountName, projectName, id);
+        IList<Check> externalChecks = await GetPullRequestExternalChecksAsync(accountName, projectName, repoName, id);
+
+        return [.. policyChecks, .. externalChecks];
+    }
+
+    private async Task<IList<Check>> GetPullRequestPolicyChecksAsync(
+        string accountName,
+        string projectName,
+        int pullRequestId)
+    {
         string projectId = await GetProjectIdAsync(accountName, projectName);
 
-        string artifactId = $"vstfs:///CodeReview/CodeReviewId/{projectId}/{id}";
+        string artifactId = $"vstfs:///CodeReview/CodeReviewId/{projectId}/{pullRequestId}";
 
-        string statusesPath = $"_apis/policy/evaluations?artifactId={artifactId}";
+        string policyEvaluationsPath = $"_apis/policy/evaluations?artifactId={artifactId}";
 
-        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
+        JObject policyEvaluationsContent = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
             accountName,
             projectName,
-            statusesPath,
+            policyEvaluationsPath,
             _logger,
             versionOverride: "5.1-preview.1");
 
-        var values = JArray.Parse(content["value"].ToString());
+        var policyEvaluations = JArray.Parse(policyEvaluationsContent["value"].ToString());
 
-        IList<Check> statuses = [];
-        foreach (JToken status in values)
+        IList<Check> checks = [];
+        foreach (JToken status in policyEvaluations)
         {
             bool isEnabled = status["configuration"]["isEnabled"].Value<bool>();
 
@@ -866,7 +878,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     AzureDevOpsCheckState.Approved => CheckState.Success,
                     _ => CheckState.None,
                 };
-                statuses.Add(
+                checks.Add(
                     new Check(
                         checkState,
                         status["configuration"]["type"]["displayName"].ToString(),
@@ -874,7 +886,44 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             }
         }
 
-        return statuses;
+        return checks;
+    }
+
+    private async Task<IList<Check>> GetPullRequestExternalChecksAsync(
+        string accountName,
+        string projectName,
+        string repoName,
+        int pullRequestId)
+    {
+        JObject pullRequestStatusesContent = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/statuses",
+            _logger,
+            versionOverride: "7.1");
+
+        IList<Check> checks = [];
+        foreach (JToken status in JArray.Parse(pullRequestStatusesContent["value"].ToString()))
+        {
+            CheckState checkState = status["state"].ToString().ToLowerInvariant() switch
+            {
+                "succeeded" => CheckState.Success,
+                "pending" => CheckState.Pending,
+                "failed" => CheckState.Failure,
+                "error" => CheckState.Error,
+                _ => CheckState.None,
+            };
+
+            string genre = status["context"]["genre"].ToString();
+            string name = status["context"]["name"].ToString();
+            checks.Add(new Check(
+                checkState,
+                $"{genre}.{name}",
+                status["targetUrl"]?.ToString() ?? string.Empty));
+        }
+
+        return checks;
     }
 
     /// <summary>

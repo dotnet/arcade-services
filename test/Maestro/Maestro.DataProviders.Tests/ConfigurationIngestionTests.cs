@@ -242,12 +242,12 @@ public class ConfigurationIngestorTests
             "https://github.com/dotnet/aspnetcore",
             "main",
             enabled: true,
-            namespaceEntity);
+            namespaceEntity,
+            excludedAssets: [new AssetFilter { Filter = "Microsoft.Extensions.Logging" }]);
 
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
-        existingSubscription.IgnoredChecks = null!;
-        existingSubscription.ExcludedAssets = null!;
+        _context.ChangeTracker.Clear();
 
         var updatedSubscription = new SubscriptionYaml
         {
@@ -263,6 +263,7 @@ public class ConfigurationIngestorTests
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
             MergePrs = true,
             IgnoredChecks = ["license/cla"],
+            ExcludedAssets = ["Microsoft.Extensions.Logging"],
         };
 
         var configData = new ConfigurationData(
@@ -286,6 +287,8 @@ public class ConfigurationIngestorTests
         updated.AutoApprove.Should().BeTrue();
         updated.MergePrs.Should().BeTrue();
         updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
+        updated.ExcludedAssets.Should().ContainSingle()
+            .Which.Filter.Should().Be("Microsoft.Extensions.Logging");
     }
 
     [Test]
@@ -615,7 +618,6 @@ public class ConfigurationIngestorTests
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
         await _context.SaveChangesAsync();
-        existingBranch.IgnoredChecks = null!;
 
         var updatedBranchYaml = new BranchMergePoliciesYaml
         {

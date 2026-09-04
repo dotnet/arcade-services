@@ -122,8 +122,7 @@ internal class ScenarioTests_AzDoFlow : TestLogic
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
-            _expectedAzDoDependenciesSource1,
-            allChecks: true).ConfigureAwait(true);
+            _expectedAzDoDependenciesSource1);
     }
 
     [Test]

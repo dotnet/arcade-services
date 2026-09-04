@@ -306,7 +306,7 @@ public class SqlBarClient : ISqlBarClient
             sourceRepository: other.SourceRepository,
             targetRepository: other.TargetRepository,
             targetBranch: other.TargetBranch,
-            ignoredChecks: [.. (other.IgnoredChecks ?? [])],
+            ignoredChecks: [.. other.IgnoredChecks],
             sourceDirectory: other.SourceDirectory,
             targetDirectory: other.TargetDirectory,
             pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
@@ -664,9 +664,9 @@ public class SqlBarClient : ISqlBarClient
             existingSubscription.MergePrs = subscription.MergePrs;
         }
 
-        if (!(existingSubscription.IgnoredChecks ?? []).SequenceEqual(subscription.IgnoredChecks ?? []))
+        if (!existingSubscription.IgnoredChecks.SequenceEqual(subscription.IgnoredChecks))
         {
-            existingSubscription.IgnoredChecks = subscription.IgnoredChecks ?? [];
+            existingSubscription.IgnoredChecks = subscription.IgnoredChecks;
         }
 
         // Compare PolicyString to avoid serialization differences causing false modifications

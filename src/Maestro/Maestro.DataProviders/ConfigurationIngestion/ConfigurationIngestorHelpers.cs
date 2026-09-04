@@ -77,7 +77,7 @@ internal partial class ConfigurationIngestor
         Branch = repositoryBranch.Branch,
         MergePolicies = [],
         MergePrs = repositoryBranch.MergePrs,
-        IgnoredChecks = [.. repositoryBranch.IgnoredChecks],
+        IgnoredChecks = [.. (repositoryBranch.IgnoredChecks ?? [])],
     };
 
     private static IngestedConfigurationUpdates ComputeEntityUpdates(
