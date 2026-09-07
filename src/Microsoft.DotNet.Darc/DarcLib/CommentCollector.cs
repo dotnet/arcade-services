@@ -13,6 +13,12 @@ public interface ICommentCollector
     Comment[] GetComments();
 }
 
+public static class CommentPlaceholders
+{
+    public const string SubscriptionId = "<subscriptionId>";
+    public const string NotificationTags = "<notificationTags>";
+}
+
 public enum CommentType
 {
     Information,

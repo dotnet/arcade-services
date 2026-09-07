@@ -90,7 +90,7 @@ internal class FlowCommitOperation : Operation
         List<AssetData> assets;
         if (_options.RealBuildId > 0)
         {
-            assets = CreateAssetDataFromBuild(await _barApiClient.GetBuildAsync(_options.RealBuildId));
+            assets = CreateAssetDataFromBuild(await _barApiClient.GetBuildAsync(_options.RealBuildId, includeAssetLocation: true));
         }
         else
         {

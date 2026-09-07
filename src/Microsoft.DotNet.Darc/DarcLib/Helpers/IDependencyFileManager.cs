@@ -57,8 +57,6 @@ public interface IDependencyFileManager
 
     Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true, UnixPath? relativeBasePath = null);
 
-    Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, UnixPath? relativeBasePath = null);
-
     /// <summary>
     /// Get the tools.dotnet section of the global.json from a target repo URI
     /// </summary>

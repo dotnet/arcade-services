@@ -1,0 +1,51 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject UrlRedirectManager UrlRedirectManager
+
+<FluentDesignTheme StorageName="theme" />
+
+<Router AppAssembly="@typeof(ClientApp).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+</Router>
+
+<FluentMenuProvider />
+<FluentTooltipProvider />
+<FluentToastProvider />
+<FluentDialogProvider />
+
+@code {
+    private IDisposable? _navigationHandlerRegistration = null;
+
+    protected override void OnInitialized()
+    {
+        _navigationHandlerRegistration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("appLoading.remove");
+        }
+    }
+
+    void IDisposable.Dispose()
+    {
+        _navigationHandlerRegistration?.Dispose();
+    }
+
+    private ValueTask LocationChangingHandler(LocationChangingContext arg)
+    {
+        string? newLocation = UrlRedirectManager.ApplyLocationRedirects(arg.TargetLocation);
+        if (!string.IsNullOrEmpty(newLocation) && !string.Equals(newLocation, arg.TargetLocation, StringComparison.OrdinalIgnoreCase))
+        {
+            // .PreventNavigation();
+            NavigationManager.NavigateTo(newLocation);
+        }
+        return ValueTask.CompletedTask;
+    }
+}

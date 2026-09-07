@@ -56,12 +56,18 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="subscriptionId">Optional subscription id to filter by.</param>
     /// <param name="buildId">Optional build id to filter by.</param>
     /// <param name="after">Optional lower bound; only outcomes on or after this date are returned.</param>
+    /// <param name="before">Optional upper bound; only outcomes on or before this date are returned.</param>
+    /// <param name="subscriptionOutcomeType">Optional outcome type to filter by (e.g. "Updated", "NoUpdate", "Failure").</param>
+    /// <param name="search">Optional free-text filter matched against source repo, target repo and target branch.</param>
     /// <param name="limit">Maximum number of outcomes to return.</param>
     /// <returns>List of subscription trigger outcomes ordered by date descending.</returns>
     Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
         Guid? subscriptionId = null,
         int? buildId = null,
         DateTimeOffset? after = null,
+        DateTimeOffset? before = null,
+        string? subscriptionOutcomeType = null,
+        string? search = null,
         int limit = 100);
 
     #endregion

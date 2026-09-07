@@ -16,6 +16,7 @@ using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
+using AssetDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Asset;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -145,7 +146,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var locationResolver = new AssetLocationResolver(_barClient);
         IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var update = requiredUpdates.SubscriptionUpdate;
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _barClient.GetBuildAsync(update.BuildId, includeAssetLocation: false);
 
         StringBuilder nonCoherencyCommitMessage = new();
         StringBuilder coherencyCommitMessage = new();
@@ -276,7 +277,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the new subscription update section along with the PR header
-            string fromBranch = subscription.LastAppliedBuild != null ? $"`{subscription.LastAppliedBuild.GetBranch()}`" : "branch";
+            string? lastAppliedBranch = subscription.LastAppliedBuild?.GetBranch();
+            string fromBranch = string.IsNullOrEmpty(lastAppliedBranch) ? "<branch not available>" : lastAppliedBranch;
             var prHeader = unsafeFlow
                 ? $"""
 
@@ -407,7 +409,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var sourceBranch = build.GetBranch();
 
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, sourceRepoUri);
+        string dependencyUpdateBlock = await CreateDependencyUpdateBlockAsync(dependencyUpdates, build);
         return
             $"""
 
@@ -426,14 +428,19 @@ internal class PullRequestBuilder : IPullRequestBuilder
             """;
     }
 
-    internal static string CreateDependencyUpdateBlock(
+    internal async Task<string> CreateDependencyUpdateBlockAsync(
         List<DependencyUpdateSummary> dependencyUpdateSummaries,
-        string repoUri)
+        BuildDTO sourceBuild)
     {
         if (dependencyUpdateSummaries.Count == 0)
         {
             return string.Empty;
         }
+
+        Dictionary<int, BuildDTO> builds = new()
+        {
+            [sourceBuild.Id] = sourceBuild
+        };
 
         StringBuilder stringBuilder = new();
 
@@ -441,10 +448,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var dependencyGroups = dependencyUpdateSummaries
             .GroupBy(dep => new
             {
-                FromCommitSha = dep.FromCommitSha,
-                FromVersion = dep.FromVersion,
-                ToCommitSha = dep.ToCommitSha,
-                ToVersion = dep.ToVersion
+                dep.FromCommitSha,
+                dep.FromVersion,
+                dep.ToCommitSha,
+                dep.ToVersion
             })
             .ToList();
 
@@ -459,13 +466,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
             stringBuilder.AppendLine("**New Dependencies**");
             foreach (var group in newDependencyGroups)
             {
-                var representative = group.First();
-                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
+                DependencyUpdateSummary representative = group.First();
+                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
+                string? diffLink = GetLinkForDependencyItem(
+                    repository,
+                    representative.FromCommitSha,
+                    representative.ToCommitSha);
                 
                 stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
-                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
                 {
-                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
                 }
             }
         }
@@ -476,12 +487,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
             stringBuilder.AppendLine("**Removed Dependencies**");
             foreach (var group in removedDependencyGroups)
             {
-                var representative = group.First();
+                DependencyUpdateSummary representative = group.First();
                 
                 stringBuilder.AppendLine($"- Removed {representative.FromVersion}");
-                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
                 {
-                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
                 }
             }
         }
@@ -493,20 +504,63 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             foreach (var group in updatedDependencyGroups)
             {
-                var representative = group.First();
-                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
+                DependencyUpdateSummary representative = group.First();
+                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
+                string? diffLink = GetLinkForDependencyItem(
+                    repository,
+                    representative.FromCommitSha,
+                    representative.ToCommitSha);
                 
                 stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
-                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
                 {
-                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                    stringBuilder.AppendLine($"  - {dependency.DependencyName}");
                 }
             }
         }
         return stringBuilder.ToString();
     }
 
+    private async Task<BuildDTO> GetProducingBuildAsync(
+        DependencyUpdateSummary dependency,
+        Dictionary<int, BuildDTO> builds)
+    {
+        BuildDTO? producingBuild = builds.Values.FirstOrDefault(
+            build => BuildContainsDependency(build, dependency));
+        if (producingBuild != null)
+        {
+            return producingBuild;
+        }
 
+        IEnumerable<AssetDTO> matchingAssets = await _barClient.GetAssetsAsync(
+            dependency.DependencyName,
+            dependency.ToVersion);
+
+        foreach (int buildId in matchingAssets
+            .Select(asset => asset.BuildId)
+            .Distinct()
+            .OrderByDescending(buildId => buildId))
+        {
+            BuildDTO candidateBuild = await _barClient.GetBuildAsync(buildId)
+                ?? throw new InvalidOperationException(
+                    $"Could not find build '{buildId}' for asset '{dependency.DependencyName}'.");
+            builds.Add(candidateBuild.Id, candidateBuild);
+
+            if (candidateBuild.Commit == dependency.ToCommitSha)
+            {
+                return candidateBuild;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Could not find the build that produced asset '{dependency.DependencyName}' " +
+            $"version '{dependency.ToVersion}' at commit '{dependency.ToCommitSha}'.");
+    }
+
+    private static bool BuildContainsDependency(BuildDTO build, DependencyUpdateSummary dependency) =>
+        build.Assets.Any(asset =>
+            asset.Name == dependency.DependencyName &&
+            asset.Version == dependency.ToVersion);
 
     private static string? GetLinkForDependencyItem(string repoUri, string? fromCommitSha, string? toCommitSha)
     {
@@ -1108,4 +1162,3 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return null;
     }
 }
-

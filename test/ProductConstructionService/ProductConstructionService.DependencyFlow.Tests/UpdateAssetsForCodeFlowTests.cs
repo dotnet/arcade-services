@@ -39,36 +39,42 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
-        // with assets and other info just like we do in UpdatePullRequestAsync.
-        // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
-        // For now, we manually update the info the unit tests expect.
-        var expectedState = new InProgressPullRequest()
-        {
-            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
-            Url = VmrPullRequestUrl,
-            HeadBranch = InProgressPrHeadBranch,
-            HeadBranchSha = InProgressPrHeadBranchSha,
-            SourceSha = build.Commit,
-            ContainedSubscriptions =
-            [
-                new()
-                {
-                    SubscriptionId = Subscription.Id,
-                    BuildId = build.Id,
-                    SourceRepo = build.GetRepository(),
-                    CommitSha = build.Commit
-                }
-            ],
-            RequiredUpdates = [],
-            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
-        };
+        InProgressPullRequest expectedState = CreateExpectedNewPullRequestState(build);
 
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
         AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
+        AndPendingUpdateIsRemoved();
+    }
+
+    [Test]
+    public async Task UpdateWithNoExistingStateForcesUpdateWhenLastAppliedBuildIsOld()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(new SubscriptionPolicy
+        {
+            Batchable = false,
+            UpdateFrequency = UpdateFrequency.EveryBuild,
+        });
+
+        Build lastAppliedBuild = GivenANewBuild(true);
+        lastAppliedBuild.Commit = "old.commit";
+        lastAppliedBuild.DateProduced = DateTimeOffset.UtcNow.AddDays(-31);
+        Subscription.LastAppliedBuild = lastAppliedBuild;
+
+        Build newBuild = GivenANewBuild(true);
+        GivenPendingUpdates(newBuild);
+        CreatePullRequestShouldReturnAValidValue();
+
+        await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+        ThenUpdateReminderIsRemoved();
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndCodeShouldHaveBeenFlownForward(newBuild, forceUpdate: true);
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(newBuild, expectedState: CreateExpectedNewPullRequestState(newBuild));
         AndPendingUpdateIsRemoved();
     }
 
@@ -200,7 +206,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
-    public async Task UpdateWithManuallyMergedPrAndNewBuild()
+    public async Task UpdateCodeFlowWithNoPrWhenRecreationFallbackLimitIsReached()
     {
         GivenATestChannel();
         GivenACodeFlowSubscription(
@@ -209,6 +215,68 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
             });
+
+        Build build = GivenANewBuild(true);
+
+        GivenPendingUpdates(build);
+        CreatePullRequestShouldReturnAValidValue();
+        WithForwardFlowRecreationFallbackLimitReached(DarcRemotes[Subscription.TargetRepository]);
+
+        var result = await WhenUpdateAssetsAsyncIsCalled(build, isCodeflow: true);
+
+        ThenUpdateReminderIsRemoved();
+        result.OutcomeMessage.Should().Be(
+            "A codeflow conflict occurred too far back in the codeflow history for the service to resolve it automatically. Manual intervention is required");
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndEmptyCodeFlowBranchShouldHaveBeenPushed();
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(build, expectedState: CreateExpectedNewPullRequestState(build));
+        AndPendingUpdateIsRemoved();
+    }
+
+    [Test]
+    public async Task UpdateExistingCodeFlowPrWhenRecreationFallbackLimitIsReached()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+
+        GivenPendingUpdates(newBuild);
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
+        {
+            ExpectPrMetadataToBeUpdated();
+            WithForwardFlowRecreationFallbackLimitReached(
+                DarcRemotes[Subscription.TargetRepository],
+                setUpMergeStatusUpdate: false);
+
+            await WhenUpdateAssetsAsyncIsCalled(newBuild, isCodeflow: true);
+
+            ThenShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHavePullRequestCheckReminder();
+            AndPendingUpdateIsRemoved();
+        }
+    }
+
+    [Test]
+    public async Task UpdateWithManuallyMergedPrAndNewBuild()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            },
+            autoApprove: true);
         Build build = GivenANewBuild(true);
         Build build2 = GivenANewBuild(true);
 
@@ -268,6 +336,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
@@ -283,7 +352,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
+            },
+            autoApprove: true);
 
         // The situation is following:
         // 1. build1 is flowed and PR is opened
@@ -354,6 +424,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build1.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
@@ -426,7 +497,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
+            },
+            autoApprove: true);
 
         var oppositeChannel = new Channel
         {
@@ -522,6 +594,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveCodeflowApprovalCheckReminder(build.Commit, build2.Commit, VmrPullRequestUrl);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
@@ -539,5 +612,30 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 var update = CreateSubscriptionUpdate(forBuild, isCodeFlow: false);
                 SetExpectedReminder(Subscription, update);
             });
+    }
+
+    private InProgressPullRequest CreateExpectedNewPullRequestState(Build build)
+    {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate InProgressPullRequest fully in production.
+        return new InProgressPullRequest
+        {
+            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+            Url = VmrPullRequestUrl,
+            HeadBranch = InProgressPrHeadBranch,
+            HeadBranchSha = InProgressPrHeadBranchSha,
+            SourceSha = build.Commit,
+            ContainedSubscriptions =
+            [
+                new()
+                {
+                    SubscriptionId = Subscription.Id,
+                    BuildId = build.Id,
+                    SourceRepo = build.GetRepository(),
+                    CommitSha = build.Commit
+                }
+            ],
+            RequiredUpdates = [],
+            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+        };
     }
 }

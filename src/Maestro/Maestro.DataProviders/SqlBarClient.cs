@@ -41,6 +41,7 @@ public class SqlBarClient : ISqlBarClient
     {
         var sub = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
+            .Include(s => s.LastAppliedBuild)
             .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
 
         if (sub == null)
@@ -58,7 +59,11 @@ public class SqlBarClient : ISqlBarClient
             sub.SourceDirectory,
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            [.. sub.ExcludedAssets.Select(s => s.Filter)]);
+            [.. sub.ExcludedAssets.Select(s => s.Filter)],
+            sub.AutoApprove)
+        {
+            LastAppliedBuild = sub.LastAppliedBuild != null ? ToClientModelBuild(sub.LastAppliedBuild) : null,
+        };
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
@@ -305,7 +310,8 @@ public class SqlBarClient : ISqlBarClient
             sourceDirectory: other.SourceDirectory,
             targetDirectory: other.TargetDirectory,
             pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
-            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList(),
+            autoApprove: other.AutoApprove)
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
@@ -415,14 +421,21 @@ public class SqlBarClient : ISqlBarClient
         return results.Select(ToClientModelSubscription);
     }
 
-    public async Task<Build> GetBuildAsync(int buildId)
+    public async Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false)
     {
-        var build = await _context.Builds.Where(b => b.Id == buildId)
+        IQueryable<Data.Models.Build> query = _context.Builds.Where(b => b.Id == buildId)
             .Include(b => b.BuildChannels)
             .ThenInclude(b => b.Channel)
-            .Include(b => b.Assets)
-            .ThenInclude(b => b.Locations)
-            .FirstOrDefaultAsync();
+            .Include(b => b.Assets);
+
+        if (includeAssetLocation)
+        {
+            query = query.Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
+                .AsSplitQuery();
+        }
+
+        var build = await query.FirstOrDefaultAsync();
 
         if (build != null)
         {
@@ -518,29 +531,6 @@ public class SqlBarClient : ISqlBarClient
             PrBuildTime = prTime,
             GoalTimeInMinutes = goalTime
         };
-    }
-
-    public async Task RegisterSubscriptionUpdate(
-        Guid subscriptionId,
-        string updateMessage)
-    {
-        Data.Models.Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);
-        Data.Models.SubscriptionUpdate subscriptionUpdate = new()
-        {
-            SubscriptionId = subscription.Id,
-            Subscription = subscription,
-            Action = updateMessage
-        };
-        var existingSubscriptionUpdate = await _context.SubscriptionUpdates.FindAsync(subscriptionUpdate.SubscriptionId);
-        if (existingSubscriptionUpdate == null)
-        {
-            _context.SubscriptionUpdates.Add(subscriptionUpdate);
-        }
-        else
-        {
-            _context.Entry(existingSubscriptionUpdate).CurrentValues.SetValues(subscriptionUpdate);
-        }
-        await _context.SaveChangesAsync();
     }
 
     public async Task CreateSubscriptionsAsync(
@@ -652,6 +642,11 @@ public class SqlBarClient : ISqlBarClient
             existingSubscription.SourceEnabled = subscription.SourceEnabled;
         }
 
+        if (existingSubscription.AutoApprove != subscription.AutoApprove)
+        {
+            existingSubscription.AutoApprove = subscription.AutoApprove;
+        }
+
         if (!StringEquivalent(existingSubscription.SourceDirectory, subscription.SourceDirectory))
         {
             existingSubscription.SourceDirectory = subscription.SourceDirectory;
@@ -741,10 +736,6 @@ public class SqlBarClient : ISqlBarClient
     {
         var subscriptionIds = subscriptionsToDelete.Select(s => s.Id).ToHashSet();
 
-        _context.SubscriptionUpdates.RemoveRange(
-            _context.SubscriptionUpdates
-                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
-
         var subscriptionsWithAssets = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .Where(s => subscriptionIds.Contains(s.Id))
@@ -810,11 +801,6 @@ public class SqlBarClient : ISqlBarClient
             throw new InvalidOperationException($"Namespace '{namespaceName}' not found.");
         }
 
-        var subscriptionIds = barNamespace.Subscriptions.Select(sub => sub.Id).ToHashSet();
-
-        _context.SubscriptionUpdates.RemoveRange(
-            _context.SubscriptionUpdates
-                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
         _context.AssetFilters.RemoveRange(
             barNamespace.Subscriptions.SelectMany(s => s.ExcludedAssets));
         _context.Channels.RemoveRange(barNamespace.Channels);

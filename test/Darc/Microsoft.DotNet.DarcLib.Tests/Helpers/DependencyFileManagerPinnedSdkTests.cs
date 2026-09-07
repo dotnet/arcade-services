@@ -59,7 +59,9 @@ public class DependencyFileManagerPinnedSdkTests
             .ReturnsAsync(globalJsonContent);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
             .Throws<DependencyFileNotFoundException>();
-        
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsJson, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
+
         // Mock NuGet.config files - provide the first one and let others throw exceptions
         bool firstConfig = true;
         foreach (var nugetConfigName in VersionFiles.NugetConfigNames)

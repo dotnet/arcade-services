@@ -408,16 +408,12 @@ module applicationGatewayModule 'application-gateway.bicep' = {
         nsgName: networkSecurityGroupName
         publicIpAddressName: publicIpAddressName
         frontendIpName: 'frontendIp'
-        httpPortName: 'httpPort'
         httpsPortName: 'httpsPort'
         pcsPool: 'pcs'
         containerAppName: productConstructionServiceName
-        backendHttpSettingName: 'backendHttpSetting'
         backendHttpsSettingName: 'backendHttpsSetting'
-        pcs80listener: 'pcs-listener-80'
         pcs443listener: 'pcs-listener-443'
         pcsRedirection: 'pcs-redirection'
-        pcs80rule: 'pcs-rule-80'
         pcs443rule: 'pcs-rule-443'
         containerEnvironmentName: containerEnvironmentName
         hostName: hostName

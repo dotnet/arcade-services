@@ -10,7 +10,7 @@ public static class BuildHelper
 {
     public static string GetBuildUrl(this Build build)
     {
-        return $"https://dev.azure.com/dnceng/internal/_build/results?view=results&buildId={build.AzureDevOpsBuildId}";
+        return $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?view=results&buildId={build.AzureDevOpsBuildId}";
     }
 
     public static string GetBuildStalenessText(this Build build)

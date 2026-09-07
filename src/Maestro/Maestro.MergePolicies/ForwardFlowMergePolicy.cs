@@ -12,7 +12,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
-internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
+public class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {

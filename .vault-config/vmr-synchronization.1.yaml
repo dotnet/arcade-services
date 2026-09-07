@@ -6,15 +6,14 @@ storageLocation:
     subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
     name: EngKeyVault
 
-references:
-  helixkv:
-    type: azure-key-vault
-    parameters:
-      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
-      name: helixkv
-
 secrets:
   BotAccount-dotnet-bot:
     type: github-account
     parameters:
       Name: dotnet-bot
+
+  BotAccount-dotnet-bot-vmr-sync-PAT:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountName: dotnet-bot
+      gitHubBotAccountSecret: BotAccount-dotnet-bot

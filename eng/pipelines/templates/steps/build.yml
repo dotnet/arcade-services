@@ -4,6 +4,9 @@ parameters:
 - name: buildArgs
   type: string
   default: ''
+- name: sign
+  type: boolean
+  default: false
 
 steps:
 - powershell: |
@@ -15,6 +18,6 @@ steps:
     -configuration ${{ parameters.configuration }}
     -prepareMachine
     /p:Test=false
-    /p:Sign=false
+    /p:Sign=${{ parameters.sign }}
     ${{ parameters.buildArgs }}
   displayName: Build

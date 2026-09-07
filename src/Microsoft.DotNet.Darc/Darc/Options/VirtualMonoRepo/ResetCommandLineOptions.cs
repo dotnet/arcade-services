@@ -16,20 +16,25 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("reset", HelpText = "Resets the contents of a VMR mapping to match a specific commit SHA from the source repository (stages the changes only).")]
 internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
 {
-    [Value(0, MetaName = "Target", Required = true, HelpText = 
+    [Value(0, MetaName = "Target", Required = false, HelpText = 
         "Repository mapping and optionally target SHA. " +
         "When --build or --channel is provided, format is [mapping]. " +
         "Otherwise, format is [mapping]:[sha]. " +
-        "Example: runtime:abc123def456 will reset the runtime mapping to commit abc123def456.")]
+        "The mapping can always be omitted to infer it from the current repository's Source tag (like forward flow). " +
+        "When the whole target is omitted (and --build/--channel are not provided), the current repository's Source tag mapping and HEAD commit are used. " +
+        "This is a positional argument and, when provided, must always come last. " +
+        "Example: darc vmr reset --vmr /path/to/vmr runtime:abc123def456 will reset the runtime mapping to commit abc123def456.")]
     public string Target { get; set; }
 
     [Option("build", Required = false, HelpText =
         "BAR build ID to reset to. The mapping will be reset to the commit associated with this build. " +
+        "The mapping is taken from the target argument, or inferred from the current repository's Source tag when omitted. " +
         "Cannot be used together with --channel or with [mapping]:[sha] format.")]
     public int? Build { get; set; }
 
     [Option("channel", Required = false, HelpText =
         "Channel name to reset to. The mapping will be reset to the latest build from this channel. " +
+        "The mapping is taken from the target argument, or inferred from the current repository's Source tag when omitted. " +
         "Cannot be used together with --build or with [mapping]:[sha] format.")]
     public string Channel { get; set; }
 

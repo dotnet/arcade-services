@@ -41,4 +41,7 @@ public class CodeflowSubscriptionStatus
 
     [JsonProperty("latestOutcome")]
     public SubscriptionTriggerOutcome LatestOutcome { get; set; }
+
+    [JsonProperty("hasFailingCodeflowCheck")]
+    public bool HasFailingCodeflowCheck { get; set; }
 }

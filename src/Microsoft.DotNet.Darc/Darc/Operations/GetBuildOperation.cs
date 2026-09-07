@@ -49,7 +49,7 @@ internal class GetBuildOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                matchingBuilds = [await _barClient.GetBuildAsync(_options.Id)];
+                matchingBuilds = [await _barClient.GetBuildAsync(_options.Id, includeAssetLocation: false)];
             }
             else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
             {

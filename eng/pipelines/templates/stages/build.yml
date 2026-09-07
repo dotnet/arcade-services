@@ -2,6 +2,10 @@ parameters:
 - name: isProdPipeline
   displayName: Indicates whether this template should be configured for a production or non-production pipeline.
   type: boolean
+- name: enableSigning
+  displayName: Enables signing and installs the MicroBuild signing plugin.
+  type: boolean
+  default: false
 
 stages:
 - stage: Build
@@ -16,7 +20,7 @@ stages:
           ${{ if parameters.isProdPipeline }}:
             manifests: true
       enableTelemetry: true
-      enableMicrobuild: false
+      enableMicrobuild: ${{ parameters.enableSigning }}
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       jobs:
@@ -28,7 +32,6 @@ stages:
           image: 1es-windows-2022
           os: windows
         variables:
-        - group: Publish-Build-Assets
         - _InternalBuildArgs: >
             /p:DotNetSignType=$(_SignType)
             /p:TeamName=$(_TeamName)
@@ -37,7 +40,11 @@ stages:
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         - _BuildConfig: Release
         - _PublishType: blob
-        - _SignType: test
+        - name: _SignType
+          ${{ if parameters.isProdPipeline }}:
+            value: real
+          ${{ else }}:
+            value: test
         steps:
         - checkout: self
           clean: true
@@ -51,6 +58,7 @@ stages:
           parameters:
             configuration: $(_BuildConfig)
             buildArgs: $(_InternalBuildArgs)
+            sign: ${{ parameters.enableSigning }}
         templateContext:
           outputs:
           - output: pipelineArtifact

@@ -182,13 +182,19 @@ public class BarApiClient : IBarApiClient
     public async Task<IReadOnlyList<SubscriptionTriggerOutcome>> GetSubscriptionTriggerOutcomesAsync(
         Guid? subscriptionId = null,
         int? buildId = null,
-        DateTimeOffset? date = null,
+        DateTimeOffset? after = null,
+        DateTimeOffset? before = null,
+        string? subscriptionOutcomeType = null,
+        string? search = null,
         int limit = 100)
     {
         return await _barClient.SubscriptionTriggerOutcomes.ListSubscriptionOutcomesAsync(
             limit: limit,
             buildId: buildId,
-            after: date,
+            after: after,
+            before: before,
+            subscriptionOutcomeType: subscriptionOutcomeType,
+            search: search,
             subscriptionId: subscriptionId?.ToString());
     }
 
@@ -285,9 +291,9 @@ public class BarApiClient : IBarApiClient
     /// <param name="buildId">Id of build.</param>
     /// <returns>Information about the specific build</returns>
     /// <remarks>The build's assets are returned</remarks>
-    public Task<Build> GetBuildAsync(int buildId)
+    public Task<Build> GetBuildAsync(int buildId, bool includeAssetLocation = false)
     {
-        return _barClient.Builds.GetBuildAsync(buildId);
+        return _barClient.Builds.GetBuildAsync(buildId, includeAssetLocation);
     }
 
     /// <summary>

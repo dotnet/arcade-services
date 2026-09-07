@@ -20,12 +20,6 @@ internal interface IPullRequestStateManager
 
     Task SetInProgressPullRequestAsync(InProgressPullRequest pr);
 
-    /// <summary>
-    ///     Updates the creation date on the in-progress PR if it differs.
-    ///     Temporary workaround until all existing PRs have a creation date.
-    /// </summary>
-    Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate);
-
     #endregion
 
     #region Merge policy evaluation cache
@@ -55,6 +49,12 @@ internal interface IPullRequestStateManager
     Task UnsetUpdateReminderAsync(bool isCodeFlow);
 
     Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow);
+
+    #endregion
+
+    #region Codeflow approval check
+
+    Task SetCodeflowApprovalCheck(CodeflowApprovalCheck check);
 
     #endregion
 

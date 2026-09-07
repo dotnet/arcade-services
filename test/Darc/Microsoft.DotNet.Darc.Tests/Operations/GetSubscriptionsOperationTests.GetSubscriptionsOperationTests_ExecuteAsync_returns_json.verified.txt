@@ -23,6 +23,7 @@
     "excludedAssets": [
       "Foo.Bar",
       "Bar.Xyz"
-    ]
+    ],
+    "autoApprove": false
   }
 ]

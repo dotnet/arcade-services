@@ -15,6 +15,7 @@ Type[] options =
 [
     typeof(ReproOptions),
     typeof(FlowCommitOptions),
+    typeof(CopyBuildOptions),
 ];
 
 Parser.Default.ParseArguments(args, options)

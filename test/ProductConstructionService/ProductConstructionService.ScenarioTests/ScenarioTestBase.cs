@@ -27,7 +27,7 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal abstract partial class ScenarioTestBase
 {
-    private static readonly TimeSpan WAIT_DELAY = TimeSpan.FromSeconds(25);
+    protected static readonly TimeSpan WAIT_DELAY = TimeSpan.FromSeconds(25);
 
     private string _packageNameSalt = null!;
     private string _testNamespace = null!;

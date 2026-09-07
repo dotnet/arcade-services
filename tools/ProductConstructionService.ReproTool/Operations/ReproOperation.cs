@@ -59,7 +59,7 @@ internal class ReproOperation(
         Build? build = null;
         if (options.BuildId != null)
         {
-            build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
+            build = await prodBarClient.GetBuildAsync(options.BuildId.Value, includeAssetLocation: true);
             if (build.GitHubRepository != subscription.SourceRepository)
             {
                 throw new ArgumentException($"Build {build.Id} repository {build.GitHubRepository} doesn't match the subscription source repository {subscription.SourceRepository}");
@@ -175,7 +175,7 @@ internal class ReproOperation(
         {
             throw new ArgumentException("A buildId must be provided to flow a dependency update subscription");
         }
-        var build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
+        var build = await prodBarClient.GetBuildAsync(options.BuildId.Value, includeAssetLocation: true);
 
         if (build.GitHubRepository != subscription.SourceRepository)
         {

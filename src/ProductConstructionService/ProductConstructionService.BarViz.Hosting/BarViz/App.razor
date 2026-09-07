@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maestro++</title>
+    <base href="/" />
+    <ResourcePreloader />
+    <link href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css"]" rel="stylesheet" />
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="icon" type="image/x-icon" href="@Assets["favicon.ico"]" />
+    <link href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.bundle.scp.css"]" rel="stylesheet" />
+    <link href="@Assets["ProductConstructionService.BarViz.bundle.scp.css"]" rel="stylesheet" />
+    <ImportMap />
+    <HeadOutlet @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
+</head>
+
+<body>
+    <script src="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/js/loading-theme.js"]"></script>
+
+    <div id="app-loading" class="loading-progress-wrap">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+        <loading-theme storage-name="theme"></loading-theme>
+    </div>
+
+    <script>
+        window.appLoading = {
+            remove: () => document.getElementById("app-loading")?.remove(),
+        };
+    </script>
+
+    <ClientApp @rendermode="new InteractiveWebAssemblyRenderMode(prerender: false)" />
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">X</span>
+    </div>
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>

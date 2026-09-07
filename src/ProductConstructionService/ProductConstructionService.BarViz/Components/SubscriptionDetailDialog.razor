@@ -117,6 +117,10 @@
                         <td>Target directory</td>
                         <td>@_subscription.TargetDirectory</td>
                     </tr>
+                    <tr>
+                        <td>Auto-approve</td>
+                        <td>@(_subscription.AutoApprove ? "Yes" : "No")</td>
+                    </tr>
                 }
                 @if (_subscription.SourceEnabled && !string.IsNullOrEmpty(_subscription.SourceDirectory))
                 {

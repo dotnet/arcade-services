@@ -1480,7 +1480,16 @@ try {
 
         # Generate the edotor.net URL
         $edotorUrl = "https://edotor.net/?engine=dot#$encodedDiagram"
-        Start-Process $edotorUrl
+
+        # The URL embeds the entire diagram in its fragment and can easily exceed the
+        # command-line length limit that Start-Process enforces when launching a URL
+        # directly. Write a tiny redirect page to a temp file and open that instead,
+        # which has no length limitation.
+        $redirectFile = Join-Path ([System.IO.Path]::GetTempPath()) "codeflow-graph-$([System.Guid]::NewGuid().ToString('N')).html"
+        $htmlEncodedUrl = [System.Web.HttpUtility]::HtmlAttributeEncode($edotorUrl)
+        $redirectHtml = "<!DOCTYPE html><html><head><meta charset=""utf-8""><meta http-equiv=""refresh"" content=""0; url=$htmlEncodedUrl""></head><body>Opening diagram&hellip; If it does not open, <a href=""$htmlEncodedUrl"">click here</a>.</body></html>"
+        Set-Content -Path $redirectFile -Value $redirectHtml -Encoding UTF8
+        Start-Process $redirectFile
         Write-Host "Opening diagram in browser..." -ForegroundColor Green
         exit 0
     }

@@ -17,6 +17,8 @@ public class GitFileContentContainer
 
     public GitFile NugetConfig { get; set; }
 
+    public GitFile DotNetToolsConfigJson { get; set; }
+
     public GitFile DotNetToolsJson { get; set; }
 
     public List<GitFile> GetFilesToCommit()
@@ -27,6 +29,11 @@ public class GitFileContentContainer
             GlobalJson,
             NugetConfig
         };
+
+        if (DotNetToolsConfigJson != null)
+        {
+            gitHubCommitsMap.Add(DotNetToolsConfigJson);
+        }
 
         if (DotNetToolsJson != null)
         {

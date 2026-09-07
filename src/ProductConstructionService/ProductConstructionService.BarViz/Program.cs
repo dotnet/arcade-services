@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Blazored.SessionStorage;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.FluentUI.AspNetCore.Components;
@@ -18,16 +17,12 @@ ImmutableList.CreateRange<int>([]);
 ImmutableDictionary.CreateRange<int, int>([]);
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
 
-string PcsApiBaseAddress = builder.HostEnvironment.IsDevelopment()
-    ? "https://localhost:53180/"
-    : builder.HostEnvironment.BaseAddress;
+string pcsApiBaseAddress = builder.HostEnvironment.BaseAddress;
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(PcsApiBaseAddress) });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(pcsApiBaseAddress) });
 builder.Services.AddFluentUIComponents();
-builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(baseUri: PcsApiBaseAddress));
+builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(baseUri: pcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
 builder.Services.AddSingleton<UserRoleManager>();

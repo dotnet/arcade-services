@@ -140,6 +140,7 @@ internal partial class ConfigurationIngestor
             },
             Enabled = subscription.Values.Enabled,
             SourceEnabled = subscription.Values.SourceEnabled,
+            AutoApprove = subscription.Values.AutoApprove,
             SourceDirectory = subscription.Values.SourceDirectory,
             TargetDirectory = subscription.Values.TargetDirectory,
             PullRequestFailureNotificationTags = subscription.Values.FailureNotificationTags,

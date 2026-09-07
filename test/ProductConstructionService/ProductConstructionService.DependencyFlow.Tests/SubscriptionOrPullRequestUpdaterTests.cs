@@ -104,7 +104,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
-    internal void GivenACodeFlowSubscription(SubscriptionPolicy policy)
+    internal void GivenACodeFlowSubscription(SubscriptionPolicy policy, bool autoApprove = false)
     {
         Subscription = new Subscription
         {
@@ -117,6 +117,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
 
             SourceEnabled = true,
             TargetDirectory = "repo",
+            AutoApprove = autoApprove,
             ExcludedAssets = [new AssetFilter() { Filter = "Excluded.Package" }],
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));

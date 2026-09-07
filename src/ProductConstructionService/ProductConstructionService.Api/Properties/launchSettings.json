@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "ProductConstructionService.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:53180",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        // "TmpPath": "D:\\tmp\\"
+      },
+    }
+  }
+}

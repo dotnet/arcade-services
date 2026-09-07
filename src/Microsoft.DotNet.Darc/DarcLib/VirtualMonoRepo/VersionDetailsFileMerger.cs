@@ -216,6 +216,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             The dependency {repo1Change.To?.Name} has conflicting incomparable version values `{repo1Change.To?.Version}` and `{repo2Change.To?.Version}`.
 
             Please verify and/or update the dependency version manually.
+            {CommentPlaceholders.NotificationTags}
             """,
             CommentType.Warning);
 

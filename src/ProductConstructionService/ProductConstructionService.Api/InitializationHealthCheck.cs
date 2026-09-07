@@ -6,15 +6,15 @@ using Maestro.WorkItems;
 
 namespace ProductConstructionService.Api;
 
-internal class InitializationHealthCheck(WorkItemScopeManager workItemProcessorScopeManager) : IHealthCheck
+internal class InitializationHealthCheck(WorkItemProcessorStateController stateController) : IHealthCheck
 {
-    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (await workItemProcessorScopeManager.GetStateAsync() == WorkItemProcessorState.Initializing)
+        if (stateController.IsInitializationPending)
         {
-            return HealthCheckResult.Unhealthy("Background worker is waiting for initialization to finish");
+            return Task.FromResult(HealthCheckResult.Unhealthy("Background worker is waiting for initialization to finish"));
         }
 
-        return HealthCheckResult.Healthy();
+        return Task.FromResult(HealthCheckResult.Healthy());
     }
 }

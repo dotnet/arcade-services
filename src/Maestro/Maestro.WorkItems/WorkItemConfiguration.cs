@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Text.Json;
 using Azure.Core;
 using Azure.ResourceManager;
@@ -10,6 +11,7 @@ using Maestro.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.WorkItems;
 
@@ -35,15 +37,16 @@ public static class WorkItemConfiguration
         bool waitForInitialization,
         Dictionary<string, (int Count, string WorkItemType)> workItemConsumers)
     {
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateCache>(
-            sp,
-            builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
-            sp,
-            new AutoResetEvent(false)));
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(
-            sp,
-            PollingRateSeconds));
+        builder.Services.AddSingleton(new WorkItemProcessorReplicaName(builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
+        builder.Services.AddSingleton<IWorkItemProcessorStateStore, WorkItemProcessorStateStore>();
+        builder.Services.AddSingleton<IReplicaWorkItemProcessorStateStore, ReplicaWorkItemProcessorStateStore>();
+        builder.Services.AddSingleton<WorkItemAdmissionGate>();
+        builder.Services.AddSingleton(new WorkItemProcessorStateControllerOptions(
+            waitForInitialization,
+            TimeSpan.FromSeconds(PollingRateSeconds)));
+        builder.Services.AddSingleton<WorkItemProcessorStateController>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<WorkItemProcessorStateController>());
+        builder.Services.AddSingleton<WorkItemScopeManager>();
 
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
@@ -59,7 +62,7 @@ public static class WorkItemConfiguration
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, LocalReplicaWorkItemProcessorStateCacheFactory>();
+            builder.Services.AddTransient<IWorkItemProcessorReplicaProvider, LocalWorkItemProcessorReplicaProvider>();
         }
         else
         {
@@ -69,7 +72,7 @@ public static class WorkItemConfiguration
                     .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
                     .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
             );
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
+            builder.Services.AddTransient<IWorkItemProcessorReplicaProvider, ContainerAppWorkItemProcessorReplicaProvider>();
         }
     }
 
@@ -77,12 +80,22 @@ public static class WorkItemConfiguration
     public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string[] queueNames)
     {
         var queueServiceClient = serviceProvider.GetRequiredService<QueueServiceClient>();
+        var logger = serviceProvider.GetRequiredService<ILoggerFactory>()
+            .CreateLogger(typeof(WorkItemConfiguration).FullName!);
+        var stopwatch = Stopwatch.StartNew();
 
-        foreach (var queueName in queueNames)
-        {
-            var queueClient = queueServiceClient.GetQueueClient(queueName);
-            await queueClient.CreateIfNotExistsAsync();
-        }
+        logger.LogInformation(
+            "Initializing {QueueCount} local work item queues: {QueueNames}",
+            queueNames.Length,
+            string.Join(", ", queueNames));
+
+        await Task.WhenAll(queueNames.Select(queueName =>
+            queueServiceClient.GetQueueClient(queueName).CreateIfNotExistsAsync()));
+
+        logger.LogInformation(
+            "Initialized {QueueCount} local work item queues in {ElapsedMilliseconds} ms",
+            queueNames.Length,
+            stopwatch.ElapsedMilliseconds);
     }
 
     public static void AddWorkItemProcessor<TWorkItem, TProcessor>(

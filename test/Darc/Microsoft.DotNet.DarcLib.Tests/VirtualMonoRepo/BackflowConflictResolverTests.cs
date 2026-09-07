@@ -95,6 +95,19 @@ public class BackflowConflictResolverTests
         _localVmr
             .Setup(x => x.GetFileFromGitAsync(It.Is<string>(s => s.Contains(VersionFiles.VersionDetailsXml)), It.IsAny<string>(), null))
             .ReturnsAsync((string _, string commit, string __) => $"vmr/{commit}");
+        _localVmr
+            .Setup(x => x.GetFileFromGitAsync(
+                VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsJson,
+                LastVmrSha,
+                null))
+            .ReturnsAsync("not important");
+        // The VMR migrated from the root manifest to .config/dotnet-tools.json.
+        _localVmr
+            .Setup(x => x.GetFileFromGitAsync(
+                VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsConfigJson,
+                CurrentVmrSha,
+                null))
+            .ReturnsAsync("not important");
 
         _localGitRepoFactory.Reset();
         _localGitRepoFactory
@@ -298,6 +311,31 @@ public class BackflowConflictResolverTests
             ],
             headBranchExisted: false,
             excludedAssets: ["Package.Excluded.From.Backflow", "Package.Also.*"]);
+
+        _jsonMergerMock.Verify(
+            x => x.MergeJsonsAsync(
+                _localRepo.Object,
+                VersionFiles.DotnetToolsJson,
+                LastRepoSha,
+                TargetBranch,
+                _localVmr.Object,
+                VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsJson,
+                LastVmrSha,
+                CurrentVmrSha,
+                true),
+            Times.Once);
+        _jsonMergerMock.Verify(
+            x => x.MergeJsonsAsync(
+                _localRepo.Object,
+                VersionFiles.DotnetToolsConfigJson,
+                LastRepoSha,
+                TargetBranch,
+                _localVmr.Object,
+                VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsConfigJson,
+                LastVmrSha,
+                CurrentVmrSha,
+                true),
+            Times.Once);
     }
 
     [Test]

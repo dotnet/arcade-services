@@ -223,10 +223,11 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
     {
         _commentCollector.AddComment(
             $"""
-                A conflict was detected when merging file `{fileName}`. {message}
+            A conflict was detected when merging file `{fileName}`. {message}
 
-                The repository value was used. Please verify this is the correct value or update it `{fileName}` accordingly.
-                """,
+            The repository value was used. Please verify this is the correct value or update it `{fileName}` accordingly.
+            {CommentPlaceholders.NotificationTags}
+            """,
             CommentType.Warning);
     }
 }

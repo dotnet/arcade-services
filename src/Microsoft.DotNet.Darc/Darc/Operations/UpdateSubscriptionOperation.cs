@@ -56,6 +56,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
         List<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
         bool sourceEnabled = subscription.SourceEnabled;
+        bool autoApprove = subscription.AutoApprove;
         List<string> excludedAssets = [..subscription.ExcludedAssets];
         string sourceDirectory = subscription.SourceDirectory;
         string targetDirectory = subscription.TargetDirectory;
@@ -106,6 +107,11 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             if (_options.SourceEnabled.HasValue)
             {
                 sourceEnabled = _options.SourceEnabled.Value;
+            }
+
+            if (_options.AutoApprove.HasValue)
+            {
+                autoApprove = _options.AutoApprove.Value;
             }
 
             if (_options.SourceDirectory != null)
@@ -250,6 +256,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
             mergePolicies = updateSubscriptionPopUp.MergePolicies;
             sourceEnabled = updateSubscriptionPopUp.SourceEnabled;
+            autoApprove = updateSubscriptionPopUp.AutoApprove;
             sourceDirectory = updateSubscriptionPopUp.SourceDirectory;
             targetDirectory = updateSubscriptionPopUp.TargetDirectory;
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
@@ -309,6 +316,12 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
+            if (!ValidateAutoApprove(autoApprove, subscription.SourceEnabled, targetDirectory))
+            {
+                Console.WriteLine("Aborting subscription update.");
+                return Constants.ErrorCode;
+            }
+
             // We created an updated Yaml subscription, keeping immutable fields from the existing subscription.
             SubscriptionYaml updatedSubscriptionYaml = new()
             {
@@ -323,6 +336,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = subscription.SourceEnabled,
+                AutoApprove = autoApprove,
                 SourceDirectory = sourceDirectory,
                 TargetDirectory = targetDirectory,
                 ExcludedAssets = excludedAssets
@@ -378,6 +392,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
            || _options.Enabled != null
            || _options.FailureNotificationTags != null
            || _options.SourceEnabled != null
+           || _options.AutoApprove != null
            || _options.SourceDirectory != null
            || _options.ExcludedAssets != null
            || _options.TargetDirectory != null

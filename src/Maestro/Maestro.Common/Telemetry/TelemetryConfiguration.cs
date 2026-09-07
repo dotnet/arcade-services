@@ -9,8 +9,16 @@ namespace Maestro.Common.Telemetry;
 
 public static class TelemetryConfiguration
 {
-    public static void AddTelemetry(this IServiceCollection services)
+    public static void AddTelemetry(
+        this IServiceCollection services,
+        Action<TelemetryOptions>? configureOptions = null)
     {
+        var optionsBuilder = services.AddOptions<TelemetryOptions>();
+        if (configureOptions is not null)
+        {
+            optionsBuilder.Configure(configureOptions);
+        }
+
         services.TryAddSingleton<ITelemetryInitializer, TelemetryRoleNameInitializer>();
         services.TryAddSingleton<ITelemetryRecorder, TelemetryRecorder>();
         services.TryAddSingleton<IMetricRecorder, MetricRecorder>();

@@ -47,38 +47,60 @@ public interface ITelemetryScope : IDisposable
 
 public class TelemetryRecorder(
         ILogger<TelemetryRecorder> logger,
-        TelemetryClient telemetryClient)
+        TelemetryClient telemetryClient,
+        IMetricRecorder metricRecorder)
     : ITelemetryRecorder
 {
     private readonly ILogger<TelemetryRecorder> _logger = logger;
     private readonly TelemetryClient _telemetryClient = telemetryClient;
+    private readonly IMetricRecorder _metricRecorder = metricRecorder;
 
     public ITelemetryScope RecordWorkItemCompletion(string workItemType, long attemptNumber, string operationId)
-        => CreateScope("WorkItemExecuted", new()
+        => CreateScope(
+            "WorkItemExecuted",
+            new()
             {
                 { "WorkItemType", workItemType },
                 { "Attempt", attemptNumber.ToString()},
                 { "OperationId", operationId }
+            },
+            new()
+            {
+                { "WorkItemType", workItemType },
+                { "Attempt", attemptNumber.ToString() }
             });
 
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri)
-        => CreateScope($"Git{operation}", new() { { "Uri", repoUri } });
+        => CreateScope($"Git{operation}", new() { { "Uri", repoUri } }, []);
 
     public void RecordCustomEvent(CustomEventType eventName, Dictionary<string, string> customProperties)
     {
         _telemetryClient.TrackEvent(eventName.ToString(), customProperties);
+        _metricRecorder.TelemetryEventRecorded(eventName.ToString());
     }
 
-    private TelemetryScope CreateScope(string metricName, Dictionary<string, string> customDimensions)
+    private TelemetryScope CreateScope(
+        string metricName,
+        Dictionary<string, string> customDimensions,
+        Dictionary<string, string> metricDimensions)
     {
-        return new TelemetryScope(metricName, _logger, _telemetryClient, customDimensions, []);
+        return new TelemetryScope(
+            metricName,
+            _logger,
+            _telemetryClient,
+            _metricRecorder,
+            customDimensions,
+            metricDimensions,
+            []);
     }
 
     private class TelemetryScope(
         string telemetryName,
         ILogger logger,
         TelemetryClient telemetryClient,
+        IMetricRecorder metricRecorder,
         Dictionary<string, string> customDimensions,
+        Dictionary<string, string> metricDimensions,
         Dictionary<string, double> customMeasurement) : ITelemetryScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
@@ -98,8 +120,13 @@ public class TelemetryRecorder(
         {
             _stopwatch.Stop();
             customDimensions.Add(SuccessDimension, _successful.ToString());
+            metricDimensions.Add(SuccessDimension, _successful.ToString());
             customMeasurement.Add(DurationMeasurement, _stopwatch.ElapsedMilliseconds);
             telemetryClient.TrackEvent(telemetryName, customDimensions, customMeasurement);
+            metricRecorder.TelemetryEventRecorded(
+                telemetryName,
+                metricDimensions,
+                _stopwatch.Elapsed.TotalMilliseconds);
             logger.LogInformation("{telemetryName} took {duration} to complete {status}",
                 telemetryName,
                 TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),

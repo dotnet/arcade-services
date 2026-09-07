@@ -162,6 +162,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+        if (IsInSubmodule(codeflowOptions.Mapping.Name, conflictedFile) || conflictedFile == ".gitmodules")
+        {
+            _logger.LogInformation("Conflict in {file} is inside a submodule, leaving it unresolved", conflictedFile);
+            return false;
+        }
+
         // Known version file - check out the branch version, we want to override it
         // See https://github.com/dotnet/arcade-services/issues/4865
         if (DependencyFileManager.CodeflowDependencyFiles
@@ -180,7 +186,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             // Nuget.Config from the repo should be preferred as it can contain additional sources that are not in the VMR's Nuget.Config
             await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
-            _commentCollector.AddComment("There was a conflict in Nuget.Config. Resolved by preferring the version from the repo. Please make sure to merge any necessary changes from the VMR's Nuget.Config if needed.",
+            _commentCollector.AddComment($"There was a conflict in Nuget.Config. Resolved by preferring the version from the repo. Please make sure to merge any necessary changes from the VMR's Nuget.Config if needed. {CommentPlaceholders.NotificationTags}",
                 CommentType.Caution);
             return true;
         }
@@ -207,6 +213,21 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Determines whether the given target repo file is a submodule of the current mapping or lives inside one.
+    /// Submodules are recorded in the source manifest as <c>{mappingName}/{repoRelativePath}</c>.
+    /// </summary>
+    private bool IsInSubmodule(string mappingName, UnixPath conflictedFile)
+    {
+        var submodulePrefix = mappingName + '/';
+
+        return _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(submodulePrefix, StringComparison.Ordinal))
+            .Select(s => s.Path.Substring(submodulePrefix.Length))
+            .Any(repoRelativePath =>
+                conflictedFile.Path.Equals(repoRelativePath, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -272,24 +293,32 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha);
 
-        bool dotnetToolsConfigExists =
-            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
-            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, vmrComparisonSha) != null));
+        UnixPath relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
+        await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsJson);
 
-        if (dotnetToolsConfigExists)
+        async Task MergeDotNetToolsManifestIfExistsAsync(string manifestPath)
         {
-            hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
+            UnixPath vmrManifestPath = relativeSourceMappingPath / manifestPath;
+            bool manifestExists =
+                await targetRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null ||
+                await targetRepo.GetFileFromGitAsync(manifestPath, targetBranch) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null;
+
+            if (manifestExists)
+            {
+                hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
-                    VersionFiles.DotnetToolsConfigJson,
+                    manifestPath,
                     repoComparisonSha,
                     targetBranch,
                     vmr,
-                    VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson,
+                    vmrManifestPath,
                     vmrComparisonSha,
                     codeflowOptions.CurrentFlow.VmrSha,
                     allowMissingFiles: true);
+            }
         }
 
         var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(

@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, List<string> excludedAssets)
+        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, List<string> excludedAssets, bool autoApprove = false)
         {
             Id = id;
             Enabled = enabled;
@@ -21,6 +21,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             TargetDirectory = targetDirectory;
             PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
             ExcludedAssets = excludedAssets;
+            AutoApprove = autoApprove;
         }
 
         [JsonProperty("id")]
@@ -61,5 +62,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("excludedAssets")]
         public List<string> ExcludedAssets { get; }
+
+        [JsonProperty("autoApprove")]
+        public bool AutoApprove { get; }
     }
 }

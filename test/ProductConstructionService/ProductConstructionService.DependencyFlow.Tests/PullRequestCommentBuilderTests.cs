@@ -227,6 +227,86 @@ public class PullRequestCommentBuilderTests
         comment.Should().NotContain("git-info");
     }
 
+    [Test]
+    public void RecreationFallbackLimitReachedCommentProvidesForwardFlowCommand()
+    {
+        var subscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true,
+            $"https://github.com/{FakeOrgName}/source-repo",
+            $"https://github.com/{FakeOrgName}/vmr",
+            "main",
+            null,
+            "sdk",
+            "@notifiedUser1",
+            excludedAssets: []);
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = subscription.Id,
+            BuildId = 12345,
+            SourceSha = "abcdef123",
+            SourceRepo = subscription.SourceRepository,
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
+            update,
+            subscription,
+            prIsEmpty: true);
+
+        comment.Should().Contain("Codeflow rewind limit reached");
+        comment.Should().Contain("reached the maximum number of rewind attempts allowed for a work item");
+        comment.Should().Contain("potentially more than an hour");
+        comment.Should().Contain("persistent development environment, such as a dev box");
+        comment.Should().Contain("No changes from this build were pushed");
+        comment.Should().Contain("In the target repository clone, check out the subscription's target branch");
+        comment.Should().Contain($"git checkout {subscription.TargetBranch}");
+        comment.Should().Contain("Run the following command from the source repository directory");
+        comment.Should().Contain($"darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}");
+        comment.Should().Contain("Commit and push the resulting changes to this PR's branch");
+        comment.Should().NotContain("<targetRepoPath>");
+        comment.Should().NotContain("Conflict detected");
+    }
+
+    [Test]
+    public void RecreationFallbackLimitReachedCommentProvidesBackflowCommand()
+    {
+        var subscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true,
+            $"https://github.com/{FakeOrgName}/vmr",
+            $"https://github.com/{FakeOrgName}/target-repo",
+            "main",
+            "sdk",
+            null,
+            "@notifiedUser1",
+            excludedAssets: []);
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = subscription.Id,
+            BuildId = 12345,
+            SourceSha = "abcdef123",
+            SourceRepo = subscription.SourceRepository,
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
+            update,
+            subscription,
+            prIsEmpty: false);
+
+        comment.Should().Contain(
+            $"darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>");
+        comment.Should().Contain(
+            "replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones");
+        comment.Should().Contain("In the target repository clone, check out the subscription's target branch");
+        comment.Should().Contain($"git checkout {subscription.TargetBranch}");
+        comment.Should().Contain("You can either merge the PR without getting these new updates");
+        comment.Should().NotContain("from the source repository directory");
+    }
+
     private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
     [
         new ClientModels.Subscription(

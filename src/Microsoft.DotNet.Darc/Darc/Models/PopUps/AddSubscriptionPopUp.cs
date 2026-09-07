@@ -29,6 +29,7 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
         IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
+        bool autoApprove,
         string? sourceDirectory,
         string? targetDirectory,
         List<string> excludedAssets)
@@ -44,6 +45,7 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
                 MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+                AutoApprove = GetCurrentSettingForDisplay(autoApprove.ToString(), autoApprove.ToString(), false),
                 SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, string.Empty, false),
                 TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, string.Empty, false),
                 ExcludedAssets = excludedAssets,

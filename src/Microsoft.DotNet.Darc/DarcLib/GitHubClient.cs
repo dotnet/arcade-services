@@ -32,6 +32,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 {
     private const string GitHubApiUri = "https://api.github.com";
     private const string DarcLibVersion = "1.0.0";
+    private const string PullRequestRuleType = "pull_request";
     private static readonly ProductHeaderValue _product;
 
     private static readonly Regex RepositoryUriPattern = new(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
@@ -344,6 +345,24 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             GithubResourceConverters.ConvertPullRequest);
 
         return result;
+    }
+
+    public async Task<bool> IsLastPushApprovalRequiredAsync(string repoUri, string branch)
+    {
+        branch = GitHelpers.NormalizeBranchName(branch);
+        (string owner, string repo) = ParseRepoUri(repoUri);
+        var rulesUri = new Uri(
+            $"repos/{owner}/{repo}/rules/branches/{Uri.EscapeDataString(branch)}",
+            UriKind.Relative);
+
+        IApiResponse<IReadOnlyList<GitHubRepositoryRule>> response =
+            await GetClient(owner, repo).Connection.Get<IReadOnlyList<GitHubRepositoryRule>>(
+                rulesUri,
+                new Dictionary<string, string>());
+
+        return response.Body.Any(rule =>
+            rule.Type == PullRequestRuleType
+            && rule.Parameters?.RequireLastPushApproval == true);
     }
 
     /// <summary>
@@ -900,13 +919,32 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
     private async Task<Commit?> GetCommitAsync(string owner, string repo, string sha)
     {
-        Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
-        Octokit.GitHubCommit commit = await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
-        if (commit == null)
+        try
+        {
+            // Transient errors (e.g. GitHub returning a 5xx / gateway timeout) should not be
+            // mistaken for the commit not existing. Retry those a few times before giving up,
+            // and let genuine "not found" responses (404) bubble up as a null result below.
+            Repository repository = await ExponentialRetry.Default.RetryAsync(
+                async () => await GetClient(owner, repo).Repository.Get(owner, repo),
+                ex => _logger.LogWarning(ex, "Failed to get repository {owner}/{repo}, retrying...", owner, repo),
+                ex => ex is ApiException apiException && apiException.StatusCode >= HttpStatusCode.InternalServerError);
+
+            Octokit.GitHubCommit? commit = await ExponentialRetry.Default.RetryAsync(
+                async () => await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha),
+                ex => _logger.LogWarning(ex, "Failed to get commit {sha} in {owner}/{repo}, retrying...", sha, owner, repo),
+                ex => ex is ApiException apiException && apiException.StatusCode >= HttpStatusCode.InternalServerError);
+
+            if (commit == null)
+            {
+                return null;
+            }
+
+            return new Commit(commit.Author?.Login, commit.Commit.Sha, commit.Commit.Message);
+        }
+        catch (NotFoundException)
         {
             return null;
         }
-        return new Commit(commit.Author?.Login, commit.Commit.Sha, commit.Commit.Message);
     }
 
     /// <summary>

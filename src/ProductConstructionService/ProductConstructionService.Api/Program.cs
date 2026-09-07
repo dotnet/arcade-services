@@ -5,9 +5,9 @@ using Maestro.Common;
 using Maestro.Services.Common;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.StaticFiles;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.BarViz.Hosting;
 using Maestro.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +18,8 @@ bool useSwagger = isDevelopment;
 await builder.ConfigurePcs(
     addKeyVault: true,
     addSwagger: useSwagger);
+builder.Services.AddBarVizHosting();
+builder.ConfigureApiRedirection();
 
 var app = builder.Build();
 
@@ -27,8 +29,6 @@ if (!isDevelopment)
 {
     app.UseHsts();
 }
-
-app.UseCors();
 
 // When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
 // When we authenticate ourselves, GitHub sends us the token, and redirects us to the redirect_uri so this needs to be on HTTPS
@@ -49,6 +49,7 @@ app.UseHttpLogging();
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
+    app.UseWebAssemblyDebugging();
     await app.Services.UseLocalWorkItemQueues(
         [
             app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.DefaultWorkItemQueueName),
@@ -71,17 +72,6 @@ app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
-// WARNING: This DOES NOT prevent the static file from being written to the response body. It does set a 302 redirect
-// so that normal users visiting the site will be redirected to the login page before API calls start failing.
-// If we ever want to serve sensitive static files, we need to challenge and short-circuit earlier.
-static async Task ChallengeUnauthenticatedStaticFileRequests(StaticFileResponseContext ctx)
-{
-    if (!await ctx.Context.IsAuthenticated())
-    {
-        await ctx.Context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
-    }
-}
-
 app.Use(async (context, next) =>
 {
     if (!await context.IsAuthenticated())
@@ -92,15 +82,9 @@ app.Use(async (context, next) =>
     await next(context);
 });
 
-app.UseDefaultFiles();
-app.UseStaticFiles(new StaticFileOptions()
-{
-    ServeUnknownFileTypes = true,
-    OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
-});
-
 // Add security headers
 app.ConfigureSecurityHeaders();
+app.UseAntiforgery();
 
 // Map pages and non-API controllers
 app.MapDefaultEndpoints();
@@ -112,7 +96,7 @@ if (isDevelopment)
     controllers.AllowAnonymous();
 }
 
-app.UseSpa();
+app.MapBarViz(AuthenticationConfiguration.WebAuthorizationPolicyName);
 
 await app.SetWorkItemProcessorInitialState();
 

@@ -21,6 +21,7 @@ public interface IVmrCodeFlower
 {
     Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
+        string targetBranch,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
         bool ignoreNonLinearFlow,
@@ -37,7 +38,8 @@ public record CodeflowOptions(
     bool KeepConflicts,
     bool ForceUpdate,
     bool UnsafeFlow,
-    bool UseRecreationFallback);
+    bool UseRecreationFallback,
+    int? MaxRecreationFallbackAttempts = 50);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -350,6 +352,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// </summary>
     public async Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
+        string targetBranch,
         ILocalGitRepo repoClone,
         bool currentIsBackflow,
         bool ignoreNonLinearFlow,
@@ -443,16 +446,14 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (!currentIsBackflow && isForwardOlder)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var currentVmrSha = await vmr.GetShaForRefAsync();
 
-            // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
-            // For normal flows it should be, but for the case described above it will be on a different branch.
-            if (!headBranchExisted && !await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            // We can tell the above by checking if the last backflown VMR sha belongs to the target branch
+            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, targetBranch))
             {
-                _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
+                _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR branch {branch}. " +
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
                     lastBackflow.VmrSha,
-                    currentVmrSha);
+                    targetBranch);
 
                 return new LastFlows(
                     LastFlow: lastForwardFlow,
@@ -531,7 +532,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (flowsToRecreate < 50)
+        // A null limit is valid and intentionally allows callers such as DARC to recreate as many previous flows as needed.
+        while (codeflowOptions.MaxRecreationFallbackAttempts is null
+            || flowsToRecreate <= codeflowOptions.MaxRecreationFallbackAttempts)
         {
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
@@ -617,7 +620,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
 
-        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
+        NativePath targetRepoPath = currentIsBackflow ? repo.Path : _vmrInfo.VmrPath;
+        throw new RecreationLimitReachedException(targetRepoPath);
     }
 
     /// <summary>

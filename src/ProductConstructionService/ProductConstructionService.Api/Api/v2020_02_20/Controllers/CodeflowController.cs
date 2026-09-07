@@ -3,12 +3,14 @@
 
 using System.Net;
 using Maestro.Data;
+using Maestro.MergePolicies;
+using Maestro.MergePolicyEvaluation;
+using Maestro.Services.Common.Cache;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using Maestro.Services.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -58,18 +60,23 @@ public class CodeflowController : ControllerBase
 
         var subscriptions = forwardFlowSubscriptions.Concat(backflowSubscriptions).ToList();
 
-        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
+        List<string> updaterIds = [.. subscriptions.Select(s => PullRequestUpdaterId.CreateUpdaterId(s).Id)];
 
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfoPerSubscription = await CalculateNewestBuildInfo(subscriptions);
+        Dictionary<string, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(updaterIds);
 
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
+        Dictionary<string, NewestBuildInfo> newestBuildInfoPerSubscription = await CalculateNewestBuildInfo(subscriptions);
+
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription = await GetLatestOutcomesAsync(subscriptions);
+
+        Dictionary<string, bool> codeflowCheckStatuses = await GetCodeflowCheckStatuses(updaterIds);
 
         var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
             backflowSubscriptions,
             activePrsPerSubscriptionId,
             newestBuildInfoPerSubscription,
-            latestOutcomePerSubscription);
+            latestOutcomePerSubscription,
+            codeflowCheckStatuses);
 
         return Ok(codeflowStatuses);
     }
@@ -107,30 +114,27 @@ public class CodeflowController : ControllerBase
             .ToListAsync();
     }
 
-    private async Task<Dictionary<Guid, InProgressPullRequest>> GetInProgressPullRequestsAsync(
-        List<Maestro.Data.Models.Subscription> subscriptions)
+    private async Task<Dictionary<string, InProgressPullRequest>> GetInProgressPullRequestsAsync(List<string> updaterIds)
     {
-        var keys = subscriptions
-            .Select(s => $"{nameof(InProgressPullRequest)}_{s.Id}")
-            .ToList();
+        List<string> cacheKeys = [.. updaterIds.Select(RedisCache.MakeKey<InProgressPullRequest>)];
 
         var cache = _cacheFactory.Create<InProgressPullRequest>(string.Empty, includeTypeInKey: false);
-        var batchResults = await cache.TryGetStateBatchAsync(keys);
+        var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
 
-        var result = new Dictionary<Guid, InProgressPullRequest>();
-        foreach (var subscription in subscriptions)
+        var result = new Dictionary<string, InProgressPullRequest>();
+        foreach (var id in updaterIds)
         {
-            var prKey = $"{nameof(InProgressPullRequest)}_{subscription.Id}";
+            var prKey = RedisCache.MakeKey<InProgressPullRequest>(id);
             if (batchResults.TryGetValue(prKey, out var pr) && pr != null)
             {
-                result[subscription.Id] = pr;
+                result[id] = pr;
             }
         }
 
         return result;
     }
 
-    private async Task<Dictionary<Guid, NewestBuildInfo>> CalculateNewestBuildInfo(
+    private async Task<Dictionary<string, NewestBuildInfo>> CalculateNewestBuildInfo(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
         var subscriptionsWithBuilds = subscriptions
@@ -167,7 +171,7 @@ public class CodeflowController : ControllerBase
 
         var newerBuilds = await newerBuildsQuery.ToListAsync();
 
-        var result = new Dictionary<Guid, NewestBuildInfo>();
+        var result = new Dictionary<string, NewestBuildInfo>();
         foreach (var subscription in subscriptionsWithBuilds)
         {
             var lastAppliedDate = subscription.LastAppliedBuild.DateProduced;
@@ -189,15 +193,38 @@ public class CodeflowController : ControllerBase
                 newestDate = newestBuild.DateProduced;
             }
 
-            result[subscription.Id] = new NewestBuildInfo(matchingBuilds.Count, newestBuildId, newestDate);
+            result[PullRequestUpdaterId.CreateUpdaterId(subscription).Id] = new NewestBuildInfo(matchingBuilds.Count, newestBuildId, newestDate);
         }
 
         return result;
     }
 
+    private async Task<Dictionary<string, bool>> GetCodeflowCheckStatuses(List<string> updaterIds)
+    {
+        List<string> cacheKeys = [.. updaterIds.Select(RedisCache.MakeKey<MergePolicyEvaluationResults>)];
+
+        var cache = _cacheFactory.Create<MergePolicyEvaluationResults>(string.Empty, includeTypeInKey: false);
+        var batchResults = await cache.TryGetStateBatchAsync(cacheKeys);
+
+        var result = new Dictionary<string, bool>();
+        foreach (var id in updaterIds)
+        {
+            var key = RedisCache.MakeKey<MergePolicyEvaluationResults>(id);
+            if (batchResults.TryGetValue(key, out var checkResults) && checkResults != null)
+            {
+                bool hasConflict = checkResults.Results
+                    .Any(checkResult => checkResult.MergePolicyName == CodeFlowMergePolicy.CodeflowMergePolicyName
+                    	&& checkResult.Status is MergePolicyEvaluationStatus.DecisiveFailure);
+
+                result[id] = hasConflict;
+            }
+        }
+        return result;
+    }
+
     private record NewestBuildInfo(int NewerBuildsCount, int? NewestBuildId, DateTimeOffset? NewestBuildDate);
 
-    private async Task<Dictionary<Guid, SubscriptionTriggerOutcome>> GetLatestOutcomesAsync(
+    private async Task<Dictionary<string, SubscriptionTriggerOutcome>> GetLatestOutcomesAsync(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
         var subscriptionIds = subscriptions.Select(s => s.Id).Distinct().ToList();
@@ -215,7 +242,7 @@ public class CodeflowController : ControllerBase
             .ToListAsync();
 
         return latestOutcomes.ToDictionary(
-            o => o.SubscriptionId,
+            o => o.SubscriptionId.ToString(),
             o => new SubscriptionTriggerOutcome(o));
     }
 
@@ -224,9 +251,10 @@ public class CodeflowController : ControllerBase
     private static List<CodeflowStatus> BuildCodeflowStatuses(
         List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
-        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfoPerSubscription,
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomePerSubscription)
+        Dictionary<string, InProgressPullRequest> activePrsPerSubscriptionId,
+        Dictionary<string, NewestBuildInfo> newestBuildInfoPerSubscription,
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomePerSubscription,
+        Dictionary<string, bool> codeflowCheckStatuses)
     {
         List<string> mappings = [.. forwardFlowSubscriptions.Concat(backflowSubscriptions)
             .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
@@ -240,8 +268,19 @@ public class CodeflowController : ControllerBase
             var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
             var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
 
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, newestBuildInfoPerSubscription, latestOutcomePerSubscription);
-            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, newestBuildInfoPerSubscription, latestOutcomePerSubscription);
+            var forwardFlowStatus = CreateSubscriptionStatus(
+                forwardFlowSubscription,
+                activePrsPerSubscriptionId,
+                newestBuildInfoPerSubscription,
+                latestOutcomePerSubscription,
+                codeflowCheckStatuses);
+
+            var backflowStatus = CreateSubscriptionStatus(
+                backflowSubscription,
+                activePrsPerSubscriptionId,
+                newestBuildInfoPerSubscription,
+                latestOutcomePerSubscription,
+                codeflowCheckStatuses);
 
             var repoUrl = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repoBranch = backflowSubscription?.TargetBranch;
@@ -261,18 +300,24 @@ public class CodeflowController : ControllerBase
 
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
-        Dictionary<Guid, InProgressPullRequest> activePrsBySubscriptionIds,
-        Dictionary<Guid, NewestBuildInfo> newestBuildInfos,
-        Dictionary<Guid, SubscriptionTriggerOutcome> latestOutcomes)
+        Dictionary<string, InProgressPullRequest> activePrsBySubscriptionIds,
+        Dictionary<string, NewestBuildInfo> newestBuildInfos,
+        Dictionary<string, SubscriptionTriggerOutcome> latestOutcomes,
+        Dictionary<string, bool> codeflowCheckStatuses)
     {
         if (subscription == null)
         {
             return null;
         }
 
-        newestBuildInfos.TryGetValue(subscription.Id, out var newestBuildInfo);
-        activePrsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
-        latestOutcomes.TryGetValue(subscription.Id, out var latestOutcome);
+        var id = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
+
+        newestBuildInfos.TryGetValue(id, out var newestBuildInfo);
+        activePrsBySubscriptionIds.TryGetValue(id, out var pr);
+        latestOutcomes.TryGetValue(id, out var latestOutcome);
+        codeflowCheckStatuses.TryGetValue(id, out var hasFailingCodeflowCheck);
+
+        hasFailingCodeflowCheck = hasFailingCodeflowCheck && pr != null;
 
         if (subscription.LastAppliedBuild != null && newestBuildInfo != null)
         {
@@ -290,6 +335,7 @@ public class CodeflowController : ControllerBase
             NewestBuildId = newestBuildInfo?.NewestBuildId,
             NewestBuildDate = newestBuildInfo?.NewestBuildDate,
             LatestOutcome = latestOutcome,
+            HasFailingCodeflowCheck = hasFailingCodeflowCheck,
         };
     }
 

@@ -38,7 +38,7 @@ internal class DeleteBuildFromChannelOperation : Operation
         try
         {
             // Find the build to give someone info
-            var build = await _barClient.GetBuildAsync(_options.Id);
+            var build = await _barClient.GetBuildAsync(_options.Id, includeAssetLocation: false);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'");

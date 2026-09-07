@@ -229,7 +229,7 @@ internal class GatherDropOperation : Operation
             foreach (var rootBuildId in _options.RootBuildIds)
             {
                 Console.WriteLine($"Looking up build by id {rootBuildId}");
-                rootBuildTasks.Add(_barClient.GetBuildAsync(rootBuildId));
+                rootBuildTasks.Add(_barClient.GetBuildAsync(rootBuildId, includeAssetLocation: false));
             }
             return await Task.WhenAll(rootBuildTasks);
         }
