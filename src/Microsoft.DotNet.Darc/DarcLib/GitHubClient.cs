@@ -336,10 +336,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IGitHubClient client = GetClient(owner, repo);
 
         var resourceUri = ApiUrls.PullRequest(owner, repo, id);
-        string cacheKey = $"{owner}_{repo}_{id}";
 
         Models.PullRequest result = await FetchEtagEnabledResourceAsync<Models.PullRequest, Octokit.PullRequest>(
-            cacheKey,
             resourceUri,
             client,
             GithubResourceConverters.ConvertPullRequest);
@@ -1009,10 +1007,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         IGitHubClient client = GetClient(owner, repo);
         var pullRequestReviewsUri = ApiUrls.PullRequestReviews(owner, repo, id);
-        string cacheKey = $"{owner}_{repo}_id";
 
         var pullRequestReviews = await FetchEtagEnabledResourceAsync<GithubPullRequestReviews, List<PullRequestReview>>(
-            cacheKey,
             pullRequestReviewsUri,
             client,
             GithubResourceConverters.ConvertPullRequestReviews);
@@ -1525,29 +1521,26 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
-    /// Fetches a resource through the Github API. If the resource has been cached and the eTag has not changed,
-    /// the cached resource is returned. Otherwise, the resource is fetched from Github and cached.
+    /// Fetches a resource through the Github API. If the resource is in our cache and is up-to-date with Github,
+    /// the cached resource is returned. Otherwise, we return the resource fetched from Github and cache it.
     /// </summary>
     /// <typeparam name="TDomainModel">The domain model of the resource in our codebase</typeparam>
     /// <typeparam name="TGithubModel">The model of the resource in Octokit</typeparam>
-    /// <param name="resourceKey">The key used to cache the resource in redis</param>
     /// <param name="resourceUri">The uri used to request the resource from Github</param>
     /// <param name="client">The github client that makes the request</param>
     /// <param name="resourceConverter">Function to convert the resource from Octokit to our domain model</param>
     /// <returns>The resource of type TDomainModel</returns>
-    /// <exception cref="DarcException"></exception>
     protected virtual async Task<TDomainModel> FetchEtagEnabledResourceAsync<TDomainModel, TGithubModel>(
-        string resourceKey,
         Uri resourceUri,
         IGitHubClient client,
         Func<TGithubModel, TDomainModel> resourceConverter)
         where TDomainModel : class, IGithubEtagResource
     {
-        var cachedResource = await _cache.TryGetAsync<TDomainModel>(resourceKey);
+        var cachedResource = await _cache.TryGetAsync<TDomainModel>(resourceUri.AbsoluteUri);
 
         var headers = new Dictionary<string, string>
         {
-            { "Accept", "application/vnd.github.v3+json" },
+            { "Accept", "application/vnd.github+json" },
         };
 
         if (cachedResource?.Etag != null)
@@ -1559,10 +1552,15 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (response.HttpResponse.StatusCode == HttpStatusCode.NotModified)
         {
-            // TODO: Add telemetry for cache hits to measure the impact of this optimization.
-            return cachedResource!;
+            if (cachedResource == null)
+            {
+                throw new InvalidOperationException($"Github returned NotModified for resource {resourceUri}, " +
+                    $"but the resource is not in the redis cache.");
+            }
+            return cachedResource;
         }
-        else if (response.HttpResponse.StatusCode == HttpStatusCode.OK)
+
+        if (response.HttpResponse.StatusCode == HttpStatusCode.OK)
         {
             var resource = resourceConverter(response.Body);
 
@@ -1573,7 +1571,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             if (!string.IsNullOrEmpty(responseEtag))
             {
                 resource.Etag = responseEtag;
-                await _cache.TrySetAsync(resourceKey, resource);
+                await _cache.TrySetAsync(resourceUri.AbsoluteUri, resource);
             }
 
             return resource;
