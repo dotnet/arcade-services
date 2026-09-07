@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
@@ -70,36 +69,7 @@ internal static class AuthenticationConfiguration
                 {
                     options.Events.OnRedirectToIdentityProvider += context =>
                     {
-                        var returnUrl = context.Request.Path + context.Request.QueryString;
                         context.ProtocolMessage.RedirectUri = redirectUri;
-                        context.ProtocolMessage.State = Convert.ToBase64String(Encoding.UTF8.GetBytes(returnUrl));
-                        return Task.CompletedTask;
-                    };
-
-                    options.Events.OnMessageReceived += context =>
-                    {
-                        // The redirect_uri is set to the one we have in the configuration, but we need to
-                        // redirect to the one that was used to authenticate.
-                        if (!string.IsNullOrEmpty(context.ProtocolMessage.State))
-                        {
-                            try
-                            {
-                                var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
-                                context.Response.Redirect(returnUrl);
-                            }
-                            catch (FormatException)
-                            {
-                                // Handle malformed state value gracefully, e.g., redirect to a safe default or log the error
-                                // For now, redirect to root
-                                context.Response.Redirect("/");
-                            }
-                        }
-                        else
-                        {
-                            // If no state is provided, redirect to the root
-                            context.Response.Redirect("/");
-                        }
-
                         return Task.CompletedTask;
                     };
                 }
