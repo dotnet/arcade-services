@@ -9,6 +9,8 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class AuthenticationConfiguration
 {
+    private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromMinutes(30);
+
     public const string EntraAuthorizationSchemeName = "Entra";
     public const string ApiAuthorizationPolicyName = "MsftApi";
     public const string WebAuthorizationPolicyName = "MsftWeb";
@@ -43,6 +45,8 @@ internal static class AuthenticationConfiguration
             // Allow /DependencyFlow pages to render for authenticated users in iframe on Azure DevOps dashboard
             // with browsers that support third-party cookies.
             cookieAuthOptions.Cookie.SameSite = SameSiteMode.None;
+            cookieAuthOptions.ExpireTimeSpan = SessionIdleTimeout;
+            cookieAuthOptions.SlidingExpiration = true;
         });
 
         // Register Entra based authentication
