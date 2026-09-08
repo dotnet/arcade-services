@@ -160,7 +160,6 @@ internal class TestGitHubClient : GitHubClient
     {
     }
     protected override async Task<T> FetchEtagEnabledResourceAsync<T, K>(
-        string resourceKey,
         Uri resourceUri,
         IGitHubClient client,
         Func<K, T> resourceConverter)
