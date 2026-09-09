@@ -128,6 +128,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     internal static string BuildNotificationAboutRecreationFallbackLimitReachedComment(
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
+        string prHeadBranch,
         bool prIsEmpty)
     {
         var comment = new StringBuilder()
@@ -156,17 +157,21 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 .AppendLine(" please help complete the codeflow manually.");
         }
 
-        string manualFlowStep = subscription.IsForwardFlow()
+        bool isForwardFlow = subscription.IsForwardFlow();
+        string flowCommand = isForwardFlow
+            ? $"darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}"
+            : $"darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>";
+        string manualFlowStep = isForwardFlow
            ? $"""
                 3. Run the following command from the source repository directory, replacing `<vmrPath>` with the path to your local VMR clone:
                 ```bash
-                darc vmr forwardflow --vmr <vmrPath> --subscription {subscription.Id}
+                {flowCommand}
                 ```
                 """
            : $"""
                 3. Run the following command, replacing `<vmrPath>` and `<targetRepoPath>` with the paths to your local VMR and target repository clones:
                 ```bash
-                darc vmr backflow --vmr <vmrPath> --subscription {subscription.Id} <targetRepoPath>
+                {flowCommand}
                 ```
                 """;
 
@@ -176,12 +181,14 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .AppendLine()
             .AppendLine("#### :information_source: To complete the codeflow manually, please follow these steps:")
             .AppendLine("1. Prepare local clones of the repositories required by the codeflow.")
-            .AppendLine($"2. In the target repository clone, check out the subscription's target branch:")
+            .AppendLine("2. In the target repository clone, check out this PR's head branch:")
             .AppendLine("    ```bash")
-            .AppendLine($"    git checkout {subscription.TargetBranch}")
+            .AppendLine($"    git checkout {prHeadBranch}")
             .AppendLine("    ```")
             .AppendLine(manualFlowStep)
-            .AppendLine("4. Commit and push the resulting changes to this PR's branch.");
+            .AppendLine("4. Commit and push the resulting changes to this PR's branch.")
+            .AppendLine()
+            .AppendLine($"Because this can be a long-running operation, a newer build may be queued for codeflow and update Maestro's internal metadata, causing the `Codeflow verification` check to turn red. If this happens, run the `{flowCommand}` command again to flow the latest build.");
 
         return comment.ToString();
     }
