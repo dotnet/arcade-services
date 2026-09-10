@@ -148,7 +148,7 @@ internal class WorkItemConsumer(
                 _logger.LogError(ex, "Processing work item {workItemType} attempt {attempt}/{maxAttempts} failed",
                     workItemType, message.DequeueCount, _options.Value.MaxWorkItemRetries);
                 // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
-                if (message.DequeueCount == _options.Value.MaxWorkItemRetries)
+                if (message.DequeueCount >= _options.Value.MaxWorkItemRetries)
                 {
                     _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                         workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
