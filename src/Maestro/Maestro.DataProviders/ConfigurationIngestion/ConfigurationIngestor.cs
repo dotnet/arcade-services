@@ -214,10 +214,6 @@ internal partial class ConfigurationIngestor(
     {
         var subscriptionIds = subscriptionRemovals.Select(sub => sub.Values.Id).ToHashSet();
 
-        _context.SubscriptionUpdates.RemoveRange(
-            _context.SubscriptionUpdates
-                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
-
         var subscriptionDaos = await _context.Subscriptions
             .Include(sub => sub.ExcludedAssets)
             .Where(sub => subscriptionIds.Contains(sub.Id))
