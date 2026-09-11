@@ -239,11 +239,14 @@ public class DeleteSubscriptionsOperationConfigRepoTests : ConfigurationManageme
     {
         return new Subscription(
             id: id,
+            mergePrs: false,
             enabled: true,
             sourceEnabled: false,
+            autoApprove: false,
             sourceRepository: sourceRepo,
             targetRepository: targetRepo,
             targetBranch: targetBranch,
+            ignoredChecks: [],
             pullRequestFailureNotificationTags: null,
             sourceDirectory: null,
             targetDirectory: null,
@@ -251,9 +254,6 @@ public class DeleteSubscriptionsOperationConfigRepoTests : ConfigurationManageme
         {
             Channel = new Channel(1, channel, "test"),
             Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryDay)
-            {
-                MergePolicies = []
-            }
         };
     }
 
@@ -266,6 +266,9 @@ public class DeleteSubscriptionsOperationConfigRepoTests : ConfigurationManageme
               Target Repository URL: {subscription.TargetRepository}
               Target Branch: {subscription.TargetBranch}
               Update Frequency: {subscription.Policy.UpdateFrequency}
+              MergePrs: {subscription.MergePrs}
+              IgnoredChecks: []
+              Merge Policies: []
             """;
     }
 

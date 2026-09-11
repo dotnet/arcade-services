@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<List<Models.MergePolicy>> GetMergePoliciesAsync(
+        Task<Models.RepositoryBranch> GetRepositoryBranchAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -118,9 +118,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             throw ex;
         }
 
-        partial void HandleFailedGetMergePoliciesRequest(RestApiException ex);
+        partial void HandleFailedGetRepositoryBranchRequest(RestApiException ex);
 
-        public async Task<List<Models.MergePolicy>> GetMergePoliciesAsync(
+        public async Task<Models.RepositoryBranch> GetRepositoryBranchAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -166,25 +166,25 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnGetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetRepositoryBranchFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     if (_res.ContentStream == null)
                     {
-                        await OnGetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetRepositoryBranchFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<List<Models.MergePolicy>>(_content);
+                        var _body = Client.Deserialize<Models.RepositoryBranch>(_content);
                         return _body;
                     }
                 }
             }
         }
 
-        internal async Task OnGetMergePoliciesFailed(Request req, Response res)
+        internal async Task OnGetRepositoryBranchFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -201,7 +201,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedGetMergePoliciesRequest(ex);
+            HandleFailedGetRepositoryBranchRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

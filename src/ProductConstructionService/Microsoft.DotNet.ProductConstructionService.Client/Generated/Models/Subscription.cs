@@ -9,26 +9,28 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, List<string> excludedAssets, bool autoApprove = false)
+        public Subscription(Guid id, bool mergePrs, bool enabled, bool sourceEnabled, bool autoApprove, string sourceRepository, string targetRepository, string targetBranch, List<string> ignoredChecks, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, List<string> excludedAssets)
         {
             Id = id;
+            MergePrs = mergePrs;
             Enabled = enabled;
             SourceEnabled = sourceEnabled;
+            AutoApprove = autoApprove;
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
+            IgnoredChecks = ignoredChecks;
             SourceDirectory = sourceDirectory;
             TargetDirectory = targetDirectory;
             PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
             ExcludedAssets = excludedAssets;
-            AutoApprove = autoApprove;
         }
 
         [JsonProperty("id")]
         public Guid Id { get; }
 
         [JsonProperty("channel")]
-        public Channel Channel { get; set; }
+        public Models.Channel Channel { get; set; }
 
         [JsonProperty("sourceRepository")]
         public string SourceRepository { get; }
@@ -38,6 +40,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("targetBranch")]
         public string TargetBranch { get; }
+
+        [JsonProperty("mergePrs")]
+        public bool MergePrs { get; }
+
+        [JsonProperty("ignoredChecks")]
+        public List<string> IgnoredChecks { get; }
 
         [JsonProperty("policy")]
         public SubscriptionPolicy Policy { get; set; }
@@ -51,6 +59,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("sourceEnabled")]
         public bool SourceEnabled { get; }
 
+        [JsonProperty("autoApprove")]
+        public bool AutoApprove { get; }
+
         [JsonProperty("sourceDirectory")]
         public string SourceDirectory { get; }
 
@@ -62,8 +73,5 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("excludedAssets")]
         public List<string> ExcludedAssets { get; }
-
-        [JsonProperty("autoApprove")]
-        public bool AutoApprove { get; }
     }
 }

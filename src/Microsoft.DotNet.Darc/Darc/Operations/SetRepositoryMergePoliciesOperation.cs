@@ -8,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Maestro.Common;
-using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
@@ -18,7 +17,6 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -47,12 +45,6 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
 
     protected override async Task<int> ExecuteInternalAsync()
     {
-        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
-        {
-            Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
-            return Constants.ErrorCode;
-        }
-
         var repoType = GitRepoUrlUtils.ParseTypeFromUri(_options.Repository);
         if (repoType == GitRepoType.Local || repoType == GitRepoType.None)
         {
@@ -60,90 +52,44 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
             return Constants.ErrorCode;
         }
 
-        // Parse the merge policies
-        List<MergePolicy> mergePolicies = [];
-
-        if (_options.AllChecksSuccessfulMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
-                });
-        }
-
-        if (_options.NoRequestedChangesMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.DontAutomergeDowngradesMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.StandardAutoMergePolicies)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = []
-                });
-        }
-
-        if (_options.CodeFlowCheckMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.CodeflowMergePolicyName,
-                    Properties = []
-                });
-        }
-
         string repository = _options.Repository;
         string branch = _options.Branch;
+        bool mergePrs = _options.MergePrs ?? false;
+        List<string> ignoredChecks = _options.IgnoreChecks?.ToList() ?? [];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
         if (_options.Quiet)
         {
             if (string.IsNullOrEmpty(repository) ||
-                string.IsNullOrEmpty(branch))
+                string.IsNullOrEmpty(branch) ||
+                !_options.MergePrs.HasValue)
             {
-                _logger.LogError($"Missing input parameters for merge policies. Please see command help or remove --quiet/-q for interactive mode");
+                _logger.LogError("Missing input parameters for repository merge settings. Please see command help or remove --quiet/-q for interactive mode");
                 return Constants.ErrorCode;
             }
         }
         else
         {
-            // Look up existing merge policies if the repository and branch were specified, and the user didn't
-            // specify policies on the command line. In this case, they typically want to update
-            if (mergePolicies.Count == 0 && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
+            if (!string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
-                mergePolicies = (await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
+                RepositoryBranch existingRepositoryBranch = await TryGetRepositoryBranchAsync(repository, branch);
+                if (existingRepositoryBranch != null)
+                {
+                    mergePrs = _options.MergePrs ?? existingRepositoryBranch.MergePrs;
+                    if (_options.IgnoreChecks == null || _options.IgnoreChecks.Count == 0)
+                    {
+                        ignoredChecks = [.. existingRepositoryBranch.IgnoredChecks];
+                    }
+                }
             }
 
-            // Help the user along with a form.  We'll use the API to gather suggested values
-            // from existing subscriptions based on the input parameters.
             var initEditorPopUp = new SetRepositoryMergePoliciesPopUp("set-policies/set-policies-todo",
                 _logger,
                 repository,
                 branch,
-                mergePolicies,
-                Constants.AvailableMergePolicyYamlHelp);
+                mergePrs,
+                ignoredChecks);
 
             var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = uxManager.PopUp(initEditorPopUp);
@@ -153,7 +99,8 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
             }
             repository = initEditorPopUp.Repository;
             branch = initEditorPopUp.Branch;
-            mergePolicies = initEditorPopUp.MergePolicies;
+            mergePrs = initEditorPopUp.MergePrs;
+            ignoredChecks = [.. initEditorPopUp.IgnoredChecks];
         }
 
         IRemote verifyRemote = await _remoteFactory.CreateRemoteAsync(repository);
@@ -182,7 +129,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
 
         if (!branchExistsOnRepo)
         {
-            Console.WriteLine("Aborting merge policy creation.");
+            Console.WriteLine("Aborting repository merge configuration.");
             return Constants.ErrorCode;
         }
 
@@ -192,38 +139,23 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
             {
                 Repository = repository,
                 Branch = branch,
-                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies)
+                MergePolicies = [],
+                MergePrs = mergePrs,
+                IgnoredChecks = ignoredChecks
             };
 
-            var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
-            if (policies != null && policies.Any())
+            bool configurationExists = await TryGetRepositoryBranchAsync(repository, branch) != null;
+            if (configurationExists)
             {
-                if (branchMergePoliciesYaml.MergePolicies.Any())
-                {
-                    await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
-                }
-                else
-                {
-                    await _configurationRepositoryManager.DeleteRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
-                }
+                await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    branchMergePoliciesYaml);
             }
             else
             {
-                if (!branchMergePoliciesYaml.MergePolicies.Any())
-                {
-                    _logger.LogWarning("No merge policies specified for {repo}@{branch}, nothing to add.", 
-                        branchMergePoliciesYaml.Repository, 
-                        branchMergePoliciesYaml.Branch);
-                    return Constants.SuccessCode;
-                }
-
                 await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                branchMergePoliciesYaml);
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    branchMergePoliciesYaml);
             }
 
             return Constants.SuccessCode;
@@ -245,7 +177,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         }
         catch (DuplicateConfigurationObjectException ex)
         {
-            _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}' in repo {configRepo} on branch {configBranch}.",
+            _logger.LogError("Repository branch merge settings for {repo}@{branch} already exist in '{filePath}' in repo {configRepo} on branch {configBranch}.",
                 repository,
                 branch,
                 ex.FilePath,
@@ -255,8 +187,20 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Failed to set merge policies.");
+            _logger.LogError(e, "Failed to set repository merge settings.");
             return Constants.ErrorCode;
+        }
+    }
+
+    private async Task<RepositoryBranch> TryGetRepositoryBranchAsync(string repository, string branch)
+    {
+        try
+        {
+            return await _barClient.GetRepositoryBranch(repository, branch);
+        }
+        catch (RestApiException ex) when (ex.Response.Status == (int)HttpStatusCode.NotFound)
+        {
+            return null;
         }
     }
 }

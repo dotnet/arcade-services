@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class ClientSubscriptionYaml
     {
-        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, ClientUpdateFrequency updateFrequency, bool batchable, bool sourceEnabled, bool autoApprove)
+        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, ClientUpdateFrequency updateFrequency, bool batchable, bool mergePrs, bool sourceEnabled, bool autoApprove)
         {
             Id = id;
             Enabled = enabled;
@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             TargetBranch = targetBranch;
             UpdateFrequency = updateFrequency;
             Batchable = batchable;
+            MergePrs = mergePrs;
             SourceEnabled = sourceEnabled;
             AutoApprove = autoApprove;
         }
@@ -52,6 +53,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("mergePolicies")]
         public List<ClientMergePolicyYaml> MergePolicies { get; set; }
+
+        [JsonProperty("mergePrs")]
+        public bool MergePrs { get; set; }
+
+        [JsonProperty("ignoredChecks")]
+        public List<string> IgnoredChecks { get; set; }
 
         [JsonProperty("failureNotificationTags")]
         public string FailureNotificationTags { get; set; }

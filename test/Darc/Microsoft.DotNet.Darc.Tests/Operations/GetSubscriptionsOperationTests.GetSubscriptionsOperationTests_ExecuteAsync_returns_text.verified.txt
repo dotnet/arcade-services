@@ -6,4 +6,4 @@
   - Excluded Assets: []
   - PR Failure Notification tags: 
   - Source-enabled: False
-  - Merge Policies: []
+  - Merge PRs: False

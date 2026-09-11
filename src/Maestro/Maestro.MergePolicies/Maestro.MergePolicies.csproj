@@ -12,14 +12,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.Build" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
   </ItemGroup>
 

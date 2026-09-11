@@ -10,4 +10,5 @@ public enum MergePolicyCheckResult
     FailedPolicies = 2,
     FailedToMerge = 3,
     Merged = 4,
+    MergeNotConfigured = 5,
 }
