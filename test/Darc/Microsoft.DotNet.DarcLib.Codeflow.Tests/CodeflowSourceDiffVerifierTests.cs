@@ -30,6 +30,7 @@ internal class CodeflowSourceDiffVerifierTests
     private const string NewSha = "bbbbbbb";
     private const string VmrTargetBranch = "main";
     private const string VmrHeadBranch = "pr-branch";
+    private const string MergeBaseSha = "merge-base-sha";
 
     // VmrInfo.GetRelativeRepoSourcesPath(MappingName) == "src/product-repo1".
     private const string SrcMappingPath = "src/" + MappingName;
@@ -38,7 +39,6 @@ internal class CodeflowSourceDiffVerifierTests
     private Mock<IVmrCloneManager> _vmrCloneManager = null!;
     private Mock<IRepositoryCloneManager> _cloneManager = null!;
     private Mock<IVmrDependencyTracker> _dependencyTracker = null!;
-    private Mock<ISourceManifest> _sourceManifest = null!;
     private Mock<ILocalGitRepo> _sourceRepo = null!;
     private Mock<ILocalGitRepo> _vmr = null!;
     private CodeflowSourceDiffVerifier _verifier = null!;
@@ -59,9 +59,6 @@ internal class CodeflowSourceDiffVerifierTests
 
         _dependencyTracker = new Mock<IVmrDependencyTracker>();
         _dependencyTracker.Setup(t => t.GetMapping(MappingName)).Returns(mapping);
-
-        _sourceManifest = new Mock<ISourceManifest>();
-        _sourceManifest.Setup(m => m.Submodules).Returns([]);
 
         _vmrCloneManager = new Mock<IVmrCloneManager>();
         _vmrCloneManager
@@ -88,7 +85,6 @@ internal class CodeflowSourceDiffVerifierTests
             _vmrCloneManager.Object,
             _cloneManager.Object,
             _dependencyTracker.Object,
-            _sourceManifest.Object,
             NullLogger<CodeflowSourceDiffVerifier>.Instance);
     }
 
@@ -115,9 +111,12 @@ internal class CodeflowSourceDiffVerifierTests
         repo.Setup(r => r.ExecuteGitCommand(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
             .Returns((string[] args, CancellationToken _) =>
             {
-                var output = args.Contains("--name-only")
-                    ? nameOnlyOutput
-                    : fileDiffs.GetValueOrDefault(args[^1], string.Empty);
+                string output = args[0] switch
+                {
+                    "merge-base" => MergeBaseSha,
+                    _ when args.Contains("--name-only") => nameOnlyOutput,
+                    _ => fileDiffs.GetValueOrDefault(args[^1], string.Empty),
+                };
 
                 return Task.FromResult(new ProcessExecutionResult { ExitCode = 0, StandardOutput = output });
             });
@@ -288,5 +287,150 @@ internal class CodeflowSourceDiffVerifierTests
 
         // Assert
         result.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task ForwardFlowMatchesSourceDiffAsync_ChangedSubmoduleAllowsInlinedChanges()
+    {
+        // Arrange
+        const string submodulePath = "externals/external-repo";
+        SetupDiffs(
+            _sourceRepo,
+            string.Empty,
+            new Dictionary<string, string>());
+        SetupDiffs(_vmr, string.Empty, new Dictionary<string, string>());
+        GivenSourceManifestSubmoduleVersions(submodulePath, "old-sha", "new-sha");
+
+        // Act
+        var result = await VerifyAsync();
+
+        // Assert
+        result.Should().BeEmpty();
+        _sourceRepo.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => args.Contains(VmrPatchHandler.GetExclusionRule(submodulePath))),
+            It.IsAny<CancellationToken>()));
+        _vmr.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => args.Contains(VmrPatchHandler.GetExclusionRule(VmrPrefix + submodulePath))),
+            It.IsAny<CancellationToken>()));
+    }
+
+    [Test]
+    public async Task ForwardFlowMatchesSourceDiffAsync_UnchangedSubmoduleDoesNotAllowInlinedChanges()
+    {
+        // Arrange
+        const string submodulePath = "externals/external-repo";
+        SetupDiffs(_sourceRepo, string.Empty, new Dictionary<string, string>());
+        SetupDiffs(_vmr, VmrPrefix + submodulePath + "/unexpected.txt", new Dictionary<string, string>());
+        GivenSourceManifestSubmoduleVersions(submodulePath, "same-sha", "same-sha");
+
+        // Act
+        var result = await VerifyAsync();
+
+        // Assert
+        result.Should().Equal(submodulePath + "/unexpected.txt");
+        _sourceRepo.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => !args.Contains(VmrPatchHandler.GetExclusionRule(submodulePath))),
+            It.IsAny<CancellationToken>()));
+        _vmr.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => !args.Contains(VmrPatchHandler.GetExclusionRule(VmrPrefix + submodulePath))),
+            It.IsAny<CancellationToken>()));
+    }
+
+    [Test]
+    public async Task ForwardFlowMatchesSourceDiffAsync_CaseDistinctPathOutsideChangedSubmoduleIsRejected()
+    {
+        // Arrange
+        const string submodulePath = "External/lib";
+        const string outsidePath = "external/lib/unexpected.txt";
+        SetupDiffs(_sourceRepo, string.Empty, new Dictionary<string, string>());
+        SetupDiffs(
+            _vmr,
+            VmrPrefix + outsidePath,
+            new Dictionary<string, string>());
+        GivenSourceManifestSubmoduleVersions(submodulePath, "old-sha", "new-sha");
+
+        // Act
+        var result = await VerifyAsync();
+
+        // Assert
+        result.Should().Equal(outsidePath);
+        _vmr.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args =>
+                args.Contains(VmrPatchHandler.GetExclusionRule(VmrPrefix + submodulePath)) &&
+                !args.Contains(VmrPatchHandler.GetExclusionRule(VmrPrefix + "external/lib"))),
+            It.IsAny<CancellationToken>()));
+    }
+
+    [Test]
+    public async Task ForwardFlowMatchesSourceDiffAsync_SubmodulePathIsNotTreatedAsAGlob()
+    {
+        // Arrange
+        const string submodulePath = "*";
+        SetupDiffs(_sourceRepo, "Security.cs", new Dictionary<string, string>());
+        SetupDiffs(_vmr, string.Empty, new Dictionary<string, string>());
+        GivenSourceManifestSubmoduleVersions(submodulePath, "old-sha", "new-sha");
+        _sourceRepo
+            .Setup(repo => repo.GetFileFromGitAsync("Security.cs", NewSha, null))
+            .ReturnsAsync("expected security update");
+
+        // Act
+        var result = await VerifyAsync();
+
+        // Assert
+        result.Should().Equal("Security.cs");
+    }
+
+    [Test]
+    public async Task ForwardFlowMatchesSourceDiffAsync_ChangedSubmoduleIgnoresSourceAndVmrContents()
+    {
+        // Arrange
+        const string submodulePath = "external/lib";
+        SetupDiffs(
+            _sourceRepo,
+            string.Empty,
+            new Dictionary<string, string>());
+        SetupDiffs(
+            _vmr,
+            string.Empty,
+            new Dictionary<string, string>());
+        GivenSourceManifestSubmoduleVersions(submodulePath, "old-sha", newSha: null);
+
+        // Act
+        var result = await VerifyAsync();
+
+        // Assert
+        result.Should().BeEmpty();
+        _sourceRepo.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => args.Contains(VmrPatchHandler.GetExclusionRule(submodulePath))),
+            It.IsAny<CancellationToken>()));
+        _vmr.Verify(repo => repo.ExecuteGitCommand(
+            It.Is<string[]>(args => args.Contains(VmrPatchHandler.GetExclusionRule(VmrPrefix + submodulePath))),
+            It.IsAny<CancellationToken>()));
+    }
+
+    private void GivenSourceManifestSubmoduleVersions(
+        string submodulePath,
+        string oldSha,
+        string? newSha)
+    {
+        const string submoduleUrl = "https://github.com/dotnet/external-repo";
+        string manifestPath = MappingName + "/" + submodulePath;
+        var oldManifest = new SourceManifest(
+            [],
+            [new SubmoduleRecord(manifestPath, submoduleUrl, oldSha)]);
+        var newManifest = new SourceManifest(
+            [],
+            newSha == null
+                ? []
+                : [new SubmoduleRecord(manifestPath, submoduleUrl, newSha)]);
+
+        _vmr.Setup(repo => repo.GetFileFromGitAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            MergeBaseSha,
+            null)).ReturnsAsync(oldManifest.ToJson());
+        _vmr.Setup(repo => repo.GetFileFromGitAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            VmrHeadBranch,
+            null)).ReturnsAsync(newManifest.ToJson());
     }
 }
