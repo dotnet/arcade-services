@@ -78,7 +78,7 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
             {
                 await AddCredScanSuppressionsContent(vmrCredScanSuppressionsFile, component.Path, cancellationToken);
 
-                foreach (var submodule in _sourceManifest.Submodules.Where(s => s.Path.StartsWith($"{component.Path}/")))
+                foreach (var submodule in _sourceManifest.GetSubmodulesForMapping(component.Path))
                 {
                     await AddCredScanSuppressionsContent(vmrCredScanSuppressionsFile, submodule.Path, cancellationToken);
                 }
