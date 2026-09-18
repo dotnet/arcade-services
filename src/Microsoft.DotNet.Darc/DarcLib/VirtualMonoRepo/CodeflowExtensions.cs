@@ -74,6 +74,7 @@ public static class CodeflowExtensions
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
         services.TryAddTransient<ICredScanSuppressionsGenerator, CredScanSuppressionsGenerator>();
+        services.TryAddTransient<ICodeQLConfigGenerator, CodeQLConfigGenerator>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();

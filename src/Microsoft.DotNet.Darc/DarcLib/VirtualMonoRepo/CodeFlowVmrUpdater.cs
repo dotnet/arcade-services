@@ -71,13 +71,14 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+        ICodeQLConfigGenerator codeQLConfigGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IGitRepoFactory gitRepoFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, codeQLConfigGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -169,7 +170,8 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                     AdditionalRemotes: [.. remotes.Select(r => new AdditionalRemote(mapping.Name, r))],
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                     GenerateCodeOwners: false,
-                    GenerateCredScanSuppressions: true),
+                    GenerateCredScanSuppressions: true,
+                    GenerateCodeQLConfig: true),
                 additionalFileExclusions,
                 cancellationToken);
 

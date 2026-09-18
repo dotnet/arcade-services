@@ -89,7 +89,8 @@ internal class AddRepoOperation : Operation
                         Array.Empty<AdditionalRemote>(),
                         VmrInfo.ThirdPartyNoticesFileName,
                         GenerateCodeOwners: false,
-                        GenerateCredScanSuppressions: true),
+                        GenerateCredScanSuppressions: true,
+                        GenerateCodeQLConfig: true),
                     CancellationToken.None);
 
                 _logger.LogInformation("Successfully added repository '{repoName}' from '{uri}' at revision '{revision}'", repoName, uri, revision);
