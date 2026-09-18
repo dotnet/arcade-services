@@ -19,7 +19,8 @@ internal class SubscriptionPopUpData
     private const string ChannelElement = "Channel";
     private const string TargetBranchElement = "Target Branch";
     private const string UpdateFrequencyElement = "Update Frequency";
-    private const string MergePolicyElement = "Merge Policies";
+    private const string MergePrsElement = "Merge PRs";
+    private const string IgnoredChecksElement = "Ignored Checks";
     private const string BatchableElement = "Batchable";
     private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
     private const string SourceDirectoryElement = "Source Directory";
@@ -48,8 +49,11 @@ internal class SubscriptionPopUpData
     [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
     public List<string> ExcludedAssets { get; set; }
 
-    [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyPopUpData> MergePolicies { get; set; }
+    [YamlMember(Alias = MergePrsElement, ApplyNamingConventions = false)]
+    public string MergePrs { get; set; }
+
+    [YamlMember(Alias = IgnoredChecksElement, ApplyNamingConventions = false)]
+    public List<string> IgnoredChecks { get; set; }
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
     public string FailureNotificationTags { get; set; }

@@ -29,7 +29,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.26452.4</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26452.4</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26428.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26451.2</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>

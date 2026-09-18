@@ -79,6 +79,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
+        services.AddMergePolicyBuilder();
         services.AddCodeflow(TmpPath, VmrPath);
     }
 
@@ -438,7 +439,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Setup(x => x.EvaluateAsync(
                 It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
-                It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                It.IsAny<IReadOnlyList<IMergePolicy>>(),
                 It.IsAny<MergePolicyEvaluationResults?>(),
                 It.IsAny<string>()))
             .ReturnsAsync(results.Results);
@@ -614,7 +615,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .Setup(x => x.EvaluateAsync(
                     It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                     It.IsAny<IRemote>(),
-                    It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                    It.IsAny<IReadOnlyList<IMergePolicy>>(),
                     It.IsAny<MergePolicyEvaluationResults?>(),
                     It.IsAny<string>()))
                 .ReturnsAsync(results.Results);

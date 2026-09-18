@@ -96,8 +96,7 @@ internal abstract class Operation(
             sourceRepository: sourceRepository,
             targetRepository: targetRepository,
             targetBranch: targetBranch,
-
-
+            mergePrs: false,
             sourceEnabled: sourceEnabled,
             batchable: false,
             enabled: true,
@@ -107,7 +106,8 @@ internal abstract class Operation(
         {
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
-            ExcludedAssets = excludedAssets != null ? [.. excludedAssets] : []
+            ExcludedAssets = excludedAssets != null ? [.. excludedAssets] : [],
+            IgnoredChecks = [],
         };
         logger.LogInformation("Created test channel {channel} and subscription {subscriptionId}", channelName, subscription.Id);
         await IngestConfigurationAsync(@namespace, new ClientYamlConfiguration
