@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Maestro.Common;
@@ -104,7 +105,6 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         var additionalSubmoduleFilePath = submodulePathInVmr / additionalFileName;
         var submoduleName = "submodule1";
         string productRepoMarker = $"# --- {GitRepoUrlUtils.GetRepoNameWithOrg(ProductRepoPath)} ---";
-        string submoduleRepoMarker = $"# --- {GitRepoUrlUtils.GetRepoNameWithOrg(SecondRepoPath)} ---";
 
         await EnsureTestRepoIsInitialized();
 
@@ -219,6 +219,10 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
             generateCodeowners: true,
             generateCredScanSuppressions: true,
             generateCodeQLConfig: true);
+
+        // Use the manifest URL, which can retain .gitmodules escaping on Windows.
+        var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
+        string submoduleRepoMarker = $"# --- {GitRepoUrlUtils.GetRepoNameWithOrg(sourceManifest.Submodules.Single().RemoteUri)} ---";
 
         expectedFiles.Add(additionalSubmoduleFilePath);
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);

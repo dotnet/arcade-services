@@ -300,7 +300,7 @@ public class CodeQLConfigGeneratorTests
                   - "cs/winforms"
                   path:
                   - src/winforms
-            """ + "\n");
+            """.ReplaceLineEndings("\n") + "\n");
 
         await generator.UpdateCodeQLConfig(CancellationToken.None);
         (await File.ReadAllTextAsync(_vmrPath / VmrInfo.CodeQLConfigPath)).Should().Be(output);
