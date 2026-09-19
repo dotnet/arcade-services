@@ -206,7 +206,8 @@ internal class ResetOperation : Operation
             AdditionalRemotes: additionalRemotes,
             TpnTemplatePath: null,
             GenerateCodeOwners: false,
-            GenerateCredScanSuppressions: false);
+            GenerateCredScanSuppressions: false,
+            GenerateCodeQLConfig: false);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files

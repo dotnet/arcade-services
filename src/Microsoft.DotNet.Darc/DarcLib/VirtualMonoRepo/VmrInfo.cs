@@ -54,6 +54,7 @@ public class VmrInfo : IVmrInfo
     public static readonly UnixPath SourcesDir = new(SourceDirName);
     public static readonly UnixPath CodeownersPath = new(".github/" + CodeownersFileName);
     public static readonly UnixPath CredScanSuppressionsPath = new(".config/" + CredScanSuppressionsFileName);
+    public static readonly UnixPath CodeQLConfigPath = new(CodeQLConfigFileName);
 
     public const string SourceDirName = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
@@ -66,6 +67,7 @@ public class VmrInfo : IVmrInfo
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string CodeownersFileName = "CODEOWNERS";
     public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
+    public const string CodeQLConfigFileName = ".CodeQL.yml";
 
     public const string ArcadeMappingName = "arcade";
     public static readonly UnixPath ArcadeRepoDir = SourcesDir / ArcadeMappingName;
