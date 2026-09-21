@@ -18,8 +18,4 @@
     <ProjectReference Include="..\..\src\Maestro\Maestro.WorkItems\Maestro.WorkItems.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="ProductConstructionService.Cli.Tests" />
-  </ItemGroup>
-
 </Project>
