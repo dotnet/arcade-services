@@ -58,6 +58,8 @@ Treat `BackflowNonContinuableNonLinearCodeflowException` as an **acceptable inte
 
 Identify the confirmed target branch and explain the guard. Do not recommend retrying, realigning the branch, or filing an incident unless explicitly requested. If the target is unknown, keep the classification unconfirmed; if it is outside `internal/validation/*`, investigate normally. Apply this per subscription, not to an entire mixed group.
 
+When this is the case, be concise, direct and end with a clear statement that this is an acceptable failure and no action is recommended.
+
 ## Analysis output
 
 Return the exact UTC window, full recorded/telemetry operation IDs, work-item type, attempt/outcome history, affected subscription and branch when known, representative redacted exception/stack evidence, likely root cause and confidence, and proposed fix/test or an explanation of why no remediation is appropriate. Clearly identify missing evidence.
