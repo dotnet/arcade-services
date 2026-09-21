@@ -30,6 +30,7 @@ public abstract partial class VmrManagerBase
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
+    private readonly ICodeQLConfigGenerator _codeQLConfigGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ILogger _logger;
@@ -43,6 +44,7 @@ public abstract partial class VmrManagerBase
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+        ICodeQLConfigGenerator codeQLConfigGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         ILogger<VmrUpdater> logger)
@@ -54,6 +56,7 @@ public abstract partial class VmrManagerBase
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _codeownersGenerator = codeownersGenerator;
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
+        _codeQLConfigGenerator = codeQLConfigGenerator;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
     }
@@ -111,6 +114,11 @@ public abstract partial class VmrManagerBase
         if (codeFlowParameters.GenerateCredScanSuppressions)
         {
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
+        }
+
+        if (codeFlowParameters.GenerateCodeQLConfig)
+        {
+            await _codeQLConfigGenerator.UpdateCodeQLConfig(cancellationToken);
         }
 
         if (conflicts.Count == 0)

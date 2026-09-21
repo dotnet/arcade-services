@@ -3,7 +3,10 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using AwesomeAssertions;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -101,6 +104,7 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         var additionalFileName = "additional-file.txt";
         var additionalSubmoduleFilePath = submodulePathInVmr / additionalFileName;
         var submoduleName = "submodule1";
+        string productRepoMarker = $"# --- {GitRepoUrlUtils.GetRepoNameWithOrg(ProductRepoPath)} ---";
 
         await EnsureTestRepoIsInitialized();
 
@@ -110,8 +114,24 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
         Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CredScanSuppressionsPath)!);
         await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ { ""_justification"": ""test"", ""file"": ""testfile"" } ] }");
+        await File.WriteAllTextAsync(
+            ProductRepoPath / VmrInfo.CodeQLConfigPath,
+            """
+            path_classifiers:
+              tests:
+                - "tests/**"
+            queries:
+              - exclude:
+                  queryid:
+                    - "cs/product-repo"
+            """);
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
+        await UpdateRepoToLastCommit(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            generateCodeowners: true,
+            generateCredScanSuppressions: true,
+            generateCodeQLConfig: true);
 
         var expectedFilesFromRepos = new List<NativePath>
         {
@@ -120,6 +140,7 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
             submoduleFilePath,
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CodeownersPath,
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CredScanSuppressionsPath,
+            VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CodeQLConfigPath,
         };
 
         List<NativePath> expectedFiles = GetExpectedFilesInVmr(
@@ -129,6 +150,7 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
 
         expectedFiles.Add(VmrPath / VmrInfo.CodeownersPath);
         expectedFiles.Add(VmrPath / VmrInfo.CredScanSuppressionsPath);
+        expectedFiles.Add(VmrPath / VmrInfo.CodeQLConfigPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
@@ -161,6 +183,11 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
             }
             """,
             removeEmptyLines: false);
+        (await File.ReadAllTextAsync(VmrPath / VmrInfo.CodeQLConfigPath)).ReplaceLineEndings("\n").Should().ContainAll(
+            productRepoMarker,
+            "src/product-repo1/tests/**",
+            "cs/product-repo",
+            "- src/product-repo1\n");
 
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
@@ -171,15 +198,36 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CodeownersPath, "# This is a second repo's CODEOWNERS\n/xyz/foo @other/team");
         Directory.CreateDirectory(Path.GetDirectoryName(SecondRepoPath / VmrInfo.CredScanSuppressionsPath)!);
         await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ { ""_justification"": ""test2"", ""file"": ""testfile2"" } ] }");
+        await File.WriteAllTextAsync(
+            SecondRepoPath / VmrInfo.CodeQLConfigPath,
+            """
+            path_classifiers:
+              tests:
+                - "test-assets/**"
+            queries:
+              - exclude:
+                  queryid:
+                    - "cs/submodule"
+            """);
         await GitOperations.CommitAll(SecondRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
 
         await GitOperations.CommitAll(ProductRepoPath, "Checkout submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
+        await UpdateRepoToLastCommit(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            generateCodeowners: true,
+            generateCredScanSuppressions: true,
+            generateCodeQLConfig: true);
+
+        // Use the manifest URL, which can retain .gitmodules escaping on Windows.
+        var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
+        string submoduleRepoMarker = $"# --- {GitRepoUrlUtils.GetRepoNameWithOrg(sourceManifest.Submodules.Single().RemoteUri)} ---";
 
         expectedFiles.Add(additionalSubmoduleFilePath);
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CredScanSuppressionsPath);
+        expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeQLConfigPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(
@@ -221,6 +269,14 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
             }
             """,
             removeEmptyLines: false);
+        (await File.ReadAllTextAsync(VmrPath / VmrInfo.CodeQLConfigPath)).ReplaceLineEndings("\n").Should().ContainAll(
+            productRepoMarker,
+            submoduleRepoMarker,
+            "src/product-repo1/tests/**",
+            "cs/product-repo",
+            "src/product-repo1/externals/product-repo2/test-assets/**",
+            "cs/submodule",
+            "- src/product-repo1/externals/product-repo2\n");
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Remove submodule
@@ -229,12 +285,18 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath, "My new content in the CODEOWNERS\n\n### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###\n");
         await File.WriteAllTextAsync(VmrPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ ] }");
         await GitOperations.CommitAll(ProductRepoPath, "Remove the submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
+        await UpdateRepoToLastCommit(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            generateCodeowners: true,
+            generateCredScanSuppressions: true,
+            generateCodeQLConfig: true);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
         expectedFiles.Remove(submodulePathInVmr / VmrInfo.CodeownersPath);
         expectedFiles.Remove(submodulePathInVmr / VmrInfo.CredScanSuppressionsPath);
+        expectedFiles.Remove(submodulePathInVmr / VmrInfo.CodeQLConfigPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
@@ -268,6 +330,11 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
             }
             """,
             removeEmptyLines: false);
+        string codeQLConfig = (await File.ReadAllTextAsync(VmrPath / VmrInfo.CodeQLConfigPath)).ReplaceLineEndings("\n");
+        codeQLConfig.Should().ContainAll(productRepoMarker, "src/product-repo1/tests/**", "cs/product-repo", "- src/product-repo1\n");
+        codeQLConfig.Should().NotContain(submoduleRepoMarker);
+        codeQLConfig.Should().NotContain("src/product-repo1/externals/product-repo2");
+        codeQLConfig.Should().NotContain("cs/submodule");
     }
 
     protected override async Task CopyReposForCurrentTest()
@@ -337,4 +404,3 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 }
-

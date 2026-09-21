@@ -46,13 +46,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
             ICodeownersGenerator codeownersGenerator,
             ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+            ICodeQLConfigGenerator codeQLConfigGenerator,
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IWorkBranchFactory workBranchFactory,
             IFileSystem fileSystem,
             ILogger<VmrUpdater> logger,
             IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, codeQLConfigGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
