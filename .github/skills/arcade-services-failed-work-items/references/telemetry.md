@@ -7,10 +7,12 @@ Used by `arcade-services-failed-work-items` and `arcade-services-work-item-analy
 - Subscription: `fbd6122a-9ad3-42e4-976e-bccb82486856`
 - Resource group: `product-construction-service`
 - Application Insights: `product-construction-service-ai-prod`
-- Require an already authenticated `az` CLI and read access to this component. Check `az account show` and `az extension show --name application-insights` without printing tokens. If access or the extension is missing, report the prerequisite rather than changing credentials or installing tools automatically.
+- Require an already authenticated `az` CLI and read access to this component. The work-item analysis helper validates access while resolving the application ID and acquiring a token; do not repeat its checks. It uses REST directly and needs no Application Insights CLI extension. For manual `az monitor app-insights query` calls, check `az account show` and `az extension show --name application-insights` without printing tokens. If access or a required extension is missing, report the prerequisite rather than changing credentials or installing tools automatically.
 - Telemetry analysis does not require WorkIQ, Teams, or a particular client runtime.
 
 ## Query execution
+
+For one work item, prefer the bundled [evidence helper](../../arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1). It keeps tokens and query results in memory and sends an explicit `timespan` in the REST request alongside bounded KQL. Its redaction is best-effort; review the output before sharing it. Use manual queries only for evidence the helper does not provide.
 
 Use explicit UTC timestamps in both KQL and the CLI request. Azure CLI defaults to `--offset 1h`; KQL alone does not override that outer time filter. Passing both `--start-time` and `--end-time` avoids clipping older windows. Expand both CLI and KQL boundaries together when examining nearby evidence.
 
