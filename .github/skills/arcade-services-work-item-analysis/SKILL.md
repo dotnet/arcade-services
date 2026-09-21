@@ -58,23 +58,23 @@ Treat `BackflowNonContinuableNonLinearCodeflowException` as an **acceptable inte
 
 Identify the confirmed target branch and explain the guard. Do not recommend retrying, realigning the branch, or filing an incident unless explicitly requested. If the target is unknown, keep the classification unconfirmed; if it is outside `internal/validation/*`, investigate normally. Apply this per subscription, not to an entire mixed group.
 
-When this is the case, be concise, direct and end with a clear statement that this is an acceptable failure and no action is recommended.
+When this is the case, skip most output, be concise direct and end only by writing out a clear statement that this is an acceptable failure and no action is recommended.
 
 ## Analysis output
 
-Return the exact UTC window, full recorded/telemetry operation IDs, work-item type, attempt/outcome history, affected subscription and branch when known, representative redacted exception/stack evidence, likely root cause and confidence, and proposed fix/test or an explanation of why no remediation is appropriate. Clearly identify missing evidence.
+Return the exact UTC window, full recorded/telemetry operation IDs, work-item type, attempt/outcome history, affected subscription and branch when known, representative redacted exception/stack evidence, likely root cause and confidence, and proposed fix/test or an explanation of why no remediation is appropriate. Clearly identify missing evidence. Be concise and direct. Use bullet points where appropriate instead of prose.
 
 ## Decision prompt
 
 After presenting findings, use the available structured question tool (`ask_user` or `vscode_askQuestions`) with these choices, following the Build Insights exception-analysis pattern:
 
-- `Fix the issue locally (preview the fix)`
+- `Fix the issue locally`
 - `Fix the issue and open a PR`
 - `Analyze another failed work item`
 - `Create an issue in dotnet/arcade-services`
 - `Take no action`
 
-Do not substitute a plain-text question when a structured tool is available. If no question tool is available, present the choices and wait for a selection. Never interpret silence as authorization. In analysis-only mode, omit this entire decision flow and return to the caller.
+Do not substitute a plain-text question when a structured tool is available. If no question tool is available, present the choices and wait for a selection. Only list applicable choices. Never interpret silence as authorization. In analysis-only mode, omit this entire decision flow and return to the caller.
 
 ### Selected actions
 
