@@ -35,9 +35,18 @@ Keep matching in UTC. Do not hard-code UTC+2; convert a user's local time using 
 
 ## Step 2: Reuse discovery and analysis
 
-1. Invoke [arcade-services-failed-work-items](../arcade-services-failed-work-items/SKILL.md) with the exact UTC alert window. Retain its full identifier mapping and completeness status.
-2. For each distinct failed work item in scope, invoke [arcade-services-work-item-analysis](../arcade-services-work-item-analysis/SKILL.md) in **analysis-only** mode, passing the failure row, mapped IDs, and window. For an explicitly selected work item, analyze only that item and label the reply accordingly; confirm it belongs to the selected alert window.
-3. Reuse already obtained evidence rather than querying the same operation twice. Group matching root causes only after confirming the evidence for the affected operations. Do not run the analyzer's interactive fix/issue decision flow from this wrapper.
+1. Invoke [arcade-services-failed-work-items](../arcade-services-failed-work-items/SKILL.md) with the exact UTC alert window, reusing an existing listing when available. Its scripted `-ListFailures` call already resolves authentication, fetches the failure table, computes counts, and checks empty results. Retain its full identifier mapping, `ApplicationId`, `Window`, and completeness flags; do not repeat those queries or prerequisite checks. Resolve truncated tables before claiming full alert coverage.
+2. Fetch missing evidence in one call to the shared [telemetry helper](../arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1), passing an array of distinct, validated IDs (prefer recorded IDs; use telemetry IDs only when recorded IDs are absent). Keep batches to at most 50 IDs. For an explicitly selected work item, include only that item and confirm it belongs to the selected alert window. Do not call with an empty ID array or include uncorrelated rows; report those as gaps.
+
+   ```powershell
+   $evidence = & ./.github/skills/arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1 `
+       -OperationId $operationIds -StartUtc $startUtc -EndUtc $endUtc -ApplicationId $applicationId |
+       ConvertFrom-Json
+   ```
+
+   Use the exact listing window, not a newly resolved relative window. One token is acquired per call and reused for every operation. One distinct ID returns the usual single-operation result; multiple IDs return `Status: Batch` with separate `Results`. Inspect every result's `Status` and `Gaps`, including `Error`, `NotFound`, and `NeedsDisambiguation`. `AllOperationsResolved` only means all lookups returned `Found`; it does not establish complete evidence samples or finished root-cause analysis. Do not merge IDs merely because they share an ambient correlation ID. Resolve ambiguity individually using `-RecordedOperationId` before using that evidence.
+
+3. For each distinct work item, use [arcade-services-work-item-analysis](../arcade-services-work-item-analysis/SKILL.md) in **analysis-only** mode with the already-fetched result, failure row, full mapping, and window. The analyzer should proceed directly to source/subscription investigation, not fetch the same evidence again. Group matching root causes only after confirming evidence for the affected operations. Do not run the analyzer's interactive fix/issue decision flow from this wrapper.
 4. Preserve the analyzer's acceptable-internal-validation classification per confirmed target branch. Do not turn expected safety guards into retry or branch-realignment recommendations.
 5. Consolidate the UTC window, affected operations/subscriptions, grouped root causes, confidence, and appropriate next steps. Include all relevant operation IDs in full, distinguish recorded and telemetry IDs, and redact sensitive data. Clearly mark any unanalyzed operations or incomplete results; never claim a complete analysis from a partial batch.
 

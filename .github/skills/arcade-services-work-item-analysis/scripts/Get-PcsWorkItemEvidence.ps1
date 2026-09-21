@@ -1,20 +1,41 @@
 #Requires -Version 7.0
 [CmdletBinding(DefaultParameterSetName = 'Recent')]
 param(
-    [Parameter(Mandatory)]
+    [Parameter(ParameterSetName = 'Recent', Mandatory)]
+    [Parameter(ParameterSetName = 'AtTime', Mandatory)]
+    [Parameter(ParameterSetName = 'Window', Mandatory)]
     [ValidatePattern('^[A-Za-z0-9-]+$')]
     [ValidateLength(1, 128)]
-    [string]$OperationId,
+    [ValidateCount(1, 50)]
+    [string[]]$OperationId,
+
+    [Parameter(ParameterSetName = 'ListRecent', Mandatory)]
+    [Parameter(ParameterSetName = 'ListWindow', Mandatory)]
+    [switch]$ListFailures,
+
+    [Parameter(ParameterSetName = 'ListRecent')]
+    [ValidateRange(0.001, 8760)]
+    [double]$LookbackHours = 2,
+
+    [Parameter(ParameterSetName = 'ListRecent')]
+    [Parameter(ParameterSetName = 'ListWindow')]
+    [ValidateRange(1, 5000)]
+    [int]$MaxRows = 200,
 
     [Parameter(ParameterSetName = 'AtTime', Mandatory)]
     [string]$FailureTimestampUtc,
 
     [Parameter(ParameterSetName = 'Window', Mandatory)]
+    [Parameter(ParameterSetName = 'ListWindow', Mandatory)]
     [string]$StartUtc,
 
     [Parameter(ParameterSetName = 'Window', Mandatory)]
+    [Parameter(ParameterSetName = 'ListWindow', Mandatory)]
     [string]$EndUtc,
 
+    [Parameter(ParameterSetName = 'Recent')]
+    [Parameter(ParameterSetName = 'AtTime')]
+    [Parameter(ParameterSetName = 'Window')]
     [ValidatePattern('^[A-Za-z0-9-]+$')]
     [ValidateLength(1, 128)]
     [string]$RecordedOperationId,
@@ -116,7 +137,7 @@ function Protect-EvidenceValue($Value) {
     return $Value
 }
 
-if ($PSCmdlet.ParameterSetName -eq 'Window') {
+if ($PSCmdlet.ParameterSetName -in @('Window', 'ListWindow')) {
     $start = ConvertTo-UtcTimestamp $StartUtc
     $end = ConvertTo-UtcTimestamp $EndUtc
 }
@@ -126,7 +147,7 @@ elseif ($PSCmdlet.ParameterSetName -eq 'AtTime') {
 }
 else {
     $end = [DateTimeOffset]::UtcNow
-    $start = $end.AddHours(-2)
+    $start = $end.AddHours(-$LookbackHours)
 }
 if ($start -ge $end) { throw 'StartUtc must precede EndUtc.' }
 $startText = Format-UtcTimestamp $start
@@ -134,6 +155,9 @@ $endText = Format-UtcTimestamp $end
 $evidenceStart = Format-UtcTimestamp $start.AddMinutes(-2)
 $evidenceEnd = Format-UtcTimestamp $end.AddMinutes(2)
 
+if ($RecordedOperationId -and $OperationId.Count -gt 1) {
+    throw 'RecordedOperationId can only disambiguate a single OperationId.'
+}
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) { throw 'Azure CLI must already be installed and authenticated.' }
 if (-not $PSBoundParameters.ContainsKey('ApplicationId')) {
     $resourceId = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Insights/components/$ApplicationName"
@@ -151,7 +175,75 @@ if ([string]::IsNullOrWhiteSpace($token)) { throw 'Azure CLI did not return an a
 $headers = @{ Authorization = "Bearer $token" }
 $queryUri = "https://api.applicationinsights.io/v1/apps/$ApplicationId/query"
 try {
-    $eventQuery = @"
+    if ($ListFailures) {
+        $listingQuery = @"
+let events = materialize(customEvents
+| where timestamp between (datetime($startText)..datetime($endText))
+| where name == 'WorkItemExecuted'
+| extend RawAttempt = tostring(customDimensions['Attempt']), RawSuccess = tostring(customDimensions['Success']),
+    Attempt = toint(customDimensions['Attempt']), Success = tobool(customDimensions['Success']),
+    WorkItemType = tostring(customDimensions['WorkItemType']), RecordedOperationId = tostring(customDimensions['OperationId'])
+| extend OperationKey = case(isnotempty(RecordedOperationId), strcat('recorded:', RecordedOperationId),
+    isnotempty(operation_Id), strcat('telemetry:', operation_Id), ''));
+let failures = materialize(events | where Success == false and Attempt == 3);
+let operations = materialize(failures | where isnotempty(OperationKey)
+| summarize FailureRows = count(), FirstFailureUtc = min(timestamp), LastFailureUtc = max(timestamp) by OperationKey);
+let byType = failures
+| summarize FailureRows = count(), FirstFailureUtc = min(timestamp), LastFailureUtc = max(timestamp) by WorkItemType, OperationKey
+| summarize TelemetryRows = sum(FailureRows), IdentifiedOperations = countif(isnotempty(OperationKey)),
+    UncorrelatedRows = sumif(FailureRows, isempty(OperationKey)), RepeatedOperations = countif(isnotempty(OperationKey) and FailureRows > 1),
+    FirstFailureUtc = min(FirstFailureUtc), LastFailureUtc = max(LastFailureUtc) by WorkItemType;
+union
+(failures | order by timestamp asc, itemId asc | take $MaxRows
+| project Kind = 'Failure', Payload = bag_pack('Timestamp', timestamp, 'EventId', itemId, 'WorkItemType', WorkItemType,
+    'Attempt', Attempt, 'RecordedOperationId', RecordedOperationId, 'TelemetryOperationId', operation_Id, 'OperationName', operation_Name)),
+(byType | project Kind = 'WorkItemType', Payload = bag_pack('WorkItemType', WorkItemType, 'TelemetryRows', TelemetryRows,
+    'IdentifiedOperations', IdentifiedOperations, 'UncorrelatedRows', UncorrelatedRows, 'RepeatedOperations', RepeatedOperations,
+    'FirstFailureUtc', FirstFailureUtc, 'LastFailureUtc', LastFailureUtc)),
+(events | summarize Rows = count() by RawAttempt, RawSuccess
+| project Kind = 'Dimensions', Payload = bag_pack('Attempt', RawAttempt, 'Success', RawSuccess, 'Rows', Rows)),
+(print Kind = 'Counts', Payload = bag_pack('WorkItemExecutedRows', toscalar(events | count),
+    'FailureRows', toscalar(failures | count), 'IdentifiedOperations', toscalar(operations | count),
+    'UncorrelatedRows', toscalar(failures | where isempty(OperationKey) | count),
+    'RepeatedOperations', toscalar(operations | where FailureRows > 1 | count),
+    'FirstFailureUtc', toscalar(failures | summarize min(timestamp)), 'LastFailureUtc', toscalar(failures | summarize max(timestamp))))
+"@
+        $listing = @(Invoke-TelemetryQuery $listingQuery $startText $endText @('Kind', 'Payload'))
+        foreach ($record in $listing) {
+            if ($record.Payload -is [string]) { $record.Payload = $record.Payload | ConvertFrom-Json }
+        }
+        $counts = @($listing | Where-Object Kind -eq 'Counts')
+        if ($counts.Count -ne 1) { throw 'Listing counts are missing; the result may be incomplete.' }
+        $failures = @($listing | Where-Object Kind -eq 'Failure' | ForEach-Object Payload | Sort-Object Timestamp, EventId)
+        $result = [ordered]@{
+            Status = 'Found'
+            ApplicationId = "$ApplicationId"
+            Window = @{ StartUtc = $startText; EndUtc = $endText }
+            CountsComplete = $true
+            RowsComplete = $failures.Count -eq $counts[0].Payload.FailureRows
+            Counts = $counts[0].Payload
+            ByWorkItemType = @($listing | Where-Object Kind -eq 'WorkItemType' | ForEach-Object Payload | Sort-Object WorkItemType)
+            DimensionCounts = @($listing | Where-Object Kind -eq 'Dimensions' | ForEach-Object Payload | Sort-Object Attempt, Success)
+            Failures = $failures
+            Gaps = @()
+            ElapsedSeconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
+            Redaction = 'Best-effort only. Review before sharing. Failure rows are not a determination of unresolved outcomes or root causes.'
+        }
+        if ($result.Counts.WorkItemExecutedRows -eq 0) {
+            $result.Status = 'NoTelemetry'
+            $result.Gaps += 'No WorkItemExecuted events were found. This does not establish that no work items failed.'
+        }
+        elseif ($result.Counts.FailureRows -eq 0) { $result.Status = 'NoFailures' }
+        if (-not $result.RowsComplete) {
+            $result.Status = 'Partial'
+            $result.Gaps += 'Failure rows truncated. Counts cover the full window; increase MaxRows or split the window before claiming a complete failure table. Deduplicate overlapping rows using EventId.'
+        }
+        Protect-EvidenceValue $result | ConvertTo-Json -Depth 30
+        return
+    }
+
+    function Get-OperationEvidence([string]$OperationId) {
+        $eventQuery = @"
 let events = materialize(customEvents
 | where timestamp between (datetime($startText)..datetime($endText))
 | where name == 'WorkItemExecuted'
@@ -167,52 +259,52 @@ events
 | project timestamp, WorkItemType, Attempt, Success, RecordedOperationId, TelemetryOperationId = operation_Id, AppVersion = application_Version
 | order by timestamp asc
 "@
-    $attempts = @(Invoke-TelemetryQuery $eventQuery $startText $endText @('timestamp', 'WorkItemType', 'Attempt', 'Success', 'RecordedOperationId', 'TelemetryOperationId', 'AppVersion'))
-    $candidateIds = @($attempts.RecordedOperationId | Where-Object { $_ } | Sort-Object -Unique)
-    $result = [ordered]@{
-        Status = 'NotFound'
-        OperationId = $OperationId
-        ApplicationId = "$ApplicationId"
-        Window = @{ StartUtc = $startText; EndUtc = $endText }
-        EvidenceWindow = @{ StartUtc = $evidenceStart; EndUtc = $evidenceEnd }
-        CandidateRecordedOperationIds = $candidateIds
-        Attempts = $attempts
-        MappedIds = @()
-        Outcome = 'Unknown'
-        ExceptionGroups = @()
-        Traces = @()
-        Gaps = @()
-    }
-    $selectedId = $null
-    if ($RecordedOperationId) {
-        if ($RecordedOperationId -cnotin $candidateIds) { throw 'RecordedOperationId is not a candidate for the supplied operation in this window.' }
-        $selectedId = $RecordedOperationId
-    }
-    elseif ($candidateIds.Count -eq 1) { $selectedId = $candidateIds[0] }
-
-    if ($attempts.Count -eq 0) {
-        $result.Gaps += 'No matching WorkItemExecuted events in this window. Request a timestamp or permission to widen the window.'
-    }
-    elseif (-not $selectedId) {
-        $result.Status = 'NeedsDisambiguation'
-        $result.Gaps += 'Select a recorded operation ID before querying evidence; distinct work items must not be merged.'
-    }
-    else {
-        $attempts = @($attempts | Where-Object { $_.RecordedOperationId -ceq $selectedId })
-        $mappedIds = @(@($selectedId) + @($attempts.TelemetryOperationId) | Where-Object { $_ } | Sort-Object -Unique)
-        foreach ($mappedId in $mappedIds) {
-            if ($mappedId -cnotmatch '^[A-Za-z0-9-]{1,128}$') { throw 'Telemetry contained an unsupported operation ID; it will not be interpolated into KQL.' }
+        $attempts = @(Invoke-TelemetryQuery $eventQuery $startText $endText @('timestamp', 'WorkItemType', 'Attempt', 'Success', 'RecordedOperationId', 'TelemetryOperationId', 'AppVersion'))
+        $candidateIds = @($attempts.RecordedOperationId | Where-Object { $_ } | Sort-Object -Unique)
+        $result = [ordered]@{
+            Status = 'NotFound'
+            OperationId = $OperationId
+            ApplicationId = "$ApplicationId"
+            Window = @{ StartUtc = $startText; EndUtc = $endText }
+            EvidenceWindow = @{ StartUtc = $evidenceStart; EndUtc = $evidenceEnd }
+            CandidateRecordedOperationIds = $candidateIds
+            Attempts = $attempts
+            MappedIds = @()
+            Outcome = 'Unknown'
+            ExceptionGroups = @()
+            Traces = @()
+            Gaps = @()
         }
-        $result.Status = 'Found'
-        $result.Attempts = $attempts
-        $result.MappedIds = $mappedIds
-        $latest = $attempts[-1]
-        if ($latest.Success -eq $true) { $result.Outcome = 'Succeeded' }
-        elseif ($latest.Success -eq $false -and $latest.Attempt -eq 3) { $result.Outcome = 'RetryExhausted' }
-        elseif ($latest.Success -eq $false) { $result.Outcome = 'FailedAttempt' }
-        $idList = ($mappedIds | ForEach-Object { "'$_'" }) -join ', '
-        $correlation = "| extend RecordedOperationId = tostring(customDimensions['OperationId']) | where RecordedOperationId == '$selectedId' or (isempty(RecordedOperationId) and operation_Id in ($idList))"
-        $evidenceQuery = @"
+        $selectedId = $null
+        if ($RecordedOperationId) {
+            if ($RecordedOperationId -cnotin $candidateIds) { throw 'RecordedOperationId is not a candidate for the supplied operation in this window.' }
+            $selectedId = $RecordedOperationId
+        }
+        elseif ($candidateIds.Count -eq 1) { $selectedId = $candidateIds[0] }
+
+        if ($attempts.Count -eq 0) {
+            $result.Gaps += 'No matching WorkItemExecuted events in this window. Request a timestamp or permission to widen the window.'
+        }
+        elseif (-not $selectedId) {
+            $result.Status = 'NeedsDisambiguation'
+            $result.Gaps += 'Select a recorded operation ID before querying evidence; distinct work items must not be merged.'
+        }
+        else {
+            $attempts = @($attempts | Where-Object { $_.RecordedOperationId -ceq $selectedId })
+            $mappedIds = @(@($selectedId) + @($attempts.TelemetryOperationId) | Where-Object { $_ } | Sort-Object -Unique)
+            foreach ($mappedId in $mappedIds) {
+                if ($mappedId -cnotmatch '^[A-Za-z0-9-]{1,128}$') { throw 'Telemetry contained an unsupported operation ID; it will not be interpolated into KQL.' }
+            }
+            $result.Status = 'Found'
+            $result.Attempts = $attempts
+            $result.MappedIds = $mappedIds
+            $latest = $attempts[-1]
+            if ($latest.Success -eq $true) { $result.Outcome = 'Succeeded' }
+            elseif ($latest.Success -eq $false -and $latest.Attempt -eq 3) { $result.Outcome = 'RetryExhausted' }
+            elseif ($latest.Success -eq $false) { $result.Outcome = 'FailedAttempt' }
+            $idList = ($mappedIds | ForEach-Object { "'$_'" }) -join ', '
+            $correlation = "| extend RecordedOperationId = tostring(customDimensions['OperationId']) | where RecordedOperationId == '$selectedId' or (isempty(RecordedOperationId) and operation_Id in ($idList))"
+            $evidenceQuery = @"
 let failures = materialize(exceptions
 | where timestamp between (datetime($evidenceStart)..datetime($evidenceEnd))
 $correlation);
@@ -231,22 +323,50 @@ union
 | project Kind = 'Trace', Payload = bag_pack('Timestamp', timestamp, 'TelemetryOperationId', operation_Id, 'Message', message, 'SeverityLevel', severityLevel)),
 (print Kind = 'Counts', Payload = bag_pack('ExceptionRows', toscalar(failures | count), 'ExceptionGroups', toscalar(groups | count), 'TraceRows', toscalar(logs | count)))
 "@
-        $evidence = @(Invoke-TelemetryQuery $evidenceQuery $evidenceStart $evidenceEnd @('Kind', 'Payload'))
-        foreach ($record in $evidence) {
-            if ($record.Payload -is [string]) { $record.Payload = $record.Payload | ConvertFrom-Json }
+            $evidence = @(Invoke-TelemetryQuery $evidenceQuery $evidenceStart $evidenceEnd @('Kind', 'Payload'))
+            foreach ($record in $evidence) {
+                if ($record.Payload -is [string]) { $record.Payload = $record.Payload | ConvertFrom-Json }
+            }
+            $counts = @($evidence | Where-Object Kind -eq 'Counts')
+            if ($counts.Count -ne 1) { throw 'Evidence counts are missing; the result may be incomplete.' }
+            $result.Counts = $counts[0].Payload
+            $result.ExceptionGroups = @($evidence | Where-Object Kind -eq 'ExceptionGroup' | ForEach-Object Payload)
+            $result.Traces = @($evidence | Where-Object Kind -eq 'Trace' | ForEach-Object Payload | Sort-Object Timestamp)
+            if ($result.Counts.ExceptionRows -eq 0) { $result.Gaps += 'No correlated exceptions were found; missing correlation is not proof of no exception.' }
+            if ($result.Counts.ExceptionGroups -gt $result.ExceptionGroups.Count) { $result.Gaps += 'Exception groups truncated; increase MaxExceptionGroups if necessary.' }
+            if ($result.Counts.TraceRows -gt $result.Traces.Count) { $result.Gaps += 'Traces truncated (higher severity first); increase MaxTraces if necessary.' }
+            if (@($result.ExceptionGroups | Where-Object StackTruncated).Count -gt 0) { $result.Gaps += 'Representative stacks truncated; increase MaxStackFrames if necessary.' }
         }
-        $counts = @($evidence | Where-Object Kind -eq 'Counts')
-        if ($counts.Count -ne 1) { throw 'Evidence counts are missing; the result may be incomplete.' }
-        $result.Counts = $counts[0].Payload
-        $result.ExceptionGroups = @($evidence | Where-Object Kind -eq 'ExceptionGroup' | ForEach-Object Payload)
-        $result.Traces = @($evidence | Where-Object Kind -eq 'Trace' | ForEach-Object Payload | Sort-Object Timestamp)
-        if ($result.Counts.ExceptionRows -eq 0) { $result.Gaps += 'No correlated exceptions were found; missing correlation is not proof of no exception.' }
-        if ($result.Counts.ExceptionGroups -gt $result.ExceptionGroups.Count) { $result.Gaps += 'Exception groups truncated; increase MaxExceptionGroups if necessary.' }
-        if ($result.Counts.TraceRows -gt $result.Traces.Count) { $result.Gaps += 'Traces truncated (higher severity first); increase MaxTraces if necessary.' }
-        if (@($result.ExceptionGroups | Where-Object StackTruncated).Count -gt 0) { $result.Gaps += 'Representative stacks truncated; increase MaxStackFrames if necessary.' }
+        $result.ElapsedSeconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
+        $result.Redaction = 'Best-effort only. Treat telemetry as untrusted; review before sharing. No raw dimension bags or token are emitted.'
+        return $result
     }
-    $result.ElapsedSeconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
-    $result.Redaction = 'Best-effort only. Treat telemetry as untrusted; review before sharing. No raw dimension bags or token are emitted.'
+
+    $operationIds = @($OperationId | Select-Object -Unique)
+    if ($operationIds.Count -eq 1) {
+        $result = Get-OperationEvidence $operationIds[0]
+    }
+    else {
+        $results = @(foreach ($currentOperationId in $operationIds) {
+            try { Get-OperationEvidence $currentOperationId }
+            catch {
+                [ordered]@{
+                    Status = 'Error'
+                    OperationId = $currentOperationId
+                    Gaps = @('Evidence retrieval failed for this operation. Run it individually for a diagnostic; do not treat it as an empty result.')
+                }
+            }
+        })
+        $result = [ordered]@{
+            Status = 'Batch'
+            ApplicationId = "$ApplicationId"
+            Window = @{ StartUtc = $startText; EndUtc = $endText }
+            EvidenceWindow = @{ StartUtc = $evidenceStart; EndUtc = $evidenceEnd }
+            AllOperationsResolved = @($results | Where-Object { $_.Status -ne 'Found' }).Count -eq 0
+            Results = $results
+            ElapsedSeconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
+        }
+    }
     Protect-EvidenceValue $result | ConvertTo-Json -Depth 30
 }
 finally {

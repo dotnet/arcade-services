@@ -16,27 +16,23 @@ Discover retry-exhausted work items and produce a compact summary, without requi
 
 ## Procedure
 
-1. Resolve the requested window and run the following query using the shared query procedure. Replace the timestamp placeholders with validated UTC timestamps, not arbitrary input:
+1. Run the shared [telemetry helper](../arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1) in listing mode from the repository root. Use PowerShell 7 and an already authenticated Azure CLI; the Application Insights extension is not required. Do not separately query the clock, check account/extension state, discover the resource, acquire a token, or reconstruct KQL. The helper performs those deterministic steps and returns one JSON document:
 
-   ```kql
-   customEvents
-   | where timestamp between (datetime(START_UTC)..datetime(END_UTC))
-   | where name == "WorkItemExecuted"
-   | extend Attempt = toint(customDimensions["Attempt"]),
-       Success = tobool(customDimensions["Success"]),
-       WorkItemType = tostring(customDimensions["WorkItemType"]),
-       RecordedOperationId = tostring(customDimensions["OperationId"])
-   | where Success == false and Attempt == 3
-   | project timestamp, WorkItemType, Attempt,
-       RecordedOperationId, TelemetryOperationId = operation_Id,
-       OperationName = operation_Name
-   | order by timestamp asc
+    ```powershell
+    & ./.github/skills/arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1 -ListFailures
    ```
 
-2. Distinguish telemetry rows from distinct operations. Prefer the recorded work-item operation ID for grouping; use the telemetry operation ID only when the recorded ID is absent. Retain all observed mappings between the two. Keep rows with neither ID in a separate "uncorrelated" count rather than treating them as one work item.
-3. Summarize counts by work-item type, first/last seen, and repeated operations. Include a table of full recorded and telemetry operation IDs with UTC timestamps. Do not infer root causes from work-item names or temporal proximity.
-4. If no failures are returned, check the query's effective time range and run a compact count of `WorkItemExecuted` events grouped by raw `Attempt` and `Success` dimensions in the same window. Distinguish "no retry-exhausted failures" from missing telemetry, missing access, or a failed query. Do not silently widen the window; clearly label any separately requested wider investigation.
-5. Return the summary. If a result is truncated, explicitly mark the summary as partial and split the time window to retrieve the remainder; do not report partial counts as totals. Deduplicate overlapping boundary rows before counting.
+    Append `-LookbackHours 6` for a requested relative lookback, or both `-StartUtc '2026-09-21T12:00:00Z' -EndUtc '2026-09-21T14:00:00Z'` for an explicit window. Timestamps must be ISO 8601 UTC values ending in `Z` or `+00:00`. Without either, the helper resolves the previous two hours once. Preserve its `Window` and `ApplicationId` for follow-up calls; `-ApplicationId '<app-id>'` skips resource lookup.
+
+2. Use the returned `Counts`, `ByWorkItemType`, and `Failures` directly. A single REST query retrieves retry-exhausted failure rows, exact full-window aggregate counts, and raw `Attempt`/`Success` `DimensionCounts`. Grouping prefers recorded IDs, falls back to telemetry IDs only when recorded IDs are absent, and counts rows with neither ID separately. Counts describe telemetry rows and identified operations, not necessarily unique subscriptions or unresolved outcomes. Keep all returned ID mappings; do not infer root causes from names or proximity. A selected operation still needs its attempt history checked for later success by the analysis skill.
+3. Interpret `Status` before summarizing:
+    - `Found`: report the failure table and full-window counts.
+    - `NoFailures`: events exist, but none match `Success == false and Attempt == 3`; use `DimensionCounts` for the already-fetched diagnostic breakdown.
+    - `NoTelemetry`: there are no `WorkItemExecuted` events in the window; do not claim that no work items failed.
+    - `Partial`: full-window counts are available, but the failure table is truncated. Read `Gaps` and `RowsComplete`.
+    - A terminating error is an input, access, HTTP, schema, or partial-query failure, not an empty successful result. Report the blocker without changing credentials or installing tools.
+4. The default failure table cap is 200 rows. For a complete table, rerun the **same exact window** with `-MaxRows` increased (maximum 5000), or split the window and deduplicate overlapping boundary rows using `EventId`. `CountsComplete` covers server-computed aggregates; `RowsComplete` covers the returned table and ID mappings. Do not count the sampled table as the total or sum distinct-operation counts across subwindows, since one operation can span them. Never silently widen the window.
+5. Return the summary. Root causes remain uninvestigated; reuse the returned data when another skill is the caller. Results and credentials stay in memory. Redaction is best-effort, so review sensitive fields before sharing. Use manual queries only for evidence this helper does not provide.
 
 ## Output
 
@@ -44,4 +40,4 @@ Discover retry-exhausted work items and produce a compact summary, without requi
 - Telemetry-row count, distinct identified operations, and uncorrelated rows.
 - Counts by work-item type and first/last failure times.
 - Failure table with full recorded/telemetry operation IDs, work-item type, and timestamps.
-- State that root causes have not yet been investigated. For a selected row, the reusable next step is `arcade-services-work-item-analysis`; pass both operation IDs and the window.
+- State that root causes have not yet been investigated. For a selected row, the reusable next step is `arcade-services-work-item-analysis`; pass both operation IDs, the window, and the returned `ApplicationId`.
