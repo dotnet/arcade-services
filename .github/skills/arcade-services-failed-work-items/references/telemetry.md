@@ -7,10 +7,14 @@ Used by `arcade-services-failed-work-items` and `arcade-services-work-item-analy
 - Subscription: `fbd6122a-9ad3-42e4-976e-bccb82486856`
 - Resource group: `product-construction-service`
 - Application Insights: `product-construction-service-ai-prod`
-- Require an already authenticated `az` CLI and read access to this component. Check `az account show` and `az extension show --name application-insights` without printing tokens. If access or the extension is missing, report the prerequisite rather than changing credentials or installing tools automatically.
+- Require an already authenticated `az` CLI and read access to this component. The shared telemetry helper validates access while resolving the application ID and acquiring a token; do not repeat its checks. It uses REST directly and needs no Application Insights CLI extension. For manual `az monitor app-insights query` calls, check `az account show` and `az extension show --name application-insights` without printing tokens. If access or a required extension is missing, report the prerequisite rather than changing credentials or installing tools automatically.
 - Telemetry analysis does not require WorkIQ, Teams, or a particular client runtime.
 
 ## Query execution
+
+Prefer the bundled [telemetry helper](../../arcade-services-work-item-analysis/scripts/Get-PcsWorkItemEvidence.ps1): `-ListFailures` discovers failures and computes full-window counts in one query; `-OperationId` retrieves evidence for one ID or an array of up to 50 IDs. Batch calls acquire one token and retain separate results for each operation. Reuse `ApplicationId` and exact `Window` across skill handoffs, and pass already-fetched results to analysis instead of fetching them again. The helper keeps tokens and query results in memory and sends an explicit `timespan` in the REST request alongside bounded KQL. Its redaction is best-effort; review output before sharing it. Use manual queries only for evidence the helper does not provide.
+
+Listing completeness has two parts: `CountsComplete` describes server-computed full-window aggregates; `RowsComplete` describes the bounded failure table. A partial table is not a complete set of ID mappings. Do not sum distinct-operation counts across overlapping or adjacent subwindows. For batches, inspect every result and its sampling gaps; `AllOperationsResolved` is not a claim that every root cause has been analyzed. Missing telemetry and query errors are never equivalent to zero failures.
 
 Use explicit UTC timestamps in both KQL and the CLI request. Azure CLI defaults to `--offset 1h`; KQL alone does not override that outer time filter. Passing both `--start-time` and `--end-time` avoids clipping older windows. Expand both CLI and KQL boundaries together when examining nearby evidence.
 
