@@ -9,6 +9,6 @@
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <MicrosoftNetFrameworkReferenceAssembliesVersion>1.0.0-preview.1</MicrosoftNetFrameworkReferenceAssembliesVersion>
-    <AspireVersion>13.5.3</AspireVersion>
+    <AspireVersion>13.5.4</AspireVersion>
   </PropertyGroup>
 </Project>
