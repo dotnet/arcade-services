@@ -3,11 +3,19 @@ param (
 	[Parameter(Mandatory = $True)]
 	$PullRequestNumber,
 	[Parameter(Mandatory = $True)]
-	$RepositoryName
+	$RepositoryName,
+	[Parameter(Mandatory = $False)]
+	$GitHubToken
 )
+
+$headers = @{}
+if ($GitHubToken) {
+	$headers["Authorization"] = "token $GitHubToken"
+}
 
 $prDetail = Invoke-WebRequest `
 		-UseBasicParsing `
+		-Headers $headers `
 		-Uri "https://api.github.com/repos/$RepositoryName/pulls/$PullRequestNumber" `
 	| ConvertFrom-Json
 
@@ -47,7 +55,7 @@ foreach ($name in $issuePatterns.Keys) {
 }
 
 if (-not $hasIssue) {
-    Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
+    Write-Host "::error::Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
     exit 1
 }
 
