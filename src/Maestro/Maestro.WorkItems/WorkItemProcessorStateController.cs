@@ -10,8 +10,8 @@ public sealed record WorkItemProcessorStateControllerOptions(bool WaitForInitial
 
 /// <summary>
 /// Replica side of the desired/observed protocol. The replica starts stopped, opens queue admission
-/// only while its desired state is <see cref="WorkItemProcessorState.Working"/>, and acknowledges a stop
-/// only after every admitted consumer cycle has finished.
+/// when its desired state is <see cref="WorkItemProcessorState.Working"/> or unknown, and acknowledges
+/// a stop only after every admitted consumer cycle has finished. Local initialization must finish first.
 /// </summary>
 public sealed class WorkItemProcessorStateController : BackgroundService
 {
@@ -62,13 +62,10 @@ public sealed class WorkItemProcessorStateController : BackgroundService
 
     public async Task ApplyDesiredStateAsync(CancellationToken cancellationToken)
     {
-        WorkItemProcessorState? desiredState = await _stateStore.GetDesiredStateAsync(cancellationToken);
+        WorkItemProcessorState desiredState = await _stateStore.GetDesiredStateAsync(cancellationToken)
+            ?? WorkItemProcessorState.Working;
 
-        if (desiredState == null)
-        {
-            _logger.LogDebug("No desired queue processing state is set, keeping the current local state");
-        }
-        else if (desiredState == WorkItemProcessorState.Working)
+        if (desiredState == WorkItemProcessorState.Working)
         {
             await StartWorkingAsync(cancellationToken);
         }
@@ -124,7 +121,8 @@ public sealed class WorkItemProcessorStateController : BackgroundService
         // work items the control plane doesn't know about.
         await ReportObservedStateAsync(WorkItemProcessorState.Working, cancellationToken);
 
-        WorkItemProcessorState? confirmedState = await _stateStore.GetDesiredStateAsync(cancellationToken);
+        WorkItemProcessorState confirmedState = await _stateStore.GetDesiredStateAsync(cancellationToken)
+            ?? WorkItemProcessorState.Working;
         if (confirmedState == WorkItemProcessorState.Working)
         {
             _admissionGate.Open();

@@ -15,10 +15,17 @@ internal class FakeReplicaStateStore : IReplicaWorkItemProcessorStateStore
 
     public Action? OnDesiredStateRead { get; set; }
 
+    public bool FailDesiredReads { get; set; }
+
     public bool FailObservedWrites { get; set; }
 
     public Task<WorkItemProcessorState?> GetDesiredStateAsync(CancellationToken cancellationToken)
     {
+        if (FailDesiredReads)
+        {
+            throw new InvalidOperationException("Redis is unavailable");
+        }
+
         WorkItemProcessorState? state = DesiredState;
         OnDesiredStateRead?.Invoke();
         return Task.FromResult(state);
@@ -62,13 +69,14 @@ public class WorkItemProcessorStateControllerTests
         _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped);
     }
 
-    [Test]
-    public async Task StartIsAcknowledgedBeforeAdmissionOpens()
+    [TestCase(null)]
+    [TestCase(WorkItemProcessorState.Working)]
+    public async Task StartIsAcknowledgedBeforeAdmissionOpens(WorkItemProcessorState? desiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController();
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = desiredState;
 
         List<bool> admissionWhenDesiredRead = [];
         _stateStore.OnDesiredStateRead = () => admissionWhenDesiredRead.Add(_admissionGate.IsOpen);
@@ -82,13 +90,14 @@ public class WorkItemProcessorStateControllerTests
         _admissionGate.IsOpen.Should().BeTrue();
     }
 
-    [Test]
-    public async Task AdmissionStaysClosedWhenStopIsRequestedBeforeItOpens()
+    [TestCase(null)]
+    [TestCase(WorkItemProcessorState.Working)]
+    public async Task AdmissionStaysClosedWhenStopIsRequestedBeforeItOpens(WorkItemProcessorState? desiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController();
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = desiredState;
         _stateStore.OnDesiredStateRead = () => _stateStore.DesiredState = WorkItemProcessorState.Stopped;
 
         // Act
@@ -102,13 +111,14 @@ public class WorkItemProcessorStateControllerTests
             WorkItemProcessorState.Stopped);
     }
 
-    [Test]
-    public async Task AdmissionStaysClosedWhenTheStartCannotBeAcknowledged()
+    [TestCase(null)]
+    [TestCase(WorkItemProcessorState.Working)]
+    public async Task AdmissionStaysClosedWhenTheStartCannotBeAcknowledged(WorkItemProcessorState? desiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController();
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = desiredState;
         _stateStore.FailObservedWrites = true;
 
         // Act
@@ -119,15 +129,17 @@ public class WorkItemProcessorStateControllerTests
         _admissionGate.IsOpen.Should().BeFalse();
     }
 
-    [Test]
-    public async Task StopIsAcknowledgedOnlyAfterAdmittedWorkFinishes()
+    [TestCase(null)]
+    [TestCase(WorkItemProcessorState.Working)]
+    public async Task StopIsAcknowledgedOnlyAfterAdmittedWorkFinishes(WorkItemProcessorState? desiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController();
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = desiredState;
         await controller.ApplyDesiredStateAsync(CancellationToken.None);
-        WorkItemAdmissionLease lease = await _admissionGate.AdmitWhenOpenAsync(CancellationToken.None);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        WorkItemAdmissionLease lease = await _admissionGate.AdmitWhenOpenAsync(timeout.Token);
 
         // Act
         _stateStore.DesiredState = WorkItemProcessorState.Stopped;
@@ -146,13 +158,14 @@ public class WorkItemProcessorStateControllerTests
             WorkItemProcessorState.Stopped);
     }
 
-    [Test]
-    public async Task PendingInitializationKeepsTheReplicaStopped()
+    [TestCase(null)]
+    [TestCase(WorkItemProcessorState.Working)]
+    public async Task PendingInitializationKeepsTheReplicaStopped(WorkItemProcessorState? desiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController(waitForInitialization: true);
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = desiredState;
 
         // Act
         await controller.ApplyDesiredStateAsync(CancellationToken.None);
@@ -168,13 +181,14 @@ public class WorkItemProcessorStateControllerTests
         _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped, WorkItemProcessorState.Working);
     }
 
-    [Test]
-    public async Task MissingDesiredStateKeepsTheCurrentLocalState()
+    [TestCase(WorkItemProcessorState.Working)]
+    [TestCase(WorkItemProcessorState.Stopped)]
+    public async Task MissingDesiredStateMakesTheReplicaWork(WorkItemProcessorState initialDesiredState)
     {
         // Arrange
         WorkItemProcessorStateController controller = CreateController();
         await controller.ReportStartupStateAsync(CancellationToken.None);
-        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.DesiredState = initialDesiredState;
         await controller.ApplyDesiredStateAsync(CancellationToken.None);
 
         // Act
@@ -184,6 +198,58 @@ public class WorkItemProcessorStateControllerTests
         // Assert
         _admissionGate.IsOpen.Should().BeTrue();
         _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped, WorkItemProcessorState.Working);
+    }
+
+    [Test]
+    public async Task ExplicitStoppedStateKeepsAdmissionClosed()
+    {
+        // Arrange
+        WorkItemProcessorStateController controller = CreateController();
+        await controller.ReportStartupStateAsync(CancellationToken.None);
+        _stateStore.DesiredState = WorkItemProcessorState.Stopped;
+
+        // Act
+        await controller.ApplyDesiredStateAsync(CancellationToken.None);
+
+        // Assert
+        _admissionGate.IsOpen.Should().BeFalse();
+        controller.ObservedState.Should().Be(WorkItemProcessorState.Stopped);
+        _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped);
+    }
+
+    [Test]
+    public async Task MissingDesiredStateOnConfirmationAllowsAdmissionToOpen()
+    {
+        // Arrange
+        WorkItemProcessorStateController controller = CreateController();
+        await controller.ReportStartupStateAsync(CancellationToken.None);
+        _stateStore.DesiredState = WorkItemProcessorState.Working;
+        _stateStore.OnDesiredStateRead = () => _stateStore.DesiredState = null;
+
+        // Act
+        await controller.ApplyDesiredStateAsync(CancellationToken.None);
+
+        // Assert
+        _admissionGate.IsOpen.Should().BeTrue();
+        _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped, WorkItemProcessorState.Working);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task DesiredStateReadFailureKeepsAdmissionClosed(bool failConfirmationRead)
+    {
+        // Arrange
+        WorkItemProcessorStateController controller = CreateController();
+        await controller.ReportStartupStateAsync(CancellationToken.None);
+        _stateStore.FailDesiredReads = !failConfirmationRead;
+        _stateStore.OnDesiredStateRead = () => _stateStore.FailDesiredReads = true;
+
+        // Act
+        Func<Task> applyDesiredState = () => controller.ApplyDesiredStateAsync(CancellationToken.None);
+
+        // Assert
+        await applyDesiredState.Should().ThrowAsync<InvalidOperationException>();
+        _admissionGate.IsOpen.Should().BeFalse();
     }
 
     private WorkItemProcessorStateController CreateController(bool waitForInitialization = false)
