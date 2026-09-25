@@ -9,3 +9,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Uses API version 2026-07-01, which is not yet available in westus2.
+      - dependency-name: "Azure.ResourceManager.AppContainers"
+        versions: ["1.6.0"]

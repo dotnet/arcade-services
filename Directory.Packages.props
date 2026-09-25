@@ -17,7 +17,8 @@
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.9.0" />
-    <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.6.0" />
+    <!-- 1.6.0 uses API version 2026-07-01, which is not yet available in our deployment region (westus2). -->
+    <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.27.1" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
