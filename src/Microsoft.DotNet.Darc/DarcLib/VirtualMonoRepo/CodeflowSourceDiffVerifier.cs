@@ -41,20 +41,17 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ISourceManifest _sourceManifest;
     private readonly ILogger<CodeflowSourceDiffVerifier> _logger;
 
     public CodeflowSourceDiffVerifier(
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager cloneManager,
         IVmrDependencyTracker dependencyTracker,
-        ISourceManifest sourceManifest,
         ILogger<CodeflowSourceDiffVerifier> logger)
     {
         _vmrCloneManager = vmrCloneManager;
         _cloneManager = cloneManager;
         _dependencyTracker = dependencyTracker;
-        _sourceManifest = sourceManifest;
         _logger = logger;
     }
 
@@ -84,8 +81,24 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        HashSet<string> changedSubmodulePaths = await GetChangedSubmodulePathsAsync(
+            vmr,
+            mappingName,
+            vmrTargetBranch,
+            vmrHeadBranch,
+            cancellationToken);
 
-        var exclusionPathspecs = GetDiffFilters(mapping, _sourceManifest);
+        var srcMappingPrefix = srcMappingPath + "/";
+        List<string> sourceExclusionPathspecs =
+        [
+            .. GetSourceExclusionPathspecs(mapping),
+            .. changedSubmodulePaths.Select(VmrPatchHandler.GetExclusionRule),
+        ];
+        List<string> vmrExclusionPathspecs =
+        [
+            .. GetStandardExclusionPathspecs(mappingName, srcMappingPrefix),
+            .. changedSubmodulePaths.Select(path => VmrPatchHandler.GetExclusionRule(srcMappingPrefix + path)),
+        ];
 
         ILocalGitRepo sourceRepo = await _cloneManager.PrepareCloneAsync(
             mapping,
@@ -95,11 +108,10 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
             resetToRemote: false,
             cancellationToken);
 
-        var srcMappingPrefix = srcMappingPath + "/";
         HashSet<string> sourceRepoChangedFiles = await GetChangedMappingFilesAsync(
-            sourceRepo, mappingName, oldSha, newSha, exclusionPathspecs: exclusionPathspecs, cancellationToken: cancellationToken);
+            sourceRepo, oldSha, newSha, exclusionPathspecs: sourceExclusionPathspecs, cancellationToken: cancellationToken);
         HashSet<string> vmrPrChangedFiles = await GetChangedMappingFilesAsync(
-            vmr, mappingName, vmrTargetBranch, vmrHeadBranch, relativePath: srcMappingPrefix, cancellationToken: cancellationToken);
+            vmr, vmrTargetBranch, vmrHeadBranch, relativePath: srcMappingPrefix, exclusionPathspecs: vmrExclusionPathspecs, cancellationToken: cancellationToken);
 
         var filesChangedInBoth = sourceRepoChangedFiles.Where(vmrPrChangedFiles.Contains).ToList();
         var sourceRepoOnlyChanges = sourceRepoChangedFiles.Where(f => !vmrPrChangedFiles.Contains(f)).ToList();
@@ -150,30 +162,92 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
             .ToList();
     }
 
-    /// <summary>
-    /// Builds the git pathspec exclusion rules the same way VmrDiffOperation.GetDiffFilters does:
-    /// the mapping's excludes plus submodule paths under the mapping, turned into git exclusion rules.
-    /// </summary>
-    private static List<string> GetDiffFilters(SourceMapping mapping, ISourceManifest manifest)
+    private static async Task<HashSet<string>> GetChangedSubmodulePathsAsync(
+        ILocalGitRepo vmr,
+        string mappingName,
+        string vmrTargetBranch,
+        string vmrHeadBranch,
+        CancellationToken cancellationToken)
     {
-        var submodules = manifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/', StringComparison.OrdinalIgnoreCase))
-            .Select(s => s.Path.Substring(mapping.Name.Length + 1));
+        var mergeBaseResult = await vmr.ExecuteGitCommand(
+            ["merge-base", vmrTargetBranch, vmrHeadBranch],
+            cancellationToken);
+        mergeBaseResult.ThrowIfFailed(
+            $"Failed to find the merge base between {vmrTargetBranch} and {vmrHeadBranch}");
 
-        return (mapping.Exclude ?? [])
-            .Concat(submodules)
-            .Select(VmrPatchHandler.GetExclusionRule)
-            .ToList();
+        string mergeBase = mergeBaseResult.StandardOutput.Trim();
+        SourceManifest oldManifest = await GetSourceManifestAsync(vmr, mergeBase);
+        SourceManifest newManifest = await GetSourceManifestAsync(vmr, vmrHeadBranch);
+        string mappingPrefix = mappingName + "/";
+        Dictionary<string, (string RemoteUri, string CommitSha)> oldSubmodules = oldManifest
+            .GetSubmodulesForMapping(mappingName)
+            .ToDictionary(
+                submodule => submodule.Path,
+                submodule => (submodule.RemoteUri, submodule.CommitSha),
+                StringComparer.Ordinal);
+        Dictionary<string, (string RemoteUri, string CommitSha)> newSubmodules = newManifest
+            .GetSubmodulesForMapping(mappingName)
+            .ToDictionary(
+                submodule => submodule.Path,
+                submodule => (submodule.RemoteUri, submodule.CommitSha),
+                StringComparer.Ordinal);
+
+        return oldSubmodules.Keys
+            .Concat(newSubmodules.Keys)
+            .Distinct(StringComparer.Ordinal)
+            .Where(path =>
+                !oldSubmodules.TryGetValue(path, out var oldSubmodule) ||
+                !newSubmodules.TryGetValue(path, out var newSubmodule) ||
+                oldSubmodule != newSubmodule)
+            .Select(path => path.Substring(mappingPrefix.Length))
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static async Task<SourceManifest> GetSourceManifestAsync(
+        ILocalGitRepo vmr,
+        string revision)
+    {
+        string? manifestContents = await vmr.GetFileFromGitAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            revision);
+        return manifestContents == null
+            ? new SourceManifest([], [])
+            : SourceManifest.FromJson(manifestContents);
+    }
+
+    /// <summary>
+    /// Builds the source repository's Git pathspec exclusions from the mapping's excludes and the standard
+    /// codeflow-managed paths. Submodule exclusions are added separately based on the manifest comparison.
+    /// </summary>
+    private static List<string> GetSourceExclusionPathspecs(SourceMapping mapping)
+    {
+        return
+        [
+            .. (mapping.Exclude ?? []).Select(VmrPatchHandler.GetExclusionRule),
+            .. GetStandardExclusionPathspecs(mapping.Name, string.Empty),
+        ];
+    }
+
+    private static IEnumerable<string> GetStandardExclusionPathspecs(
+        string mappingName,
+        string pathPrefix)
+    {
+        IEnumerable<string> paths = DependencyFileManager.CodeflowDependencyFiles
+            .Select(path => pathPrefix + path);
+        if (mappingName != VmrInfo.ArcadeMappingName)
+        {
+            paths = paths.Append(pathPrefix + Constants.CommonScriptFilesPath);
+        }
+
+        return paths.Select(VmrPatchHandler.GetExclusionRule);
     }
 
     /// <summary>
     /// Runs a three-dot name-only diff (<paramref name="fromRef"/>...<paramref name="toRef"/>) scoped to the
-    /// mapping's location in the repo and returns the mapping-relative paths, after dropping eng/common
-    /// (non-arcade) and version/metadata files.
+    /// mapping's location in the repo and returns mapping-relative paths after applying the supplied exclusions.
     /// </summary>
     private static async Task<HashSet<string>> GetChangedMappingFilesAsync(
         ILocalGitRepo repo,
-        string mappingName,
         string fromRef,
         string toRef,
         string? relativePath = null,
@@ -192,22 +266,10 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         IEnumerable<string> files = result.GetOutputLines();
         if (!string.IsNullOrEmpty(relativePath))
         {
-            files = files
-                .Select(f => f.Substring(relativePath.Length));
+            files = files.Select(f => f.Substring(relativePath.Length));
         }
 
-        return FilterMappingFiles(files, mappingName);
-    }
-
-    private static HashSet<string> FilterMappingFiles(IEnumerable<string> files, string mappingName)
-    {
-        var engCommonPrefix = Constants.CommonScriptFilesPath + "/";
-        var dropEngCommon = mappingName != VmrInfo.ArcadeMappingName;
-
-        return files
-            .Where(f => !DependencyFileManager.CodeflowDependencyFiles.Contains(f, StringComparer.OrdinalIgnoreCase))
-            .Where(f => !dropEngCommon || !f.StartsWith(engCommonPrefix, StringComparison.OrdinalIgnoreCase))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return files.ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -252,7 +314,7 @@ public class CodeflowSourceDiffVerifier : ICodeflowSourceDiffVerifier
         {
             if (line.StartsWith("@@"))
             {
-                // start of code changes. we want to start adding lines after this, but not the hunk header itself
+                // Start adding change lines after this hunk header.
                 insideHunk = true;
             }
             else if (insideHunk && (line.StartsWith('+') || line.StartsWith('-')))
