@@ -7,8 +7,6 @@ using System.Linq;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -19,7 +17,7 @@ internal partial class ConfigurationIngestor
     {
         var convertedSubscriptions = namespaceEntity.Subscriptions
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
-            .Select(SubscriptionYaml.FromClientModel)
+            .Select(ConvertSubscriptionToYaml)
             .Select(yamlSub => new IngestedSubscription(yamlSub))
             .ToList();
 
@@ -37,7 +35,7 @@ internal partial class ConfigurationIngestor
 
         var convertedBranchMergePolicies = namespaceEntity.RepositoryBranches
             .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
-            .Select(BranchMergePoliciesYaml.FromClientModel)
+            .Select(ConvertBranchMergePoliciesToYaml)
             .Select(rbYaml => new IngestedBranchMergePolicies(rbYaml))
             .ToList();
 
@@ -47,6 +45,40 @@ internal partial class ConfigurationIngestor
             convertedDefaultChannels,
             convertedBranchMergePolicies);
     }
+
+    // TODO: Remove this converter and use SubscriptionYaml.FromClientModel after updating MaestroConfiguration.Client.
+    private static SubscriptionYaml ConvertSubscriptionToYaml(
+        Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription subscription) => new()
+    {
+        Id = subscription.Id,
+        Enabled = subscription.Enabled,
+        Channel = subscription.Channel.Name,
+        SourceRepository = subscription.SourceRepository,
+        TargetRepository = subscription.TargetRepository,
+        TargetBranch = subscription.TargetBranch,
+        UpdateFrequency = subscription.Policy.UpdateFrequency,
+        Batchable = subscription.Policy.Batchable,
+        MergePolicies = [],
+        MergePrs = subscription.MergePrs,
+        IgnoredChecks = [.. subscription.IgnoredChecks],
+        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        SourceEnabled = subscription.SourceEnabled,
+        AutoApprove = subscription.AutoApprove,
+        SourceDirectory = subscription.SourceDirectory,
+        TargetDirectory = subscription.TargetDirectory,
+        ExcludedAssets = [.. subscription.ExcludedAssets],
+    };
+
+    // TODO: Remove this converter and use BranchMergePoliciesYaml.FromClientModel after updating MaestroConfiguration.Client.
+    private static BranchMergePoliciesYaml ConvertBranchMergePoliciesToYaml(
+        Microsoft.DotNet.ProductConstructionService.Client.Models.RepositoryBranch repositoryBranch) => new()
+    {
+        Repository = repositoryBranch.Repository,
+        Branch = repositoryBranch.Branch,
+        MergePolicies = [],
+        MergePrs = repositoryBranch.MergePrs,
+        IgnoredChecks = [.. repositoryBranch.IgnoredChecks],
+    };
 
     private static IngestedConfigurationUpdates ComputeEntityUpdates(
         IngestedConfigurationData configurationData,
@@ -136,8 +168,9 @@ internal partial class ConfigurationIngestor
             {
                 UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
                 Batchable = subscription.Values.Batchable,
-                MergePolicies = [.. subscription.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
             },
+            MergePrs = subscription.Values.MergePrs,
+            IgnoredChecks = [.. subscription.Values.IgnoredChecks],
             Enabled = subscription.Values.Enabled,
             SourceEnabled = subscription.Values.SourceEnabled,
             AutoApprove = subscription.Values.AutoApprove,
@@ -187,30 +220,17 @@ internal partial class ConfigurationIngestor
         IngestedBranchMergePolicies branchMergePolicies,
         Namespace namespaceEntity)
     {
-        var policyObject = new RepositoryBranch.Policy
-        {
-            MergePolicies = [.. branchMergePolicies.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
-        };
-
         var branchMergePolicyDao = new RepositoryBranch
         {
             RepositoryName = branchMergePolicies.Values.Repository,
             BranchName = branchMergePolicies.Values.Branch,
-            PolicyString = JsonConvert.SerializeObject(policyObject),
+            MergePrs = branchMergePolicies.Values.MergePrs,
+            IgnoredChecks = [.. branchMergePolicies.Values.IgnoredChecks],
             Namespace = namespaceEntity,
         };
 
         return branchMergePolicyDao;
     }
-
-    private static MergePolicyDefinition ConvertMergePolicyYamlToDao(MergePolicyYaml mergePolicy)
-        => new()
-        {
-            Name = mergePolicy.Name,
-            Properties = mergePolicy.Properties?.ToDictionary(
-                p => p.Key,
-                p => JToken.FromObject(p.Value)), // todo: this seems fragile. Can we change MergePolicyYaml to be <string, JToken> like the DAO & DTO?
-        };
 }
 
 internal class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>

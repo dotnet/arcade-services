@@ -10,6 +10,4 @@ public class SubscriptionPolicy
     public bool Batchable { get; set; }
 
     public UpdateFrequency UpdateFrequency { get; set; }
-
-    public List<MergePolicyDefinition> MergePolicies { get; set; }
 }

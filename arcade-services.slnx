@@ -33,8 +33,8 @@
     <Project Path="src/ProductConstructionService/Microsoft.DotNet.ProductConstructionService.Client/Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.AppHost/ProductConstructionService.AppHost.csproj" />
-    <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz.Hosting/ProductConstructionService.BarViz.Hosting.csproj" />
+    <Project Path="src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />
@@ -55,7 +55,6 @@
   <Folder Name="/test/ProductConstructionService/">
     <Project Path="test/ProductConstructionService/ProductConstructionService.Api.Tests/ProductConstructionService.Api.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.BarViz.Tests/ProductConstructionService.BarViz.Tests.csproj" />
-    <Project Path="test/ProductConstructionService/ProductConstructionService.Cli.Tests/ProductConstructionService.Cli.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.DependencyFlow.Tests/ProductConstructionService.DependencyFlow.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.FeedCleaner.Tests/ProductConstructionService.FeedCleaner.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.ScenarioTests.Tests/ProductConstructionService.ScenarioTests.Tests.csproj" />

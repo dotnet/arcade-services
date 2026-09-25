@@ -17,11 +17,14 @@ public class SubscriptionExtensionTests
     {
         return new Subscription(
             Guid.NewGuid(),
+            false,
             true, // enabled
             sourceEnabled,
+            false,
             "https://github.com/dotnet/runtime",
             "https://github.com/dotnet/aspnetcore", 
             "main",
+            [],
             sourceDirectory ?? string.Empty,
             targetDirectory ?? string.Empty,
             string.Empty,

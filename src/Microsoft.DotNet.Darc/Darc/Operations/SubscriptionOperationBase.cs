@@ -132,3 +132,28 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
             .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
     }
 }
+
+// TODO Remove when we have this from the maestro-configuration repo
+internal static class SubscriptionYamlConverter
+{
+    public static SubscriptionYaml FromClientModel(Subscription subscription) => new()
+    {
+        Id = subscription.Id,
+        Enabled = subscription.Enabled,
+        Channel = subscription.Channel.Name,
+        SourceRepository = subscription.SourceRepository,
+        TargetRepository = subscription.TargetRepository,
+        TargetBranch = subscription.TargetBranch,
+        UpdateFrequency = subscription.Policy.UpdateFrequency,
+        Batchable = subscription.Policy.Batchable,
+        MergePolicies = [],
+        MergePrs = subscription.MergePrs,
+        IgnoredChecks = [.. subscription.IgnoredChecks],
+        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        SourceEnabled = subscription.SourceEnabled,
+        AutoApprove = subscription.AutoApprove,
+        SourceDirectory = subscription.SourceDirectory,
+        TargetDirectory = subscription.TargetDirectory,
+        ExcludedAssets = [.. subscription.ExcludedAssets],
+    };
+}

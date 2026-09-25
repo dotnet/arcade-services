@@ -186,7 +186,6 @@ public class SubscriptionTriggererTests
             Enabled = enabled,
             PolicyObject = new SubscriptionPolicy
             {
-                MergePolicies = null,
                 UpdateFrequency = UpdateFrequency.EveryDay
             },
             LastAppliedBuild = build
