@@ -207,8 +207,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     {
         var submodulePrefix = codeflowOptions.Mapping.Name + '/';
 
-        var currentSubmodules = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(submodulePrefix))
+        var currentSubmodules = _sourceManifest
+            .GetSubmodulesForMapping(codeflowOptions.Mapping.Name)
             .ToList();
 
         if (currentSubmodules.Count == 0)
@@ -655,8 +655,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     internal static IReadOnlyCollection<string> GetPatchExclusions(ISourceManifest sourceManifest, SourceMapping mapping)
     {
         // Exclude all submodules that belong to the mapping
-        var exclusions = sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+        var exclusions = sourceManifest
+            .GetSubmodulesForMapping(mapping.Name)
             .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 
         // Exclude version files as those will be handled manually
