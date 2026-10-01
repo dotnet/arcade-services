@@ -224,17 +224,9 @@ public class BarApiClient : IBarApiClient
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Repository branch</param>
     /// <returns>List of merge policies</returns>
-    public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
+    public async Task<RepositoryBranch> GetRepositoryBranch(string repoUri, string branch)
     {
-        try
-        {
-            return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
-        }
-        catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
-        {
-            // Return an empty list
-            return new List<MergePolicy>();
-        }
+        return await _barClient.Repository.GetRepositoryBranchAsync(repository: repoUri, branch: branch);
     }
 
     /// <summary>

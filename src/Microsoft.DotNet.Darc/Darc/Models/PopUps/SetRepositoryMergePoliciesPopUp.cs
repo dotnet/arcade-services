@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
@@ -17,14 +16,15 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
     private readonly RepositoryPoliciesData _yamlData;
     public string Repository => _yamlData.Repository;
     public string Branch => _yamlData.Branch;
-    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
+    public bool MergePrs => bool.Parse(_yamlData.MergePrs);
+    public IReadOnlyCollection<string> IgnoredChecks => _yamlData.IgnoredChecks;
 
     public SetRepositoryMergePoliciesPopUp(string path,
         ILogger logger,
         string repository,
         string branch,
-        List<MergePolicy> mergePolicies,
-        IEnumerable<string> availableMergePolicyHelp)
+        bool mergePrs,
+        IReadOnlyCollection<string> ignoredChecks)
         : base(path)
     {
         _logger = logger;
@@ -32,7 +32,8 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         {
             Repository = GetCurrentSettingForDisplay(repository, "<required>", false),
             Branch = GetCurrentSettingForDisplay(branch, "<required>", false),
-            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies)
+            MergePrs = GetCurrentSettingForDisplay(mergePrs.ToString(), mergePrs.ToString(), false),
+            IgnoredChecks = ignoredChecks
         };
 
         ISerializer serializer = new SerializerBuilder().Build();
@@ -42,11 +43,10 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents =
         [
-            new("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
-            new("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
-            new("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
+            new("Use this form to configure Merge PRs for batchable subscriptions.", true),
+            new("Batchable subscriptions share merge settings for all subscriptions that target the same repo and branch.", true),
             Line.Empty,
-            new("Fill out the following form. Suggested values for merge policies are shown below.", true),
+            new("Fill out the following form.", true),
             new()
         ];
 
@@ -55,12 +55,6 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
             Contents.Add(new Line(line));
         }
 
-        // Add helper comments
-        Contents.Add(new Line("Available Merge Policies", true));
-        foreach (string mergeHelp in availableMergePolicyHelp)
-        {
-            Contents.Add(new Line($"  {mergeHelp}", true));
-        }
     }
 
     public override Task<int> ProcessContents(IList<Line> contents)
@@ -70,7 +64,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         try
         {
             // Join the lines back into a string and deserialize as YAML.
-            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = string.Join(Environment.NewLine, contents.Select(line => line.Text));
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<RepositoryPoliciesData>(yamlString);
         }
@@ -80,13 +74,14 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
             return Task.FromResult(Constants.ErrorCode);
         }
 
-        // Validate the merge policies
-        if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
+        _yamlData.MergePrs = ParseSetting(outputYamlData.MergePrs, _yamlData.MergePrs, false);
+        if (!bool.TryParse(_yamlData.MergePrs, out bool mergePrs))
         {
+            _logger.LogError("Merge PRs is not a valid boolean value.");
             return Task.FromResult(Constants.ErrorCode);
         }
 
-        _yamlData.MergePolicies = outputYamlData.MergePolicies;
+        _yamlData.IgnoredChecks = outputYamlData.IgnoredChecks ?? [];
 
         _yamlData.Repository = ParseSetting(outputYamlData.Repository, _yamlData.Repository, false);
         if (string.IsNullOrEmpty(_yamlData.Repository))
@@ -109,7 +104,8 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
     {
         public const string RepoElement = "Repository URL";
         public const string BranchElement = "Branch";
-        public const string MergePolicyElement = "Merge Policies";
+        public const string MergePrsElement = "Merge PRs";
+        public const string IgnoredChecksElement = "Ignored Checks";
 
         [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
         public string Branch { get; set; }
@@ -117,7 +113,10 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         [YamlMember(Alias = RepoElement, ApplyNamingConventions = false)]
         public string Repository { get; set; }
 
-        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-        public List<MergePolicyPopUpData> MergePolicies { get; set; }
+        [YamlMember(Alias = MergePrsElement, ApplyNamingConventions = false)]
+        public string MergePrs { get; set; }
+
+        [YamlMember(Alias = IgnoredChecksElement, ApplyNamingConventions = false)]
+        public IReadOnlyCollection<string> IgnoredChecks { get; set; }
     }
 }

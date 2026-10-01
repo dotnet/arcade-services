@@ -25,12 +25,11 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdatePop
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
-        IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdatePopUpData data)
-        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory, data,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, logger, gitRepoFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-                new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+            new Line("Batchable subscriptions configure merging at the repository and branch level.", true),
                 Line.Empty,
                 new("Excluded assets is a list of package names to be ignored during dependency updates. ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
@@ -57,13 +56,12 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdatePop
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
-        IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
         string sourceDirectory,
         string targetDirectory,
         List<string> excludedAssets)
-        : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp,
+        : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies,
               new SubscriptionUpdatePopUpData
               {
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
@@ -75,7 +73,8 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdatePop
                   UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
                   Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
                   FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false),
-                  MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies),
+                  MergePrs = GetCurrentSettingForDisplay(subscription.MergePrs.ToString(), subscription.MergePrs.ToString(), false),
+                  IgnoredChecks = [.. subscription.IgnoredChecks],
                   SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                   AutoApprove = GetCurrentSettingForDisplay(subscription.AutoApprove.ToString(), subscription.AutoApprove.ToString(), false),
                   SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, subscription.SourceDirectory, false),
