@@ -87,7 +87,11 @@ public class DeploymentOperation : IOperation
                 .AsEnumerable()
                 .ToDictionary(revision => revision.Data.Name, revision => revision.Data.IsActive ?? false, StringComparer.OrdinalIgnoreCase);
 
-            await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
+            if (!await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight)))
+            {
+                _logger.LogError("Leftover revisions could not be safely cleaned up; aborting deployment");
+                return -1;
+            }
 
             var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
             candidateRevisionName = await DeployContainerApp(newImageFullUrl);
@@ -137,7 +141,10 @@ public class DeploymentOperation : IOperation
                     await RemoveRevisionLabel(oldRevisionName, oldRevisionLabel);
                 }
 
-                await StopDeactivateAndCleanupRevision(oldRevisionName);
+                if (!await StopDeactivateAndCleanupRevision(oldRevisionName))
+                {
+                    return -1;
+                }
             }
 
             await DeployContainerJobs(newImageFullUrl);
@@ -341,21 +348,30 @@ public class DeploymentOperation : IOperation
     }
 
     /// <summary>
-    /// Confirms that every replica of the revision stopped processing before deactivating it and removing its keys.
+    /// Confirms every replica stopped processing or never started before deactivating it and removing its keys.
     /// A revision whose stop cannot be confirmed stays active and keeps its keys.
     /// </summary>
     private async Task<bool> StopDeactivateAndCleanupRevision(string revisionName)
     {
-        if (!await _replicaStateCoordinator.SetDesiredStateAndWaitAsync(
-            revisionName,
-            WorkItemProcessorState.Stopped,
-            requireAtLeastOneReplica: false))
+        if (!await _replicaStateCoordinator.StopForDeactivationAsync(revisionName))
         {
             _logger.LogError("Revision {revisionName} was not confirmed stopped and stays active", revisionName);
             return false;
         }
 
         await DeactivateRevision(revisionName);
+        var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
+        if (revision.Data.IsActive != false)
+        {
+            _logger.LogError("Revision {revisionName} is not confirmed inactive; retaining replica state", revisionName);
+            return false;
+        }
+
+        if (!await _replicaStateCoordinator.WaitForReplicasToDisappearAsync(revisionName))
+        {
+            return false;
+        }
+
         await _replicaStateCoordinator.DeleteStateAsync(revisionName);
         return true;
     }
@@ -368,7 +384,7 @@ public class DeploymentOperation : IOperation
         result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}.");
     }
 
-    private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
+    private async Task<bool> CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
         IEnumerable<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
             .AsEnumerable()
@@ -388,8 +404,13 @@ public class DeploymentOperation : IOperation
                 await RemoveRevisionLabel(revision.Name, revision.Label);
             }
 
-            await StopDeactivateAndCleanupRevision(revision.Name);
+            if (!await StopDeactivateAndCleanupRevision(revision.Name))
+            {
+                return false;
+            }
         }
+
+        return true;
     }
 
     private async Task<string> DeployContainerApp(string imageUrl)
