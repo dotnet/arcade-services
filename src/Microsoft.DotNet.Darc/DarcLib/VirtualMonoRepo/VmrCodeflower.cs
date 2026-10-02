@@ -124,7 +124,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         var commitMessages = result.GetOutputLines();
         var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
-        var matchingPrUris = prsInfo.Distinct().Reverse().Select(pr => pr.prUri).ToArray();
+        var matchingPrUris = prsInfo.Select(pr => pr.prUri).Reverse().Distinct().ToArray();
         string[] otherPrUris = [];
 
         if (pathFilter != null)
@@ -135,8 +135,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {repo.Path}");
 
             var filteredPrsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(result.GetOutputLines(), repoUri);
-            matchingPrUris = filteredPrsInfo.Select(pr => pr.prUri).Distinct().Reverse().ToArray();
-            otherPrUris = prsInfo.Select(pr => pr.prUri).Except(matchingPrUris).Reverse().ToArray();
+            matchingPrUris = filteredPrsInfo.Select(pr => pr.prUri).Reverse().Distinct().ToArray();
+            otherPrUris = prsInfo.Select(pr => pr.prUri).Reverse().Except(matchingPrUris).ToArray();
         }
 
         if (matchingPrUris.Length == 0 && otherPrUris.Length == 0)

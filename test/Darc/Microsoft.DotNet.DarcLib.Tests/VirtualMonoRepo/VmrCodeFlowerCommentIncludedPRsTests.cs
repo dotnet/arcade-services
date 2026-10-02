@@ -77,15 +77,15 @@ public class VmrCodeFlowerCommentIncludedPRsTests
     }
 
     [Test]
-    public async Task CommentIncludedPRsAsync_NullPathFilter_DeduplicatesIdenticalTitlesOnly()
+    public async Task CommentIncludedPRsAsync_NullPathFilter_ListsEachPrAtItsEarliestPosition()
     {
         // Arrange
-        // Existing behavior: deduplication is by (title, URI), so the same PR with different titles is listed twice.
         SetupGitLog(FullRangeArgs,
+            "New feature (#3)",
+            "Update dependencies again (#1)",
             "Fix build (#2)",
             "Update dependencies (#1)",
-            "Update dependencies (#1)",
-            "Update dependencies again (#1)");
+            "Update dependencies (#1)");
 
         // Act
         await CommentIncludedPRsAsync(pathFilter: null);
@@ -94,8 +94,8 @@ public class VmrCodeFlowerCommentIncludedPRsTests
         VerifySingleComment(
             CommentHeader,
             $"- {RepoUri}/pull/1",
-            $"- {RepoUri}/pull/1",
-            $"- {RepoUri}/pull/2");
+            $"- {RepoUri}/pull/2",
+            $"- {RepoUri}/pull/3");
     }
 
     [Test]
@@ -134,17 +134,20 @@ public class VmrCodeFlowerCommentIncludedPRsTests
     }
 
     [Test]
-    public async Task CommentIncludedPRsAsync_PathFilter_PrReferencedByDistinctTitles_IsListedOnce()
+    public async Task CommentIncludedPRsAsync_PathFilter_ListsEachPrOnceAtItsEarliestPosition()
     {
         // Arrange
         SetupGitLog(FullRangeArgs,
             "Revert part of change (#5)",
             "Fix docs (#2)",
+            "Update another source (#6)",
+            "Update other docs (#4)",
             "Follow-up for src (#5)",
             "Update docs (#2)",
             "Update src (#5)");
         SetupGitLog(FilteredArgs,
             "Follow-up for src (#5)",
+            "Update another source (#6)",
             "Update src (#5)");
 
         // Act
@@ -154,11 +157,13 @@ public class VmrCodeFlowerCommentIncludedPRsTests
         VerifySingleComment(
             CommentHeader,
             $"- {RepoUri}/pull/5",
+            $"- {RepoUri}/pull/6",
             string.Empty,
             "<details>",
             OtherSummary,
             string.Empty,
             $"- {RepoUri}/pull/2",
+            $"- {RepoUri}/pull/4",
             string.Empty,
             "</details>");
     }
