@@ -18,6 +18,69 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 [TestFixture]
 internal class SubmoduleCodeflowTests : CodeFlowTests
 {
+    [Test]
+    public async Task UpdatingExistingBackflowDoesNotRevertRepoSubmoduleBumpTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        // Add a submodule and forward flow it so both the repo and VMR start from the same pointer.
+        var submodulePath = new UnixPath("externals/external-repo");
+        await GitOperations.InitializeSubmodule(ProductRepoPath, "second-repo", SecondRepoPath, submodulePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Added a submodule");
+
+        var forwardBranchName = GetTestBranchName(forwardFlow: true);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(forwardBranchName);
+
+        // Bump the submodule only in the product repo, leaving the VMR source manifest at the previous commit.
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        var deinitializeSubmodule = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "submodule",
+            "deinit",
+            "-f",
+            "--",
+            submodulePath);
+        deinitializeSubmodule.ThrowIfFailed("Failed to deinitialize the submodule");
+
+        await File.WriteAllTextAsync(SecondRepoPath / "submodule-bump.txt", "Submodule bump");
+        await GitOperations.CommitAll(SecondRepoPath, "Bump submodule");
+        var bumpedSubmoduleSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
+
+        var updateSubmodule = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "update-index",
+            "--cacheinfo",
+            $"160000,{bumpedSubmoduleSha},{submodulePath}");
+        updateSubmodule.ThrowIfFailed("Failed to update the submodule pointer");
+        await GitOperations.Commit(ProductRepoPath, "Update submodule");
+
+        // Open an unrelated backflow without merging it. It must preserve the newer repo-side submodule pointer.
+        var backflowBranchName = GetTestBranchName();
+        await File.WriteAllTextAsync(_productRepoVmrPath / "first-backflow.txt", "First backflow");
+        await GitOperations.CommitAll(VmrPath, "Create first backflow");
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit first backflow");
+        (await GetSubmoduleShaAsync(backflowBranchName)).Should().Be(bumpedSubmoduleSha);
+
+        // Update the existing backflow with another unrelated change. This previously reverted the submodule bump.
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "second-backflow.txt", "Second backflow");
+        await GitOperations.CommitAll(VmrPath, "Create second backflow");
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit second backflow");
+        (await GetSubmoduleShaAsync(backflowBranchName)).Should().Be(bumpedSubmoduleSha);
+
+        async Task<string> GetSubmoduleShaAsync(string revision)
+            => (await GitOperations.ExecuteGitCommand(
+                ProductRepoPath,
+                "rev-parse",
+                $"{revision}:{submodulePath}")).StandardOutput.Trim();
+    }
+
     // A submodule pointer bumped only on the VMR side backflows cleanly into the repo. When the same submodule
     // is also bumped differently on the repo side, both pointers reference commits in the submodule's own linear
     // history, so git's submodule-aware merge fast-forwards the gitlink to the newer commit instead of raising a
