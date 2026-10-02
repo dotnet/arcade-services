@@ -90,7 +90,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     }
 
     /// <summary>
-    /// Posts a comment listing the PRs that were ingested into this codeflow update.
+    /// Posts a comment listing the PRs in this codeflow update's commit range.
+    /// When a path filter is provided, separates PRs matching the path-filtered history from other PRs in the range.
+    /// Git may simplify merge history when filtering by path, so other PRs may still have touched the path.
     /// PR numbers are extracted from the titles of the commits between <paramref name="lastCommit"/>
     /// and <paramref name="currentCommit"/> in <paramref name="repo"/>.
     /// </summary>
@@ -98,8 +100,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="lastCommit">Lower bound commit (exclusive) of the range to inspect.</param>
     /// <param name="currentCommit">Upper bound commit of the range to inspect.</param>
     /// <param name="repoUri">URI of the repository the PRs belong to; also used to skip local-only codeflow tests.</param>
-    /// <param name="commentHeader">Header line of the posted comment.</param>
-    /// <param name="pathFilter">Optional git pathspec to restrict the commit history to a subfolder.</param>
+    /// <param name="commentHeader">Header line of the main PR list.</param>
+    /// <param name="pathFilter">Optional git pathspec to group PRs by the path-filtered commit history.</param>
     protected async Task CommentIncludedPRs(
         ILocalGitRepo repo,
         string lastCommit,
@@ -117,31 +119,62 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
 
         List<string> args = ["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"];
-        if (pathFilter != null)
-        {
-            args.Add("--");
-            args.Add(pathFilter);
-        }
-
         var result = await repo.ExecuteGitCommand(args.ToArray(), cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {repo.Path}");
 
         var commitMessages = result.GetOutputLines();
         var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
+        var matchingPrUris = prsInfo.Distinct().Reverse().Select(pr => pr.prUri).ToArray();
+        string[] otherPrUris = [];
 
-        if (prsInfo.Count == 0)
+        if (pathFilter != null)
+        {
+            args.Add("--");
+            args.Add(pathFilter);
+            result = await repo.ExecuteGitCommand(args.ToArray(), cancellationToken);
+            result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {repo.Path}");
+
+            var filteredPrsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(result.GetOutputLines(), repoUri);
+            matchingPrUris = filteredPrsInfo.Select(pr => pr.prUri).Distinct().Reverse().ToArray();
+            otherPrUris = prsInfo.Select(pr => pr.prUri).Except(matchingPrUris).Reverse().ToArray();
+        }
+
+        if (matchingPrUris.Length == 0 && otherPrUris.Length == 0)
         {
             _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
             return;
         }
         else
         {
-            StringBuilder str = new(commentHeader);
-            foreach (var prInfo in prsInfo.Distinct().Reverse())
+            StringBuilder str = new();
+            if (matchingPrUris.Length > 0)
             {
-                string format = $"- {{0}}";
+                str.Append(commentHeader);
+                foreach (var prUri in matchingPrUris)
+                {
+                    str.AppendLine();
+                    str.Append($"- {prUri}");
+                }
+            }
+
+            if (otherPrUris.Length > 0)
+            {
+                if (str.Length > 0)
+                {
+                    str.AppendLine();
+                    str.AppendLine();
+                }
+
+                str.AppendLine("<details>");
+                str.AppendLine("<summary>Other PRs in the commit range</summary>");
                 str.AppendLine();
-                str.AppendFormat(format, prInfo.prUri);
+                foreach (var prUri in otherPrUris)
+                {
+                    str.AppendLine($"- {prUri}");
+                }
+
+                str.AppendLine();
+                str.Append("</details>");
             }
 
             _commentCollector.AddComment(str.ToString(), CommentType.Information);
