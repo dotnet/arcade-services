@@ -13,7 +13,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26474.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26474.1</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
-    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26480.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
+    <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26501.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
     <MicrosoftAspNetCoreApiVersioningPackageVersion>1.1.0-beta.26480.1</MicrosoftAspNetCoreApiVersioningPackageVersion>
     <MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>1.1.0-beta.26480.1</MicrosoftAspNetCoreApiVersioningSwashbucklePackageVersion>
     <MicrosoftDncEngConfigurationExtensionsPackageVersion>1.1.0-beta.26480.1</MicrosoftDncEngConfigurationExtensionsPackageVersion>
