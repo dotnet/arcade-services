@@ -569,7 +569,7 @@ public class LocalGitClient : ILocalGitClient
         args.Insert(0, $"--config-env=http.extraheader={ENV_VAR_NAME}");
         envVars[ENV_VAR_NAME] = repoType switch
         {
-            GitRepoType.GitHub => $"Authorization: Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"))}",
+            GitRepoType.GitHub => $"Authorization: Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubTokenUserName}:{token}"))}",
             GitRepoType.AzureDevOps => $"Authorization: Bearer {token}",
             GitRepoType.Local => token,
             GitRepoType t => throw new Exception($"Cannot set authorization header for repo of type {t}"),

@@ -414,7 +414,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = Constants.GitHubBotUserName,
+                    Username = Constants.GitHubTokenUserName,
                     Password = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
                 },
             OnPushStatusError = error =>

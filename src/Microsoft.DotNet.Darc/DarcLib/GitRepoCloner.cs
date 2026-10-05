@@ -61,9 +61,7 @@ public class GitRepoCloner : IGitRepoCloner
         cloneOptions.FetchOptions.CredentialsProvider = (_, __, ___) =>
             new UsernamePasswordCredentials
             {
-                // The PAT is actually the only thing that matters here, the username
-                // will be ignored.
-                Username = Constants.GitHubBotUserName,
+                Username = Constants.GitHubTokenUserName,
                 Password = _remoteTokenProvider.GetTokenForRepository(repoUri),
             };
 
