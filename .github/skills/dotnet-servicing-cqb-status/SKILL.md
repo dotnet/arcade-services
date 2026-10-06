@@ -80,9 +80,11 @@ For every graph edge:
 1. Find the matching Maestro subscription for the selected channel and target branch.
 2. Find its dependency-flow PR.
 3. Apply the `ProductConstructionServiceProd` creator check before using the PR.
-4. Record whether the trusted PR is absent, open, abandoned, conflicted, or merged.
-5. For a merged PR, record the merge commit and completion time.
-6. Resolve the BAR build for relevant repository commits when needed:
+4. After validating the creator, refresh the PR's title, source commit, description, and status. A subscription configured as batchable participates in a **batched subscription**: PCS may update one existing open dependency-flow PR with builds from multiple subscriptions/parents instead of creating one PR per graph edge.
+5. Record whether the relevant subscriptions are batchable when that metadata is available. Never rely on PR contents from an earlier observation.
+6. Record every parent BAR currently contained by the trusted PR and whether the PR is absent, open, abandoned, conflicted, or merged. Treat one batched PR as evidence for each contained parent edge, but do not double-count it as multiple PRs.
+7. For a merged PR, record the merge commit and completion time.
+8. Resolve the BAR build for relevant repository commits when needed:
 
    ```powershell
    darc get-build --repo <repository-url> --commit <commit>
@@ -98,10 +100,15 @@ For each target branch:
 
 1. Find the latest branch commit.
 2. Find CI runs for the exact pipeline definition and branch.
-3. Check whether the latest branch commit has a run. Missing coverage may indicate a misconfigured or missed pipeline trigger.
-4. For completeness, select a successful build whose source commit contains every required merged dependency-flow PR.
-5. Record builds that are queued, running, failed, canceled, or missing.
-6. Do not treat a successful build as sufficient merely because it is newer by time; verify parent-build containment through BAR build/dependency data.
+3. Check whether the latest branch commit has a run. Correlate by exact source commit and PR merge time; do not report `Trigger missing` from one empty/stale branch listing. Retry with a fresh query and directly inspect a known build ID or full internal AzDO URL when available.
+4. Query organization `dnceng` and project `internal` explicitly. Do not allow tools to fall back to public AzDO defaults.
+5. For completeness, select a terminal build whose source commit contains every required merged dependency-flow PR and that produced the expected BAR build.
+6. Record CI result and BAR publication separately. A BAR may appear while CI is still running; this does not make the node complete.
+7. Treat `partiallySucceeded` as qualifying only when the expected product BAR was published, PCS accepted or flowed it, and the remaining failures are ancillary/post-product. Otherwise classify it as `Build failed`.
+8. Record builds that are queued, running, failed, canceled, missing, duplicate, or obsolete.
+9. Do not treat a green build as sufficient merely because it is newer by time; verify parent-build containment through BAR build/dependency data.
+
+If multiple runs target the same qualifying commit, retain one and recommend canceling the duplicates. If a required parent PR merges after a run was queued, that run is obsolete even if it later succeeds: it cannot contain the final parent set.
 
 Use `azdo_builds` for definition/branch lookup and `azdo_build` for a selected run when available. Query organization `dnceng`, project `internal`.
 
@@ -110,7 +117,7 @@ Use `azdo_builds` for definition/branch lookup and `azdo_build` for a selected r
 A node is `Complete` only when:
 
 - every direct parent has a trusted PCS dependency-flow PR merged into the selected branch;
-- a successful CI build contains all those parent builds;
+- a qualifying terminal CI build produced a BAR containing all those parent builds;
 - its transitive runtime provenance satisfies the coherence rule below.
 
 Use these intermediate states:
@@ -123,6 +130,8 @@ Use these intermediate states:
 | `Waiting for build` | Required PRs merged, but no qualifying CI build completed. |
 | `Build running` | A qualifying run is queued or in progress. |
 | `Build failed` | The qualifying/latest required run failed or was canceled. |
+| `Obsolete build` | The run was queued before all required parent PRs merged, or targets an older branch head. |
+| `Duplicate build` | Another run already covers the same qualifying source commit. |
 | `Trigger missing` | The latest branch commit has no run for the expected definition. |
 | `Incomplete inputs` | A build exists but does not contain every required parent. |
 | `Incoherent` | Runtime provenance violates the coherence rule. |
@@ -150,8 +159,11 @@ Recommend the smallest concrete next action:
 | PR merged, build queued/running | Wait for the linked run. |
 | PR merged, latest commit has no run | Manually queue the repository's listed CI definition and investigate its branch trigger. |
 | Qualifying build failed | Investigate the linked run and its first actionable failure. |
+| Run predates a required parent merge | Cancel the obsolete run and queue or retain a run on the final branch head containing every parent. |
+| Multiple runs cover the same qualifying commit | Retain one run and cancel the duplicates. |
 | Green build lacks required parent | Wait for/flow the missing parent, then produce a new child build. |
 | Runtime provenance incoherent | Stop downstream advancement; complete the missing flows or replace stale unreleased inputs before rebuilding. |
+| Downstream PR references an obsolete BAR | Do not merge it; wait for PCS to update it or replace it with a PR for the coherent BAR. |
 
 Never perform a recommended write action without a separate explicit user request.
 
@@ -169,8 +181,10 @@ Requirements:
 
 - Use clickable AzDO PR/build links.
 - Include every active SDK and installer band as a separate row.
+- For a batched subscription PR, list all contained parent BARs in the same PR entry.
 - Name the missing parent or exact blocker; never say only "waiting".
-- Distinguish no PR, open PR, merged PR without build, running build, failed build, trigger missing, incomplete inputs, and incoherence.
+- Distinguish no PR, open PR, merged PR without build, running build, failed build, obsolete build, duplicate build, trigger missing, incomplete inputs, and incoherence.
+- Show the CI result and BAR build ID separately, especially for running or partially successful builds.
 - Add a short **Critical path** line naming the first unresolved graph edge(s).
 - Add a short **Actions** list ordered by dependency critical path, not by repository name.
 - State evidence gaps explicitly. Never infer `Complete` from missing data.
