@@ -11,4 +11,5 @@ public record CodeFlowParameters(
     IReadOnlyCollection<AdditionalRemote> AdditionalRemotes,
     string? TpnTemplatePath,
     bool GenerateCodeOwners,
-    bool GenerateCredScanSuppressions);
+    bool GenerateCredScanSuppressions,
+    bool GenerateCodeQLConfig);

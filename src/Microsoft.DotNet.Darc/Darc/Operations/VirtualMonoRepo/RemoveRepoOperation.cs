@@ -37,7 +37,8 @@ internal class RemoveRepoOperation : VmrOperationBase
                 additionalRemotes,
                 VmrInfo.ThirdPartyNoticesFileName,
                 GenerateCodeOwners: false,
-                GenerateCredScanSuppressions: true),
+                GenerateCredScanSuppressions: true,
+                GenerateCodeQLConfig: true),
             cancellationToken);
 
         return true;

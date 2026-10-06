@@ -170,11 +170,16 @@ internal abstract class CodeFlowTestsBase
         await CallDarcInitialize(repoName, commit, sourceMappings);
     }
 
-    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
+    protected async Task UpdateRepoToLastCommit(
+        string repoName,
+        NativePath repoPath,
+        bool generateCodeowners = false,
+        bool generateCredScanSuppressions = false,
+        bool generateCodeQLConfig = false)
     {
         await CreateNewBuild(repoPath, []);
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
-        await CallDarcUpdate(repoName, commit, generateCodeowners, generateCredScanSuppressions);
+        await CallDarcUpdate(repoName, commit, generateCodeowners, generateCredScanSuppressions, generateCodeQLConfig);
     }
 
     private async Task CallDarcInitialize(string mapping, string commit, LocalPath sourceMappingsPath)
@@ -190,18 +195,30 @@ internal abstract class CodeFlowTestsBase
                 AdditionalRemotes: [],
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
-                GenerateCredScanSuppressions: false),
+                GenerateCredScanSuppressions: false,
+                GenerateCodeQLConfig: false),
             cancellationToken: _cancellationToken.Token);
 
         await GitOperations.CommitAll(VmrPath, $"Initialize {mapping} at {commit}");
     }
 
-    protected async Task CallDarcUpdate(string mapping, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
+    protected async Task CallDarcUpdate(
+        string mapping,
+        string commit,
+        bool generateCodeowners = false,
+        bool generateCredScanSuppressions = false,
+        bool generateCodeQLConfig = false)
     {
-        await CallDarcUpdate(mapping, commit, [], generateCodeowners, generateCredScanSuppressions);
+        await CallDarcUpdate(mapping, commit, [], generateCodeowners, generateCredScanSuppressions, generateCodeQLConfig);
     }
 
-    protected async Task CallDarcUpdate(string mapping, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
+    protected async Task CallDarcUpdate(
+        string mapping,
+        string commit,
+        AdditionalRemote[] additionalRemotes,
+        bool generateCodeowners = false,
+        bool generateCredScanSuppressions = false,
+        bool generateCodeQLConfig = false)
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
@@ -212,7 +229,8 @@ internal abstract class CodeFlowTestsBase
                 AdditionalRemotes: additionalRemotes,
                 TpnTemplatePath: null,
                 GenerateCodeOwners: generateCodeowners,
-                GenerateCredScanSuppressions: generateCredScanSuppressions),
+                GenerateCredScanSuppressions: generateCredScanSuppressions,
+                GenerateCodeQLConfig: generateCodeQLConfig),
             cancellationToken: _cancellationToken.Token);
     }
 

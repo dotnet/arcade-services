@@ -484,6 +484,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 PullRequestCommentBuilder.BuildNotificationAboutRecreationFallbackLimitReachedComment(
                     update,
                     subscription,
+                    prHeadBranch,
                     prIsEmpty),
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };

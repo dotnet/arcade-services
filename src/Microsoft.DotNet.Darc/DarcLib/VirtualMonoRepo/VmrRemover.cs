@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// This class is able to remove a repository from the VMR.
 /// It removes the sources, updates the source manifest, removes the repo-projects entry
 /// and any RepositoryReference entries, and optionally regenerates third-party notices,
-/// codeowners, and credential scan suppressions.
+/// codeowners, credential scan suppressions, and CodeQL configuration.
 /// </summary>
 public class VmrRemover : VmrManagerBase, IVmrRemover
 {
@@ -42,6 +42,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
+    private readonly ICodeQLConfigGenerator _codeQLConfigGenerator;
 
     public VmrRemover(
             IVmrDependencyTracker dependencyTracker,
@@ -49,6 +50,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
             ICodeownersGenerator codeownersGenerator,
             ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+            ICodeQLConfigGenerator codeQLConfigGenerator,
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IWorkBranchFactory workBranchFactory,
@@ -57,7 +59,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             ILogger<VmrUpdater> baseLogger,
             ISourceManifest sourceManifest,
             IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, baseLogger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, codeQLConfigGenerator, localGitClient, localGitRepoFactory, baseLogger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
@@ -69,6 +71,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _codeownersGenerator = codeownersGenerator;
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
+        _codeQLConfigGenerator = codeQLConfigGenerator;
     }
 
     public async Task RemoveRepository(
@@ -142,6 +145,11 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             if (codeFlowParameters.GenerateCredScanSuppressions)
             {
                 await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
+            }
+
+            if (codeFlowParameters.GenerateCodeQLConfig)
+            {
+                await _codeQLConfigGenerator.UpdateCodeQLConfig(cancellationToken);
             }
 
             var commitMessage = string.Format(RemovalCommitMessage, mapping.Name);

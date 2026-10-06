@@ -1,0 +1,31 @@
+name: Verify GitHub issue link
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify-issue-link:
+    name: Verify GitHub Issue Link included in all PRs
+    # PRs flowing from the production branch (inter-branch merges) are exempt
+    if: github.head_ref != 'production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce GitHub issue link presence
+        shell: pwsh
+        run: ./eng/enforce-issue.ps1 -PullRequestNumber ${{ github.event.pull_request.number }} -RepositoryName ${{ github.repository }} -GitHubToken $env:GH_TOKEN
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

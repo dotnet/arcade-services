@@ -223,8 +223,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     {
         var submodulePrefix = mappingName + '/';
 
-        return _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(submodulePrefix, StringComparison.Ordinal))
+        return _sourceManifest
+            .GetSubmodulesForMapping(mappingName)
             .Select(s => s.Path.Substring(submodulePrefix.Length))
             .Any(repoRelativePath =>
                 conflictedFile.Path.Equals(repoRelativePath, StringComparison.OrdinalIgnoreCase));
