@@ -164,7 +164,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                     case MergePolicyCheckResult.MergeNotConfigured:
                         _logger.LogInformation(
-                            "Pull request {url} passed all policies, but Merge PRs is disabled. The pull request will not be updated",
+                            "Pull request {url} passed all policies, but Merge PRs is disabled. The pull request is ready for manual merging and is not eligible for further updates",
                             pr.Url);
                         await _stateManager.SetCheckReminderAsync(pr, prInfo, isCodeFlow, delay);
 

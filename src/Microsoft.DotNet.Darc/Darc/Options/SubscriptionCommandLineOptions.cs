@@ -32,5 +32,5 @@ internal abstract class SubscriptionCommandLineOptions<T> : ConfigurationManagem
     public bool ForceCreation { get; set; }
 
     [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when evaluating pull requests.")]
-    public IEnumerable<string> IgnoreChecks { get; set; } = [];
+    public IEnumerable<string> IgnoredChecks { get; set; } = [];
 }

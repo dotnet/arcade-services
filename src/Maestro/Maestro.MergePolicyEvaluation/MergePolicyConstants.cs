@@ -11,7 +11,7 @@ public class MergePolicyConstants
     public const string DontAutomergeDowngradesPolicyName = "DontAutomergeDowngrades";
     public const string ValidateCoherencyMergePolicyName = "ValidateCoherency";
 
-    public const string IgnoreChecksMergePolicyPropertyName = "ignoreChecks";
+    public const string IgnoredChecksMergePolicyPropertyName = "ignoreChecks";
 
     public const string MaestroMergePolicyCheckRunPrefix = "maestro-policy-";
 
@@ -21,4 +21,3 @@ public class MergePolicyConstants
 
     public const string VersionDetailsPropsMergePolicyName = "VersionDetailsPropsMergePolicy";
 }
-

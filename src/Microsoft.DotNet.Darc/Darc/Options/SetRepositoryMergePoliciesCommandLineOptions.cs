@@ -20,7 +20,7 @@ internal class SetRepositoryMergePoliciesCommandLineOptions : ConfigurationManag
     public bool? MergePrs { get; set; }
 
     [Option("ignore-checks", Separator = ',', HelpText = "A comma-separated list of checks ignored when evaluating pull requests.")]
-    public IReadOnlyCollection<string> IgnoreChecks { get; set; } = [];
+    public IReadOnlyCollection<string> IgnoredChecks { get; set; } = [];
 
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }

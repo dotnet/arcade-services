@@ -310,7 +310,7 @@ public class UpdateSubscriptionOperationConfigRepoTests : ConfigurationManagemen
             UpdateFrequency = updateFrequency,
             Enabled = enabled,
             Batchable = batchable,
-            IgnoreChecks = [],
+            IgnoredChecks = [],
             ConfigurationRepository = ConfigurationRepoPath,
             ConfigurationBranch = configurationBranch,
             ConfigurationBaseBranch = configurationBaseBranch,

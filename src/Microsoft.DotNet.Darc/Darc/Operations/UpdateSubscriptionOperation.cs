@@ -121,9 +121,9 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 mergePrs = _options.MergePrs.Value;
             }
 
-            if (_options.IgnoreChecks.Any())
+            if (_options.IgnoredChecks.Any())
             {
-                ignoredChecks = [.. _options.IgnoreChecks];
+                ignoredChecks = [.. _options.IgnoredChecks];
             }
 
             if (_options.Batchable.HasValue && _options.Batchable.Value && sourceEnabled)
@@ -316,7 +316,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
            || _options.ExcludedAssets != null
            || _options.TargetDirectory != null
            || _options.MergePrs.HasValue
-           || _options.IgnoreChecks.Any();
+           || _options.IgnoredChecks.Any();
 
     private async Task ValidateNoEquivalentSubscription(SubscriptionYaml subscriptionYaml)
     {

@@ -65,7 +65,7 @@ public class Constants
         "YAML format:",
         $"- Name: {MergePolicyConstants.AllCheckSuccessfulMergePolicyName}",
         "  Properties:",
-        $"    {MergePolicyConstants.IgnoreChecksMergePolicyPropertyName}:",
+        $"    {MergePolicyConstants.IgnoredChecksMergePolicyPropertyName}:",
         "    - WIP",
         "    - license/cla",
         "    - <other check names>",

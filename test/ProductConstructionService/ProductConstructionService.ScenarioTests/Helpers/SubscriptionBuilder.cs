@@ -19,7 +19,7 @@ public class SubscriptionBuilder
         UpdateFrequency updateFrequency,
         bool batchable,
         bool mergePrs = false,
-        List<string> ignoreChecks = null,
+        List<string> ignoredChecks = null,
         string failureNotificationTags = null)
     {
         var expectedSubscription = new Subscription(
@@ -31,7 +31,7 @@ public class SubscriptionBuilder
             repo1Uri,
             repo2Uri,
             targetBranch,
-            ignoreChecks ?? [],
+            ignoredChecks ?? [],
             pullRequestFailureNotificationTags: failureNotificationTags,
             sourceDirectory: null,
             targetDirectory: null,

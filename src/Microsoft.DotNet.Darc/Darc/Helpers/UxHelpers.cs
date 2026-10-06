@@ -162,7 +162,7 @@ public static class UxHelpers
         subInfo.AppendLine($"  - Merge PRs: {subscription.MergePrs}");
         if (subscription.IgnoredChecks.Count != 0)
         {
-            subInfo.AppendLine("  - Ignored Checks:");
+            subInfo.AppendLine("  - Ignored Checks (during auto-merge):");
             foreach (var ignoredCheck in subscription.IgnoredChecks)
             {
                 subInfo.AppendLine($"    - {ignoredCheck}");

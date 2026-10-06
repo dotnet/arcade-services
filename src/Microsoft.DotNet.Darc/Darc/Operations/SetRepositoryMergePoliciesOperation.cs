@@ -55,7 +55,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
         string repository = _options.Repository;
         string branch = _options.Branch;
         bool mergePrs = _options.MergePrs ?? false;
-        List<string> ignoredChecks = _options.IgnoreChecks?.ToList() ?? [];
+        List<string> ignoredChecks = _options.IgnoredChecks?.ToList() ?? [];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
@@ -77,7 +77,7 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
                 if (existingRepositoryBranch != null)
                 {
                     mergePrs = _options.MergePrs ?? existingRepositoryBranch.MergePrs;
-                    if (_options.IgnoreChecks == null || _options.IgnoreChecks.Count == 0)
+                    if (_options.IgnoredChecks == null || _options.IgnoredChecks.Count == 0)
                     {
                         ignoredChecks = [.. existingRepositoryBranch.IgnoredChecks];
                     }

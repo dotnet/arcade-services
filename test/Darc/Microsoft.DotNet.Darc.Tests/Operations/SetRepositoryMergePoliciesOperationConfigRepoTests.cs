@@ -150,7 +150,7 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
             Repository = repository,
             Branch = branch,
             MergePrs = mergePrs,
-            IgnoreChecks = ignoredChecks,
+            IgnoredChecks = ignoredChecks,
             ConfigurationRepository = ConfigurationRepoPath,
             ConfigurationBranch = configurationBranch,
             ConfigurationBaseBranch = DefaultBranch,

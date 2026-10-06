@@ -80,7 +80,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         bool sourceEnabled = _options.SourceEnabled;
         bool autoApprove = _options.AutoApprove;
         bool mergePrs = _options.MergePrs;
-        List<string> ignoredChecks = [.. _options.IgnoreChecks];
+        List<string> ignoredChecks = [.. _options.IgnoredChecks];
         string sourceDirectory = _options.SourceDirectory;
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
@@ -356,7 +356,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         }
     }
 
-    private bool HasUserSpecifiedMergeSettings() => _options.MergePrs || _options.IgnoreChecks.Any();
+    private bool HasUserSpecifiedMergeSettings() => _options.MergePrs || _options.IgnoredChecks.Any();
 
     private async Task ValidateNoEquivalentSubscription(SubscriptionYamlParameters subscriptionYamlParameters)
     {

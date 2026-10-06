@@ -333,7 +333,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationBaseBranch = DefaultBranch,
             NoPr = true,
             Quiet = true,
-            IgnoreChecks = []
+            IgnoredChecks = []
         };
 
         var operation = CreateOperation(options);
@@ -424,7 +424,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationBaseBranch = DefaultBranch,
             NoPr = true,
             Quiet = true,
-            IgnoreChecks = []
+            IgnoredChecks = []
         };
 
         var operation = CreateOperation(options);
@@ -483,7 +483,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             SourceDirectory = subscription.SourceDirectory,
             TargetDirectory = subscription.TargetDirectory,
             Enabled = subscription.Enabled,
-            IgnoreChecks = []
+            IgnoredChecks = []
         };
     }
 
