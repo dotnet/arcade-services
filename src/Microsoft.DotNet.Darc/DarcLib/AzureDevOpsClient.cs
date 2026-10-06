@@ -906,7 +906,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         IList<Check> checks = [];
         foreach (JToken status in JArray.Parse(pullRequestStatusesContent["value"].ToString()))
         {
-            CheckState checkState = status["state"].ToString().ToLowerInvariant() switch
+            CheckState checkState = status["state"]?.ToString().ToLowerInvariant() switch
             {
                 "succeeded" => CheckState.Success,
                 "pending" => CheckState.Pending,
@@ -915,11 +915,17 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 _ => CheckState.None,
             };
 
-            string genre = status["context"]["genre"].ToString();
-            string name = status["context"]["name"].ToString();
+            JObject context = status["context"] as JObject;
+            string name = context?.Value<string>("name");
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new DarcException("Azure DevOps pull request status has no context name.");
+            }
+
+            string genre = context.Value<string>("genre");
             checks.Add(new Check(
                 checkState,
-                $"{genre}.{name}",
+                string.IsNullOrEmpty(genre) ? name : $"{genre}.{name}",
                 status["targetUrl"]?.ToString() ?? string.Empty));
         }
 
@@ -981,7 +987,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
     /// <param name="retryCount">Maximum number of tries to attempt the API request</param>
     /// <returns>Http response</returns>
-    public async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
+    public virtual async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
         HttpMethod method,
         string accountName,
         string projectName,

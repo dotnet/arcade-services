@@ -1117,6 +1117,10 @@ pass. For non-batched subscriptions,
 `Merge PRs` and `Ignored Checks` belong to the subscription. For batched
 subscriptions, they belong to the target repository and branch.
 
+Maestro reads Azure DevOps external pull request statuses alongside branch-policy
+checks. External check names use `genre.name`, or just `name` when the status has
+no genre. Non-ignored failed or error statuses fail the `All Checks Successful` policy.
+
 All policy results are available on the `Checks` tab of each update pull
 request created by Maestro.
 
