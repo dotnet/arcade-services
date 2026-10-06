@@ -34,6 +34,10 @@ internal abstract partial class ScenarioTestBase
     private string[] _configRepoDarcParams = [];
     private const string ScenarioTestBaseBranch = "origin/scenario-test";
     private bool _namespaceIngested = false;
+    // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
+    private readonly Dictionary<
+        (string Channel, string SourceRepository, string TargetRepository, string TargetBranch),
+        (bool MergePrs, IReadOnlyCollection<string> IgnoredChecks)> _subscriptionMergeSettings = [];
     protected TemporaryDirectory _temporaryDirectory = null!;
 
     // We need this for tests where we have multiple updates
@@ -58,6 +62,7 @@ internal abstract partial class ScenarioTestBase
             "--no-pr"
         ];
         _namespaceIngested = false;
+        _subscriptionMergeSettings.Clear();
         await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.email", $"{TestParameters.GitHubUser}@test.com");
         await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.name", TestParameters.GitHubUser);
     }
@@ -726,15 +731,39 @@ internal abstract partial class ScenarioTestBase
             .. additionalOptions ?? []
         ];
 
-        var output = await RunDarcAsync(includeConfigurationRepoParams: true, command);
+        var ignoredChecksOptionIndex = additionalOptions?.IndexOf("--ignore-checks") ?? -1;
+        IReadOnlyCollection<string> ignoredChecks = ignoredChecksOptionIndex >= 0 && ignoredChecksOptionIndex + 1 < additionalOptions!.Count
+            ? additionalOptions[ignoredChecksOptionIndex + 1].Split(',', StringSplitOptions.RemoveEmptyEntries)
+            : [];
+        var mergePrs = additionalOptions?.Contains("--merge-prs") == true;
+        var mergeSettingsKey = (sourceChannelName, sourceUrl, targetUrl, targetBranch);
+        var hasMergeSettings = mergePrs || ignoredChecks.Count > 0;
 
-        Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
-        if (!match.Success)
+        if (hasMergeSettings)
         {
-            throw new ScenarioTestException("Unable to create subscription.");
+            _subscriptionMergeSettings[mergeSettingsKey] = (mergePrs, ignoredChecks);
         }
 
-        return match.Groups[1].Value;
+        var subscriptionCreated = false;
+        try
+        {
+            var output = await RunDarcAsync(includeConfigurationRepoParams: true, command);
+            Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
+            if (!match.Success)
+            {
+                throw new ScenarioTestException("Unable to create subscription.");
+            }
+
+            subscriptionCreated = true;
+            return match.Groups[1].Value;
+        }
+        finally
+        {
+            if (!subscriptionCreated)
+            {
+                _subscriptionMergeSettings.Remove(mergeSettingsKey);
+            }
+        }
     }
 
     protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
@@ -1352,6 +1381,30 @@ internal abstract partial class ScenarioTestBase
     {
         _namespaceIngested = true;
         var configuration = await TestParameters.ConfigRepoParser.ParseAsync(_temporaryDirectory.Directory, _testNamespace);
+
+        // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
+        configuration = configuration with
+        {
+            Subscriptions =
+            [
+                .. configuration.Subscriptions.Select(subscription =>
+                {
+                    var key = (
+                        subscription.Channel,
+                        subscription.SourceRepository,
+                        subscription.TargetRepository,
+                        subscription.TargetBranch);
+
+                    return _subscriptionMergeSettings.TryGetValue(key, out var mergeSettings)
+                        ? subscription with
+                        {
+                            MergePrs = mergeSettings.MergePrs,
+                            IgnoredChecks = [.. mergeSettings.IgnoredChecks],
+                        }
+                        : subscription;
+                })
+            ],
+        };
         
         await PcsApi.Ingestion.IngestNamespaceAsync(
             _testNamespace,

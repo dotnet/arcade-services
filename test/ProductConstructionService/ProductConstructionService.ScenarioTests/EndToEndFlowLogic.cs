@@ -237,6 +237,7 @@ internal abstract class TestLogic : ScenarioTestBase
             targetBranch,
             UpdateFrequency.None.ToString(),
             "maestro-auth-test",
+            additionalOptions: ["--merge-prs"],
             sourceIsAzDo: false,
             targetIsAzDo: false);
 
@@ -612,7 +613,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         TestContext.WriteLine($"Adding a subscription from {sourceRepoName} to {targetRepoName} with target directories");
         var subscription1Id = await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}"],
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}", "--merge-prs"],
             sourceIsAzDo: false, targetIsAzDo: false);
 
         TestContext.WriteLine("Set the first build for intake into target repository");

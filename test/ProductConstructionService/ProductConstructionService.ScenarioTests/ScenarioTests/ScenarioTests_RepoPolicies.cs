@@ -26,25 +26,29 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
         // so it's important that this branch name not be a substring or superstring of another branch name
         var branchName = GetTestBranchName();
 
-        TestContext.WriteLine("Setting repository merge policy to standard");
-        await SetRepositoryPolicies(repoUrl, branchName, ["--standard-automerge"]);
-        var standardPolicies = await GetRepositoryPolicies(repoUrl, branchName);
-        var expectedStandard = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  Standard\r\n";
-        standardPolicies.Should().BeEquivalentTo(expectedStandard, "Repository policy not set to standard");
+        TestContext.WriteLine("Enabling pull request merging");
+        await SetRepositoryPolicies(repoUrl, branchName, ["--merge-prs", "true"]);
+        var mergeEnabledPolicies = await GetRepositoryPolicies(repoUrl, branchName);
+        var expectedMergeEnabledPolicies = $"{repoUrl} @ {branchName}\r\n  Merge PRs: True\r\n  Ignored Checks:\r\n";
+        mergeEnabledPolicies.Should().BeEquivalentTo(
+            expectedMergeEnabledPolicies,
+            "Repository pull request merging was not enabled");
 
-        TestContext.WriteLine("Setting repository merge policy to all checks successful");
-        await SetRepositoryPolicies(repoUrl, branchName, ["--all-checks-passed", "--ignore-checks", "A,B"]);
-        var allChecksPolicies = await GetRepositoryPolicies(repoUrl, branchName);
-        var expectedAllChecksPolicies = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
-            "                   [\r\n" +
-            "                     \"A\",\r\n" +
-            "                     \"B\"\r\n" +
-            "                   ]\r\n";
-        allChecksPolicies.Should().BeEquivalentTo(expectedAllChecksPolicies, "Repository policy is incorrect for all checks successful case");
+        TestContext.WriteLine("Adding ignored checks");
+        await SetRepositoryPolicies(repoUrl, branchName, ["--merge-prs", "true", "--ignore-checks", "A,B"]);
+        var policiesWithIgnoredChecks = await GetRepositoryPolicies(repoUrl, branchName);
+        var expectedPoliciesWithIgnoredChecks =
+            $"{repoUrl} @ {branchName}\r\n  Merge PRs: True\r\n  Ignored Checks:\r\n    - A\r\n    - B\r\n";
+        policiesWithIgnoredChecks.Should().BeEquivalentTo(
+            expectedPoliciesWithIgnoredChecks,
+            "Repository ignored checks were not updated");
 
-        TestContext.WriteLine("Deleting the repository merge policies");
-        await SetRepositoryPolicies(repoUrl, branchName);
-        var emptyPolicies = await GetRepositoryPolicies(repoUrl, branchName);
-        emptyPolicies.Should().BeEquivalentTo(string.Empty, "Repository merge policy is not empty");
+        TestContext.WriteLine("Disabling pull request merging and clearing ignored checks");
+        await SetRepositoryPolicies(repoUrl, branchName, ["--merge-prs", "false"]);
+        var resetPolicies = await GetRepositoryPolicies(repoUrl, branchName);
+        var expectedResetPolicies = $"{repoUrl} @ {branchName}\r\n  Merge PRs: False\r\n  Ignored Checks:\r\n";
+        resetPolicies.Should().BeEquivalentTo(
+            expectedResetPolicies,
+            "Repository merge settings were not reset");
     }
 }
