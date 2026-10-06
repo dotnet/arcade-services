@@ -99,7 +99,16 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             {
                 return FailDecisively(
                     $"#### ❌ {DisplayName}: Validation Failed",
-                    $"The `{versionsPropsPath}` file was not found. Please add this file with an import of `{Constants.VersionDetailsProps}`.");
+                    $"""
+                    The `{versionsPropsPath}` file was not found. Please add this file with an import of `{Constants.VersionDetailsProps}`.
+
+                    A minimal file looks like:
+                    ```xml
+                    <Project>
+                      <Import Project="{Constants.VersionDetailsProps}" Condition="Exists('{Constants.VersionDetailsProps}')" />
+                    </Project>
+                    ```
+                    """);
             }
 
             var versionsProps = ProjectRootElement.Create(

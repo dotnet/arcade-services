@@ -202,8 +202,16 @@ public class VersionDetailsPropsMergePolicyTests
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
         result.Title.Should().Be("#### ❌ Version.Details.props Validation Merge Policy: Validation Failed");
-        result.Message.Should().Be(
-            $"The `{VersionFiles.VersionsProps}` file was not found. Please add this file with an import of `Version.Details.props`.");
+        result.Message.Should().Be($"""
+            The `{VersionFiles.VersionsProps}` file was not found. Please add this file with an import of `Version.Details.props`.
+
+            A minimal file looks like:
+            ```xml
+            <Project>
+              <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+            </Project>
+            ```
+            """);
         result.MergePolicyName.Should().Be("VersionDetailsProps");
         result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
     }
