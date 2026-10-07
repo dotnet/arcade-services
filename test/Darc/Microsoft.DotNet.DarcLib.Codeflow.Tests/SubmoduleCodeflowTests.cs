@@ -18,6 +18,120 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 [TestFixture]
 internal class SubmoduleCodeflowTests : CodeFlowTests
 {
+    // Regression test for https://github.com/dotnet/arcade-services/issues/6703.
+    // A backflow is opened while the submodule points to A. The submodule is then bumped to B and forward-flown,
+    // after which the older backflow is merged. When the repo reverts the submodule to A, the next forward flow
+    // recreates its work branch from the older backflow. From that work branch's perspective there is no submodule
+    // content change, so the merge can retain B's inlined contents while source-manifest.json is updated to A.
+    [Test]
+    public async Task ForwardFlowSubmoduleRevertAfterCrossingBackflowTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var submodulePath = new UnixPath("externals/external-repo");
+        var sourceManifestPath = VmrPath / VmrInfo.DefaultRelativeSourceManifestPath;
+        var inlinedSubmodulePath = _productRepoVmrPath / submodulePath;
+        var bumpedFileName = "only-in-b.txt";
+
+        // Establish submodule state A on both sides.
+        await GitOperations.InitializeSubmodule(ProductRepoPath, "second-repo", SecondRepoPath, submodulePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Add submodule at A");
+        var submoduleShaA = await GitOperations.GetRepoLastCommit(SecondRepoPath);
+
+        var deinitializeSubmodule = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "submodule",
+            "deinit",
+            "-f",
+            "--",
+            submodulePath);
+        deinitializeSubmodule.ThrowIfFailed("Failed to deinitialize the submodule");
+        Directory.EnumerateFileSystemEntries(ProductRepoPath / submodulePath).Should().BeEmpty();
+
+        var initialForwardBranch = GetTestBranchName(forwardFlow: true);
+        var codeFlowResult = await CallForwardflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            initialForwardBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(initialForwardBranch);
+
+        // Open and commit an unrelated backflow based on state A, but leave it unmerged.
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "unrelated-backflow.txt", "Unrelated backflow");
+        await GitOperations.CommitAll(VmrPath, "Create unrelated backflow");
+
+        var staleBackflowBranch = GetTestBranchName();
+        codeFlowResult = await CallBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            staleBackflowBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit unrelated backflow");
+
+        // Bump the submodule to B and forward-flow it into the VMR.
+        await File.WriteAllTextAsync(SecondRepoPath / bumpedFileName, "Content from B");
+        await GitOperations.CommitAll(SecondRepoPath, "Create submodule state B");
+        var submoduleShaB = await GitOperations.GetRepoLastCommit(SecondRepoPath);
+
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        var bumpSubmodule = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "update-index",
+            "--cacheinfo",
+            $"160000,{submoduleShaB},{submodulePath}");
+        bumpSubmodule.ThrowIfFailed("Failed to bump the submodule pointer to B");
+        await GitOperations.Commit(ProductRepoPath, "Bump submodule from A to B");
+
+        var bumpForwardBranch = GetTestBranchName(forwardFlow: true);
+        codeFlowResult = await CallForwardflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            bumpForwardBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(bumpForwardBranch);
+
+        SourceManifest.FromFile(sourceManifestPath)
+            .Submodules.Single()
+            .CommitSha.Should().Be(submoduleShaB);
+        File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeTrue();
+
+        // Merge the older backflow after the submodule bump, making it the last crossing flow.
+        await GitOperations.MergePrBranch(ProductRepoPath, staleBackflowBranch);
+        var submoduleShaAfterBackflow = (await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "rev-parse",
+            $"HEAD:{submodulePath}")).StandardOutput.Trim();
+        submoduleShaAfterBackflow.Should().Be(submoduleShaB);
+
+        // Revert the product repo's submodule pointer from B back to A.
+        var resetSubmodule = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "update-index",
+            "--cacheinfo",
+            $"160000,{submoduleShaA},{submodulePath}");
+        resetSubmodule.ThrowIfFailed("Failed to revert the submodule pointer to A");
+
+        await GitOperations.Commit(ProductRepoPath, "Revert submodule from B to A");
+        Directory.EnumerateFileSystemEntries(ProductRepoPath / submodulePath).Should().BeEmpty(
+            "the product repo must keep the submodule as a gitlink without checking out its contents");
+
+        // The forward-flow PR must consistently represent A in both its manifest and inlined contents.
+        var revertForwardBranch = GetTestBranchName(forwardFlow: true);
+        codeFlowResult = await CallForwardflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            revertForwardBranch);
+        codeFlowResult.ShouldHaveUpdates();
+
+        Directory.EnumerateFileSystemEntries(ProductRepoPath / submodulePath).Should().BeEmpty();
+        SourceManifest.FromFile(sourceManifestPath)
+            .Submodules.Single()
+            .CommitSha.Should().Be(submoduleShaA);
+        File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeFalse(
+            "the inlined submodule contents must be reverted together with the source manifest");
+    }
+
     [Test]
     public async Task UpdatingExistingBackflowDoesNotRevertRepoSubmoduleBumpTest()
     {
