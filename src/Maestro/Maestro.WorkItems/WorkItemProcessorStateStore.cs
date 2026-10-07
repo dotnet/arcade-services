@@ -89,18 +89,18 @@ public class WorkItemProcessorStateStore : IWorkItemProcessorStateStore
         cancellationToken.ThrowIfCancellationRequested();
 
         var value = await _redisCacheFactory.Create(key).TryGetAsync();
-        if (string.IsNullOrEmpty(value))
+        if (value is null)
         {
             return null;
         }
 
-        if (!Enum.TryParse(value, out WorkItemProcessorState state))
+        if (value != nameof(WorkItemProcessorState.Working) && value != nameof(WorkItemProcessorState.Stopped))
         {
-            _logger.LogWarning("Key {key} holds unrecognized queue processing state {value}", key, value);
-            return null;
+            _logger.LogError("Key {key} holds an invalid queue processing state", key);
+            throw new InvalidDataException($"Key {key} holds an invalid queue processing state");
         }
 
-        return state;
+        return Enum.Parse<WorkItemProcessorState>(value);
     }
 
     private async Task WriteStateAsync(string key, WorkItemProcessorState state, CancellationToken cancellationToken)
