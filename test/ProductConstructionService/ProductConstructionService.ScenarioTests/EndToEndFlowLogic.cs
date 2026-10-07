@@ -68,6 +68,8 @@ internal abstract class TestLogic : ScenarioTestBase
                 {
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
+                    // push a failed check so PR is updatable
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest);
                     await TriggerSubscriptionAsync(subscription2Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
@@ -97,7 +99,7 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     public async Task NonBatchedGitHubFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
-        List<DependencyDetail> expectedDependencies, bool allChecks = false)
+        List<DependencyDetail> expectedDependencies, bool mergePrs = false)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
         var sourceRepoName = TestRepository.TestRepo1Name;
@@ -110,7 +112,7 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         var subscription1Id = await CreateSubscriptionForEndToEndTests(
-            testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
+            testChannelName, sourceRepoName, targetRepoName, targetBranch, mergePrs, false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, sourceAssets);
@@ -151,7 +153,7 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     public async Task NonBatchedGitHubFlowCoherencyTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
-        List<AssetData> childSourceAssets, List<DependencyDetail> expectedDependencies, string coherentParent, bool allChecks)
+        List<AssetData> childSourceAssets, List<DependencyDetail> expectedDependencies, string coherentParent, bool mergePrs)
     {
         var targetRepoName = TestRepository.TestRepo3Name;
         var sourceRepoName = TestRepository.TestRepo2Name;
@@ -166,7 +168,7 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         var subscription1Id = await CreateSubscriptionForEndToEndTests(
-            testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
+            testChannelName, sourceRepoName, targetRepoName, targetBranch, mergePrs, false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, sourceAssets);
@@ -204,7 +206,7 @@ internal abstract class TestLogic : ScenarioTestBase
                         targetBranch,
                         expectedDependencies,
                         reposFolder.Directory,
-                        isCompleted: allChecks,
+                        isCompleted: mergePrs,
                         isUpdated: false,
                         cleanUp: true);
                 }
@@ -235,7 +237,7 @@ internal abstract class TestLogic : ScenarioTestBase
             targetBranch,
             UpdateFrequency.None.ToString(),
             "maestro-auth-test",
-            additionalOptions: ["--validate-coherency"],
+            additionalOptions: ["--merge-prs"],
             sourceIsAzDo: false,
             targetIsAzDo: false);
 
@@ -308,7 +310,7 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     public async Task NonBatchedUpdatingGitHubFlowTestBase(string targetBranch, string channelName, List<AssetData> source1Assets, List<AssetData> source1AssetsUpdated,
-        List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies, bool allChecks = false)
+        List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies, bool mergePrs = false)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
         var sourceRepoName = TestRepository.TestRepo1Name;
@@ -322,7 +324,7 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         var subscription1Id = await CreateSubscriptionForEndToEndTests(
-            testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
+            testChannelName, sourceRepoName, targetRepoName, targetBranch, mergePrs, false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, source1Assets);
@@ -354,13 +356,16 @@ internal abstract class TestLogic : ScenarioTestBase
                         targetBranch,
                         expectedDependencies,
                         reposFolder.Directory,
-                        allChecks,
+                        mergePrs,
                         isUpdated: false,
                         cleanUp: false);
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, source1AssetsUpdated);
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
+
+                    // Push a failed check so the PR remains eligible for another dependency update.
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
 
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
@@ -372,13 +377,16 @@ internal abstract class TestLogic : ScenarioTestBase
                         targetBranch,
                         expectedUpdatedDependencies,
                         reposFolder.Directory,
-                        allChecks,
+                        mergePrs,
                         isUpdated: true,
                         cleanUp: false);
 
                     // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
                     TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
                     await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
+
+                    // The updated commit gets a successful scenario check during validation; fail it again before updating.
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
 
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
@@ -391,7 +399,7 @@ internal abstract class TestLogic : ScenarioTestBase
                         targetBranch,
                         expectedDependencies,
                         reposFolder.Directory,
-                        allChecks,
+                        mergePrs,
                         isUpdated: true,
                         cleanUp: true);
                 }
@@ -489,7 +497,7 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     public async Task NonBatchedAzDoFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
-        List<DependencyDetail> expectedDependencies, bool allChecks = false, bool isFeedTest = false, string[] expectedFeeds = null, string[] notExpectedFeeds = null)
+        List<DependencyDetail> expectedDependencies, bool mergePrs = false, bool isFeedTest = false, string[] expectedFeeds = null, string[] notExpectedFeeds = null)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
         var sourceRepoName = TestRepository.TestRepo1Name;
@@ -502,7 +510,7 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         var subscription1Id = await CreateSubscriptionForEndToEndTests(
-            testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, true);
+            testChannelName, sourceRepoName, targetRepoName, targetBranch, mergePrs, true);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, sourceAssets);
@@ -528,20 +536,6 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                    if (allChecks)
-                    {
-                        await CheckNonBatchedAzDoPullRequest(
-                            sourceRepoName,
-                            targetRepoName,
-                            targetBranch,
-                            expectedDependencies,
-                            reposFolder.Directory,
-                            isCompleted: true,
-                            isUpdated: false,
-                            cleanUp: true);
-                        return;
-                    }
-
                     if (isFeedTest)
                     {
                         await CheckNonBatchedAzDoPullRequest(
@@ -555,7 +549,18 @@ internal abstract class TestLogic : ScenarioTestBase
                             cleanUp: true,
                             expectedFeeds: expectedFeeds,
                             notExpectedFeeds: notExpectedFeeds);
-                        return;
+                    }
+                    else
+                    {
+                        await CheckNonBatchedAzDoPullRequest(
+                            sourceRepoName,
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            isCompleted: true,
+                            isUpdated: false,
+                            cleanUp: true);
                     }
                 }
             }
@@ -563,9 +568,9 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     private async Task<string> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
-        string targetRepoName, string targetBranch, bool allChecks, bool isAzDoTest)
+        string targetRepoName, string targetBranch, bool mergePrs, bool isAzDoTest)
     {
-        if (allChecks)
+        if (mergePrs)
         {
             return await CreateSubscriptionAsync(
                 testChannelName,
@@ -574,7 +579,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 targetBranch,
                 UpdateFrequency.None.ToString(),
                 "maestro-auth-test",
-                additionalOptions: ["--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla"],
+                additionalOptions: ["--merge-prs"],
                 sourceIsAzDo: isAzDoTest,
                 targetIsAzDo: isAzDoTest);
         }
@@ -614,7 +619,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         TestContext.WriteLine($"Adding a subscription from {sourceRepoName} to {targetRepoName} with target directories");
         var subscription1Id = await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}"],
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}", "--merge-prs"],
             sourceIsAzDo: false, targetIsAzDo: false);
 
         TestContext.WriteLine("Set the first build for intake into target repository");
@@ -658,6 +663,9 @@ internal abstract class TestLogic : ScenarioTestBase
                     TestContext.WriteLine("Set the second build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, build2Assets);
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
+
+                    // push a failed check so PR is updatable
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
 
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);

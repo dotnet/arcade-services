@@ -77,11 +77,14 @@ public class DependencyFlowNodeTests
 
         var subscription = new Subscription(
             Guid.NewGuid(),
+            false,
             true,
+            false,
             false,
             "source",
             "target",
             "test",
+            [],
             sourceDirectory: null,
             targetDirectory: null,
             pullRequestFailureNotificationTags: string.Empty,

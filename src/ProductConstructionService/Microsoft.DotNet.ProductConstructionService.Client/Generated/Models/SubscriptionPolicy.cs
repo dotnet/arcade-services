@@ -22,9 +22,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonConverter(typeof(StringEnumConverter))]
         public UpdateFrequency UpdateFrequency { get; set; }
 
-        [JsonProperty("mergePolicies")]
-        public List<MergePolicy> MergePolicies { get; set; }
-
         [JsonIgnore]
         public bool IsValid
         {
