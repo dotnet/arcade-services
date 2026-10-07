@@ -136,7 +136,8 @@ public abstract class ConfigurationManagementTestBase
             ProcessManager,
             new FileSystem(),
             NullLoggerFactory.Instance,
-            temporaryPath: null!);
+            temporaryPath: null!,
+            new NoOpRedisClient());
 
         var localGitClient = new LocalGitClient(
             new RemoteTokenProvider(),
