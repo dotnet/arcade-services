@@ -127,7 +127,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo2Name);
         var targetBranchName = GetTestBranchName();
         var includedPrNumber = 24;
-        var excludedPrNumber = 25;
+        var otherPrNumber = 25;
 
         await CreateTestChannelAsync(channelName);
 
@@ -200,7 +200,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         var outsideRepoFilePath = Path.Combine(vmrFolder.Directory, "outsideRepoFile.txt");
                         await File.WriteAllTextAsync(outsideRepoFilePath, "test");
                         await GitAddAllAsync();
-                        await GitCommitAsync($"Change outside the repo folder (#{excludedPrNumber})");
+                        await GitCommitAsync($"Change outside the repo folder (#{otherPrNumber})");
 
                         // Push it to github
                         await using (await PushGitBranchAsync("origin", branchName))
@@ -243,12 +243,11 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             await CheckIfPullRequestCommentExists(
                                 TestRepository.TestRepo2Name,
                                 pr,
-                                [$"{vmrRepoUrl}/pull/{includedPrNumber}"]);
-
-                            await CheckThatPullRequestCommentDoesNotContain(
-                                TestRepository.TestRepo2Name,
-                                pr,
-                                [$"{vmrRepoUrl}/pull/{excludedPrNumber}"]);
+                                [
+                                    $"{vmrRepoUrl}/pull/{includedPrNumber}",
+                                    "Other PRs in the commit range",
+                                    $"{vmrRepoUrl}/pull/{otherPrNumber}"
+                                ]);
                         }
                     }
                 }

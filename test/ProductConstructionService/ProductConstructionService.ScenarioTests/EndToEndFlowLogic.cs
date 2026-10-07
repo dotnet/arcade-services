@@ -364,6 +364,9 @@ internal abstract class TestLogic : ScenarioTestBase
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, source1AssetsUpdated);
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
 
+                    // Push a failed check so the PR remains eligible for another dependency update.
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
+
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
 
@@ -381,6 +384,9 @@ internal abstract class TestLogic : ScenarioTestBase
                     // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
                     TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
                     await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
+
+                    // The updated commit gets a successful scenario check during validation; fail it again before updating.
+                    await CreateFailedExternalStatusCheckAsync(targetRepoName, targetBranch, isAzDoTest: false);
 
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
