@@ -1111,7 +1111,8 @@ backflow validation.
 
 The `All Checks Successful` policy evaluates the other checks reported on the
 pull request, such as PR builds, and succeeds only when every non-ignored check
-is green. Maestro's own policy checks are evaluated separately. When
+is green. If no non-ignored checks remain, the policy stays pending with
+`Waiting for checks.` Maestro's own policy checks are evaluated separately. When
 `Merge PRs` is enabled, Maestro merges the pull request only after all policies
 pass. For non-batched subscriptions,
 `Merge PRs` and `Ignored Checks` belong to the subscription. For batched

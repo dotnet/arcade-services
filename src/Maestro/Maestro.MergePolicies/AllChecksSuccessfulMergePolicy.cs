@@ -59,7 +59,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
         if (!notIgnoredChecks.Any())
         {
-            return SucceedTransiently("Found no checks to evaluate. All checks are either ignored or not present.");
+            return Pending(WaitingForChecksMsg);
         }
 
         // Group check statuses to success, pending and error

@@ -104,7 +104,7 @@ public class AllChecksSuccessfulMergePolicyTests
     }
 
     [Test]
-    public async Task EvaluateAsync_NoChecks_ReturnsSuccess()
+    public async Task EvaluateAsync_NoChecks_ReturnsPending()
     {
         // Arrange
         const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
@@ -119,8 +119,33 @@ public class AllChecksSuccessfulMergePolicyTests
         MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
 
         // Assert
-        result.Status.Should().Be(MergePolicyEvaluationStatus.TransientSuccess);
-        result.Title.Should().Be("0 successful check(s)");
+        result.Status.Should().Be(MergePolicyEvaluationStatus.Pending);
+        result.Title.Should().Be(AllChecksSuccessfulMergePolicy.WaitingForChecksMsg);
+    }
+
+    [Test]
+    public async Task EvaluateAsync_OnlyIgnoredChecks_ReturnsPending()
+    {
+        // Arrange
+        const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
+        var remote = new Mock<IRemote>(MockBehavior.Strict);
+        remote.Setup(r => r.GetPullRequestChecksAsync(pullRequestUrl))
+            .ReturnsAsync(
+            [
+                new Check(CheckState.Failure, "license/cla", string.Empty),
+                new Check(CheckState.Failure, "Configured check", string.Empty),
+                new Check(CheckState.Pending, "Maestro policy", string.Empty, isMaestroMergePolicy: true),
+            ]);
+
+        var policy = new AllChecksSuccessfulMergePolicy(["Configured check"]);
+        PullRequestUpdateSummary pullRequest = CreatePullRequestSummary(pullRequestUrl);
+
+        // Act
+        MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.Pending);
+        result.Title.Should().Be(AllChecksSuccessfulMergePolicy.WaitingForChecksMsg);
     }
 
     private static PullRequestUpdateSummary CreatePullRequestSummary(string pullRequestUrl) => new(
