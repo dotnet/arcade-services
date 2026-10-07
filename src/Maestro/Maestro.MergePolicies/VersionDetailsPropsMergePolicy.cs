@@ -87,10 +87,30 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
         try
         {
-            var versionsPropsContent = await remote.GetFileContentsAsync(
-                versionsPropsPath,
-                pr.TargetRepoUrl,
-                pr.HeadBranch);
+            string versionsPropsContent;
+            try
+            {
+                versionsPropsContent = await remote.GetFileContentsAsync(
+                    versionsPropsPath,
+                    pr.TargetRepoUrl,
+                    pr.HeadBranch);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                return FailDecisively(
+                    $"#### ❌ {DisplayName}: Validation Failed",
+                    $"""
+                    The `{versionsPropsPath}` file was not found. Please add this file with an import of `{Constants.VersionDetailsProps}`.
+
+                    A minimal file looks like:
+                    ```xml
+                    <Project>
+                      <Import Project="{Constants.VersionDetailsProps}" Condition="Exists('{Constants.VersionDetailsProps}')" />
+                    </Project>
+                    ```
+                    """);
+            }
+
             var versionsProps = ProjectRootElement.Create(
                 XmlReader.Create(new StringReader(versionsPropsContent)));
 
