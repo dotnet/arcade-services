@@ -23,17 +23,31 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
     // after which the older backflow is merged. When the repo reverts the submodule to A, the next forward flow
     // recreates its work branch from the older backflow. From that work branch's perspective there is no submodule
     // content change, so the merge can retain B's inlined contents while source-manifest.json is updated to A.
-    [Test]
-    public async Task ForwardFlowSubmoduleRevertAfterCrossingBackflowTest()
+    [TestCase(false, false)]
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    [TestCase(true, true)]
+    public async Task ForwardFlowSubmoduleRevertAfterCrossingBackflowTest(bool partialRevert, bool independentVmrReset)
     {
         await EnsureTestRepoIsInitialized();
 
         var submodulePath = new UnixPath("externals/external-repo");
         var sourceManifestPath = VmrPath / VmrInfo.DefaultRelativeSourceManifestPath;
         var inlinedSubmodulePath = _productRepoVmrPath / submodulePath;
-        var bumpedFileName = "only-in-b.txt";
+        const string bumpedFileName = "only-in-b.txt";
+        const string modifiedFileName = "modified[1].txt";
+        const string deletedFileName = "deleted-in-b.txt";
+        const string binaryFileName = "binary.bin";
+        const string unchangedFileName = "unchanged.txt";
+        const string cloakedFileName = "cloaked.exe";
+        byte[] originalBinaryContent = [0, 1, 2];
 
         // Establish submodule state A on both sides.
+        await File.WriteAllTextAsync(SecondRepoPath / modifiedFileName, "A");
+        await File.WriteAllTextAsync(SecondRepoPath / deletedFileName, "Restored from A");
+        await File.WriteAllTextAsync(SecondRepoPath / unchangedFileName, "Unchanged in source");
+        await File.WriteAllBytesAsync(SecondRepoPath / binaryFileName, originalBinaryContent);
+        await GitOperations.CommitAll(SecondRepoPath, "Create submodule state A");
         await GitOperations.InitializeSubmodule(ProductRepoPath, "second-repo", SecondRepoPath, submodulePath);
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule at A");
         var submoduleShaA = await GitOperations.GetRepoLastCommit(SecondRepoPath);
@@ -71,6 +85,10 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
 
         // Bump the submodule to B and forward-flow it into the VMR.
         await File.WriteAllTextAsync(SecondRepoPath / bumpedFileName, "Content from B");
+        await File.WriteAllTextAsync(SecondRepoPath / modifiedFileName, "B");
+        File.Delete(SecondRepoPath / deletedFileName);
+        await File.WriteAllBytesAsync(SecondRepoPath / binaryFileName, [0, 3, 4]);
+        await File.WriteAllTextAsync(SecondRepoPath / cloakedFileName, "Excluded content");
         await GitOperations.CommitAll(SecondRepoPath, "Create submodule state B");
         var submoduleShaB = await GitOperations.GetRepoLastCommit(SecondRepoPath);
 
@@ -96,6 +114,15 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
             .CommitSha.Should().Be(submoduleShaB);
         File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeTrue();
 
+        if (independentVmrReset)
+        {
+            await File.WriteAllTextAsync(SecondRepoPath / "vmr-reset.txt", "Independent VMR reset");
+            await GitOperations.CommitAll(SecondRepoPath, "Create independent VMR submodule commit");
+            var submoduleManifestPath = SourceManifest.FromFile(sourceManifestPath).Submodules.Single().Path;
+            await CallResetSubmoduleOperation(submoduleManifestPath, SecondRepoPath);
+            await GitOperations.CommitAll(VmrPath, "Reset submodule independently in the VMR");
+        }
+
         // Merge the older backflow after the submodule bump, making it the last crossing flow.
         await GitOperations.MergePrBranch(ProductRepoPath, staleBackflowBranch);
         var submoduleShaAfterBackflow = (await GitOperations.ExecuteGitCommand(
@@ -104,12 +131,25 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
             $"HEAD:{submodulePath}")).StandardOutput.Trim();
         submoduleShaAfterBackflow.Should().Be(submoduleShaB);
 
-        // Revert the product repo's submodule pointer from B back to A.
+        // A partial revert also introduces new content at C, while restoring A's files.
+        var revertedSubmoduleSha = submoduleShaA;
+        if (partialRevert)
+        {
+            File.Delete(SecondRepoPath / bumpedFileName);
+            File.Delete(SecondRepoPath / cloakedFileName);
+            await File.WriteAllTextAsync(SecondRepoPath / modifiedFileName, "A");
+            await File.WriteAllTextAsync(SecondRepoPath / deletedFileName, "Restored from A");
+            await File.WriteAllBytesAsync(SecondRepoPath / binaryFileName, originalBinaryContent);
+            await File.WriteAllTextAsync(SecondRepoPath / "only-in-c.txt", "Content from C");
+            await GitOperations.CommitAll(SecondRepoPath, "Partially revert submodule B to A with new content");
+            revertedSubmoduleSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
+        }
+
         var resetSubmodule = await GitOperations.ExecuteGitCommand(
             ProductRepoPath,
             "update-index",
             "--cacheinfo",
-            $"160000,{submoduleShaA},{submodulePath}");
+            $"160000,{revertedSubmoduleSha},{submodulePath}");
         resetSubmodule.ThrowIfFailed("Failed to revert the submodule pointer to A");
 
         await GitOperations.Commit(ProductRepoPath, "Revert submodule from B to A");
@@ -125,11 +165,39 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
 
         Directory.EnumerateFileSystemEntries(ProductRepoPath / submodulePath).Should().BeEmpty();
-        SourceManifest.FromFile(sourceManifestPath)
-            .Submodules.Single()
-            .CommitSha.Should().Be(submoduleShaA);
-        File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeFalse(
-            "the inlined submodule contents must be reverted together with the source manifest");
+        if (independentVmrReset)
+        {
+            AssertSubmoduleConflictSurfaced(codeFlowResult);
+            CheckFileContents(inlinedSubmodulePath / "vmr-reset.txt", "Independent VMR reset");
+            File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeTrue();
+        }
+        else
+        {
+            SourceManifest.FromFile(sourceManifestPath)
+                .Submodules.Single()
+                .CommitSha.Should().Be(revertedSubmoduleSha);
+            File.Exists(inlinedSubmodulePath / bumpedFileName).Should().BeFalse(
+                "the inlined submodule contents must be reverted together with the source manifest");
+            codeFlowResult.ConflictedFiles.Should().BeEmpty();
+            CheckFileContents(inlinedSubmodulePath / modifiedFileName, "A");
+            CheckFileContents(inlinedSubmodulePath / deletedFileName, "Restored from A");
+            (await File.ReadAllBytesAsync(inlinedSubmodulePath / binaryFileName))
+                .Should().Equal(originalBinaryContent);
+            CheckFileContents(inlinedSubmodulePath / unchangedFileName, "Unchanged in source");
+            File.Exists(inlinedSubmodulePath / cloakedFileName).Should().BeFalse();
+            var sourceFiles = await GitOperations.ExecuteGitCommand(
+                SecondRepoPath, "ls-tree", "-r", "--name-only", revertedSubmoduleSha);
+            sourceFiles.ThrowIfFailed("Failed to list the expected submodule snapshot");
+            Directory.EnumerateFiles(inlinedSubmodulePath, "*", SearchOption.AllDirectories)
+                .Select(file => Path.GetRelativePath(inlinedSubmodulePath, file).Replace('\\', '/'))
+                .Should().BeEquivalentTo(sourceFiles.GetOutputLines().Where(file => !file.EndsWith(".exe")));
+            if (partialRevert)
+            {
+                CheckFileContents(inlinedSubmodulePath / "only-in-c.txt", "Content from C");
+            }
+        }
+
+        CheckFileContents(_productRepoVmrPath / "unrelated-backflow.txt", "Unrelated backflow");
     }
 
     [Test]
@@ -461,6 +529,8 @@ internal class SubmoduleCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         var submoduleManifestPath = SourceManifest.FromFile(sourceManifestPath).Submodules.Single().Path;
         await CallResetSubmoduleOperation(submoduleManifestPath, SecondRepoPath);
+        SourceManifest.FromFile(sourceManifestPath).Submodules.Single().CommitSha.Should().Be(vmrSideSubmoduleSha);
+        CheckFileContents(_productRepoVmrPath / submodulePath / "vmr-side.txt", "VMR side submodule bump");
         await GitOperations.CommitAll(VmrPath, "Reset submodule to VMR-side commit (reset-submodule)");
 
         // Bump the submodule pointer in the repo to a DIFFERENT commit than the VMR did.

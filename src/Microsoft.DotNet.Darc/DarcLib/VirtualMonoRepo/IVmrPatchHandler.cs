@@ -40,6 +40,25 @@ public interface IVmrPatchHandler
         string[]? patchFileExclusionFilters = null,
         CancellationToken cancellationToken = default);
 
+    Task<Dictionary<string, List<VmrIngestionPatch>>> CreateSubmodulePatchesAsync(
+        SourceMapping mapping,
+        ILocalGitRepo clone,
+        string fromSha,
+        string toSha,
+        CancellationToken cancellationToken);
+
+    Task ResetSubmoduleAsync(
+        SourceMapping mapping,
+        ILocalGitRepo clone,
+        string submodulePath,
+        string sourceSha,
+        CancellationToken cancellationToken);
+
+    Task ResetSubmoduleAsync(
+        UnixPath submodulePath,
+        IEnumerable<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken);
+
     Task<List<VmrIngestionPatch>> CreatePatches(
         string patchPath,
         string sha1,

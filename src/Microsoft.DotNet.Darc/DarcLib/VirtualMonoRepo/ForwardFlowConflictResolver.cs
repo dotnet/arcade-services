@@ -76,6 +76,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ICommentCollector _commentCollector;
+    private readonly IVmrPatchHandler _patchHandler;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
@@ -101,6 +102,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _versionDetailsFileMerger = versionDetailsFileMerger;
         _versionDetailsParser = versionDetailsParser;
         _commentCollector = commentCollector;
+        _patchHandler = patchHandler;
     }
 
     public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
@@ -120,6 +122,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             cancellationToken);
 
         await DetectAndFixPartialReverts(
+            codeflowOptions,
+            vmr,
+            sourceRepo,
+            conflictedFiles,
+            lastFlows,
+            cancellationToken);
+
+        await DetectAndFixSubmoduleRevertsAsync(
             codeflowOptions,
             vmr,
             sourceRepo,
@@ -151,6 +161,70 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         }
 
         return await vmr.GetConflictedFilesAsync(cancellationToken);
+    }
+
+    private async Task DetectAndFixSubmoduleRevertsAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        LastFlows lastFlows,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow is null
+            || conflictedFiles.Contains(VmrInfo.DefaultRelativeSourceManifestPath))
+        {
+            return;
+        }
+
+        var submodulePatches = await _patchHandler.CreateSubmodulePatchesAsync(
+            codeflowOptions.Mapping,
+            sourceRepo,
+            lastFlows.CrossingFlow.RepoSha,
+            codeflowOptions.CurrentFlow.RepoSha,
+            cancellationToken);
+        try
+        {
+            foreach (var (submodulePath, patches) in submodulePatches)
+            {
+                foreach (var patch in patches)
+                {
+                    if (_fileSystem.GetFileInfo(patch.Path).Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var applicationPath = patch.ApplicationPath
+                        ?? throw new InvalidOperationException("Submodule patches must have an application path.");
+                    var reverseCheck = await vmr.ExecuteGitCommand(
+                        ["apply", "--cached", "--check", "--reverse", "--ignore-space-change", "--directory", applicationPath, patch.Path],
+                        cancellationToken);
+                    if (reverseCheck.Succeeded)
+                    {
+                        continue;
+                    }
+
+                    _logger.LogInformation("Detected incorrect submodule content in {path}. Restoring the source commit snapshot...", submodulePath);
+                    await _patchHandler.ResetSubmoduleAsync(
+                        codeflowOptions.Mapping,
+                        sourceRepo,
+                        submodulePath,
+                        codeflowOptions.CurrentFlow.RepoSha,
+                        cancellationToken);
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            foreach (var patch in submodulePatches.Values.SelectMany(patches => patches).DistinctBy(patch => patch.Path))
+            {
+                if (_fileSystem.FileExists(patch.Path))
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
+            }
+        }
     }
 
     protected override async Task<bool> TryResolvingConflict(
