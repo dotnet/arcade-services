@@ -171,10 +171,17 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         LastFlows lastFlows,
         CancellationToken cancellationToken)
     {
-        if (lastFlows.CrossingFlow is null
-            || conflictedFiles.Contains(VmrInfo.DefaultRelativeSourceManifestPath))
+        if (lastFlows.CrossingFlow is null)
         {
             return;
+        }
+
+        IReadOnlyCollection<UnixPath> conflictedSubmodules = [];
+        if (conflictedFiles.Contains(VmrInfo.DefaultRelativeSourceManifestPath))
+        {
+            _logger.LogDebug("Inspecting submodule changes in the merge index stages for {path}", _vmrInfo.SourceManifestPath);
+            conflictedSubmodules = await GetDivergentSubmodulePathsAsync(
+                vmr, codeflowOptions.Mapping.Name!, cancellationToken);
         }
 
         var submodulePatches = await _patchHandler.CreateSubmodulePatchesAsync(
@@ -187,6 +194,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         {
             foreach (var (submodulePath, patches) in submodulePatches)
             {
+                var manifestPath = new UnixPath(codeflowOptions.Mapping.Name) / submodulePath;
+                if (conflictedSubmodules.Contains(manifestPath))
+                {
+                    _logger.LogInformation("Skipping revert repair for submodule {path} because it has an unresolved conflict", manifestPath);
+                    continue;
+                }
+
                 foreach (var patch in patches)
                 {
                     if (_fileSystem.GetFileInfo(patch.Path).Length == 0)
@@ -243,7 +257,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             // different commit since the last flow (e.g. via `darc vmr reset-submodule`), the two sides genuinely
             // diverged. We must not silently overwrite the VMR's submodule state with the repo's - leave the conflict
             // so it surfaces to a human (conflict PR / darc error). See https://github.com/dotnet/arcade-services/issues/6444.
-            if (await HasDivergentSubmoduleChangeAsync(vmr, codeflowOptions.Mapping.Name!, cancellationToken))
+            var divergentSubmodules = await GetDivergentSubmodulePathsAsync(vmr, codeflowOptions.Mapping.Name!, cancellationToken);
+            if (divergentSubmodules.Count != 0)
             {
                 _commentCollector.AddComment(
                     $"""
@@ -343,13 +358,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     }
 
     /// <summary>
-    /// Determines whether the source-manifest.json conflict is caused by a submodule that was changed on both sides:
+    /// Finds submodules that were changed on both sides of the source-manifest.json conflict:
     /// the repo bumped an existing submodule in this flow while the VMR reset the same submodule to a different commit
     /// since the last flow (e.g. via <c>darc vmr reset-submodule</c>). Such a divergence must not be auto-resolved
     /// because doing so would silently discard one side's change.
     /// The three sides are read from the in-progress merge's index stages (1 = merge base, 2 = ours, 3 = theirs).
     /// </summary>
-    private static async Task<bool> HasDivergentSubmoduleChangeAsync(
+    private static async Task<List<UnixPath>> GetDivergentSubmodulePathsAsync(
         ILocalGitRepo vmr,
         string mappingName,
         CancellationToken cancellationToken)
@@ -361,7 +376,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Without both sides of the merge we cannot reason about the change, so let the default resolution proceed.
         if (ourManifest is null || theirManifest is null)
         {
-            return false;
+            return [];
         }
 
         static string? GetSubmoduleSha(SourceManifest? manifest, string path)
@@ -373,6 +388,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             .Select(s => s.Path)
             .ToList();
 
+        List<UnixPath> divergentSubmodules = [];
         foreach (var path in submodulePaths)
         {
             var baseSha = GetSubmoduleSha(baseManifest, path);
@@ -390,11 +406,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 && theirSha != baseSha
                 && ourSha != theirSha)
             {
-                return true;
+                divergentSubmodules.Add(new UnixPath(path));
             }
         }
 
-        return false;
+        return divergentSubmodules;
     }
 
     private static async Task<SourceManifest?> TryReadSourceManifestStageAsync(
