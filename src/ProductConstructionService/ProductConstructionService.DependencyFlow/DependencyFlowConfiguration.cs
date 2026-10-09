@@ -31,7 +31,6 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<ICodeFlowExecutor, CodeFlowExecutor>();
         services.TryAddScoped<ICommentCollector, CommentCollector>();
         services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
-        services.TryAddTransient<ISubscriptionEventRecorder, SubscriptionEventRecorder>();
         services.TryAddScoped<ISubscriptionUpdateOutcomeRecorder, SubscriptionUpdateOutcomeRecorder>();
         services.TryAddScoped<IServiceCommitTracker, ServiceCommitTracker>();
         services.AddTransient<ILocalGitClient, TrackingLocalGitClient>();

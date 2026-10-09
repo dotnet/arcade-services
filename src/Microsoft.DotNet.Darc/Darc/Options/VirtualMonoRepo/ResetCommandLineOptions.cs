@@ -60,13 +60,14 @@ internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
             IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
             ICodeownersGenerator codeownersGenerator,
             ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+            ICodeQLConfigGenerator codeQLConfigGenerator,
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IGitRepoFactory gitRepoFactory,
             ILogger<VmrUpdater> logger,
             ISourceManifest sourceManifest,
             IVmrInfo vmrInfo)
-            : base(dependencyTracker, cloneManager, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, gitRepoFactory, logger, sourceManifest, vmrInfo)
+            : base(dependencyTracker, cloneManager, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, codeQLConfigGenerator, localGitClient, localGitRepoFactory, gitRepoFactory, logger, sourceManifest, vmrInfo)
         {
         }
 

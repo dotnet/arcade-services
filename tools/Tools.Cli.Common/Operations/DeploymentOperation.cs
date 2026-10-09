@@ -95,7 +95,7 @@ public class DeploymentOperation : IOperation
 
             if (!await WaitForRevisionToBecomeHealthy(candidateRevisionName, wasReusedInactiveCandidate))
             {
-                _logger.LogError("Check logs to see the failure reason: {logsUri}", GetLogsUri());
+                _logger.LogError("Check logs to see the failure reason: {logsUri}", GetLogsUri(candidateRevisionName));
                 await StopDeactivateAndCleanupRevision(candidateRevisionName);
                 return -1;
             }
@@ -478,11 +478,11 @@ public class DeploymentOperation : IOperation
         _logger.LogInformation("Deactivated revision {revisionName}", revisionName);
     }
 
-    private string GetLogsUri()
+    internal string GetLogsUri(string revisionName)
     {
-        var query = """
-            ContainerAppConsoleLogs_CL `
-            | where RevisionName_s == '$revisionName' `
+        var query = $"""
+            ContainerAppConsoleLogs_CL
+            | where RevisionName_s == '{revisionName}'
             | project TimeGenerated, Log_s
             """;
 
@@ -513,11 +513,11 @@ public class DeploymentOperation : IOperation
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(query);
         using MemoryStream memoryStream = new();
-        using GZipStream compressedStream = new(memoryStream, CompressionMode.Compress);
+        using (GZipStream compressedStream = new(memoryStream, CompressionMode.Compress, leaveOpen: true))
+        {
+            compressedStream.Write(bytes, 0, bytes.Length);
+        }
 
-        compressedStream.Write(bytes, 0, bytes.Length);
-        compressedStream.Close();
-        memoryStream.Seek(0, SeekOrigin.Begin);
         var data = memoryStream.ToArray();
         var base64query = Convert.ToBase64String(data);
         return HttpUtility.UrlEncode(base64query);

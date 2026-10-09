@@ -45,13 +45,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+        ICodeQLConfigGenerator codeQLConfigGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IGitRepoFactory gitRepoFactory,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, codeQLConfigGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;

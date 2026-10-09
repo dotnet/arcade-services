@@ -24,6 +24,9 @@ internal class WorkItemConsumer(
         ITelemetryRecorder telemetryRecorder)
     : BackgroundService
 {
+    // Randomizes empty-queue sleeps so consumers across replicas don't poll in lockstep.
+    private const double MaxQueuePollJitterRatio = 0.2;
+
     private readonly string _consumerId = consumerId;
     private readonly string _queueName = queueName;
     private readonly ILogger<WorkItemConsumer> _logger = logger;
@@ -89,8 +92,9 @@ internal class WorkItemConsumer(
         if (message?.Body == null)
         {
             // Queue is empty, wait a bit
-            _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _queueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
-            await Task.Delay(_options.Value.QueuePollTimeout, cancellationToken);
+            TimeSpan pollDelay = _options.Value.QueuePollTimeout * (1 + MaxQueuePollJitterRatio * Random.Shared.NextDouble());
+            _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} ms", _queueName, (int)pollDelay.TotalMilliseconds);
+            await Task.Delay(pollDelay, cancellationToken);
             return;
         }
 
@@ -148,7 +152,7 @@ internal class WorkItemConsumer(
                 _logger.LogError(ex, "Processing work item {workItemType} attempt {attempt}/{maxAttempts} failed",
                     workItemType, message.DequeueCount, _options.Value.MaxWorkItemRetries);
                 // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
-                if (message.DequeueCount == _options.Value.MaxWorkItemRetries)
+                if (message.DequeueCount >= _options.Value.MaxWorkItemRetries)
                 {
                     _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                         workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());

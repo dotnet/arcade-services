@@ -259,12 +259,12 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
 
-        var allCommentBodies = string.Join(Environment.NewLine, comments.Select(c => c.Body));
+        var allCommentBodies = string.Join(Environment.NewLine, comments.Select(c => c.Body)).ReplaceLineEndings("\n");
 
         foreach (var expected in stringsExpectedInComment)
         {
             allCommentBodies.Should().Contain(
-                expected,
+                expected.ReplaceLineEndings("\n"),
                 $"PR {pullRequest.HtmlUrl} should contain '{string.Join("', '", stringsExpectedInComment)}'");
         }
     }

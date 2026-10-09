@@ -59,27 +59,11 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<Channel> Channels { get; set; }
     public DbSet<DefaultChannel> DefaultChannels { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
-    public DbSet<SubscriptionUpdate> SubscriptionUpdates { get; set; }
     public DbSet<Repository> Repositories { get; set; }
     public DbSet<RepositoryBranch> RepositoryBranches { get; set; }
-    public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
     public DbSet<GoalTime> GoalTime { get; set; }
     public DbSet<Namespace> Namespaces { get; set; }
     public DbSet<SubscriptionOutcome> SubscriptionOutcomes { get; set; }
-
-    public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates
-        .TemporalAll()
-        .Select(
-            u => new SubscriptionUpdateHistoryEntry
-            {
-                SubscriptionId = u.SubscriptionId,
-                Action = u.Action,
-                Success = u.Success,
-                ErrorMessage = u.ErrorMessage,
-                Method = u.Method,
-                Arguments = u.Arguments,
-                Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-            });
 
     public override Task<int> SaveChangesAsync(
         bool acceptAllChangesOnSuccess,
@@ -151,32 +135,6 @@ public class BuildAssetRegistryContext(DbContextOptions options)
                     dc.ChannelId
                 })
             .IsUnique();
-
-        builder.Entity<SubscriptionUpdate>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
-        builder.Entity<SubscriptionUpdate>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
-
-        builder.Entity<SubscriptionUpdate>()
-            .ToTable(b =>
-            {
-                b.IsTemporal(t =>
-                {
-                    t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
-                    t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
-                    t.UseHistoryTable(nameof(SubscriptionUpdateHistory));
-                });
-            })
-            .HasOne(su => su.Subscription)
-            .WithOne()
-            .HasForeignKey<SubscriptionUpdate>(su => su.SubscriptionId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-
-        builder.Entity<SubscriptionUpdateHistory>().ToTable(nameof(SubscriptionUpdateHistory));
-        builder.Entity<SubscriptionUpdateHistory>().HasNoKey();
-        builder.Entity<SubscriptionUpdateHistory>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
-        builder.Entity<SubscriptionUpdateHistory>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
-        builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
-        builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
         builder.Entity<Repository>().HasKey(r => new { r.RepositoryName });
 
@@ -402,19 +360,4 @@ FROM traverse;";
 
         return latestBuild?.HasProductDependencies ?? false;
     }
-}
-
-public class SubscriptionUpdateHistoryEntry : UpdateHistoryEntry
-{
-    public Guid SubscriptionId { get; set; }
-}
-
-public class UpdateHistoryEntry
-{
-    public string Action { get; set; }
-    public bool Success { get; set; }
-    public string ErrorMessage { get; set; }
-    public string Method { get; set; }
-    public string Arguments { get; set; }
-    public DateTime Timestamp { get; set; }
 }

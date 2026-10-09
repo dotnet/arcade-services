@@ -538,8 +538,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     // We shouldn't try to fix reverts in submodules
     protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping)
-        => _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+        => _sourceManifest
+            .GetSubmodulesForMapping(mapping.Name)
             .Select(s => (string)(VmrInfo.SourcesDir / s.Path))
             .Any(p => targetPath.Equals(p, StringComparison.OrdinalIgnoreCase)
                 || targetPath.StartsWith(p + '/', StringComparison.OrdinalIgnoreCase));

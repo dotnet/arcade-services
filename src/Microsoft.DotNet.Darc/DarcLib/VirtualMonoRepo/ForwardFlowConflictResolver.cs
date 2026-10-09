@@ -247,16 +247,16 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             updatedMapping.CommitSha,
             updatedMapping.BarId);
 
-        var theirAffectedSubmodules = targetBranchSourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + '/'))
+        var theirAffectedSubmodules = targetBranchSourceManifest
+            .GetSubmodulesForMapping(mappingName)
             .ToList();
         foreach (var submodule in theirAffectedSubmodules)
         {
             targetBranchSourceManifest.RemoveSubmodule(submodule);
         }
 
-        var ourAffectedSubmodules = ourSourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + '/'))
+        var ourAffectedSubmodules = ourSourceManifest
+            .GetSubmodulesForMapping(mappingName)
             .ToList();
         foreach (var submodule in ourAffectedSubmodules)
         {
@@ -290,16 +290,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return false;
         }
 
-        var prefix = mappingName + '/';
-
         static string? GetSubmoduleSha(SourceManifest? manifest, string path)
             => manifest?.Submodules.FirstOrDefault(s => s.Path == path)?.CommitSha;
 
         // Look at every submodule of this mapping present at the merge base. A submodule missing from the base was
         // added by the repo in this flow (the VMR only ever resets already-tracked submodules), so it cannot diverge.
-        var submodulePaths = (baseManifest?.Submodules ?? [])
+        var submodulePaths = (baseManifest?.GetSubmodulesForMapping(mappingName) ?? [])
             .Select(s => s.Path)
-            .Where(path => path.StartsWith(prefix, StringComparison.Ordinal));
+            .ToList();
 
         foreach (var path in submodulePaths)
         {
