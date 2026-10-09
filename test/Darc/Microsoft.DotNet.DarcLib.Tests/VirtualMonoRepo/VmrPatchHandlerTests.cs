@@ -198,7 +198,7 @@ public class VmrPatchHandlerTests
             .ReturnsAsync([nestedSubmodule]);
 
         var patches = await _patchHandler.CreateSubmodulePatchesAsync(
-            _testRepoMapping, _repoClone, Sha1, Sha2, CancellationToken.None);
+            _testRepoMapping, _repoClone, Sha1, Sha2, cancellationToken: CancellationToken.None);
 
         patches.Keys.Should().BeEquivalentTo([_submoduleInfo.Path]);
         patches.Values.SelectMany(submodulePatches => submodulePatches)

@@ -106,18 +106,31 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Creates inlined diffs grouped by submodule path without changing the source manifest.
     /// </summary>
+    /// <param name="excludedSubmodulePaths">
+    /// Submodule paths (relative to the mapping) to skip when creating patches, e.g. because they
+    /// already have an unresolved conflict and the patches would never be used.
+    /// </param>
     public async Task<Dictionary<string, List<VmrIngestionPatch>>> CreateSubmodulePatchesAsync(
         SourceMapping mapping,
         ILocalGitRepo clone,
         string fromSha,
         string toSha,
-        CancellationToken cancellationToken)
+        IReadOnlyCollection<string>? excludedSubmodulePaths = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating submodule revert-check patches for {mapping}", mapping.Name);
         var changes = await GetSubmoduleChanges(clone, fromSha, toSha);
         Dictionary<string, List<VmrIngestionPatch>> patches = new(StringComparer.Ordinal);
         foreach (var change in changes.Where(change => change.Before != change.After))
         {
+            if (excludedSubmodulePaths?.Contains(change.Path) == true)
+            {
+                _logger.LogInformation(
+                    "Skipping revert-check patch creation for submodule {path} because it has an unresolved conflict",
+                    change.Path);
+                continue;
+            }
+
             var submodulePatches = await GetPatchesForSubmoduleChange(
                 mapping,
                 _vmrInfo.TmpPath,

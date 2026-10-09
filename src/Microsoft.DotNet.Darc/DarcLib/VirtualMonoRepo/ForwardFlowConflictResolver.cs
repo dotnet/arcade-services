@@ -184,23 +184,21 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 vmr, codeflowOptions.Mapping.Name!, cancellationToken);
         }
 
+        var excludedSubmodulePaths = conflictedSubmodules
+            .Select(manifestPath => manifestPath.Path[(codeflowOptions.Mapping.Name!.Length + 1)..])
+            .ToList();
+
         var submodulePatches = await _patchHandler.CreateSubmodulePatchesAsync(
             codeflowOptions.Mapping,
             sourceRepo,
             lastFlows.CrossingFlow.RepoSha,
             codeflowOptions.CurrentFlow.RepoSha,
+            excludedSubmodulePaths,
             cancellationToken);
         try
         {
             foreach (var (submodulePath, patches) in submodulePatches)
             {
-                var manifestPath = new UnixPath(codeflowOptions.Mapping.Name) / submodulePath;
-                if (conflictedSubmodules.Contains(manifestPath))
-                {
-                    _logger.LogInformation("Skipping revert repair for submodule {path} because it has an unresolved conflict", manifestPath);
-                    continue;
-                }
-
                 foreach (var patch in patches)
                 {
                     if (_fileSystem.GetFileInfo(patch.Path).Length == 0)

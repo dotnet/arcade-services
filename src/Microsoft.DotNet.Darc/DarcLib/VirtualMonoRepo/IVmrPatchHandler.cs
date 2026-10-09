@@ -45,7 +45,8 @@ public interface IVmrPatchHandler
         ILocalGitRepo clone,
         string fromSha,
         string toSha,
-        CancellationToken cancellationToken);
+        IReadOnlyCollection<string>? excludedSubmodulePaths = null,
+        CancellationToken cancellationToken = default);
 
     Task ResetSubmoduleAsync(
         SourceMapping mapping,
