@@ -181,6 +181,42 @@ public class VersionDetailsPropsMergePolicyTests
     }
 
     [Test]
+    public async Task EvaluateAsync_WhenVersionsPropsMissing_ShouldFail()
+    {
+        // Arrange
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionDetailsProps,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ReturnsAsync(VersionDetailsPropsWithProperties);
+
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionsProps,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+
+        // Act
+        var result = await _policy.EvaluateAsync(_prSummary, _mockRemote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
+        result.Title.Should().Be("#### ❌ Version.Details.props Validation Merge Policy: Validation Failed");
+        result.Message.Should().Be($"""
+            The `{VersionFiles.VersionsProps}` file was not found. Please add this file with an import of `Version.Details.props`.
+
+            A minimal file looks like:
+            ```xml
+            <Project>
+              <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+            </Project>
+            ```
+            """);
+        result.MergePolicyName.Should().Be("VersionDetailsProps");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
+    }
+
+    [Test]
     public async Task EvaluateAsync_WhenConflictingPropertiesExist_ShouldFail()
     {
         // Arrange

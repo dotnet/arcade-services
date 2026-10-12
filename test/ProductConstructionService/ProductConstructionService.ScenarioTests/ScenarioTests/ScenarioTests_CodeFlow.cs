@@ -196,7 +196,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await GitAddAllAsync();
                         await GitCommitAsync($"Change that would have been made in a pr (#{includedPrNumber})");
 
-                        // A change outside of src/<repo> in the VMR - must NOT be linked in the backflow PR comment
+                        // A change outside of src/<repo> in the VMR belongs in the Other PRs section
                         var outsideRepoFilePath = Path.Combine(vmrFolder.Directory, "outsideRepoFile.txt");
                         await File.WriteAllTextAsync(outsideRepoFilePath, "test");
                         await GitAddAllAsync();
@@ -240,14 +240,23 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 [repoSidePackageLocation, vmrSidePackageLocation, buildPackageLocation]);
 
                             var vmrRepoUrl = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
+                            var expectedComment = string.Join('\n',
+                            [
+                                "> VMR PRs included in this codeflow update:",
+                                $"> - {vmrRepoUrl}/pull/{includedPrNumber}",
+                                "> ",
+                                "> <details>",
+                                "> <summary>Other PRs in the commit range</summary>",
+                                "> ",
+                                $"> - {vmrRepoUrl}/pull/{otherPrNumber}",
+                                "> ",
+                                "> </details>"
+                            ]);
+
                             await CheckIfPullRequestCommentExists(
                                 TestRepository.TestRepo2Name,
                                 pr,
-                                [
-                                    $"{vmrRepoUrl}/pull/{includedPrNumber}",
-                                    "Other PRs in the commit range",
-                                    $"{vmrRepoUrl}/pull/{otherPrNumber}"
-                                ]);
+                                [expectedComment]);
                         }
                     }
                 }
