@@ -307,7 +307,7 @@ internal class ResolveConflictOperation(
 
             string lastFlownSha = await GetLastFlownShaAsync(subscription, targetGitRepoPath);
 
-            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, result.ConflictedFiles);
+            await CreateCommitMessageFileAsync(targetGitRepoPath, subscription, build, lastFlownSha, result.ConflictedFiles, cancellationToken);
         }
         else
         {
@@ -318,15 +318,21 @@ internal class ResolveConflictOperation(
         return true;
     }
 
-    private void CreateCommitMessageFile(
+    private async Task CreateCommitMessageFileAsync(
         string targetRepoPath,
         Subscription subscription,
         Build build,
         string lastFlownSha,
-        IEnumerable<UnixPath> conflictedFiles)
+        IEnumerable<UnixPath> conflictedFiles,
+        CancellationToken cancellationToken)
     {
-        // Overwrite .git/SQUASH_MSG to preset the commit message. This file is created by the codeflow's squash rebase.
-        var commitEditMsgPath = Path.Combine(targetRepoPath, ".git", "SQUASH_MSG");
+        // Overwrite SQUASH_MSG to preset the commit message. This file is created by the codeflow's squash rebase.
+        var result = await _processManager.ExecuteGit(
+            targetRepoPath,
+            ["rev-parse", "--path-format=absolute", "--git-path", "SQUASH_MSG"],
+            cancellationToken: cancellationToken);
+        result.ThrowIfFailed("Failed to resolve the squash commit message path.");
+        var commitEditMsgPath = result.StandardOutput.Trim();
 
         var mappingName = subscription.IsForwardFlow()
             ? subscription.TargetDirectory
