@@ -103,6 +103,97 @@ public class VmrPatchHandler : IVmrPatchHandler
         return patches;
     }
 
+    /// <summary>
+    /// Creates inlined diffs grouped by submodule path without changing the source manifest.
+    /// </summary>
+    /// <param name="excludedSubmodulePaths">
+    /// Submodule paths (relative to the mapping) to skip when creating patches, e.g. because they
+    /// already have an unresolved conflict and the patches would never be used.
+    /// </param>
+    public async Task<Dictionary<string, List<VmrIngestionPatch>>> CreateSubmodulePatchesAsync(
+        SourceMapping mapping,
+        ILocalGitRepo clone,
+        string fromSha,
+        string toSha,
+        IReadOnlyCollection<string>? excludedSubmodulePaths = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Creating submodule revert-check patches for {mapping}", mapping.Name);
+        var changes = await GetSubmoduleChanges(clone, fromSha, toSha);
+        Dictionary<string, List<VmrIngestionPatch>> patches = new(StringComparer.Ordinal);
+        foreach (var change in changes.Where(change => change.Before != change.After))
+        {
+            if (excludedSubmodulePaths?.Contains(change.Path) == true)
+            {
+                _logger.LogInformation(
+                    "Skipping revert-check patch creation for submodule {path} because it has an unresolved conflict",
+                    change.Path);
+                continue;
+            }
+
+            var submodulePatches = await GetPatchesForSubmoduleChange(
+                mapping,
+                _vmrInfo.TmpPath,
+                _vmrInfo.TmpPath,
+                new UnixPath(mapping.Name),
+                change,
+                cancellationToken,
+                updateSourceManifest: false);
+            if (patches.TryGetValue(change.Path, out var existingPatches))
+            {
+                existingPatches.AddRange(submodulePatches);
+            }
+            else
+            {
+                patches.Add(change.Path, submodulePatches);
+            }
+        }
+
+        return patches;
+    }
+
+    public async Task ResetSubmoduleAsync(
+        SourceMapping mapping,
+        ILocalGitRepo clone,
+        string submodulePath,
+        string sourceSha,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Resetting inlined submodule {path} to its state at source commit {sha}", submodulePath, sourceSha);
+        var submodule = (await clone.GetGitSubmodulesAsync(sourceSha)).SingleOrDefault(s => s.Path == submodulePath);
+        List<VmrIngestionPatch> patches = submodule is null
+            ? []
+            : await GetPatchesForSubmoduleChange(
+                mapping,
+                _vmrInfo.TmpPath,
+                _vmrInfo.TmpPath,
+                new UnixPath(mapping.Name),
+                new SubmoduleChange(submodule.Name, submodule.Path, submodule.Url, Constants.EmptyGitObject, submodule.Commit),
+                cancellationToken,
+                updateSourceManifest: false);
+
+        await ResetSubmoduleAsync(new UnixPath(mapping.Name) / submodulePath, patches, cancellationToken);
+    }
+
+    public async Task ResetSubmoduleAsync(
+        UnixPath submodulePath,
+        IEnumerable<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken)
+    {
+        var vmrSubmodulePath = VmrInfo.SourcesDir / submodulePath;
+        _logger.LogInformation("Replacing inlined submodule content at {path}", vmrSubmodulePath);
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        (await vmr.ExecuteGitCommand(["rm", "-r", "-q", "-f", "--ignore-unmatch", "--", $":(literal){vmrSubmodulePath}"], cancellationToken))
+            .ThrowIfFailed($"Failed to remove existing inlined submodule content at {vmrSubmodulePath}");
+
+        await ApplyPatches(
+            patches,
+            _vmrInfo.VmrPath,
+            removePatchAfter: true,
+            keepConflicts: false,
+            cancellationToken: cancellationToken);
+    }
+
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
         ILocalGitRepo clone,
@@ -112,7 +203,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath tmpPath,
         UnixPath relativePath,
         string[]? patchFileExclusionFilters = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool updateSourceManifest = true)
     {
         var repoPath = clone.Path;
         if (_fileSystem.GetFileName(repoPath) == ".git")
@@ -126,7 +218,10 @@ public class VmrPatchHandler : IVmrPatchHandler
             .Select(c => new SubmoduleRecord(relativePath / c.Path, c.Url, c.After))
             .ToList();
 
-        _dependencyTracker.UpdateSubmodules(changedRecords);
+        if (updateSourceManifest)
+        {
+            _dependencyTracker.UpdateSubmodules(changedRecords);
+        }
 
         if (mapping.Include.Count == 0)
         {
@@ -201,7 +296,8 @@ public class VmrPatchHandler : IVmrPatchHandler
                 tmpPath,
                 relativePath,
                 change,
-                cancellationToken));
+                cancellationToken,
+                updateSourceManifest));
 
             _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
         }
@@ -624,7 +720,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath tmpPath,
         UnixPath relativePath,
         SubmoduleChange change,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool updateSourceManifest = true)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
@@ -636,15 +733,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var clonePath = await _cloneManager.PrepareCloneAsync(change.Url, checkoutCommit, resetToRemote: false, cancellationToken);   
-
-        // We are only interested in filters specific to submodule's path
-        ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
-        {
-            return filters
-                .Where(p => p.StartsWith(change.Path))
-                .Select(p => p[change.Path.Length..].TrimStart('/'))
-                .ToImmutableArray();
-        }
 
         static string SanitizeName(string mappingName)
         {
@@ -662,8 +750,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             SanitizeName(change.Name),
             change.Url,
             change.Before,
-            GetSubmoduleFilters(mapping.Include),
-            GetSubmoduleFilters(mapping.Exclude),
+            GetSubmoduleFilters(mapping.Include, change.Path),
+            GetSubmoduleFilters(mapping.Exclude, change.Path),
             DisableSynchronization: false);
 
         var submodulePath = change.Path;
@@ -680,12 +768,19 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(submodulePath),
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            updateSourceManifest: updateSourceManifest);
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";
 
     public static string GetExclusionRule(string path) => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){path}";
+
+    private static ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters, string submodulePath)
+        => filters
+            .Where(path => path.StartsWith(submodulePath))
+            .Select(path => path[submodulePath.Length..].TrimStart('/'))
+            .ToImmutableArray();
 
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
 }
