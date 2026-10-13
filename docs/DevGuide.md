@@ -177,7 +177,21 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
    - A Readiness probe that waits for the service to fully initialize. Currently, this is probe just waits for the VMR to be cloned on the containerapp disk.
  - Assigns the correct label to the new revision, and switches all traffic to it.
  - Starts the JobProcessor once the service is ready.
- - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
+ - If there are failures during the deployment, the candidate must be safely stopped and deactivated before the old revision can be resumed.
+
+Revision cleanup writes desired `Stopped` before refreshing Azure replica lifecycle evidence. Normally every
+replica must acknowledge `Stopped`. Only for immediate deactivation, a replica with no observed state can
+instead qualify as never started: Azure must report every expected container, with no container ID, zero
+restarts, explicit `Waiting` state, and explicit false started/ready flags. Startup-probe and readiness
+flags alone are not proof that a worker never ran. Missing/incomplete metadata and any `Working` observation
+require a real stop acknowledgement; ordinary start/stop operations do not use this exception.
+New replicas receive the stop request and require a subsequent lifecycle refresh. Removed replicas need
+no acknowledgement. Invalid Redis state values are errors, not missing acknowledgements; a worker with
+invalid desired state closes admission rather than defaulting to `Working`.
+Desired and observed keys are retained until Azure confirms the revision is inactive **and all replicas
+have disappeared**, so shutdown-racing workers cannot default back to `Working`. Replacements still
+appearing during shutdown also receive desired `Stopped`. A timeout retains all keys.
+If cleanup of leftover revisions cannot be confirmed, deployment aborts before updating the app.
 
 ## Deploying to prod
 

@@ -20,6 +20,7 @@ public class ReplicaStateCoordinator
     private readonly IWorkItemProcessorStateStore _stateStore;
     private readonly ILogger<ReplicaStateCoordinator> _logger;
     private readonly Dictionary<string, HashSet<string>> _knownReplicasByRevision = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _observedWorkingReplicas = new(StringComparer.OrdinalIgnoreCase);
 
     public ReplicaStateCoordinator(
         IWorkItemProcessorReplicaProvider replicaProvider,
@@ -94,8 +95,100 @@ public class ReplicaStateCoordinator
     }
 
     /// <summary>
+    /// Stops replicas for immediate deactivation only. A missing acknowledgement may be replaced by
+    /// fresh proof that all containers never started, but never after observing Working.
+    /// </summary>
+    public virtual async Task<bool> StopForDeactivationAsync(string revisionName, CancellationToken cancellationToken = default)
+    {
+        HashSet<string> knownReplicas = GetKnownReplicas(revisionName);
+        HashSet<string> commandedReplicas = new(StringComparer.OrdinalIgnoreCase);
+
+        _logger.LogInformation("Stopping revision {revisionName} for deactivation", revisionName);
+
+        for (int attempt = 0; attempt < MaxPollAttempts; attempt++)
+        {
+            var replicaNames = await _replicaProvider.GetReplicaNamesAsync(revisionName);
+            foreach (var replicaName in replicaNames)
+            {
+                if (commandedReplicas.Add(replicaName))
+                {
+                    knownReplicas.Add(replicaName);
+                    await _stateStore.SetDesiredStateAsync(replicaName, WorkItemProcessorState.Stopped, cancellationToken);
+                }
+            }
+
+            // Refresh only AFTER writing Stopped, so a racing startup sees the stop request.
+            var replicas = await _replicaProvider.GetReplicaStatusesAsync(revisionName);
+            bool allStopped = true;
+            bool discoveredReplica = false;
+            foreach (var replica in replicas)
+            {
+                if (commandedReplicas.Add(replica.Name))
+                {
+                    knownReplicas.Add(replica.Name);
+                    await _stateStore.SetDesiredStateAsync(replica.Name, WorkItemProcessorState.Stopped, cancellationToken);
+                    // This snapshot predates the new replica's stop request. Never use its evidence.
+                    discoveredReplica = true;
+                    allStopped = false;
+                }
+
+                var observedState = await GetObservedStateAsync(replica.Name, cancellationToken);
+
+                if (observedState != WorkItemProcessorState.Stopped
+                    && !(observedState is null && replica.HasNeverStarted && !_observedWorkingReplicas.Contains(replica.Name)))
+                {
+                    allStopped = false;
+                }
+            }
+
+            if (allStopped)
+            {
+                _logger.LogInformation("Revision {revisionName} has only stopped, never-started, or removed replicas", revisionName);
+                return true;
+            }
+
+            if (!discoveredReplica)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(PollIntervalSeconds), cancellationToken);
+            }
+        }
+
+        _logger.LogError("Revision {revisionName} could not be safely stopped for deactivation", revisionName);
+        return false;
+    }
+
+    /// <summary>
+    /// After deactivation, retains stop requests until Azure reports no replicas. Also stops and tracks
+    /// any replacement replicas still appearing during shutdown.
+    /// </summary>
+    public virtual async Task<bool> WaitForReplicasToDisappearAsync(string revisionName, CancellationToken cancellationToken = default)
+    {
+        var knownReplicas = GetKnownReplicas(revisionName);
+        for (int attempt = 0; attempt < MaxPollAttempts; attempt++)
+        {
+            var replicaNames = await _replicaProvider.GetReplicaNamesAsync(revisionName);
+            if (replicaNames.Count == 0)
+            {
+                _logger.LogInformation("Revision {revisionName} has no remaining replicas", revisionName);
+                return true;
+            }
+
+            foreach (var replicaName in replicaNames)
+            {
+                knownReplicas.Add(replicaName);
+                await _stateStore.SetDesiredStateAsync(replicaName, WorkItemProcessorState.Stopped, cancellationToken);
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(PollIntervalSeconds), cancellationToken);
+        }
+
+        _logger.LogError("Revision {revisionName} still has replicas after deactivation; retaining stop requests", revisionName);
+        return false;
+    }
+
+    /// <summary>
     /// Removes the desired and observed keys of every replica the deployment has written to.
-    /// Only safe once the revision is deactivated.
+    /// Only safe once the revision is deactivated and has no remaining replicas.
     /// </summary>
     public async Task DeleteStateAsync(string revisionName, CancellationToken cancellationToken = default)
     {
@@ -107,6 +200,7 @@ public class ReplicaStateCoordinator
         foreach (var replicaName in knownReplicas)
         {
             await _stateStore.DeleteAsync(replicaName, cancellationToken);
+            _observedWorkingReplicas.Remove(replicaName);
         }
 
         _knownReplicasByRevision.Remove(revisionName);
@@ -119,7 +213,7 @@ public class ReplicaStateCoordinator
     {
         foreach (var replicaName in replicaNames)
         {
-            WorkItemProcessorState? observedState = await _stateStore.GetObservedStateAsync(replicaName, cancellationToken);
+            WorkItemProcessorState? observedState = await GetObservedStateAsync(replicaName, cancellationToken);
             if (observedState != desiredState)
             {
                 return false;
@@ -127,6 +221,17 @@ public class ReplicaStateCoordinator
         }
 
         return true;
+    }
+
+    private async Task<WorkItemProcessorState?> GetObservedStateAsync(string replicaName, CancellationToken cancellationToken)
+    {
+        var observedState = await _stateStore.GetObservedStateAsync(replicaName, cancellationToken);
+        if (observedState == WorkItemProcessorState.Working)
+        {
+            _observedWorkingReplicas.Add(replicaName);
+        }
+
+        return observedState;
     }
 
     private HashSet<string> GetKnownReplicas(string revisionName)

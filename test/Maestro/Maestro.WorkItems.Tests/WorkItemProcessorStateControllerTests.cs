@@ -17,10 +17,17 @@ internal class FakeReplicaStateStore : IReplicaWorkItemProcessorStateStore
 
     public bool FailDesiredReads { get; set; }
 
+    public bool InvalidDesiredState { get; set; }
+
     public bool FailObservedWrites { get; set; }
 
     public Task<WorkItemProcessorState?> GetDesiredStateAsync(CancellationToken cancellationToken)
     {
+        if (InvalidDesiredState)
+        {
+            throw new InvalidDataException("Invalid desired state");
+        }
+
         if (FailDesiredReads)
         {
             throw new InvalidOperationException("Redis is unavailable");
@@ -232,6 +239,38 @@ public class WorkItemProcessorStateControllerTests
         // Assert
         _admissionGate.IsOpen.Should().BeTrue();
         _stateStore.ObservedWrites.Should().Equal(WorkItemProcessorState.Stopped, WorkItemProcessorState.Working);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task InvalidDesiredStateClosesAdmissionAsync(bool initiallyWorking)
+    {
+        var controller = CreateController();
+        await controller.ReportStartupStateAsync(CancellationToken.None);
+        if (initiallyWorking)
+        {
+            await controller.ApplyDesiredStateAsync(CancellationToken.None);
+        }
+        _stateStore.InvalidDesiredState = true;
+
+        await controller.ApplyDesiredStateAsync(CancellationToken.None);
+
+        _admissionGate.IsOpen.Should().BeFalse();
+        controller.ObservedState.Should().Be(WorkItemProcessorState.Stopped);
+    }
+
+    [Test]
+    public async Task InvalidDesiredStateOnConfirmationDoesNotOpenAdmissionAsync()
+    {
+        var controller = CreateController();
+        await controller.ReportStartupStateAsync(CancellationToken.None);
+        _stateStore.OnDesiredStateRead = () => _stateStore.InvalidDesiredState = true;
+
+        await controller.ApplyDesiredStateAsync(CancellationToken.None);
+
+        _admissionGate.IsOpen.Should().BeFalse();
+        _stateStore.ObservedWrites.Should().Equal(
+            WorkItemProcessorState.Stopped, WorkItemProcessorState.Working, WorkItemProcessorState.Stopped);
     }
 
     [TestCase(false)]
