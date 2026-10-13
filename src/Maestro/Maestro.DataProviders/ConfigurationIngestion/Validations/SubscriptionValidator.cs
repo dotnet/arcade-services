@@ -102,6 +102,20 @@ internal static class SubscriptionValidator
                 "Merge policies are specified at a repository+branch level.", subscription);
         }
 
+        if (subscription.Values.Batchable && subscription.Values.MergePrs)
+        {
+            throw new EntityIngestionValidationException(
+                "Batchable subscriptions cannot enable Merge PRs. " +
+                "Merge PRs is configured at a repository+branch level.", subscription);
+        }
+
+        if (subscription.Values.Batchable && subscription.Values.IgnoredChecks.Count > 0)
+        {
+            throw new EntityIngestionValidationException(
+                "Batchable subscriptions cannot specify ignored checks. " +
+                "Ignored checks are configured at a repository+branch level.", subscription);
+        }
+
         if (!string.IsNullOrEmpty(subscription.Values.SourceDirectory)
             && !string.IsNullOrEmpty(subscription.Values.TargetDirectory))
         {

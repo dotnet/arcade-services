@@ -2932,6 +2932,10 @@ evaluates every other check on the pull request, such as PR builds, and succeeds
 when every non-ignored check is green. When Merge PRs is enabled, Maestro merges
 the pull request after all Maestro policies pass.
 
+Configuration ingestion rejects batchable subscriptions that enable Merge PRs
+or specify ignored checks at the subscription level. Configure these settings
+for the target repository and branch instead.
+
 This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
 
 If `-q` is not passed, the command opens an editor where the repository settings
