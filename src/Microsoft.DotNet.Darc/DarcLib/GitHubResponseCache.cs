@@ -21,15 +21,18 @@ internal sealed class GitHubResponseCache(ICache cache, ILogger logger) : IRespo
 {
     private const string CacheKeyPrefix = "GitHubConditionalResponse:v1:";
     private static readonly TimeSpan Retention = TimeSpan.FromDays(1);
-    // Matches API paths such as:
-    // /repos/dotnet/runtime/pulls/123
-    // /repos/dotnet/runtime/pulls/123/commits
-    // /repos/dotnet/runtime/commits/abc123/status
-    // /repos/dotnet/runtime/commits/abc123/check-runs
     // Query parameters (for example, ?page=2) are not part of the matched AbsolutePath.
-    private static readonly Regex AllowedPathRegex = new(
-        @"^/repos/[^/]+/[^/]+/(pulls/[0-9]+(/commits)?|commits/[^/]+/(status|check-runs))$",
-        RegexOptions.CultureInvariant);
+    private static readonly Regex[] AllowedPathRegexes =
+    [
+        // PR details: /repos/dotnet/runtime/pulls/123
+        new(@"^/repos/[^/]+/[^/]+/pulls/[0-9]+$", RegexOptions.CultureInvariant),
+        // PR commits: /repos/dotnet/runtime/pulls/123/commits
+        new(@"^/repos/[^/]+/[^/]+/pulls/[0-9]+/commits$", RegexOptions.CultureInvariant),
+        // Combined statuses: /repos/dotnet/runtime/commits/abc123/status
+        new(@"^/repos/[^/]+/[^/]+/commits/[^/]+/status$", RegexOptions.CultureInvariant),
+        // Check runs: /repos/dotnet/runtime/commits/abc123/check-runs
+        new(@"^/repos/[^/]+/[^/]+/commits/[^/]+/check-runs$", RegexOptions.CultureInvariant),
+    ];
 
     public async Task<CachedResponse.V1?> GetAsync(IRequest request)
     {
@@ -108,7 +111,7 @@ internal sealed class GitHubResponseCache(ICache cache, ILogger logger) : IRespo
             uri.Scheme == Uri.UriSchemeHttps &&
             uri.Host == "api.github.com" &&
             uri.IsDefaultPort &&
-            AllowedPathRegex.IsMatch(uri.AbsolutePath);
+            AllowedPathRegexes.Any(regex => regex.IsMatch(uri.AbsolutePath));
     }
 
     private static string GetKey(IRequest request) =>
