@@ -536,13 +536,22 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return targetPath.Substring(vmrSourcesPath.Length + 1);
     }
 
-    // We shouldn't try to fix reverts in submodules
+    // Only files belonging to the mapped repository can be checked against the source repository.
+    // We also shouldn't try to fix reverts in submodules.
     protected override bool ShouldSkipRevertCheck(string targetPath, SourceMapping mapping)
-        => _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+    {
+        var relativeRepoSourcePath = (string)VmrInfo.GetRelativeRepoSourcesPath(mapping);
+        if (!targetPath.StartsWith(relativeRepoSourcePath + '/', StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return _sourceManifest
+            .GetSubmodulesForMapping(mapping.Name)
             .Select(s => (string)(VmrInfo.SourcesDir / s.Path))
             .Any(p => targetPath.Equals(p, StringComparison.OrdinalIgnoreCase)
                 || targetPath.StartsWith(p + '/', StringComparison.OrdinalIgnoreCase));
+    }
 
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected virtual bool ShouldResetVmr => false;

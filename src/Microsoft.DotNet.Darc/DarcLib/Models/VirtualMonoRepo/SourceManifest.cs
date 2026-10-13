@@ -29,6 +29,18 @@ public interface ISourceManifest
     void Refresh(string sourceManifestPath);
 }
 
+public static class SourceManifestExtensions
+{
+    public static IEnumerable<ISourceComponent> GetSubmodulesForMapping(
+        this ISourceManifest sourceManifest,
+        string mappingName)
+    {
+        string mappingPrefix = mappingName + '/';
+        return sourceManifest.Submodules
+            .Where(submodule => submodule.Path.StartsWith(mappingPrefix, StringComparison.Ordinal));
+    }
+}
+
 /// <summary>
 /// A model for source-manifest.json file which VMR uses to keep track of
 /// synchronized sources

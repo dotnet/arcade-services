@@ -196,7 +196,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     /// <summary>
     /// Detects submodule changes that happened in the VMR (via <c>darc vmr reset-submodule</c>) and stages them
     /// into the target repo during backflow. A submodule is considered changed when its SHA or URL in the current
-    /// source manifest differs from the one recorded at the last flow. When the SHA changes, the submodule
+    /// source manifest differs from the source manifest at the last flow. When the SHA changes, the submodule
     /// pointer in the git tree is updated; when the URL changes, the <c>.gitmodules</c> file is updated.
     /// </summary>
     private async Task TryBackflowSubmodulesAsync(
@@ -207,25 +207,40 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     {
         var submodulePrefix = codeflowOptions.Mapping.Name + '/';
 
-        var currentSubmodules = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(submodulePrefix))
-            .ToList();
+        var currentSubmodules = _sourceManifest.GetSubmodulesForMapping(codeflowOptions.Mapping.Name).ToList();
 
         if (currentSubmodules.Count == 0)
         {
             return;
         }
 
-        // Compare against the submodule state at the last flow's repo SHA (forward or backward) rather than the
-        // last forward flow, because an intervening backflow may have already backflown a submodule bump.
-        List<GitSubmoduleInfo> lastFlowSubmodules =
-            await targetRepo.GetGitSubmodulesAsync(lastFlows.LastFlow.RepoSha);
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        string? previousManifestContents = await vmr.GetFileFromGitAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            lastFlows.LastFlow.VmrSha);
+        SourceManifest previousManifest = previousManifestContents == null
+            ? new SourceManifest([], [])
+            : SourceManifest.FromJson(previousManifestContents);
+        var updatedSubmodules = GetUpdatedSubmodules(
+            _sourceManifest,
+            previousManifest,
+            codeflowOptions.Mapping.Name);
 
-        foreach (var submodule in currentSubmodules)
+        if (updatedSubmodules.Count == 0)
+        {
+            return;
+        }
+
+        var previousSubmodules = previousManifest
+            .GetSubmodulesForMapping(codeflowOptions.Mapping.Name)
+            .ToDictionary(submodule => submodule.Path, StringComparer.Ordinal);
+        List<GitSubmoduleInfo> targetSubmodules = await targetRepo.GetGitSubmodulesAsync("HEAD");
+
+        foreach (var submodule in updatedSubmodules)
         {
             var repoRelativePath = submodule.Path.Substring(submodulePrefix.Length);
-
-            var previous = lastFlowSubmodules.FirstOrDefault(s => s.Path == repoRelativePath);
+            previousSubmodules.TryGetValue(submodule.Path, out ISourceComponent? previous);
+            var target = targetSubmodules.FirstOrDefault(s => s.Path == repoRelativePath);
 
             if (previous == null)
             {
@@ -235,30 +250,56 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 continue;
             }
 
+            if (target == null)
+            {
+                _logger.LogWarning(
+                    "Submodule {path} does not exist in the target repo but backflowing new submodules is not supported - skipping",
+                    submodule.Path);
+                continue;
+            }
+
             // When the SHA changed, update the submodule pointer in the git tree
-            if (previous.Commit != submodule.CommitSha)
+            if (previous.CommitSha != submodule.CommitSha)
             {
                 _logger.LogInformation(
                     "Updating submodule {path} pointer from {oldSha} to {newSha}",
                     repoRelativePath,
-                    previous.Commit,
+                    previous.CommitSha,
                     submodule.CommitSha);
 
                 await UpdateSubmodulePointerAsync(targetRepo, repoRelativePath, submodule.CommitSha, cancellationToken);
             }
 
             // When the URL changed, update the .gitmodules file
-            if (previous.Url != submodule.RemoteUri)
+            if (previous.RemoteUri != submodule.RemoteUri)
             {
                 _logger.LogInformation(
                     "Updating submodule {path} URL from {oldUrl} to {newUrl}",
                     repoRelativePath,
-                    previous.Url,
+                    previous.RemoteUri,
                     submodule.RemoteUri);
 
-                await UpdateSubmoduleUrlAsync(targetRepo, previous.Name, submodule.RemoteUri, cancellationToken);
+                await UpdateSubmoduleUrlAsync(targetRepo, target.Name, submodule.RemoteUri, cancellationToken);
             }
         }
+    }
+
+    private static List<ISourceComponent> GetUpdatedSubmodules(
+        ISourceManifest currentManifest,
+        ISourceManifest previousManifest,
+        string mappingName)
+    {
+        Dictionary<string, ISourceComponent> previousSubmodules = previousManifest
+            .GetSubmodulesForMapping(mappingName)
+            .ToDictionary(submodule => submodule.Path, StringComparer.Ordinal);
+
+        return currentManifest
+            .GetSubmodulesForMapping(mappingName)
+            .Where(submodule =>
+                !previousSubmodules.TryGetValue(submodule.Path, out ISourceComponent? previousSubmodule)
+                || previousSubmodule.CommitSha != submodule.CommitSha
+                || previousSubmodule.RemoteUri != submodule.RemoteUri)
+            .ToList();
     }
 
     /// <summary>
@@ -655,8 +696,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     internal static IReadOnlyCollection<string> GetPatchExclusions(ISourceManifest sourceManifest, SourceMapping mapping)
     {
         // Exclude all submodules that belong to the mapping
-        var exclusions = sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+        var exclusions = sourceManifest
+            .GetSubmodulesForMapping(mapping.Name)
             .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 
         // Exclude version files as those will be handled manually

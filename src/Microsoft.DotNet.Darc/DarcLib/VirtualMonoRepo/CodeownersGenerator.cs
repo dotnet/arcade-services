@@ -87,7 +87,7 @@ public class CodeownersGenerator : ICodeownersGenerator
             {
                 await AddCodeownersContent(component.Path, writer, cancellationToken);
 
-                foreach (var submodule in _sourceManifest.Submodules.Where(s => s.Path.StartsWith($"{component.Path}/")))
+                foreach (var submodule in _sourceManifest.GetSubmodulesForMapping(component.Path))
                 {
                     await AddCodeownersContent(submodule.Path, writer, cancellationToken);
                 }
