@@ -13,8 +13,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Internal.Credentials;
-using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.MergePolicyEvaluation;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.GitHub;
@@ -25,6 +25,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Octokit;
+using Octokit.Internal;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -46,6 +47,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
+    private readonly ICache? _responseCache;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
@@ -64,7 +66,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IProcessManager processManager,
         ILogger logger,
         IMemoryCache? cache)
-        : this(remoteTokenProvider, processManager, logger, null, cache)
+        : this(remoteTokenProvider, processManager, logger, null, cache, null)
     {
     }
 
@@ -74,10 +76,22 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         ILogger logger,
         string? temporaryRepositoryPath,
         IMemoryCache? cache)
+        : this(remoteTokenProvider, processManager, logger, temporaryRepositoryPath, cache, null)
+    {
+    }
+
+    public GitHubClient(
+        IRemoteTokenProvider remoteTokenProvider,
+        IProcessManager processManager,
+        ILogger logger,
+        string? temporaryRepositoryPath,
+        IMemoryCache? cache,
+        ICache? responseCache)
         : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
     {
         _tokenProvider = remoteTokenProvider;
         _logger = logger;
+        _responseCache = responseCache;
         _serializerSettings = new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -1121,7 +1135,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 "Please use the --github-pat option or set it using 'darc authenticate'");
         }
 
-        return new Octokit.GitHubClient(_product)
+        var connection = _responseCache == null
+            ? new Connection(_product)
+            : new Connection(_product, new GitHubConditionalRequestClient(
+                new HttpClientAdapter(HttpMessageHandlerFactory.CreateDefault),
+                new GitHubResponseCache(_responseCache, _logger)));
+
+        return new Octokit.GitHubClient(connection)
         {
             Credentials = new Credentials(token)
         };
