@@ -48,8 +48,8 @@ public class GetBuildOperationTests
         string sha = "50c88957fb93ccaa0040b5b28ff459a29ecf88c6";
         string internalRepo = $"internal-{repo}";
         string githubRepo = $"Github-{repo}";
-        Subscription subscription1 = new(Guid.Empty, true, false, internalRepo, "target", "test", string.Empty, null, null, []);
-        Subscription subscription2 = new(Guid.Empty, true, false, githubRepo, "target", "test", string.Empty, null, null, []);
+        Subscription subscription1 = new(Guid.Empty, false, true, false, false, internalRepo, "target", "test", [], string.Empty, null, null, []);
+        Subscription subscription2 = new(Guid.Empty, false, true, false, false, githubRepo, "target", "test", [], string.Empty, null, null, []);
 
         List<Subscription> subscriptions =
         [

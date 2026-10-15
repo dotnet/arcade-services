@@ -129,7 +129,7 @@ internal class SubscriptionsStatusOperation : ConfigurationManagementOperationBa
                 }
 
                 // Create an updated subscription YAML with only the Enabled property changed
-                var updatedyaml = SubscriptionYaml.FromClientModel(subscription) with
+                var updatedyaml = SubscriptionYamlConverter.FromClientModel(subscription) with
                 {
                     Enabled = _options.Enable,
                 };

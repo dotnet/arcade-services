@@ -87,6 +87,85 @@ public class ConfigurationIngestionValidationTests
     }
 
     [Test]
+    public void ValidateSubscription_BatchableWithMergePrs_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Batchable = true,
+            MergePrs = true,
+        });
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => SubscriptionValidator.ValidateSubscription(subscription));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("Batchable subscriptions cannot enable Merge PRs");
+        exception.Message.Should().Contain("repository+branch level");
+        exception.Message.Should().Contain(subscriptionId.ToString());
+        exception.EntityInfo.Should().Contain(subscriptionId.ToString());
+    }
+
+    [Test]
+    public void ValidateSubscription_BatchableWithIgnoredChecks_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var subscriptionId = Guid.NewGuid();
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Batchable = true,
+            IgnoredChecks = ["build"],
+        });
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => SubscriptionValidator.ValidateSubscription(subscription));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("Batchable subscriptions cannot specify ignored checks");
+        exception.Message.Should().Contain("repository+branch level");
+        exception.Message.Should().Contain(subscriptionId.ToString());
+        exception.EntityInfo.Should().Contain(subscriptionId.ToString());
+    }
+
+    [TestCase(true, false, false)]
+    [TestCase(false, false, false)]
+    [TestCase(false, true, false)]
+    [TestCase(false, false, true)]
+    [TestCase(false, true, true)]
+    public void ValidateSubscription_ValidMergeSettings_DoesNotThrow(
+        bool batchable, bool mergePrs, bool hasIgnoredChecks)
+    {
+        // Arrange
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Batchable = batchable,
+            MergePrs = mergePrs,
+            IgnoredChecks = hasIgnoredChecks ? ["build"] : [],
+        });
+
+        // Act & Assert
+        Assert.DoesNotThrow(() => SubscriptionValidator.ValidateSubscription(subscription));
+    }
+
+    [Test]
     public void ValidateSubscription_CodeflowWithoutSourceEnabled_ThrowsWithEntityInfo()
     {
         // Arrange

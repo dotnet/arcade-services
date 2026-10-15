@@ -51,20 +51,3 @@ public abstract class CodeFlowMergePolicy(IBasicBarClient barClient, ILogger<IMe
         - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
         """;
 }
-
-public class CodeFlowMergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.CodeflowMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        IMergePolicy policy = pr.CodeFlowDirection switch
-        {
-            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(barClient, logger),
-            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(barClient, logger),
-            _ => throw new ArgumentException("PR is not a codeflow PR, can't build CodeFlow Merge Policy"),
-        };
-
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([policy]);
-    }
-}

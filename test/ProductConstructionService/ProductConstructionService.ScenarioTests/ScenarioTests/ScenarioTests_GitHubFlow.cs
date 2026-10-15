@@ -162,7 +162,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             GetTestChannelName(),
             sourceAssets,
             expectedCoherencyDependencies,
-            allChecks: true);
+            mergePrs: true);
     }
 
     [Test]
@@ -218,7 +218,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             childSourceAssets,
             expectedCoherencyDependencies,
             coherentParent: GetUniqueAssetName("Foo"),
-            allChecks: false);
+            mergePrs: false);
     }
 
     [Test]

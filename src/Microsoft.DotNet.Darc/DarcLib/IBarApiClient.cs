@@ -18,12 +18,12 @@ public interface IBarApiClient : IBasicBarClient
     #region Subscription Operations
 
     /// <summary>
-    ///     Get a repository merge policy (for batchable subscriptions)
+    ///     Get a repository branch
     /// </summary>
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Repository branch</param>
     /// <returns>List of merge policies</returns>
-    Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch);
+    Task<RepositoryBranch> GetRepositoryBranch(string repoUri, string branch);
 
     /// <summary>
     ///     Get a list of repository+branch combos and their associated merge policies.

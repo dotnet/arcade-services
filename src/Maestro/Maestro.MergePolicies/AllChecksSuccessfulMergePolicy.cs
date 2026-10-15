@@ -1,10 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
@@ -13,17 +15,33 @@ namespace Maestro.MergePolicies;
 
 /// <summary>
 ///     Merge the PR when it has more than one check and they are all successful, ignoring checks specified in the
-///     "ignoreChecks" property.
+///     "IgnoredChecks" property.
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
-    private readonly HashSet<string> _ignoreChecks;
+    private static readonly HashSet<string> s_githubIgnoredChecks =
+    [
+        "WIP",
+        "license/cla",
+        "auto-merge.config.enforce",
+        "Build Analysis",
+    ];
+
+    private static readonly HashSet<string> s_azureDevOpsIgnoredChecks =
+    [
+        "Comment requirements",
+        "Minimum number of reviewers",
+        "auto-merge.config.enforce",
+        "Work item linking",
+    ];
+
+    private readonly HashSet<string> _ignoredChecks;
 
     public const string WaitingForChecksMsg = "Waiting for checks.";
 
-    public AllChecksSuccessfulMergePolicy(HashSet<string> ignoreChecks)
+    public AllChecksSuccessfulMergePolicy(HashSet<string> ignoredChecks)
     {
-        _ignoreChecks = ignoreChecks;
+        _ignoredChecks = ignoredChecks;
     }
 
     public override string DisplayName => "All Checks Successful";
@@ -33,7 +51,11 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Check> checks = await darc.GetPullRequestChecksAsync(pr.Url);
-        IEnumerable<Check> notIgnoredChecks = checks.Where(c => !_ignoreChecks.Contains(c.Name) && !c.IsMaestroMergePolicy);
+        HashSet<string> defaultIgnoredChecks = GetDefaultIgnoredChecks(pr.Url);
+        IEnumerable<Check> notIgnoredChecks = checks.Where(c =>
+            !_ignoredChecks.Contains(c.Name)
+            && !defaultIgnoredChecks.Contains(c.Name)
+            && !c.IsMaestroMergePolicy);
 
         if (!notIgnoredChecks.Any())
         {
@@ -70,15 +92,15 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
         return SucceedTransiently($"{ListChecksCount(CheckState.Success)} successful check(s)");
     }
-}
 
-public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.AllCheckSuccessfulMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
+    private static HashSet<string> GetDefaultIgnoredChecks(string pullRequestUrl)
     {
-        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new AllChecksSuccessfulMergePolicy(ignoreChecks)]);
+        return GitRepoUrlUtils.ParseTypeFromUri(pullRequestUrl) switch
+        {
+            GitRepoType.GitHub => s_githubIgnoredChecks,
+            GitRepoType.AzureDevOps => s_azureDevOpsIgnoredChecks,
+            var repositoryType => throw new NotSupportedException(
+                $"Repository type '{repositoryType}' for pull request URL '{pullRequestUrl}' is not supported."),
+        };
     }
 }

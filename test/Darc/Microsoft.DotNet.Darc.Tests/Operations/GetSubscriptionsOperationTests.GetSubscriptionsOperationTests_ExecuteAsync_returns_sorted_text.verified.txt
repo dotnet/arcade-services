@@ -6,7 +6,7 @@
   - Excluded Assets: []
   - PR Failure Notification tags: 
   - Source-enabled: False
-  - Merge Policies: []
+  - Merge PRs: False
 source2 (name) ==> 'target2' ('test')
   - Id: 00000000-0000-0000-0000-000000000000
   - Update Frequency: EveryDay
@@ -16,4 +16,4 @@ source2 (name) ==> 'target2' ('test')
   - PR Failure Notification tags: 
   - Source-enabled: True
   - Source Directory: repo-name
-  - Merge Policies: []
+  - Merge PRs: False

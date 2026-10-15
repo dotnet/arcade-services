@@ -209,7 +209,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         List<string> additionalOptions =
         [
             "--source-enabled", "true",
-            "--standard-automerge",
+            "--merge-prs",
             directoryType, directoryName,
         ];
 
