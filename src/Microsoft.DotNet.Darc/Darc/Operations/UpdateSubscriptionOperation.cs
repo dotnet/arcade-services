@@ -250,7 +250,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 TargetBranch = subscription.TargetBranch,
                 UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true),
                 Batchable = batchable,
-                MergePolicies = [],
                 MergePrs = mergePrs,
                 IgnoredChecks = ignoredChecks,
                 FailureNotificationTags = failureNotificationTags,

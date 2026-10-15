@@ -292,7 +292,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
     }
 
     [Test]
-    [Ignore("TODO: Re-enable after Microsoft.DotNet.MaestroConfiguration.Client preserves MergePrs and IgnoredChecks when adding subscriptions.")]
     public async Task AddSubscriptionOperation_CopyFromSubscription_CopiesAllSettings()
     {
         // Arrange - Create a source subscription to copy from
@@ -372,7 +371,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         actualSubscription.ExcludedAssets.Should().BeEquivalentTo(sourceSubscription.ExcludedAssets);
         actualSubscription.MergePrs.Should().BeTrue();
         actualSubscription.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
-        actualSubscription.MergePolicies.Should().BeEmpty();
     }
 
     [Test]

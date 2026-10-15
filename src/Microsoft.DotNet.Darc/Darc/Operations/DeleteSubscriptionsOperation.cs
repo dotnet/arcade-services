@@ -81,7 +81,7 @@ internal class DeleteSubscriptionsOperation : ConfigurationManagementOperationBa
             {
                 await _configRepositoryManager.DeleteSubscriptionAsync(
                     parameters,
-                    SubscriptionYamlConverter.FromClientModel(subscription));
+                    SubscriptionYaml.FromClientModel(subscription));
             }
 
             Console.WriteLine("done");

@@ -317,7 +317,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 TargetBranch = targetBranch,
                 UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
                 Batchable = batchable,
-                MergePolicies = [],
                 MergePrs = mergePrs,
                 IgnoredChecks = ignoredChecks,
                 FailureNotificationTags = failureNotificationTags,

@@ -139,7 +139,6 @@ internal class SetRepositoryMergePoliciesOperation : ConfigurationManagementOper
             {
                 Repository = repository,
                 Branch = branch,
-                MergePolicies = [],
                 MergePrs = mergePrs,
                 IgnoredChecks = ignoredChecks
             };

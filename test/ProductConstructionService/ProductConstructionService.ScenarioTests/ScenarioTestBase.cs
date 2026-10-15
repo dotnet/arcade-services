@@ -34,10 +34,6 @@ internal abstract partial class ScenarioTestBase
     private string[] _configRepoDarcParams = [];
     private const string ScenarioTestBaseBranch = "origin/scenario-test";
     private bool _namespaceIngested = false;
-    // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
-    private readonly Dictionary<
-        (string Channel, string SourceRepository, string TargetRepository, string TargetBranch),
-        (bool MergePrs, IReadOnlyCollection<string> IgnoredChecks)> _subscriptionMergeSettings = [];
     protected TemporaryDirectory _temporaryDirectory = null!;
 
     // We need this for tests where we have multiple updates
@@ -62,7 +58,6 @@ internal abstract partial class ScenarioTestBase
             "--no-pr"
         ];
         _namespaceIngested = false;
-        _subscriptionMergeSettings.Clear();
         await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.email", $"{TestParameters.GitHubUser}@test.com");
         await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.name", TestParameters.GitHubUser);
     }
@@ -731,39 +726,14 @@ internal abstract partial class ScenarioTestBase
             .. additionalOptions ?? []
         ];
 
-        var ignoredChecksOptionIndex = additionalOptions?.IndexOf("--ignore-checks") ?? -1;
-        IReadOnlyCollection<string> ignoredChecks = ignoredChecksOptionIndex >= 0 && ignoredChecksOptionIndex + 1 < additionalOptions!.Count
-            ? additionalOptions[ignoredChecksOptionIndex + 1].Split(',', StringSplitOptions.RemoveEmptyEntries)
-            : [];
-        var mergePrs = additionalOptions?.Contains("--merge-prs") == true;
-        var mergeSettingsKey = (sourceChannelName, sourceUrl, targetUrl, targetBranch);
-        var hasMergeSettings = mergePrs || ignoredChecks.Count > 0;
-
-        if (hasMergeSettings)
+        var output = await RunDarcAsync(includeConfigurationRepoParams: true, command);
+        Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
+        if (!match.Success)
         {
-            _subscriptionMergeSettings[mergeSettingsKey] = (mergePrs, ignoredChecks);
+            throw new ScenarioTestException("Unable to create subscription.");
         }
 
-        var subscriptionCreated = false;
-        try
-        {
-            var output = await RunDarcAsync(includeConfigurationRepoParams: true, command);
-            Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
-            if (!match.Success)
-            {
-                throw new ScenarioTestException("Unable to create subscription.");
-            }
-
-            subscriptionCreated = true;
-            return match.Groups[1].Value;
-        }
-        finally
-        {
-            if (!subscriptionCreated)
-            {
-                _subscriptionMergeSettings.Remove(mergeSettingsKey);
-            }
-        }
+        return match.Groups[1].Value;
     }
 
     protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
@@ -1381,70 +1351,10 @@ internal abstract partial class ScenarioTestBase
     {
         _namespaceIngested = true;
         var configuration = await TestParameters.ConfigRepoParser.ParseAsync(_temporaryDirectory.Directory, _testNamespace);
-
-        // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
-        configuration = configuration with
-        {
-            Subscriptions =
-            [
-                .. configuration.Subscriptions.Select(subscription =>
-                {
-                    var key = (
-                        subscription.Channel,
-                        subscription.SourceRepository,
-                        subscription.TargetRepository,
-                        subscription.TargetBranch);
-
-                    return _subscriptionMergeSettings.TryGetValue(key, out var mergeSettings)
-                        ? subscription with
-                        {
-                            MergePrs = mergeSettings.MergePrs,
-                            IgnoredChecks = [.. mergeSettings.IgnoredChecks],
-                        }
-                        : subscription;
-                })
-            ],
-        };
         
         await PcsApi.Ingestion.IngestNamespaceAsync(
             _testNamespace,
             true,
-            ConvertConfigurationToPcsClient(configuration));
+            configuration.ToPcsClient());
     }
-
-    // TODO: Remove after updating Microsoft.DotNet.MaestroConfiguration.Client.
-    private static ClientYamlConfiguration ConvertConfigurationToPcsClient(
-        Microsoft.DotNet.MaestroConfiguration.Client.Models.YamlConfiguration configuration) => new()
-    {
-        Subscriptions = [.. configuration.Subscriptions.Select(subscription => new ClientSubscriptionYaml(
-            id: subscription.Id,
-            enabled: subscription.Enabled,
-            channel: subscription.Channel,
-            sourceRepository: subscription.SourceRepository,
-            targetRepository: subscription.TargetRepository,
-            targetBranch: subscription.TargetBranch,
-            updateFrequency: Microsoft.DotNet.MaestroConfiguration.Client.Models.SubscriptionYaml.ConvertUpdateFrequency(subscription.UpdateFrequency),
-            batchable: subscription.Batchable,
-            mergePrs: subscription.MergePrs,
-            sourceEnabled: subscription.SourceEnabled,
-            autoApprove: subscription.AutoApprove)
-        {
-            ExcludedAssets = [.. subscription.ExcludedAssets],
-            MergePolicies = [],
-            IgnoredChecks = [.. subscription.IgnoredChecks],
-            FailureNotificationTags = subscription.FailureNotificationTags,
-            SourceDirectory = subscription.SourceDirectory,
-            TargetDirectory = subscription.TargetDirectory,
-        })],
-        Channels = Microsoft.DotNet.MaestroConfiguration.Client.Models.ChannelYaml.ToPcsClientList(configuration.Channels),
-        DefaultChannels = Microsoft.DotNet.MaestroConfiguration.Client.Models.DefaultChannelYaml.ToPcsClientList(configuration.DefaultChannels),
-        BranchMergePolicies = [.. configuration.BranchMergePolicies.Select(repositoryBranch => new ClientBranchMergePoliciesYaml(
-            branch: repositoryBranch.Branch,
-            repository: repositoryBranch.Repository,
-            mergePrs: repositoryBranch.MergePrs)
-        {
-            MergePolicies = [],
-            IgnoredChecks = [.. repositoryBranch.IgnoredChecks],
-        })],
-    };
 }

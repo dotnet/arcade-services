@@ -613,7 +613,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -625,11 +624,6 @@ public class ConfigurationIngestorTests
             Branch = "main",
             MergePrs = false,
             IgnoredChecks = ["license/cla"],
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
         };
 
         var configData = new ConfigurationData(
@@ -854,7 +848,6 @@ public class ConfigurationIngestorTests
         var branch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(branch);
@@ -1125,7 +1118,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1135,10 +1127,6 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-            ],
         };
 
         var configData = new ConfigurationData(
@@ -1165,7 +1153,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1599,7 +1586,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1786,7 +1772,6 @@ public class ConfigurationIngestorTests
     private async Task<RepositoryBranch> CreateRepositoryBranch(
         string repositoryName,
         string branchName,
-        List<MergePolicyYaml> mergePolicies,
         Namespace namespaceEntity)
     {
         var repository = await _context.Repositories.FirstOrDefaultAsync(r => r.RepositoryName == repositoryName);
@@ -1838,7 +1823,6 @@ public class ConfigurationIngestorTests
             Branch = "main",
             MergePrs = false,
             IgnoredChecks = ["license/cla"],
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
         };
 
         return new ConfigurationData(
@@ -2063,7 +2047,6 @@ internal class LargeScaleTestDataBuilder
                 TargetBranch = "release",
                 Enabled = true,
                 ExcludedAssets = ["System.*"],
-                MergePolicies = [],
                 Batchable = true,
                 UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             },
@@ -2146,13 +2129,13 @@ internal class LargeScaleTestDataBuilder
             {
                 Repository = "https://github.com/dotnet/repo-create-1",
                 Branch = "main",
-                MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+                MergePrs = true,
             },
             new()
             {
                 Repository = "https://github.com/dotnet/repo-create-2",
                 Branch = "dev",
-                MergePolicies = [new MergePolicyYaml { Name = "RequireReviews" }],
+                IgnoredChecks = ["license/cla"],
             },
             // branchDelete is not included (will be deleted)
         };
