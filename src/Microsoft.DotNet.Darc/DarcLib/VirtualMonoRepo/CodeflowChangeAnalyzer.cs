@@ -36,6 +36,9 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     // +    <PackageB1PackageVersion>2.0.1</PackageB1PackageVersion>
     private static readonly IReadOnlyCollection<string> IgnoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
 
+    private static readonly IReadOnlyCollection<string> VersioningFiles =
+        [..DependencyFileManager.CodeflowDependencyFiles, ..VersionFiles.NugetConfigNames];
+
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IBasicBarClient _barClient;
@@ -61,7 +64,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     /// If it only contains version file changes that happened during the last backflow, we can skip it.
     /// Example:
     ///   - Changed files are only `source-manifest.json` and version files (Version.Details.xml, Versions.props,
-    ///   global.json...)
+    ///   global.json, NuGet.config...)
     ///   - The version file changes are only bumps of dependencies that were backflowed
     /// </summary>
     /// <returns> True, if there are no meaningful changes that warrant a PR creation</returns>
@@ -104,7 +107,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         var versionDetailsPropsFile =
             VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsProps;
 
-        var repoVersionFilesInVmr = DependencyFileManager.CodeflowDependencyFiles
+        var repoVersionFilesInVmr = VersioningFiles
             .Select(file => new UnixPath(mappingSrc) / file)
             .Append(versionDetailsPropsFile)
             .Select(unixPath => unixPath.ToString())
@@ -140,7 +143,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        var versionFileInclusionRules = DependencyFileManager.CodeflowDependencyFiles
+        var versionFileInclusionRules = VersioningFiles
             .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).ToString())
             .Select(VmrPatchHandler.GetInclusionRule)
             .ToList();
