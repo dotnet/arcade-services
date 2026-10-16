@@ -21,9 +21,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("repository")]
         public string Repository { get; set; }
 
-        [JsonProperty("mergePolicies")]
-        public List<ClientMergePolicyYaml> MergePolicies { get; set; }
-
         [JsonProperty("mergePrs")]
         public bool MergePrs { get; set; }
 

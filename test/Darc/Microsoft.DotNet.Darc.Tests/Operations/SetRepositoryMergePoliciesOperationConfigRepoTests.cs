@@ -51,7 +51,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         BranchMergePoliciesYaml actual = await GetWrittenConfigurationAsync(repository, branch, testBranch);
         actual.MergePrs.Should().BeTrue();
         actual.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
-        actual.MergePolicies.Should().BeEmpty();
     }
 
     [Test]
@@ -81,7 +80,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         BranchMergePoliciesYaml actual = await GetWrittenConfigurationAsync(repository, branch, testBranch);
         actual.MergePrs.Should().BeTrue();
         actual.IgnoredChecks.Should().BeEquivalentTo(["new-check"]);
-        actual.MergePolicies.Should().BeEmpty();
     }
 
     [Test]
@@ -173,7 +171,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
             Branch = branch,
             MergePrs = true,
             IgnoredChecks = ["old-check"],
-            MergePolicies = [],
         };
         string filePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(configuration);
         string content = new SerializerBuilder()

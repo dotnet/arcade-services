@@ -414,7 +414,7 @@ internal partial class ConfigurationIngestor(
             .Where(e => e.State == EntityState.Modified || subscriptionIdsWithAssetFilterChanges.Contains(e.Entity.Id))
             .Select(e => e.Entity)
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
-            .Select(ConvertSubscriptionToYaml)
+            .Select(SubscriptionYaml.FromClientModel)
             .ToList();
 
         var channelUpdates = _context.ChangeTracker.Entries<Channel>()
@@ -435,7 +435,7 @@ internal partial class ConfigurationIngestor(
             .Where(e => e.State == EntityState.Modified)
             .Select(e => e.Entity)
             .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
-            .Select(ConvertBranchMergePoliciesToYaml)
+            .Select(BranchMergePoliciesYaml.FromClientModel)
             .ToList();
 
         return new ConfigurationUpdates(

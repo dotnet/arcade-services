@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Maestro.MergePolicyEvaluation;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.Exceptions;
 
@@ -43,11 +41,6 @@ internal class BranchMergePolicyValidator
             throw new EntityIngestionValidationException("Branch is required.", branchMergePolicy);
         }
 
-        if (branchMergePolicy.Values.MergePolicies == null)
-        {
-            throw new EntityIngestionValidationException("Merge policies cannot be null.", branchMergePolicy);
-        }
-
         if (branchMergePolicy.Values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
         {
             throw new EntityIngestionValidationException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength} characters.", branchMergePolicy);
@@ -56,16 +49,6 @@ internal class BranchMergePolicyValidator
         if (branchMergePolicy.Values.Branch.Length > Data.Models.Repository.BranchNameLength)
         {
             throw new EntityIngestionValidationException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength} characters.", branchMergePolicy);
-        }
-
-        var mergePolicies = branchMergePolicy.Values.MergePolicies.Select(mp => mp.Name);
-
-        if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
-            && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))
-        {
-            throw new EntityIngestionValidationException(
-                "One or more of the following merge policies could not be added because it is already included "
-                + $"in the standard merge policy: {string.Join(", ", SubscriptionValidator.StandardMergePolicies)}", branchMergePolicy);
         }
     }
 }
