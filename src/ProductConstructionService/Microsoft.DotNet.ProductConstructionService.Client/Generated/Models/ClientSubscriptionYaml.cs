@@ -51,9 +51,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("excludedAssets")]
         public List<string> ExcludedAssets { get; set; }
 
-        [JsonProperty("mergePolicies")]
-        public List<ClientMergePolicyYaml> MergePolicies { get; set; }
-
         [JsonProperty("mergePrs")]
         public bool MergePrs { get; set; }
 
