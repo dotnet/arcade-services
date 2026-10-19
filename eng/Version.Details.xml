@@ -64,25 +64,25 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26509.2">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26515.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ff0ca5dff8fdd2966be49f7f9d6bece62b19cd2c</Sha>
+      <Sha>ed9b62fbe0647cadb40b25793463110495e19984</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26509.2">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26515.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ff0ca5dff8fdd2966be49f7f9d6bece62b19cd2c</Sha>
+      <Sha>ed9b62fbe0647cadb40b25793463110495e19984</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.VersionTools" Version="8.0.0-beta.25555.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>048a8c0ba5b72234301a3605c424ee9f9ff99772</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26502.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.26515.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>bd2230343e3f134d1f796ae6d9b3cb4a2c57e182</Sha>
+      <Sha>34e5ff09e5db998471bd1b6a14fe92c290105e86</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26502.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.26515.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>bd2230343e3f134d1f796ae6d9b3cb4a2c57e182</Sha>
+      <Sha>34e5ff09e5db998471bd1b6a14fe92c290105e86</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26515.1">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
