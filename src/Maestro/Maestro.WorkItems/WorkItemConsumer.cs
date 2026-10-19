@@ -71,7 +71,7 @@ internal class WorkItemConsumer(
                     await ReadAndProcessWorkItemAsync(queueClient, workItemScope, cancellationToken);
                 }
                 // If the cancellation token gets cancelled, we just want to exit
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     break;
                 }
@@ -142,7 +142,7 @@ internal class WorkItemConsumer(
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
             // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }

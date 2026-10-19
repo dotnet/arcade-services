@@ -8,6 +8,7 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.Storage.Queues;
 using Maestro.Common;
+using Maestro.Services.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -58,6 +59,9 @@ public static class WorkItemConfiguration
                 type: consumer.Value.WorkItemType,
                 queueName: consumer.Key);
         }
+
+        builder.Services.AddHealthChecks()
+            .AddCheck<WorkItemConsumerHealthCheck>("WorkItemConsumers", tags: [ServiceDefaultsExtensions.LivenessHealthCheckTag]);
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
