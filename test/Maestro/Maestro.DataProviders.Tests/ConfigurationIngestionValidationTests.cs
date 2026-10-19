@@ -61,7 +61,7 @@ public class ConfigurationIngestionValidationTests
     }
 
     [Test]
-    public void ValidateSubscription_BatchableWithMergePolicies_ThrowsWithEntityInfo()
+    public void ValidateSubscription_BatchableWithMergePrs_ThrowsWithEntityInfo()
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
@@ -73,7 +73,7 @@ public class ConfigurationIngestionValidationTests
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
             Batchable = true,
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            MergePrs = true,
         });
 
         // Act & Assert
@@ -81,13 +81,14 @@ public class ConfigurationIngestionValidationTests
             () => SubscriptionValidator.ValidateSubscription(subscription));
 
         exception.Should().NotBeNull();
-        exception.Message.Should().Contain("Batchable subscriptions cannot be combined with merge policies");
+        exception.Message.Should().Contain("Batchable subscriptions cannot enable Merge PRs");
+        exception.Message.Should().Contain("repository+branch level");
         exception.Message.Should().Contain(subscriptionId.ToString());
         exception.EntityInfo.Should().Contain(subscriptionId.ToString());
     }
 
     [Test]
-    public void ValidateSubscription_CodeflowWithoutSourceEnabled_ThrowsWithEntityInfo()
+    public void ValidateSubscription_BatchableWithIgnoredChecks_ThrowsWithEntityInfo()
     {
         // Arrange
         var subscriptionId = Guid.NewGuid();
@@ -98,8 +99,8 @@ public class ConfigurationIngestionValidationTests
             SourceRepository = "https://github.com/dotnet/runtime",
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
-            SourceEnabled = false,
-            MergePolicies = [new MergePolicyYaml { Name = "CodeflowConsistency" }],
+            Batchable = true,
+            IgnoredChecks = ["build"],
         });
 
         // Act & Assert
@@ -107,8 +108,35 @@ public class ConfigurationIngestionValidationTests
             () => SubscriptionValidator.ValidateSubscription(subscription));
 
         exception.Should().NotBeNull();
-        exception.Message.Should().Contain("Only source-enabled subscriptions may have the Codeflow merge policy");
+        exception.Message.Should().Contain("Batchable subscriptions cannot specify ignored checks");
+        exception.Message.Should().Contain("repository+branch level");
         exception.Message.Should().Contain(subscriptionId.ToString());
+        exception.EntityInfo.Should().Contain(subscriptionId.ToString());
+    }
+
+    [TestCase(true, false, false)]
+    [TestCase(false, false, false)]
+    [TestCase(false, true, false)]
+    [TestCase(false, false, true)]
+    [TestCase(false, true, true)]
+    public void ValidateSubscription_ValidMergeSettings_DoesNotThrow(
+        bool batchable, bool mergePrs, bool hasIgnoredChecks)
+    {
+        // Arrange
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Batchable = batchable,
+            MergePrs = mergePrs,
+            IgnoredChecks = hasIgnoredChecks ? ["build"] : [],
+        });
+
+        // Act & Assert
+        Assert.DoesNotThrow(() => SubscriptionValidator.ValidateSubscription(subscription));
     }
 
     [Test]
@@ -125,7 +153,6 @@ public class ConfigurationIngestionValidationTests
             TargetBranch = "main",
             SourceEnabled = false,
             AutoApprove = true,
-            MergePolicies = [],
         });
 
         // Act & Assert
@@ -152,7 +179,6 @@ public class ConfigurationIngestionValidationTests
             SourceEnabled = true,
             SourceDirectory = "runtime",
             AutoApprove = true,
-            MergePolicies = [],
         });
 
         // Act & Assert
@@ -178,7 +204,6 @@ public class ConfigurationIngestionValidationTests
             SourceEnabled = true,
             TargetDirectory = "runtime",
             AutoApprove = true,
-            MergePolicies = [],
         });
 
         // Act & Assert
@@ -311,7 +336,7 @@ public class ConfigurationIngestionValidationTests
         {
             Repository = null!,
             Branch = "main",
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            MergePrs = true,
         });
 
         // Act & Assert
@@ -332,7 +357,7 @@ public class ConfigurationIngestionValidationTests
         {
             Repository = longRepo,
             Branch = "main",
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            MergePrs = true,
         });
 
         // Act & Assert
@@ -341,31 +366,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Repository name cannot be longer than 450");
-        exception.Message.Should().Contain("main");
-    }
-
-    [Test]
-    public void ValidateBranchMergePolicies_StandardPolicyConflict_ThrowsWithEntityInfo()
-    {
-        // Arrange
-        var branchMergePolicy = new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
-        {
-            Repository = "https://github.com/dotnet/runtime",
-            Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "Standard" },
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-            ],
-        });
-
-        // Act & Assert
-        var exception = Assert.Throws<EntityIngestionValidationException>(
-            () => BranchMergePolicyValidator.ValidateBranchMergePolicies(branchMergePolicy));
-
-        exception.Should().NotBeNull();
-        exception.Message.Should().Contain("One or more of the following merge policies could not be added");
-        exception.Message.Should().Contain("https://github.com/dotnet/runtime");
         exception.Message.Should().Contain("main");
     }
 
@@ -484,13 +484,13 @@ public class ConfigurationIngestionValidationTests
             {
                 Repository = "https://github.com/dotnet/Runtime",
                 Branch = "Main",
-                MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+                MergePrs = true,
             }),
             new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
             {
                 Repository = "https://github.com/dotnet/runtime",
                 Branch = "main",
-                MergePolicies = [new MergePolicyYaml { Name = "Standard" }],
+                MergePrs = false,
             }),
         };
 
@@ -577,7 +577,7 @@ public class ConfigurationIngestionValidationTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            MergePrs = true,
         });
 
         // Act

@@ -186,7 +186,7 @@ internal static class PcsStartup
         // in such a way that will work with sizing.
         builder.Services.AddSingleton<DarcRemoteMemoryCache>();
         builder.Services.EnableLazy();
-        builder.Services.AddMergePolicies();
+        builder.Services.AddMergePolicyBuilder();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         builder.InitializeVmrFromRemote();

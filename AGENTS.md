@@ -17,6 +17,8 @@
 - Do NOT run `test/ProductConstructionService.ScenarioTests` — they require a deployed service.
 
 ## Constraints
+- Perform only work explicitly requested by the user. Never make unrequested changes or expand the task's scope.
+- Questions and critiques are not permission to edit files. Ask for explicit approval before making changes that were not requested.
 - Keep diffs minimal and scoped to the request.
 - Update or add tests for any behavior change.
 - Do not modify CI, dependency versions, or security settings unless asked.

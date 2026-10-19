@@ -3,26 +3,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Maestro.Common;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.Exceptions;
-using Maestro.MergePolicyEvaluation;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 internal static class SubscriptionValidator
 {
-    internal static HashSet<string> StandardMergePolicies = [
-            MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-            MergePolicyConstants.NoRequestedChangesMergePolicyName,
-            MergePolicyConstants.DontAutomergeDowngradesPolicyName,
-            MergePolicyConstants.ValidateCoherencyMergePolicyName,
-            MergePolicyConstants.VersionDetailsPropsMergePolicyName,
-            MergePolicyConstants.CodeflowMergePolicyName,
-        ];
-
     /// <summary>
     /// Validates a collection of Subscription entities against business rules.
     /// </summary>
@@ -69,37 +58,23 @@ internal static class SubscriptionValidator
             throw new EntityIngestionValidationException("Target branch is required.", subscription);
         }
 
-        if (subscription.Values.MergePolicies == null)
-        {
-            throw new EntityIngestionValidationException("Merge policies cannot be null.", subscription);
-        }
-
-        List<string> mergePolicies = [.. subscription.Values.MergePolicies.Select(mp => mp.Name)];
-
-        if (!subscription.Values.SourceEnabled
-            && mergePolicies.Contains(MergePolicyConstants.CodeflowMergePolicyName))
-        {
-            throw new EntityIngestionValidationException("Only source-enabled subscriptions may have the Codeflow merge policy.", subscription);
-        }
-
-        if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
-            && mergePolicies.Any(StandardMergePolicies.Contains))
-        {
-            throw new EntityIngestionValidationException(
-                "One or more of the following merge policies could not be added because it is already included "
-                + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.", subscription);
-        }
-
         if (subscription.Values.Batchable && subscription.Values.SourceEnabled)
         {
             throw new EntityIngestionValidationException("Batched codeflow subscriptions are not supported.", subscription);
         }
 
-        if (subscription.Values.Batchable && mergePolicies.Count > 0)
+        if (subscription.Values.Batchable && subscription.Values.MergePrs)
         {
             throw new EntityIngestionValidationException(
-                "Batchable subscriptions cannot be combined with merge policies. " +
-                "Merge policies are specified at a repository+branch level.", subscription);
+                "Batchable subscriptions cannot enable Merge PRs. " +
+                "Merge PRs is configured at a repository+branch level.", subscription);
+        }
+
+        if (subscription.Values.Batchable && subscription.Values.IgnoredChecks.Count > 0)
+        {
+            throw new EntityIngestionValidationException(
+                "Batchable subscriptions cannot specify ignored checks. " +
+                "Ignored checks are configured at a repository+branch level.", subscription);
         }
 
         if (!string.IsNullOrEmpty(subscription.Values.SourceDirectory)

@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
-using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
 using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -47,13 +45,13 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             false);
 
-        var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
+        var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1);
 
         await ValidateSubscriptionInfo(subscription1Id, expectedSubscription1Info);
 
         var subscription2Id = await CreateSubscriptionAsync(
             channel1Name, repo1Name, repo1Name, targetBranch, "none", "maestro-auth-test",
-            ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"], targetIsAzDo: true);
+            ["--merge-prs", "--ignore-checks", "WIP,license/cla"], targetIsAzDo: true);
 
         var expectedSubscription2 = SubscriptionBuilder.BuildSubscription(
             repo1Uri,
@@ -63,16 +61,15 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             subscription2Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
             false,
-            [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
+            true,
             ["WIP", "license/cla"]);
 
-        var expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
+        var expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2);
 
         await ValidateSubscriptionInfo(subscription2Id, expectedSubscription2Info);
 
         var subscription3Id = await CreateSubscriptionAsync(
-            channel2Name, repo1Name, repo2Name, targetBranch, "none", "maestro-auth-test",
-            ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"]);
+            channel2Name, repo1Name, repo2Name, targetBranch, "none", "maestro-auth-test");
 
         var expectedSubscription3 = SubscriptionBuilder.BuildSubscription(
             repo1Uri,
@@ -81,11 +78,9 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             channel2Name,
             subscription3Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
-            false,
-            [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
-            ["WIP", "license/cla"]);
+            false);
 
-        var expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);
+        var expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3);
 
         await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
 
@@ -116,12 +111,17 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
         await DeleteSubscriptionById(subscription3Id);
 
-        // Attempt to create a batchable subscription with merge policies.
-        // Should fail, merge policies are set separately for batched subs
-        TestContext.WriteLine("Attempt to create a batchable subscription with merge policies");
+        TestContext.WriteLine("Attempt to create a batchable subscription with Merge PRs enabled");
         Assert.ThrowsAsync<ScenarioTestException>(async () =>
-            await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "none", additionalOptions: ["--standard-automerge", "--batchable"]),
-            "Attempt to create a batchable subscription with merge policies");
+            await CreateSubscriptionAsync(
+                channel1Name,
+                repo1Name,
+                repo2Name,
+                targetBranch,
+                "none",
+                "maestro-auth-test",
+                ["--merge-prs", "--batchable"]),
+            "Batchable subscriptions should configure merging through repository policies");
 
         // Create a batchable subscription
         TestContext.WriteLine("Create a batchable subscription");
@@ -137,7 +137,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             true);
 
-        var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
+        var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription);
 
         await ValidateSubscriptionInfo(batchSubscriptionId, expectedBatchedSubscriptionInfo);
         await DeleteSubscriptionById(batchSubscriptionId);
@@ -151,9 +151,10 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             Target Branch: {targetBranch}
             Update Frequency: everyWeek
             Batchable: False
-            Merge Policies:
-            - Name: Standard
+            Merge PRs: False
+            Ignored Checks: []
             Source Enabled: False
+            Auto Approve: False
             Excluded Assets: []
             ";
 
@@ -166,71 +167,12 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             channel1Name,
             yamlSubscriptionId,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
-            false,
-            [MergePolicyConstants.StandardMergePolicyName]);
+            false);
 
-        var expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
+        var expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription);
 
         await ValidateSubscriptionInfo(yamlSubscriptionId, expectedYamlSubscriptionInfo);
         await DeleteSubscriptionById(yamlSubscriptionId);
-
-        TestContext.WriteLine("Change casing of the various properties. Expecting no changes.");
-
-        var yamlDefinition2 = $@"
-            Channel: {channel1Name}
-            Source Repository URL: {repo1Uri}
-            Target Repository URL: {repo2Uri}
-            Target Branch: {targetBranch}
-            Update Frequency: everyweek
-            Batchable: False
-            Merge Policies:
-            - Name: standard
-            Source Enabled: False
-            Excluded Assets: []
-            ";
-
-        var yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
-
-        var expectedYamlSubscription2 = SubscriptionBuilder.BuildSubscription(
-            repo1Uri,
-            repo2Uri,
-            targetBranch,
-            channel1Name,
-            yamlSubscription2Id,
-            Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek, false,
-            [MergePolicyConstants.StandardMergePolicyName]);
-
-        var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
-
-        await ValidateSubscriptionInfo(yamlSubscription2Id, expectedYamlSubscriptionInfo2);
-        await DeleteSubscriptionById(yamlSubscription2Id);
-
-        TestContext.WriteLine("Attempt to add multiple of the same merge policy checks. Should fail.");
-
-        var yamlDefinition3 = $"""
-            Channel: {channel1Name}
-            Source Repository URL: {repo1Uri}
-            Target Repository URL: {repo2Uri}
-            Target Branch: {targetBranch}
-            Update Frequency: everyweek
-            Batchable: False
-            Merge Policies:
-            - Name: AllChecksSuccessful
-                Properties:
-                ignoreChecks:
-                - WIP
-                - license/cla
-            - Name: AllChecksSuccessful
-                Properties:
-                ignoreChecks:
-                - WIP
-                - MySpecialCheck
-            Source Enabled: False
-            Excluded Assets: []
-            """;
-
-        Assert.ThrowsAsync<ScenarioTestException>(async () =>
-            await CreateSubscriptionAsync(yamlDefinition3), "Attempt to create a subscription with multiples of the same merge policy.");
 
         TestContext.WriteLine("Testing duplicate subscription handling...");
         var yamlSubscription3Id = await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");

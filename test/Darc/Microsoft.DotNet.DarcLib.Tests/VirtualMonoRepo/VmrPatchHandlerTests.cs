@@ -182,6 +182,93 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
+    public async Task CreateSubmodulePatchesDoesNotUpdateManifestTest()
+    {
+        _vmrInfo.SetupGet(x => x.TmpPath).Returns(_patchDir);
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodulesAsync(_repoClone.Path, Sha1))
+            .ReturnsAsync([]);
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodulesAsync(_repoClone.Path, Sha2))
+            .ReturnsAsync([_submoduleInfo]);
+        var nestedSubmodule = new GitSubmoduleInfo(
+            "external-2", "nested", "https://github.com/dotnet/external-2", SubmoduleSha2);
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodulesAsync(TmpDir / "external-1", SubmoduleSha1))
+            .ReturnsAsync([nestedSubmodule]);
+
+        var patches = await _patchHandler.CreateSubmodulePatchesAsync(
+            _testRepoMapping, _repoClone, Sha1, Sha2, cancellationToken: CancellationToken.None);
+
+        patches.Keys.Should().BeEquivalentTo([_submoduleInfo.Path]);
+        patches.Values.SelectMany(submodulePatches => submodulePatches)
+            .Select(patch => patch.ApplicationPath).Should().BeEquivalentTo(
+            [
+                RepoVmrPath / _submoduleInfo.Path,
+                RepoVmrPath / _submoduleInfo.Path / nestedSubmodule.Path,
+            ]);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ResetSubmoduleRestoresSourceSnapshotWithoutUpdatingManifestTest(bool removed)
+    {
+        _vmrInfo.SetupGet(x => x.TmpPath).Returns(_patchDir);
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodulesAsync(_repoClone.Path, Sha2))
+            .ReturnsAsync(removed ? [] : [_submoduleInfo]);
+
+        await _patchHandler.ResetSubmoduleAsync(
+            _testRepoMapping, _repoClone, _submoduleInfo.Path, Sha2, CancellationToken.None);
+
+        VerifyGitCall(
+            [
+                "rm", "-r", "-q", "-f", "--ignore-unmatch", "--",
+                $":(literal){RepoVmrPath / _submoduleInfo.Path}",
+            ],
+            _vmrPath);
+        var expectedPatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        var expectedArgs = GetExpectedGitDiffArguments(
+            expectedPatchName, Constants.EmptyGitObject, SubmoduleSha1, null)
+            .Take(10)
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
+        _processManager.Verify(
+            x => x.Execute(
+                "git",
+                expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                TmpDir / "external-1",
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
+            removed ? Times.Never() : Times.Once());
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Never);
+        _cloneManager.Verify(
+            x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, false, It.IsAny<CancellationToken>()),
+            removed ? Times.Never() : Times.Once());
+    }
+
+    [Test]
+    public async Task ResetSubmoduleAppliesSnapshotWithoutUpdatingManifestTest()
+    {
+        var submodulePath = new UnixPath(IndividualRepoName) / "submodules/external[1]";
+        var applicationPath = SRC / submodulePath;
+        var patch = new VmrIngestionPatch(_patchDir / "snapshot.patch", applicationPath);
+
+        await _patchHandler.ResetSubmoduleAsync(submodulePath, [patch], CancellationToken.None);
+
+        VerifyGitCall(
+            ["rm", "-r", "-q", "-f", "--ignore-unmatch", "--", $":(literal){SRC / submodulePath}"],
+            _vmrPath);
+        VerifyGitCall(
+            ["apply", "--ignore-space-change", "--cached", "--directory", applicationPath, patch.Path],
+            _vmrPath);
+        _fileSystem.Verify(x => x.DeleteFile(patch.Path), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Never);
+    }
+
+    [Test]
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
         // Setup

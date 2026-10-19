@@ -42,14 +42,3 @@ public class ValidateCoherencyMergePolicy : MergePolicy
         return Task.FromResult(FailDecisively("Coherency check failed.", description.ToString()));
     }
 }
-
-public class ValidateCoherencyMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.ValidateCoherencyMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new ValidateCoherencyMergePolicy() };
-        return Task.FromResult(policies);
-    }
-}

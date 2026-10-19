@@ -120,6 +120,12 @@ public class ConfigurationIngestorTests
         namespaceEntity.Should().NotBeNull();
         namespaceEntity.Channels.Should().ContainSingle()
             .Which.Name.Should().Be(".NET 8");
+        namespaceEntity.RepositoryBranches.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new
+            {
+                MergePrs = false,
+                IgnoredChecks = new[] { "license/cla" },
+            });
     }
 
     [Test]
@@ -236,10 +242,12 @@ public class ConfigurationIngestorTests
             "https://github.com/dotnet/aspnetcore",
             "main",
             enabled: true,
-            namespaceEntity);
+            namespaceEntity,
+            excludedAssets: [new AssetFilter { Filter = "Microsoft.Extensions.Logging" }]);
 
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
 
         var updatedSubscription = new SubscriptionYaml
         {
@@ -253,6 +261,9 @@ public class ConfigurationIngestorTests
             TargetDirectory = "runtime", // Forward flow subscription
             AutoApprove = true, // Changed from false to true
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
+            MergePrs = true,
+            IgnoredChecks = ["license/cla"],
+            ExcludedAssets = ["Microsoft.Extensions.Logging"],
         };
 
         var configData = new ConfigurationData(
@@ -274,6 +285,10 @@ public class ConfigurationIngestorTests
         updated.SourceEnabled.Should().BeTrue();
         updated.TargetDirectory.Should().Be("runtime");
         updated.AutoApprove.Should().BeTrue();
+        updated.MergePrs.Should().BeTrue();
+        updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
+        updated.ExcludedAssets.Should().ContainSingle()
+            .Which.Filter.Should().Be("Microsoft.Extensions.Logging");
     }
 
     [Test]
@@ -598,7 +613,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -608,11 +622,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
+            MergePrs = false,
+            IgnoredChecks = ["license/cla"],
         };
 
         var configData = new ConfigurationData(
@@ -636,7 +647,8 @@ public class ConfigurationIngestorTests
             .FirstOrDefault(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
 
         updated.Should().NotBeNull();
-        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
+        updated.MergePrs.Should().BeFalse();
+        updated.IgnoredChecks.Should().BeEquivalentTo(["license/cla"]);
     }
 
     #endregion
@@ -836,7 +848,6 @@ public class ConfigurationIngestorTests
         var branch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(branch);
@@ -1107,7 +1118,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1117,10 +1127,6 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-            ],
         };
 
         var configData = new ConfigurationData(
@@ -1139,7 +1145,7 @@ public class ConfigurationIngestorTests
     }
 
     [Test]
-    public async Task IngestConfigurationAsync_RepositoryBranchWithPolicyChanges_ReportedAsUpdate()
+    public async Task IngestConfigurationAsync_RepositoryBranchWithMergeConfigurationChanges_ReportedAsUpdate()
     {
         // Arrange
         var namespaceEntity = await CreateNamespace();
@@ -1147,7 +1153,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1157,11 +1162,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
+            MergePrs = true,
+            IgnoredChecks = ["license/cla"],
         };
 
         var configData = new ConfigurationData(
@@ -1333,7 +1335,6 @@ public class ConfigurationIngestorTests
         
         var updatedBranch = namespaceEntity.RepositoryBranches.First(rb => 
             rb.RepositoryName == "https://github.com/dotnet/repo-update-1" && rb.BranchName == "release");
-        updatedBranch.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     #endregion
@@ -1585,7 +1586,6 @@ public class ConfigurationIngestorTests
         var existingBranch = await CreateRepositoryBranch(
             "https://github.com/dotnet/runtime",
             "main",
-            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
             namespaceEntity);
 
         await _context.RepositoryBranches.AddAsync(existingBranch);
@@ -1596,11 +1596,7 @@ public class ConfigurationIngestorTests
         {
             Repository = "HTTPS://GITHUB.COM/DOTNET/RUNTIME",
             Branch = "MAIN",
-            MergePolicies =
-            [
-                new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                new MergePolicyYaml { Name = "RequireReviews" },
-            ],
+            MergePrs = true,
         };
 
         var configData = new ConfigurationData(
@@ -1621,7 +1617,6 @@ public class ConfigurationIngestorTests
             .FirstOrDefaultAsync(rb => rb.Namespace!.Name == _testNamespace);
 
         updated.Should().NotBeNull();
-        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     [Test]
@@ -1753,7 +1748,6 @@ public class ConfigurationIngestorTests
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
                 Batchable = false,
-                MergePolicies = [],
             },
             Namespace = namespaceEntity,
             ExcludedAssets = excludedAssets ?? [],
@@ -1778,7 +1772,6 @@ public class ConfigurationIngestorTests
     private async Task<RepositoryBranch> CreateRepositoryBranch(
         string repositoryName,
         string branchName,
-        List<MergePolicyYaml> mergePolicies,
         Namespace namespaceEntity)
     {
         var repository = await _context.Repositories.FirstOrDefaultAsync(r => r.RepositoryName == repositoryName);
@@ -1789,23 +1782,11 @@ public class ConfigurationIngestorTests
             await _context.SaveChangesAsync();
         }
 
-        var policyObject = new RepositoryBranch.Policy
-        {
-            MergePolicies = mergePolicies
-                .Select(mp => new MergePolicyDefinition
-                {
-                    Name = mp.Name,
-                    Properties = mp.Properties?.ToDictionary(p => p.Key, p => Newtonsoft.Json.Linq.JToken.FromObject(p.Value)),
-                })
-                .ToList(),
-        };
-
         return new RepositoryBranch
         {
             Repository = repository,
             RepositoryName = repository.RepositoryName,
             BranchName = branchName,
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(policyObject),
             Namespace = namespaceEntity,
         };
     }
@@ -1840,7 +1821,8 @@ public class ConfigurationIngestorTests
         {
             Repository = "https://github.com/dotnet/runtime2",
             Branch = "main",
-            MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            MergePrs = false,
+            IgnoredChecks = ["license/cla"],
         };
 
         return new ConfigurationData(
@@ -1913,8 +1895,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-                Batchable = false,
-                MergePolicies = [],
+                Batchable = false
             },
             Namespace = _namespace,
             ExcludedAssets = [new AssetFilter { Filter = "Old.Package" }],
@@ -1932,8 +1913,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryDay,
-                Batchable = true,
-                MergePolicies = [],
+                Batchable = true
             },
             Namespace = _namespace,
             ExcludedAssets = [],
@@ -1951,8 +1931,7 @@ internal class LargeScaleTestDataBuilder
             PolicyObject = new SubscriptionPolicy
             {
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-                Batchable = false,
-                MergePolicies = [],
+                Batchable = false
             },
             Namespace = _namespace,
             ExcludedAssets = [],
@@ -2005,10 +1984,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoUpdate1,
             RepositoryName = repoUpdate1.RepositoryName,
             BranchName = "release",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
-            }),
             Namespace = _namespace,
         };
 
@@ -2017,10 +1992,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoUpdate2,
             RepositoryName = repoUpdate2.RepositoryName,
             BranchName = "main",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "RequireReviews" }],
-            }),
             Namespace = _namespace,
         };
 
@@ -2029,10 +2000,6 @@ internal class LargeScaleTestDataBuilder
             Repository = repoDelete1,
             RepositoryName = repoDelete1.RepositoryName,
             BranchName = "main",
-            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
-            {
-                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
-            }),
             Namespace = _namespace,
         };
 
@@ -2080,7 +2047,6 @@ internal class LargeScaleTestDataBuilder
                 TargetBranch = "release",
                 Enabled = true,
                 ExcludedAssets = ["System.*"],
-                MergePolicies = [],
                 Batchable = true,
                 UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             },
@@ -2150,34 +2116,26 @@ internal class LargeScaleTestDataBuilder
             {
                 Repository = "https://github.com/dotnet/repo-update-1",
                 Branch = "release",
-                MergePolicies =
-                [
-                    new MergePolicyYaml { Name = "AllChecksSuccessful" },
-                    new MergePolicyYaml { Name = "RequireReviews" },
-                ],
+                MergePrs = true,
             },
             new()
             {
                 Repository = "https://github.com/dotnet/repo-update-2",
                 Branch = "main",
-                MergePolicies =
-                [
-                    new MergePolicyYaml { Name = "RequireReviews" },
-                    new MergePolicyYaml { Name = "NoExtraCommits" },
-                ],
+                IgnoredChecks = ["license/cla"],
             },
             // Creates
             new()
             {
                 Repository = "https://github.com/dotnet/repo-create-1",
                 Branch = "main",
-                MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+                MergePrs = true,
             },
             new()
             {
                 Repository = "https://github.com/dotnet/repo-create-2",
                 Branch = "dev",
-                MergePolicies = [new MergePolicyYaml { Name = "RequireReviews" }],
+                IgnoredChecks = ["license/cla"],
             },
             // branchDelete is not included (will be deleted)
         };

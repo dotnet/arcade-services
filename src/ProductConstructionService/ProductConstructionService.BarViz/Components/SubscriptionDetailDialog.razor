@@ -90,18 +90,22 @@
                     <td>@(_subscription.Policy.Batchable ? "Yes" : "No")</td>
                 </tr>
                 <tr>
-                    <td>Merge policies</td>
+                    <td>Merge PRs</td>
+                    <td>@(_subscription.MergePrs ? "Yes" : "No")</td>
+                </tr>
+                <tr>
+                    <td>Ignored checks</td>
                     <td>
-                        @if (_subscription.Policy.MergePolicies == null || _subscription.Policy.MergePolicies.Count == 0)
+                        @if (_subscription.IgnoredChecks == null || _subscription.IgnoredChecks.Count == 0)
                         {
                             <span>None</span>
                         }
                         else
                         {
                             <ul>
-                                @foreach (var policy in _subscription.Policy.MergePolicies)
+                                @foreach (var check in _subscription.IgnoredChecks)
                                 {
-                                    <li>@policy.Name</li>
+                                    <li>@check</li>
                                 }
                             </ul>
                         }

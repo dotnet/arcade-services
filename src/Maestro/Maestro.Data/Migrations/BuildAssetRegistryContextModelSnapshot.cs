@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -453,12 +453,15 @@ namespace Maestro.Data.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.PrimitiveCollection<string>("IgnoredChecks")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("MergePrs")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("NamespaceId")
                         .HasColumnType("int");
-
-                    b.Property<string>("PolicyString")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Policy");
 
                     b.HasKey("RepositoryName", "BranchName");
 
@@ -482,8 +485,15 @@ namespace Maestro.Data.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 
+                    b.PrimitiveCollection<string>("IgnoredChecks")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("LastAppliedBuildId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("MergePrs")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("NamespaceId")
                         .HasColumnType("int");

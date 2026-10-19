@@ -8,8 +8,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class RepositoryBranch
     {
-        public RepositoryBranch()
+        public RepositoryBranch(bool mergePrs)
         {
+            MergePrs = mergePrs;
         }
 
         [JsonProperty("repository")]
@@ -18,7 +19,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("branch")]
         public string Branch { get; set; }
 
-        [JsonProperty("mergePolicies")]
-        public List<MergePolicy> MergePolicies { get; set; }
+        [JsonProperty("mergePrs")]
+        public bool MergePrs { get; set; }
+
+        [JsonProperty("ignoredChecks")]
+        public List<string> IgnoredChecks { get; set; }
     }
 }

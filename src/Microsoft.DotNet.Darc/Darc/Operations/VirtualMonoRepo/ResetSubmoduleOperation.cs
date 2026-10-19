@@ -177,13 +177,6 @@ internal class ResetSubmoduleOperation : Operation
         string targetSha,
         IReadOnlyCollection<string> filters)
     {
-        var targetDir = _vmrInfo.VmrPath / VmrInfo.SourcesDir / submodule.Path;
-        var removeResult = await _processManager.Execute(
-            _processManager.GitExecutable,
-            ["rm", "-r", "-q", "-f", "--", .. filters],
-            workingDir: targetDir);
-        removeResult.ThrowIfFailed($"Failed to remove existing submodule content in {targetDir}");
-
         var patchPath = _vmrInfo.TmpPath / $"{SanitizePathForFileName(submodule.Path)}.patch";
         var patches = await _patchHandler.CreatePatches(
             patchPath,
@@ -197,12 +190,10 @@ internal class ResetSubmoduleOperation : Operation
             ignoreLineEndings: false,
             CancellationToken.None);
 
-        await _patchHandler.ApplyPatches(
+        await _patchHandler.ResetSubmoduleAsync(
+            new UnixPath(submodule.Path),
             patches,
-            _vmrInfo.VmrPath,
-            removePatchAfter: true,
-            keepConflicts: false,
-            cancellationToken: CancellationToken.None);
+            CancellationToken.None);
     }
 
     /// <summary>

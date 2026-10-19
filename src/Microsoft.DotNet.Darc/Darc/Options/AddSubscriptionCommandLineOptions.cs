@@ -24,8 +24,11 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("target-branch", HelpText = "Target branch for the subscription.")]
     public string TargetBranch { get; set; }
 
-    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies or is a codeflow subscription (source-enabled).")]
+    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported with --merge-prs or for codeflow subscriptions (source-enabled).")]
     public bool Batchable { get; set; }
+
+    [Option("merge-prs", HelpText = "Whether Maestro should merge pull requests after all Maestro checks pass.")]
+    public bool MergePrs { get; set; }
 
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }
@@ -39,6 +42,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("auto-approve", HelpText = "Whether passing pull requests should be automatically approved. Only allowed on forward flow subscriptions.", Default = false)]
     public bool AutoApprove { get; set; }
 
-    [Option("subscription", HelpText = "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags (enabled, batchable, source-enabled) are copied when no merge policies are specified via command line.")]
+    [Option("subscription", HelpText = "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags are copied when no Merge PRs settings are specified via command line.")]
     public string CopyFromSubscription { get; set; }
 }

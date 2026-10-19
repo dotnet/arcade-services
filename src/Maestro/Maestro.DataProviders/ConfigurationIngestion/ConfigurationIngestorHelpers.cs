@@ -7,8 +7,6 @@ using System.Linq;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -136,8 +134,9 @@ internal partial class ConfigurationIngestor
             {
                 UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
                 Batchable = subscription.Values.Batchable,
-                MergePolicies = [.. subscription.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
             },
+            MergePrs = subscription.Values.MergePrs,
+            IgnoredChecks = [.. subscription.Values.IgnoredChecks],
             Enabled = subscription.Values.Enabled,
             SourceEnabled = subscription.Values.SourceEnabled,
             AutoApprove = subscription.Values.AutoApprove,
@@ -187,30 +186,17 @@ internal partial class ConfigurationIngestor
         IngestedBranchMergePolicies branchMergePolicies,
         Namespace namespaceEntity)
     {
-        var policyObject = new RepositoryBranch.Policy
-        {
-            MergePolicies = [.. branchMergePolicies.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
-        };
-
         var branchMergePolicyDao = new RepositoryBranch
         {
             RepositoryName = branchMergePolicies.Values.Repository,
             BranchName = branchMergePolicies.Values.Branch,
-            PolicyString = JsonConvert.SerializeObject(policyObject),
+            MergePrs = branchMergePolicies.Values.MergePrs,
+            IgnoredChecks = [.. branchMergePolicies.Values.IgnoredChecks],
             Namespace = namespaceEntity,
         };
 
         return branchMergePolicyDao;
     }
-
-    private static MergePolicyDefinition ConvertMergePolicyYamlToDao(MergePolicyYaml mergePolicy)
-        => new()
-        {
-            Name = mergePolicy.Name,
-            Properties = mergePolicy.Properties?.ToDictionary(
-                p => p.Key,
-                p => JToken.FromObject(p.Value)), // todo: this seems fragile. Can we change MergePolicyYaml to be <string, JToken> like the DAO & DTO?
-        };
 }
 
 internal class CaseInsensitivePairComparer: IEqualityComparer<(string, string)>

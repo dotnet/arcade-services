@@ -128,6 +128,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
+            await CreateFailedExternalStatusCheckAsync(TestRepository.VmrTestRepoName, targetBranchName, isAzDoTest: false);
             await TriggerSubscriptionAsync(subscriptionId);
 
             // We verify the file got there + make a conflicting change for future
@@ -163,6 +164,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
+            await CreateFailedExternalStatusCheckAsync(TestRepository.VmrTestRepoName, targetBranchName, isAzDoTest: false);
             await TriggerSubscriptionAsync(subscriptionId);
 
             // This time we should get a conflict comment for the second file
@@ -285,6 +287,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(secondBuild.Id, channelName);
+            await CreateFailedExternalStatusCheckAsync(TestRepository.VmrTestRepoName, targetBranchName, isAzDoTest: false);
             await TriggerSubscriptionAsync(subscriptionId);
 
             TestContext.WriteLine("Waiting for the new unsafe codeflow PR to show up");
@@ -416,6 +419,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
+            await CreateFailedExternalStatusCheckAsync(TestRepository.TestRepo1Name, targetBranchName, isAzDoTest: false);
             await TriggerSubscriptionAsync(subscriptionId);
 
             // We verify the file got there + make a conflicting change for future
@@ -451,6 +455,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
+            await CreateFailedExternalStatusCheckAsync(TestRepository.TestRepo1Name, targetBranchName, isAzDoTest: false);
             await TriggerSubscriptionAsync(subscriptionId);
 
             // This time we should get a conflict comment for the second file

@@ -82,6 +82,7 @@ INSERT INTO [Repositories] (RepositoryName, InstallationId) VALUES
     ('https://github.com/maestro-auth-test/maestro-test2', 289474),
     ('https://github.com/maestro-auth-test/maestro-test3', 289474),
     ('https://github.com/maestro-auth-test/maestro-test-vmr', 289474),
+    ('https://github.com/maestro-auth-test/maestro-test-arcade', 289474),
     ('https://github.com/maestro-auth-test/arcade', 289474),
     ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
 ```
