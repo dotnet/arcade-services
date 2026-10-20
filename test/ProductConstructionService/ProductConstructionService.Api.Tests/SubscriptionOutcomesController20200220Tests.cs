@@ -108,6 +108,39 @@ public partial class SubscriptionOutcomesController20200220Tests
     }
 
     [Test]
+    public async Task ListSubscriptionOutcomes_FiltersByApprovedType()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        var seeded = await SeedOutcomesAsync(data.Context);
+        var approval = new DataModels.SubscriptionOutcome
+        {
+            OperationId = Guid.NewGuid().ToString("N"),
+            SubscriptionId = seeded.SubscriptionAId,
+            BuildId = 101,
+            Date = DateTime.UtcNow,
+            Message = "Automatically approved pull request at commit abc1234",
+            Type = DataModels.SubscriptionOutcomeType.Approved,
+            PrUrl = "https://github.com/dotnet/dotnet/pull/123",
+        };
+        data.Context.SubscriptionOutcomes.Add(approval);
+        await data.Context.SaveChangesAsync();
+
+        IActionResult result = await data.SubscriptionOutcomesController.ListSubscriptionOutcomes(
+            subscriptionId: seeded.SubscriptionAId.ToString(),
+            subscriptionOutcomeType: "Approved");
+
+        var objResult = (ObjectResult)result;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        var outcomes = (List<SubscriptionTriggerOutcome>)objResult.Value!;
+        var outcome = outcomes.Should().ContainSingle().Subject;
+        outcome.OperationId.Should().Be(approval.OperationId);
+        outcome.Type.Should().Be(OutcomeType.Approved);
+        outcome.BuildId.Should().Be(approval.BuildId);
+        outcome.PrUrl.Should().Be(approval.PrUrl);
+        outcome.Message.Should().Be(approval.Message);
+    }
+
+    [Test]
     public async Task ListSubscriptionOutcomes_InvalidType_ReturnsBadRequest()
     {
         using TestData data = await TestData.Default.BuildAsync();

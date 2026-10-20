@@ -818,6 +818,13 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
                 throw new NonRetriableException(
                     $"Failed to approve pull request {pr.Url}: {e.Message}", e);
             }
+
+            _outcomeRecorder.SetPullRequestUrl(pr.Url);
+            await _outcomeRecorder.RecordSubscriptionUpdateAsync(
+                $"Automatically approved pull request at commit {prInfo.HeadBranchSha}",
+                SubscriptionOutcomeType.Approved,
+                subscription.Id,
+                pr.ContainedSubscriptions.Single(s => s.SubscriptionId == subscription.Id).BuildId);
         }
         else
         {

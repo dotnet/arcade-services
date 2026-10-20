@@ -1515,6 +1515,10 @@ repository (i.e. the PR's changes match the source diff and it has no commits au
 someone other than the bot). This is only allowed on forward flow subscriptions
 (source-enabled subscriptions that specify a target directory).
 
+Each successful auto-approval records an `Approved` subscription history item with
+the PR link, build id, and approved commit SHA. View these items with
+`darc get-subscription-history --id <subscription-id> --type Approved`.
+
 **Examples**:
 
 ```
@@ -2883,9 +2887,10 @@ https://github.com/aspnet/AspNetCore (.NET Core 3.1 Dev) ==> 'https://github.com
 ### **`get-subscription-history`**
 
 Retrieves the history of subscription trigger outcomes recorded by Maestro.
-Each outcome describes what happened the last time a subscription was triggered
+Each outcome describes what happened when a subscription was triggered
 (for example whether a pull request was opened/updated, there was nothing to
-update, or the update failed).
+update, or the update failed). Successful automatic PR approvals are also recorded
+as `Approved` outcomes, including the PR link and the approved commit SHA.
 
 When run without any filters, the command returns the most recent outcomes
 (up to `--limit`, default 10). The result set can be narrowed with the filters
@@ -2895,7 +2900,7 @@ below, all of which can be combined:
   [get-subscriptions](#get-subscriptions).
 - `--build` - Filter by the build id that triggered the outcome.
 - `--type` - Filter by outcome type. Valid values: `Updated`, `NoUpdate`,
-  `NotUpdatable`, `Failure`, `UserError`, `HasConflict`, `Rescheduled`.
+  `NotUpdatable`, `Failure`, `UserError`, `HasConflict`, `Rescheduled`, `Approved`.
 - `--search` - Free-text filter matched against the subscription's source repo,
   target repo and target branch.
 - `--after` / `--before` - Restrict to outcomes on or after / on or before the

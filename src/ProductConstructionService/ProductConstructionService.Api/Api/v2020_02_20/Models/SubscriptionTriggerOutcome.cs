@@ -58,4 +58,5 @@ public enum OutcomeType
     UserError,
     HasConflict,
     Rescheduled,
+    Approved,
 }

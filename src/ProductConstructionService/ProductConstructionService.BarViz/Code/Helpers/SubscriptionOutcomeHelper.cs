@@ -82,7 +82,7 @@ public static class SubscriptionOutcomeHelper
     }
     public static string GetOutcomeTypeBadgeColor(OutcomeType type) => type switch
     {
-        OutcomeType.Updated => "status-green",
+        OutcomeType.Updated or OutcomeType.Approved => "status-green",
         OutcomeType.Failure => "status-red",
         OutcomeType.UserError => "status-yellow",
         OutcomeType.HasConflict => "status-yellow",

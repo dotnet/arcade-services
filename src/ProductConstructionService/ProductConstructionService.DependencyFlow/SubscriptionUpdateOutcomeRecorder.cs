@@ -26,6 +26,12 @@ public interface ISubscriptionUpdateOutcomeRecorder
     Task<bool> RunUpdateWithOutcomePersistenceAsync(
         SubscriptionTriggerWorkItem workItem,
         Func<Task<SubscriptionUpdateResult>> processAsync);
+
+    Task RecordSubscriptionUpdateAsync(
+        string message,
+        SubscriptionOutcomeType type,
+        Guid subscriptionId,
+        int? buildId);
 }
 
 public class SubscriptionUpdateOutcomeRecorder(
@@ -105,7 +111,7 @@ public class SubscriptionUpdateOutcomeRecorder(
         }
     }
 
-    private async Task RecordSubscriptionUpdateAsync(
+    public async Task RecordSubscriptionUpdateAsync(
         string message,
         SubscriptionOutcomeType type,
         Guid subscriptionId,

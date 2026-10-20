@@ -24,5 +24,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         HasConflict,
         [EnumMember(Value = "rescheduled")]
         Rescheduled,
+        [EnumMember(Value = "approved")]
+        Approved,
     }
 }

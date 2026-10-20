@@ -15,7 +15,7 @@ internal class GetSubscriptionHistoryCommandLineOptions : CommandLineOptions<Get
     [Option("build", HelpText = "Filter by build id.")]
     public int? BuildId { get; set; }
 
-    [Option("type", HelpText = "Filter by outcome type. Valid values: Updated, NoUpdate, NotUpdatable, Failure, UserError, HasConflict, Rescheduled.")]
+    [Option("type", HelpText = "Filter by outcome type. Valid values: Updated, NoUpdate, NotUpdatable, Failure, UserError, HasConflict, Rescheduled, Approved.")]
     public string OutcomeType { get; set; }
 
     [Option("search", HelpText = "Free-text filter matched against the subscription's source repo, target repo and target branch.")]

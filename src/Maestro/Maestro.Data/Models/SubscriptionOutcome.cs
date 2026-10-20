@@ -31,4 +31,5 @@ public enum SubscriptionOutcomeType
     UserError,
     HasConflict,
     Rescheduled,
+    Approved,
 }

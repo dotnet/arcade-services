@@ -8,6 +8,7 @@ using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -850,7 +851,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             });
     }
 
-    protected async Task WhenRunCodeflowApprovalCheckAsyncIsCalled(CodeflowApprovalCheck approvalCheck)
+    protected async Task<List<SubscriptionOutcome>> WhenRunCodeflowApprovalCheckAsyncIsCalled(CodeflowApprovalCheck approvalCheck)
         => await Execute(
             async context =>
             {
@@ -859,6 +860,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     SqlBarClient.ToClientModelSubscription(Subscription),
                     approvalCheck,
                     CancellationToken.None);
+
+                return await context.GetRequiredService<BuildAssetRegistryContext>()
+                    .SubscriptionOutcomes.AsNoTracking().ToListAsync();
             });
 
     protected void ThenThePullRequestShouldHaveBeenApproved(string prUrl)

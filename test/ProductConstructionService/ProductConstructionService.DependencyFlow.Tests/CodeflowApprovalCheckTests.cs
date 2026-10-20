@@ -1,9 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using AwesomeAssertions;
+using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
+using Maestro.WorkItems;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -38,10 +45,19 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         GivenThePullRequestOnlyHasBotCommits(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(true);
 
-        await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
+        var beforeApproval = DateTime.UtcNow;
+        var outcomes = await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
 
         ThenThePullRequestShouldHaveBeenApproved(VmrPullRequestUrl);
         ThenTheInProgressPullRequestWasChecked();
+        var outcome = outcomes.Should().ContainSingle().Subject;
+        outcome.Type.Should().Be(SubscriptionOutcomeType.Approved);
+        outcome.SubscriptionId.Should().Be(Subscription.Id);
+        outcome.BuildId.Should().Be(build.Id);
+        outcome.PrUrl.Should().Be(VmrPullRequestUrl);
+        outcome.Message.Should().Be($"Automatically approved pull request at commit {InProgressPrHeadBranchSha}");
+        outcome.OperationId.Should().NotBeNullOrEmpty();
+        outcome.Date.Should().BeOnOrAfter(beforeApproval).And.BeOnOrBefore(DateTime.UtcNow);
     }
 
     [Test]
@@ -63,8 +79,9 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         GivenTheForwardFlowMatchesTheSourceDiff(false);
         GivenTheMismatchCommentCanBePosted();
 
-        await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
+        var outcomes = await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
 
+        outcomes.Should().BeEmpty();
         ThenThePullRequestShouldNotHaveBeenApproved();
         ThenTheMismatchCommentWasPosted();
         ThenTheInProgressPullRequestWasChecked();
@@ -88,8 +105,9 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         GivenThePullRequestHasANonServiceCommit(VmrPullRequestUrl);
         GivenTheForwardFlowMatchesTheSourceDiff(true);
 
-        await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
+        var outcomes = await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
 
+        outcomes.Should().BeEmpty();
         ThenThePullRequestShouldNotHaveBeenApproved();
         ThenTheSourceDiffShouldNotHaveBeenVerified();
         ThenTheInProgressPullRequestWasChecked();
@@ -111,11 +129,56 @@ internal class CodeflowApprovalCheckTests : UpdateAssetsPullRequestUpdaterTests
         GivenAnOpenInProgressCodeFlowPullRequest(build);
         GivenTheTargetBranchRequiresLastPushApproval(false);
 
-        await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
+        var outcomes = await WhenRunCodeflowApprovalCheckAsyncIsCalled(GivenACodeflowApprovalCheck(build));
 
+        outcomes.Should().BeEmpty();
         ThenThePullRequestShouldNotHaveBeenApproved();
         ThenTheSourceDiffShouldNotHaveBeenVerified();
         ThenOnlyThePullRequestAndTargetBranchRulesWereChecked();
+    }
+
+    [Test]
+    public async Task DoesNotRecordApprovalWhenApprovingThePullRequestFails()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            },
+            autoApprove: true);
+        Build build = GivenANewBuild(true);
+
+        GivenAnOpenInProgressCodeFlowPullRequest(build);
+        GivenTheTargetBranchRequiresLastPushApproval(true);
+        GivenThePullRequestOnlyHasBotCommits(VmrPullRequestUrl);
+        GivenTheForwardFlowMatchesTheSourceDiff(true);
+        PullRequestApprover
+            .Setup(x => x.ApprovePullRequestAsync(
+                VmrPullRequestUrl,
+                InProgressPrHeadBranchSha,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Approval failed"));
+
+        await Execute(async context =>
+        {
+            var updater = (CodeFlowPullRequestUpdater)CreatePullRequestActor(context, isCodeflow: true);
+            Func<Task> approve = () => updater.RunCodeflowApprovalCheckAsync(
+                SqlBarClient.ToClientModelSubscription(Subscription),
+                GivenACodeflowApprovalCheck(build),
+                CancellationToken.None);
+
+            await approve.Should().ThrowAsync<NonRetriableException>()
+                .WithMessage($"Failed to approve pull request {VmrPullRequestUrl}: Approval failed");
+
+            var outcomes = await context.GetRequiredService<BuildAssetRegistryContext>()
+                .SubscriptionOutcomes.AsNoTracking().ToListAsync();
+            outcomes.Should().BeEmpty();
+        });
+
+        ThenTheInProgressPullRequestWasChecked();
     }
 
     private CodeflowApprovalCheck GivenACodeflowApprovalCheck(Build build)
