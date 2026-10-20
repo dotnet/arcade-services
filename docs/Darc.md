@@ -170,9 +170,6 @@ These remote queries require authentication in most circumstances. There are sev
 **Azure DevOps Authentication Options:**
 - **[Recommended]** Leave empty and darc will sign you in via a browser or device code auth flow
 - **[Alternative]** Create an Azure DevOps PAT with `Build.Execute` and `Code.Read` scopes
-- **[Alternative]** Use the [PatGeneratorTool](https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool)
-  - Run: `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 7`
-  - Token lasts 7 days
 
 These tokens can either be passed on the command line using parameters or cached locally on the machine using the [`darc authenticate`](#authenticate) command.
 
