@@ -24,7 +24,7 @@ internal sealed class WorkItemConsumerHealthCheck(
 
         string[] stoppedConsumers = _consumers
             .Where(consumer => consumer.ExecuteTask is null || consumer.ExecuteTask.IsCompleted)
-            .Select(consumer => $"{consumer.ConsumerId} ({consumer.QueueName})")
+            .Select(consumer => $"{consumer._consumerId} ({consumer._queueName})")
             .ToArray();
 
         if (stoppedConsumers.Length == 0)

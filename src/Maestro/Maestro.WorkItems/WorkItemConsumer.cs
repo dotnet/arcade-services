@@ -27,12 +27,13 @@ internal class WorkItemConsumer(
     // Randomizes empty-queue sleeps so consumers across replicas don't poll in lockstep.
     private const double MaxQueuePollJitterRatio = 0.2;
 
-    private readonly string _consumerId = consumerId;
-    private readonly string _queueName = queueName;
     private readonly ILogger<WorkItemConsumer> _logger = logger;
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
     private readonly IMetricRecorder _metricRecorder = metricRecorder;
+
+    internal readonly string _consumerId = consumerId;
+    internal readonly string _queueName = queueName;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
