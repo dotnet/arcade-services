@@ -168,7 +168,13 @@ If you need to update the client library, follow these steps:
 
 # General deployment notes
 
-The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [ProductConstructionService.Deployment](https://github.com/dotnet/arcade-services/tree/main/src/ProductConstructionService/ProductConstructionService.Deployment) script. The script does the following:
+The [deployment pipeline](../eng/pipelines/templates/stages/deploy.yaml) runs a single `Release` stage after `Build`. This stage applies database migrations first, then runs the `DeployPCS` deployment job using the `runOnce` strategy. The `E2ETests` stage runs after the release succeeds.
+
+The deployment job targets the Azure DevOps `Production` environment for `refs/heads/production`, and `Staging` otherwise. Azure DevOps evaluates environment approvals and checks before the entire `Release` stage starts, so they protect both database migrations and application deployment without a separate approval-only stage. Configure approvals, checks, and pipeline permissions on those environments in Azure DevOps; they are not defined by this YAML.
+
+These Azure DevOps environments can be empty logical environments used for deployment history and checks. Deployment still uses the existing Azure service connections and PCS CLI; the `runOnce` strategy does not replace the CLI's blue-green rollout or recovery logic.
+
+The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [PCS deployment CLI](../tools/Tools.Cli.Common/Operations/DeploymentOperation.cs). The CLI does the following:
  - Figures out the label that should be assigned to the new revision and removes it from the old, inactive revision.
  - Tells the currently active revision to stop processing new jobs and waits for the new one to finish.
  - Deploys the new revision.

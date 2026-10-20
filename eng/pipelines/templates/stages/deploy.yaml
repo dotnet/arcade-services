@@ -1,21 +1,41 @@
 stages:
-- stage: Approval
+- stage: Release
+  displayName: Release PCS
   dependsOn:
   - Build
-  jobs:
-  - deployment: approval
-    displayName: deployment approval (conditional)
-    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      environment: Production
-    ${{ else }}:
-      environment: Staging
-    pool: server
 
-- stage: Migrations
-  displayName: Apply Database Migrations
-  dependsOn:
-  - Build
-  - Approval
+  variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,sub-triggerer-everytwoweeks-prod,sub-triggerer-everymonth-prod,feed-cleaner-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+
+  - ${{ else }}:
+    - name: subscriptionId
+      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+    - name: containerappName
+      value: product-construction-int
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,sub-triggerer-everytwoweeks-int,sub-triggerer-everymonth-int,feed-cleaner-int
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-int
+    - name: authServiceConnection
+      value: "Darc: Maestro Staging"
+    - name: redisConnectionString
+      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
   jobs:
   - job: UpdateDatabase
     displayName: Update BuildAssetRegistry database
@@ -52,153 +72,125 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-- stage: Deploy
-  displayName: Deploy
-  dependsOn:
-  - Build
-  - Approval
-  - Migrations
-
-  variables:
-  - name: currentDate
-    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
-
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    - name: subscriptionId
-      value: fbd6122a-9ad3-42e4-976e-bccb82486856
-    - name: containerappName
-      value: product-construction-prod
-    - name: containerjobNames
-      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,sub-triggerer-everytwoweeks-prod,sub-triggerer-everymonth-prod,feed-cleaner-prod
-    - name: containerappWorkspaceName
-      value: product-construction-service-workspace-prod
-    - name: authServiceConnection
-      value: "Darc: Maestro Production"
-    - name: redisConnectionString
-      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
-
-  - ${{ else }}:
-    - name: subscriptionId
-      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
-    - name: containerappName
-      value: product-construction-int
-    - name: containerjobNames
-      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,sub-triggerer-everytwoweeks-int,sub-triggerer-everymonth-int,feed-cleaner-int
-    - name: containerappWorkspaceName
-      value: product-construction-service-workspace-int
-    - name: authServiceConnection
-      value: "Darc: Maestro Staging"
-    - name: redisConnectionString
-      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
-
-  jobs:
-  - job: DeployPCS
+  - deployment: DeployPCS
     displayName: Deploy PCS
+    dependsOn: UpdateDatabase
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      environment: Production
+    ${{ else }}:
+      environment: Staging
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2022
     variables:
       newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
 
-    steps:
-    - download: current
-      displayName: Download ProductConstructionService.Cli
-      artifact: ProductConstructionService.Cli
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
 
-    - task: UseDotNet@2
-      displayName: Install .NET
-      inputs:
-        useGlobalJson: true
+          - download: none
 
-    - powershell: |
-        $az = Get-Command az.cmd
-        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
-      displayName: Locate Azure CLI
+          - download: current
+            displayName: Download ProductConstructionService.Cli
+            artifact: ProductConstructionService.Cli
 
-    # We'll need to give this service connection permission to get an auth token for PCS
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: $(pcsDeploymentServiceConnection)
-        scriptType: pscore
-        scriptLocation: inlineScript
-        inlineScript: >
-          $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
-          deploy
-          --subscriptionId $(subscriptionId)
-          --resourceGroupName $(resourceGroupName)
-          --containerRegistryName $(containerRegistryName)
-          --containerAppName $(containerappName)
-          --workspaceName $(containerappWorkspaceName)
-          --containerJobNames $(containerjobNames)
-          --newImageTag $(newDockerImageTag)
-          --imageName $(containerName)
-          --attempt $(System.JobAttempt)
-          --azCliPath "$(azCliPath)"
-          --redisConnectionString $(redisConnectionString)
-      displayName: Deploy container app
+          - task: UseDotNet@2
+            displayName: Install .NET
+            inputs:
+              useGlobalJson: true
 
-    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      - download: current
-        artifact: AssetManifests
+          - powershell: |
+              $az = Get-Command az.cmd
+              Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+            displayName: Locate Azure CLI
 
-      - template: /eng/pipelines/templates/steps/get-github-app-token.yml
-        parameters:
-          azureSubscription: $(pcsDeploymentServiceConnection)
-          keyVaultName: $(keyVaultName)
-          keyName: maestro-ci-private-key
-          appClientId: $(ciGitHubAppClientId)
-          installationOwner: dotnet
-          outputVariableName: ArcadeServicesGitHubAppToken
-          displayName: Get GitHub App token for dotnet/arcade-services
+          # We'll need to give this service connection permission to get an auth token for PCS
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(pcsDeploymentServiceConnection)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: >
+                $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
+                deploy
+                --subscriptionId $(subscriptionId)
+                --resourceGroupName $(resourceGroupName)
+                --containerRegistryName $(containerRegistryName)
+                --containerAppName $(containerappName)
+                --workspaceName $(containerappWorkspaceName)
+                --containerJobNames $(containerjobNames)
+                --newImageTag $(newDockerImageTag)
+                --imageName $(containerName)
+                --attempt $(System.JobAttempt)
+                --azCliPath "$(azCliPath)"
+                --redisConnectionString $(redisConnectionString)
+            displayName: Deploy container app
 
-      - powershell: |
-          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
-          $xml = [xml](Get-Content $xmlPaths[0].FullName)
-          $releaseVersion = $xml.Build.Package[0].Version
-          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
-            --generate-notes `
-            --latest `
-            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
-            --target $(Build.SourceVersion) `
-            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
-            --repo dotnet/arcade-services
-        displayName: Create GitHub release
-        env:
-          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
-        continueOnError: true
+          - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+            - download: current
+              artifact: AssetManifests
 
-      - task: AzureCLI@2
-        displayName: Bump minimum darc version if breaking-darc-change label is present
-        inputs:
-          azureSubscription: $(pcsDeploymentServiceConnection)
-          scriptType: pscore
-          scriptLocation: inlineScript
-          inlineScript: |
-            $PSNativeCommandUseErrorActionPreference = $true
-            $labels = gh api "repos/dotnet/arcade-services/commits/$(Build.SourceVersion)/pulls" --jq '.[].labels[].name'
-            if ($LASTEXITCODE -ne 0) {
-              Write-Warning "FAILED to query labels for commit $(Build.SourceVersion) (gh exited with code $LASTEXITCODE). This is NOT the same as the label being absent. The minimum darc version was NOT bumped and must be verified manually."
-              exit 1
-            }
-            if ($labels -contains 'breaking-darc-change') {
-              $darcVersion = Invoke-RestMethod "https://maestro.dot.net/api/darc-version?api-version=2020-02-20"
-              if ([string]::IsNullOrWhiteSpace($darcVersion)) {
-                Write-Warning "Empty darc version returned from maestro.dot.net; skipping minimum darc version bump."
-                exit 1
-              }
-              Write-Host "Found 'breaking-darc-change' label. Bumping minimum darc version to $darcVersion..."
-              $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe set-min-darc-version $darcVersion --isCi
-            } else {
-              Write-Host "No 'breaking-darc-change' label found. Skipping minimum darc version bump."
-            }
-        env:
-          GH_TOKEN: $(ArcadeServicesGitHubAppToken)
-        continueOnError: true
+            - template: /eng/pipelines/templates/steps/get-github-app-token.yml
+              parameters:
+                azureSubscription: $(pcsDeploymentServiceConnection)
+                keyVaultName: $(keyVaultName)
+                keyName: maestro-ci-private-key
+                appClientId: $(ciGitHubAppClientId)
+                installationOwner: dotnet
+                outputVariableName: ArcadeServicesGitHubAppToken
+                displayName: Get GitHub App token for dotnet/arcade-services
+
+            - powershell: |
+                $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+                $xml = [xml](Get-Content $xmlPaths[0].FullName)
+                $releaseVersion = $xml.Build.Package[0].Version
+                gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+                  --generate-notes `
+                  --latest `
+                  --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+                  --target $(Build.SourceVersion) `
+                  --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+                  --repo dotnet/arcade-services
+              displayName: Create GitHub release
+              env:
+                GH_TOKEN: $(ArcadeServicesGitHubAppToken)
+              continueOnError: true
+
+            - task: AzureCLI@2
+              displayName: Bump minimum darc version if breaking-darc-change label is present
+              inputs:
+                azureSubscription: $(pcsDeploymentServiceConnection)
+                scriptType: pscore
+                scriptLocation: inlineScript
+                inlineScript: |
+                  $PSNativeCommandUseErrorActionPreference = $true
+                  $labels = gh api "repos/dotnet/arcade-services/commits/$(Build.SourceVersion)/pulls" --jq '.[].labels[].name'
+                  if ($LASTEXITCODE -ne 0) {
+                    Write-Warning "FAILED to query labels for commit $(Build.SourceVersion) (gh exited with code $LASTEXITCODE). This is NOT the same as the label being absent. The minimum darc version was NOT bumped and must be verified manually."
+                    exit 1
+                  }
+                  if ($labels -contains 'breaking-darc-change') {
+                    $darcVersion = Invoke-RestMethod "https://maestro.dot.net/api/darc-version?api-version=2020-02-20"
+                    if ([string]::IsNullOrWhiteSpace($darcVersion)) {
+                      Write-Warning "Empty darc version returned from maestro.dot.net; skipping minimum darc version bump."
+                      exit 1
+                    }
+                    Write-Host "Found 'breaking-darc-change' label. Bumping minimum darc version to $darcVersion..."
+                    $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe set-min-darc-version $darcVersion --isCi
+                  } else {
+                    Write-Host "No 'breaking-darc-change' label found. Skipping minimum darc version bump."
+                  }
+              env:
+                GH_TOKEN: $(ArcadeServicesGitHubAppToken)
+              continueOnError: true
 
 - stage: E2ETests
   displayName: Run E2E Tests
   dependsOn:
-  - Deploy
+  - Release
 
   jobs:
   - template: ../jobs/e2e-pcs-tests.yml
