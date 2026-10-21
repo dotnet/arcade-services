@@ -23,6 +23,7 @@ public static class ServiceDefaultsExtensions
 {
     public const string HealthEndpointPath = "/health";
     public const string AlivenessEndpointPath = "/alive";
+    public const string LivenessHealthCheckTag = "live";
 
     public static IHostApplicationBuilder AddServiceDefaults(
         this IHostApplicationBuilder builder,
@@ -43,7 +44,7 @@ public static class ServiceDefaultsExtensions
     private static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
     {
         builder.Services.AddHealthChecks()
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+            .AddCheck("self", () => HealthCheckResult.Healthy(), [LivenessHealthCheckTag]);
 
         return builder;
     }
@@ -53,7 +54,7 @@ public static class ServiceDefaultsExtensions
         app.MapHealthChecks(HealthEndpointPath);
         app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
         {
-            Predicate = registration => registration.Tags.Contains("live")
+            Predicate = registration => registration.Tags.Contains(LivenessHealthCheckTag)
         });
 
         return app;
