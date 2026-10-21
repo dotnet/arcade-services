@@ -172,12 +172,18 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
  - Figures out the label that should be assigned to the new revision and removes it from the old, inactive revision.
  - Tells the currently active revision to stop processing new jobs and waits for the new one to finish.
  - Deploys the new revision.
- - Waits for the Health Probes to be successful. We currently have two health probes:
+ - Waits for the startup and readiness probes to be successful. The service has three health probes:
    - A Startup probe, that is run after the service is started. This probe just tests if the service is responsive.
+   - A Liveness probe that checks `/alive` every 10 seconds with a 5-second timeout. Three consecutive failures trigger a container restart. After host startup, the endpoint fails if any registered work-item consumer has not started or its execution task has completed unexpectedly. Consumers waiting for initialization, an empty queue, or an intentional processing stop remain healthy. Host shutdown is excluded from this check.
    - A Readiness probe that waits for the service to fully initialize. Currently, this is probe just waits for the VMR to be cloned on the containerapp disk.
  - Assigns the correct label to the new revision, and switches all traffic to it.
  - Starts the JobProcessor once the service is ready.
  - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
+
+Consumer liveness checks inspect local execution tasks, not Redis state or external
+dependency availability. `/health` also includes this check. A failed check logs
+the affected consumer IDs and queue names. A task that is still running but stuck
+is not detected by this check.
 
 ## Deploying to prod
 

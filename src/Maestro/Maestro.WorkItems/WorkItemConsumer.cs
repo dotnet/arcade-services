@@ -27,12 +27,13 @@ internal class WorkItemConsumer(
     // Randomizes empty-queue sleeps so consumers across replicas don't poll in lockstep.
     private const double MaxQueuePollJitterRatio = 0.2;
 
-    private readonly string _consumerId = consumerId;
-    private readonly string _queueName = queueName;
     private readonly ILogger<WorkItemConsumer> _logger = logger;
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
     private readonly IMetricRecorder _metricRecorder = metricRecorder;
+
+    internal readonly string _consumerId = consumerId;
+    internal readonly string _queueName = queueName;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -50,7 +51,7 @@ internal class WorkItemConsumer(
             {
                 workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync(cancellationToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
@@ -71,7 +72,7 @@ internal class WorkItemConsumer(
                     await ReadAndProcessWorkItemAsync(queueClient, workItemScope, cancellationToken);
                 }
                 // If the cancellation token gets cancelled, we just want to exit
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     break;
                 }
@@ -142,7 +143,7 @@ internal class WorkItemConsumer(
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
             // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }

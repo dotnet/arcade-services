@@ -115,6 +115,18 @@ resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                       }
                       {
                           httpGet: {
+                              path: '/alive'
+                              port: 8080
+                              scheme: 'HTTP'
+                          }
+                          periodSeconds: 10
+                          timeoutSeconds: 5
+                          failureThreshold: 3
+                          successThreshold: 1
+                          type: 'Liveness'
+                      }
+                      {
+                          httpGet: {
                               path: '/health'
                               port: 8080
                               scheme: 'HTTP'
