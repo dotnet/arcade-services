@@ -75,6 +75,17 @@ stages:
   - deployment: DeployPCS
     displayName: Deploy PCS
     dependsOn: UpdateDatabase
+    templateContext:
+      type: releaseJob
+      isProduction: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
+      inputs:
+      - input: pipelineArtifact
+        artifactName: ProductConstructionService.Cli
+        targetPath: $(Pipeline.Workspace)/ProductConstructionService.Cli
+      - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        - input: pipelineArtifact
+          artifactName: AssetManifests
+          targetPath: $(Pipeline.Workspace)/AssetManifests
     ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       environment: Production
     ${{ else }}:
@@ -90,12 +101,6 @@ stages:
         deploy:
           steps:
           - checkout: self
-
-          - download: none
-
-          - download: current
-            displayName: Download ProductConstructionService.Cli
-            artifact: ProductConstructionService.Cli
 
           - task: UseDotNet@2
             displayName: Install .NET
@@ -130,9 +135,6 @@ stages:
             displayName: Deploy container app
 
           - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-            - download: current
-              artifact: AssetManifests
-
             - template: /eng/pipelines/templates/steps/get-github-app-token.yml
               parameters:
                 azureSubscription: $(pcsDeploymentServiceConnection)
