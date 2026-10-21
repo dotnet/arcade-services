@@ -59,6 +59,15 @@ stages:
             configuration: $(_BuildConfig)
             buildArgs: $(_InternalBuildArgs)
             sign: ${{ parameters.enableSigning }}
+        - task: CopyFiles@2
+          displayName: Stage PCS deployment dependencies
+          inputs:
+            SourceFolder: $(Build.SourcesDirectory)
+            Contents: |
+              global.json
+              eng\Get-GitHubAppToken.ps1
+            TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
+            flattenFolders: true
         templateContext:
           outputs:
           - output: pipelineArtifact

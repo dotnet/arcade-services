@@ -174,6 +174,8 @@ The deployment job targets the Azure DevOps `Production` environment for `refs/h
 
 The [1ES deployment-job requirements](https://eng.ms/docs/coreai/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/features/releasepipelines/releaseworkflows/deploymentjob.html) require `DeployPCS` to declare `templateContext.type: releaseJob`. Its `isProduction` value is true for `refs/heads/production` and false otherwise. Artifacts from the current build are declared through `templateContext.inputs`: the PCS CLI for every deployment, and `AssetManifests` only for production. 1ES does not automatically download artifacts in the deployment lifecycle hook.
 
+Release jobs cannot check out source or download package dependencies directly. The build job includes `global.json` and the GitHub App token helper script in the PCS CLI pipeline artifact. Deployment installs the pinned .NET SDK using that artifact's `global.json` and runs the packaged token helper, without a repository checkout. Database migrations remain in the preceding regular job, which builds from source.
+
 The Azure DevOps environments must use resource type `None` (no attached resources), as required by 1ES deployment jobs. They provide deployment history and checks, while deployment still uses the existing Azure service connections and PCS CLI; the `runOnce` strategy does not replace the CLI's blue-green rollout or recovery logic.
 
 The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [PCS deployment CLI](../tools/Tools.Cli.Common/Operations/DeploymentOperation.cs). The CLI does the following:

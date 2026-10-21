@@ -100,12 +100,11 @@ stages:
       runOnce:
         deploy:
           steps:
-          - checkout: self
-
           - task: UseDotNet@2
             displayName: Install .NET
             inputs:
               useGlobalJson: true
+              workingDirectory: $(Pipeline.Workspace)/ProductConstructionService.Cli
 
           - powershell: |
               $az = Get-Command az.cmd
@@ -143,6 +142,7 @@ stages:
                 appClientId: $(ciGitHubAppClientId)
                 installationOwner: dotnet
                 outputVariableName: ArcadeServicesGitHubAppToken
+                scriptPath: $(Pipeline.Workspace)/ProductConstructionService.Cli/Get-GitHubAppToken.ps1
                 displayName: Get GitHub App token for dotnet/arcade-services
 
             - powershell: |
