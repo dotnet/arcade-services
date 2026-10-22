@@ -147,6 +147,46 @@ The final product build must have one active runtime provenance everywhere.
 - A direct `runtime -> aspnetcore` PR alone does not complete aspnetcore when the graph also requires `efcore -> aspnetcore`. Wait for a successful aspnetcore build containing both parent flows.
 - Do not hide incoherence behind a newer green CI run.
 
+#### Recover pins for packages no longer produced
+
+Servicing timing can leave a consumer pinned to an unreleased runtime build that
+regenerated an already-released out-of-band (OOB) package. A later monthly reset
+may disable that package's generation, so future runtime builds no longer provide
+a replacement. Waiting for another dependency flow or rebuilding the same
+consumer commit will not repair this case.
+
+1. Identify the exact package names, versions, and runtime `<Sha>` pins in the
+   consumer's `eng/Version.Details.xml` at the built commit. Do not infer the
+   offending packages from build-level graph edges alone.
+2. Confirm that the selected runtime BAR no longer contains those assets. Compare
+   the last producing runtime commit with the servicing branch head to find the
+   disabling change, such as `GeneratePackageOnBuild` changing from `true` to
+   `false`. Distinguish an intentional packaging reset from a failed packaging job.
+3. Blame each affected SHA line in the consumer repository and follow its history
+   backward, newest first:
+
+   ```powershell
+   git blame <consumer-commit> -- eng/Version.Details.xml
+   git log -L <sha-line>,<sha-line>:eng/Version.Details.xml <consumer-commit>
+   darc get-build --repo runtime --commit <candidate-sha>
+   ```
+
+4. For each package, stop at the most recent historical SHA whose runtime build
+   reports **`Released: True`**. Verify that this released BAR contains the exact
+   package name and version still required by the consumer. Check each package
+   independently; their last released producers may differ.
+5. Recommend reverting only the affected package SHA pins to those verified
+   released producers, preserving their package versions and keeping other runtime
+   dependencies on the selected root. This resolves the discontinued-package
+   coherence violation without re-enabling package generation, deleting legitimate
+   released packages, or marking an unreleased build released merely to pass the check.
+6. Keep the current build classified as `Incoherent` until the pin correction is
+   explicitly authorized, applied, and included in a qualifying new consumer build.
+   Recheck the resulting graph and downstream flows before declaring CQB complete.
+
+This recovery remains a recommendation under the skill's read-only boundary.
+Do not edit consumer pins or trigger builds without separate explicit approval.
+
 ## Recommended actions
 
 Recommend the smallest concrete next action:
@@ -162,6 +202,7 @@ Recommend the smallest concrete next action:
 | Run predates a required parent merge | Cancel the obsolete run and queue or retain a run on the final branch head containing every parent. |
 | Multiple runs cover the same qualifying commit | Retain one run and cancel the duplicates. |
 | Green build lacks required parent | Wait for/flow the missing parent, then produce a new child build. |
+| Unreleased OOB package pin, but newer runtime builds intentionally no longer produce that package | Trace the consumer SHA line back to the last released producer containing the same package version; recommend restoring that pin as described above. |
 | Runtime provenance incoherent | Stop downstream advancement; complete the missing flows or replace stale unreleased inputs before rebuilding. |
 | Downstream PR references an obsolete BAR | Do not merge it; wait for PCS to update it or replace it with a PR for the coherent BAR. |
 
@@ -187,4 +228,5 @@ Requirements:
 - Show the CI result and BAR build ID separately, especially for running or partially successful builds.
 - Add a short **Critical path** line naming the first unresolved graph edge(s).
 - Add a short **Actions** list ordered by dependency critical path, not by repository name.
+- For discontinued-package incoherence, name each affected package/version, its current unreleased BAR/SHA, the disabling change, and the verified last released BAR/SHA to restore.
 - State evidence gaps explicitly. Never infer `Complete` from missing data.

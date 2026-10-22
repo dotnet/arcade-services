@@ -10,4 +10,4 @@ The scale set extensions scripts folders contains two scrips that are used to co
 
 If at some point we need to recreate Maestro, we'll need to upload these scripts to a storage account, and add a Scale Set extension that's calling them with the `AppInsightsConnectionString` parameter set
 
-More information on this extension can been seen at the [wiki](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/1085/Application-insights-overview)
+More information on this extension is available in the [Application Insights overview](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/1820/application-insights#overview).
