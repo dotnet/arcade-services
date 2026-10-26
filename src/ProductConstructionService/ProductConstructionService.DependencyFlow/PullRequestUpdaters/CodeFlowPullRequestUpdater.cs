@@ -862,17 +862,24 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         var comment = new Comment(
             PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(),
             CommentType.Warning);
-        var targetRepository = (await _target.GetTargetAsync()).Repository;
-        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-
-        if (await PullRequestCommenter.IsLastCommentAsync(
-            remote,
-            pr.Url,
-            comment,
-            [(CommentPlaceholders.SubscriptionId, subscriptionId.ToString())]))
+        try
         {
-            _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
-            return;
+            var targetRepository = (await _target.GetTargetAsync()).Repository;
+            var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+
+            if (await PullRequestCommenter.IsLastCommentAsync(
+                remote,
+                pr.Url,
+                comment,
+                [(CommentPlaceholders.SubscriptionId, subscriptionId.ToString())]))
+            {
+                _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
+                return;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Unable to check for a duplicate blocked-flow comment on PR {prUrl}", pr.Url);
         }
 
         _commentCollector.AddComment(comment.Text, comment.Type);
