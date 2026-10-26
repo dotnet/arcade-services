@@ -70,14 +70,13 @@ internal class PullRequestCommenter : IPullRequestCommenter
         }
     }
 
-    internal static async Task<bool> IsLastCommentAsync(
+    internal static async Task<bool> LastCommentContainsAsync(
         IRemote remote,
         string prUrl,
-        Comment comment,
-        IEnumerable<(string oldValue, string newValue)> replacements)
+        string text)
     {
         var lastComment = (await remote.GetPullRequestCommentsAsync(prUrl)).LastOrDefault();
-        return lastComment == FormatComment(comment, replacements);
+        return lastComment?.Contains(text, StringComparison.Ordinal) == true;
     }
 
     private static string FormatComment(
