@@ -12,8 +12,6 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 public class PullRequestCommenterTests
 {
     private const string PullRequestUrl = "https://github.com/org/repo/pull/1";
-    private const string BlockedFlowMarker =
-        "While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).";
 
     [Test]
     public async Task LastCommentContainsAsyncReturnsTrueWhenLastCommentHasBlockedFlowMarker()
@@ -21,12 +19,12 @@ public class PullRequestCommenterTests
         var remote = new Mock<IRemote>();
         remote.Setup(r => r.GetPullRequestCommentsAsync(PullRequestUrl))
             .ReturnsAsync([CreatePostedComment(
-                $"{BlockedFlowMarker}\nTo avoid complex conflicts, the codeflow cannot continue.")]);
+                $"{PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro}\nTo avoid complex conflicts, the codeflow cannot continue.")]);
 
         var isLastComment = await PullRequestCommenter.LastCommentContainsAsync(
             remote.Object,
             PullRequestUrl,
-            BlockedFlowMarker);
+            PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro);
 
         isLastComment.Should().BeTrue();
     }
@@ -37,14 +35,14 @@ public class PullRequestCommenterTests
         var remote = new Mock<IRemote>();
         remote.Setup(r => r.GetPullRequestCommentsAsync(PullRequestUrl)).ReturnsAsync(
         [
-            CreatePostedComment(BlockedFlowMarker),
+            CreatePostedComment(PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro),
             "A newer comment"
         ]);
 
         var isLastComment = await PullRequestCommenter.LastCommentContainsAsync(
             remote.Object,
             PullRequestUrl,
-            BlockedFlowMarker);
+            PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro);
 
         isLastComment.Should().BeFalse();
     }

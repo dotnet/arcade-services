@@ -193,9 +193,12 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
+    public const string OppositeCodeflowMergedNotificationIntro =
+        "While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).";
+
     public static string BuildOppositeCodeflowMergedNotification() =>
         $"""
-        While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
+        {OppositeCodeflowMergedNotificationIntro}
         To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
         
         You can continue with one of the following options:

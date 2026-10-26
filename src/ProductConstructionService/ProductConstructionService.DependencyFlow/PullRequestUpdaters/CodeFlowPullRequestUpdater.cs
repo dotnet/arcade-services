@@ -870,7 +870,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             if (await PullRequestCommenter.LastCommentContainsAsync(
                 remote,
                 pr.Url,
-                comment.Text.Split('\n', 2)[0].TrimEnd('\r')))
+                PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro))
             {
                 _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
                 return;
