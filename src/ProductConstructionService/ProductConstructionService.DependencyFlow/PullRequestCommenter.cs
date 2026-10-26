@@ -59,38 +59,53 @@ internal class PullRequestCommenter : IPullRequestCommenter
 
         foreach (var comment in comments)
         {
-            var header = comment.Type switch
-            {
-                CommentType.Warning => "> [!IMPORTANT]",
-                CommentType.Information => "> [!NOTE]",
-                CommentType.Caution => "> [!CAUTION]",
-                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.Type} is not supported")
-            };
-
-            var commentText = comment.Text;
-            
-            foreach (var (oldValue, newValue) in replacements)
-            {
-                commentText = commentText.Replace(oldValue, newValue);
-            }
-            
-            StringBuilder sb = new();
-            sb.AppendLine(header);
-            foreach (var textLine in commentText.Split(Environment.NewLine))
-            {
-                sb.AppendLine($"> {textLine}");
-            }
-            sb.AppendLine(">");
-            sb.AppendLine(HelpLine);
-
             try
             {
-                await remote.CommentPullRequestAsync(prUrl, sb.ToString());
+                await remote.CommentPullRequestAsync(prUrl, FormatComment(comment, replacements));
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to post collected comment to {prUrl}: {message}", prUrl, e.Message);
             }
         }
+    }
+
+    internal static async Task<bool> IsLastCommentAsync(
+        IRemote remote,
+        string prUrl,
+        Comment comment,
+        IEnumerable<(string oldValue, string newValue)> replacements)
+    {
+        var lastComment = (await remote.GetPullRequestCommentsAsync(prUrl)).LastOrDefault();
+        return lastComment == FormatComment(comment, replacements);
+    }
+
+    private static string FormatComment(
+        Comment comment,
+        IEnumerable<(string oldValue, string newValue)> replacements)
+    {
+        var header = comment.Type switch
+        {
+            CommentType.Warning => "> [!IMPORTANT]",
+            CommentType.Information => "> [!NOTE]",
+            CommentType.Caution => "> [!CAUTION]",
+            _ => throw new ArgumentOutOfRangeException($"Comment type {comment.Type} is not supported")
+        };
+
+        var commentText = comment.Text;
+        foreach (var (oldValue, newValue) in replacements)
+        {
+            commentText = commentText.Replace(oldValue, newValue);
+        }
+
+        StringBuilder sb = new();
+        sb.AppendLine(header);
+        foreach (var textLine in commentText.Split(Environment.NewLine))
+        {
+            sb.AppendLine($"> {textLine}");
+        }
+        sb.AppendLine(">");
+        sb.AppendLine(HelpLine);
+        return sb.ToString();
     }
 }

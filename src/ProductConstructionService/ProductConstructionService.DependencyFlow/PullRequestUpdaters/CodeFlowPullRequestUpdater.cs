@@ -106,7 +106,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
+            await AddOppositeCodeflowMergedCommentAsync(pr, update.SubscriptionId);
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
@@ -141,7 +141,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
         catch (BlockingCodeflowException e) when (pr != null)
         {
-            await HandleBlockingCodeflowException(pr);
+            await HandleBlockingCodeflowException(pr, update.SubscriptionId);
             return new SubscriptionUpdateResult(
                 e.Message,
                 SubscriptionOutcomeType.NotUpdatable);
@@ -849,12 +849,33 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         }
     }
 
-    private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
+    private async Task HandleBlockingCodeflowException(InProgressPullRequest pr, Guid subscriptionId)
     {
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
-        _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
+        await AddOppositeCodeflowMergedCommentAsync(pr, subscriptionId);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
+    }
+
+    private async Task AddOppositeCodeflowMergedCommentAsync(InProgressPullRequest pr, Guid subscriptionId)
+    {
+        var comment = new Comment(
+            PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(),
+            CommentType.Warning);
+        var targetRepository = (await _target.GetTargetAsync()).Repository;
+        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+
+        if (await PullRequestCommenter.IsLastCommentAsync(
+            remote,
+            pr.Url,
+            comment,
+            [(CommentPlaceholders.SubscriptionId, subscriptionId.ToString())]))
+        {
+            _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
+            return;
+        }
+
+        _commentCollector.AddComment(comment.Text, comment.Type);
     }
 
     private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription, string sourceBranch)
