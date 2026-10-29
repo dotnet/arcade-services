@@ -153,7 +153,10 @@ internal class GetSubscriptionsOperation : Operation
             TypeInfoResolver = SubscriptionJsonContext.Default.WithAddedModifier(RemoveNewtonsoftIgnoredProperties),
             WriteIndented = true,
         };
+        // Every enum reachable from a subscription needs its own converter: the source generator writes
+        // enums as numbers by default, and its UseStringEnumConverter option ignores the naming policy.
         options.Converters.Add(new JsonStringEnumConverter<UpdateFrequency>(JsonNamingPolicy.CamelCase));
+        options.Converters.Add(new JsonStringEnumConverter<LocationType>(JsonNamingPolicy.CamelCase));
         return options;
     }
 
