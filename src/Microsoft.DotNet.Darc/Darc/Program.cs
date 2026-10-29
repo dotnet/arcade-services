@@ -42,7 +42,9 @@ internal static class Program
             ProcessTerminationTimeout = null,
         };
 
-        return await BuildCommandLine().Parse(args).InvokeAsync(configuration);
+        return await BuildCommandLine()
+            .Parse(args, new ParserConfiguration { ResponseFileTokenReplacer = null })
+            .InvokeAsync(configuration);
     }
 
     private static RootCommand BuildCommandLine()
