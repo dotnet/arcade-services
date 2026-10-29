@@ -3,7 +3,9 @@
 
 using System;
 using System.CommandLine;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -122,6 +124,52 @@ public class CommandLineParsingTests
     }
 
     [Test]
+    public async Task UnsupportedOutputFormatsFailAsCommandLineErrors()
+    {
+        RootCommand root = new();
+        root.Add(Program.CreateCommand(new VerifyCommandLineOptions()));
+
+        // The enum itself parses, so 'verify' only rejects json when the value reaches the options instance.
+        ParseResult result = Program.Parse(root, "verify", "--output-format", "json");
+        result.Errors.Should().BeEmpty();
+
+        StringWriter error = new();
+        TextWriter previousError = Console.Error;
+        Console.SetError(error);
+
+        int exitCode;
+        try
+        {
+            exitCode = await result.InvokeAsync(new InvocationConfiguration
+            {
+                Output = TextWriter.Null,
+                Error = TextWriter.Null,
+            });
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+
+        exitCode.Should().Be(Constants.CommandLineErrorCode);
+        error.ToString().Should().Contain("Output format json is not supported");
+    }
+
+    [Test]
+    public void ValuesStartingWithAtAreNotExpandedAsResponseFiles()
+    {
+        var options = Parse(
+            new UpdateSubscriptionCommandLineOptions(),
+            "update-subscription",
+            "--id",
+            "00000000-0000-0000-0000-000000000000",
+            "--failure-notification-tags",
+            "@dotnet/some-team");
+
+        options.FailureNotificationTags.Should().Be("@dotnet/some-team");
+    }
+
+    [Test]
     public void ExactAndRegexCannotBeCombined()
     {
         ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--exact", "--regex")
@@ -158,6 +206,6 @@ public class CommandLineParsingTests
     {
         RootCommand root = new();
         root.Add(Program.CreateCommand(options));
-        return root.Parse(args);
+        return Program.Parse(root, args);
     }
 }

@@ -42,10 +42,18 @@ internal static class Program
             ProcessTerminationTimeout = null,
         };
 
-        return await BuildCommandLine()
-            .Parse(args, new ParserConfiguration { ResponseFileTokenReplacer = null })
-            .InvokeAsync(configuration);
+        return await Parse(BuildCommandLine(), args).InvokeAsync(configuration);
     }
+
+    /// <summary>
+    /// Parses the given command line the same way darc does at runtime.
+    /// </summary>
+    /// <remarks>
+    /// Response file expansion is disabled because darc option values are allowed to start with '@'
+    /// (e.g. --failure-notification-tags @dotnet/some-team) and have never been read from a file.
+    /// </remarks>
+    internal static ParseResult Parse(Command command, params string[] args)
+        => command.Parse(args, new ParserConfiguration { ResponseFileTokenReplacer = null });
 
     private static RootCommand BuildCommandLine()
     {
@@ -107,10 +115,11 @@ internal static class Program
         catch (Exception e)
         {
             // Some properties validate in their setter (e.g. --output-format), which darc has always
-            // reported as a command line error rather than as a crash.
+            // reported as a command line error rather than as a crash. Report it with the same exit
+            // code as any other invalid input instead of the operation failure code.
             Console.Error.WriteLine("ERROR(S):");
             Console.Error.WriteLine("  " + e.Message);
-            return Constants.ErrorCode;
+            return Constants.CommandLineErrorCode;
         }
 
         ServiceCollection services = new();
