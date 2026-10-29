@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -25,7 +26,7 @@ using Microsoft.Extensions.Logging.Console;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-public abstract class CommandLineOptions<T> : CommandLineOptions where T : Operation
+public abstract class CommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : CommandLineOptions where T : Operation
 {
     public override Operation GetOperation(ServiceProvider sp)
     {

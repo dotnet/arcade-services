@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,7 @@ internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
     bool UnsafeFlow { get; set; }
 }
 
-internal abstract class CodeFlowCommandLineOptions<T>
+internal abstract class CodeFlowCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>
     : VmrCommandLineOptions<T>, ICodeFlowCommandLineOptions where T : Operation
 {
     [RedactFromLogging]

@@ -147,26 +147,36 @@ internal class GetSubscriptionsOperation : Operation
 
     private static JsonSerializerOptions CreateJsonOptions()
     {
-        DefaultJsonTypeInfoResolver typeInfoResolver = new();
-        typeInfoResolver.Modifiers.Add(typeInfo =>
-        {
-            List<JsonPropertyInfo> ignoredProperties = [.. typeInfo.Properties.Where(property =>
-                property.AttributeProvider is System.Reflection.MemberInfo memberInfo &&
-                memberInfo.GetCustomAttributesData().Any(attribute =>
-                    attribute.AttributeType.FullName == "Newtonsoft.Json.JsonIgnoreAttribute"))];
-            foreach (JsonPropertyInfo ignoredProperty in ignoredProperties)
-            {
-                typeInfo.Properties.Remove(ignoredProperty);
-            }
-        });
-
         JsonSerializerOptions options = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            TypeInfoResolver = typeInfoResolver,
+            TypeInfoResolver = SubscriptionJsonContext.Default.WithAddedModifier(RemoveNewtonsoftIgnoredProperties),
             WriteIndented = true,
         };
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        options.Converters.Add(new JsonStringEnumConverter<UpdateFrequency>(JsonNamingPolicy.CamelCase));
         return options;
     }
+
+    /// <summary>
+    /// The client models are annotated for Newtonsoft.Json, so properties it ignores (such as the
+    /// generated IsValid helper) have to be dropped explicitly when writing them with System.Text.Json.
+    /// </summary>
+    private static void RemoveNewtonsoftIgnoredProperties(JsonTypeInfo typeInfo)
+    {
+        List<JsonPropertyInfo> ignoredProperties = [.. typeInfo.Properties.Where(property =>
+            property.AttributeProvider is System.Reflection.MemberInfo memberInfo &&
+            memberInfo.GetCustomAttributesData().Any(attribute =>
+                attribute.AttributeType.FullName == "Newtonsoft.Json.JsonIgnoreAttribute"))];
+        foreach (JsonPropertyInfo ignoredProperty in ignoredProperties)
+        {
+            typeInfo.Properties.Remove(ignoredProperty);
+        }
+    }
 }
+
+/// <summary>
+/// Source-generated System.Text.Json metadata for the subscription output, so that
+/// --output-format json works without reflection-based serialization.
+/// </summary>
+[JsonSerializable(typeof(IEnumerable<Subscription>))]
+internal partial class SubscriptionJsonContext : JsonSerializerContext;
