@@ -170,6 +170,41 @@ public class CommandLineParsingTests
     }
 
     [Test]
+    public void NullableBooleanOptionsRequireAnExplicitValue()
+    {
+        // A bare '--enabled' does not say whether the subscription should be enabled or disabled, so
+        // it must not be read as 'true' and silently flip the subscription on.
+        ParseResultOf(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc", "--enabled")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--enabled");
+
+        Parse(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc", "--enabled", "false")
+            .Enabled.Should().BeFalse();
+    }
+
+    [Test]
+    public void PlainBooleanOptionsStayFlags()
+    {
+        // Only the tri-state options became stricter; '--verbose' has always worked without a value.
+        Parse(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--verbose").Verbose.Should().BeTrue();
+    }
+
+    [Test]
+    public void ScalarOptionsDoNotSwallowMistypedOptions()
+    {
+        // Without a guard the value-less '--target-repo' takes the next option as its value, which
+        // would query for a repository literally named '--disabled'.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--disabled")
+            .Errors.Should().Contain(error => error.Message.Contains("--disabled"));
+
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
+            .Errors.Should().Contain(error => error.Message.Contains("--help"));
+
+        Parse(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "dotnet/runtime")
+            .TargetRepository.Should().Be("dotnet/runtime");
+    }
+
+    [Test]
     public void ExactAndRegexCannotBeCombined()
     {
         ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--exact", "--regex")

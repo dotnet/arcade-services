@@ -265,6 +265,20 @@ public abstract class CommandLineOptions : ICommandLineOptions
             option.DefaultValueFactory = _ => defaultValue();
         }
 
+        switch (option)
+        {
+            // Unlike --verbose and friends, a nullable flag is tri-state, so a bare '--enabled' does
+            // not say which value was meant. The old parser quietly left the option unset and
+            // dropped what the user asked for, so require the value to be spelled out instead.
+            case Option<bool?>:
+                option.Arity = ArgumentArity.ExactlyOne;
+                break;
+
+            case Option<string> text:
+                text.CustomParser = CliOptions.SingleValue;
+                break;
+        }
+
         return option;
     }
 

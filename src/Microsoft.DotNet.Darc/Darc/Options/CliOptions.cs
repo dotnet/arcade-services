@@ -112,6 +112,17 @@ internal static class CliOptions
         return argument;
     }
 
+    /// <summary>
+    /// Reads the single value of a scalar option, rejecting values that look like an option name.
+    /// </summary>
+    /// <remarks>
+    /// Without this a scalar option greedily takes whatever token follows it, so a value-less
+    /// <c>--target-repo --disabled</c> would silently query for a repository literally named
+    /// '--disabled' instead of reporting the missing value. Even <c>--help</c> gets swallowed.
+    /// </remarks>
+    public static string SingleValue(ArgumentResult result)
+        => RejectOptionLikeTokens(result) && result.Tokens.Count > 0 ? result.Tokens[0].Value : null;
+
     private static string[] Values(ArgumentResult result)
         => RejectOptionLikeTokens(result) ? [.. result.Tokens.Select(token => token.Value)] : [];
 
