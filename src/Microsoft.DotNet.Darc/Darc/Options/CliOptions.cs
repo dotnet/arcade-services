@@ -30,7 +30,6 @@ internal static class CliOptions
             Arity = ArgumentArity.OneOrMore,
             AllowMultipleArgumentsPerToken = true,
             DefaultValueFactory = _ => [],
-            CustomParser = Values,
         };
 
     /// <summary>
@@ -112,41 +111,8 @@ internal static class CliOptions
         return argument;
     }
 
-    /// <summary>
-    /// Reads the single value of a scalar option, rejecting values that look like an option name.
-    /// </summary>
-    /// <remarks>
-    /// Without this a scalar option greedily takes whatever token follows it, so a value-less
-    /// <c>--target-repo --disabled</c> would silently query for a repository literally named
-    /// '--disabled' instead of reporting the missing value. Even <c>--help</c> gets swallowed.
-    /// </remarks>
-    public static string SingleValue(ArgumentResult result)
-        => RejectOptionLikeTokens(result) && result.Tokens.Count > 0 ? result.Tokens[0].Value : null;
-
-    private static string[] Values(ArgumentResult result)
-        => RejectOptionLikeTokens(result) ? [.. result.Tokens.Select(token => token.Value)] : [];
-
     private static string[] Split(ArgumentResult result, char separator)
-        => RejectOptionLikeTokens(result)
-            ? [.. result.Tokens.SelectMany(token => token.Value.Split(separator))]
-            : [];
-
-    /// <summary>
-    /// Reports tokens that look like an option name, e.g. the mistyped <c>--additional-remote --bogus</c>.
-    /// Without this, a collection option greedily takes them as values instead of darc reporting them
-    /// as unknown options.
-    /// </summary>
-    private static bool RejectOptionLikeTokens(ArgumentResult result)
-    {
-        var valid = true;
-        foreach (var token in result.Tokens.Where(token => token.Value.StartsWith("--", StringComparison.Ordinal)))
-        {
-            result.AddError($"Unrecognized command or argument '{token.Value}'.");
-            valid = false;
-        }
-
-        return valid;
-    }
+        => [.. result.Tokens.SelectMany(token => token.Value.Split(separator))];
 
     private static int[] ParseInts(ArgumentResult result, char separator)
     {

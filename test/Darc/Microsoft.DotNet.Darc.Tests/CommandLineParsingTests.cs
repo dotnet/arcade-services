@@ -63,16 +63,6 @@ public class CommandLineParsingTests
     }
 
     [Test]
-    public void CollectionOptionsDoNotSwallowMistypedOptions()
-    {
-        ParseResultOf(new ForwardFlowCommandLineOptions(), "forwardflow", "--additional-remote", "--bogus")
-            .Errors.Should().Contain(error => error.Message.Contains("--bogus"));
-
-        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "a", "--bogus")
-            .Errors.Should().Contain(error => error.Message.Contains("--bogus"));
-    }
-
-    [Test]
     public void IntegerListOptionsRejectNonNumericValues()
     {
         ParseResultOf(new GatherDropCommandLineOptions(), "gather-drop", "--id", "1,x")
@@ -209,15 +199,12 @@ public class CommandLineParsingTests
     }
 
     [Test]
-    public void ScalarOptionsDoNotSwallowMistypedOptions()
+    public void ExplicitlyAssignedOptionLikeValuesAreKept()
     {
-        // Without a guard the value-less '--target-repo' takes the next option as its value, which
-        // would query for a repository literally named '--disabled'.
-        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--disabled")
-            .Errors.Should().Contain(error => error.Message.Contains("--disabled"));
-
-        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
-            .Errors.Should().Contain(error => error.Message.Contains("--help"));
+        // The old parser took '--search=--foo' literally, so this has to keep binding the value
+        // rather than reporting '--foo' as an unknown option.
+        Parse(new GetSubscriptionHistoryCommandLineOptions(), "get-subscription-history", "--search=--foo")
+            .Search.Should().Be("--foo");
 
         Parse(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "dotnet/runtime")
             .TargetRepository.Should().Be("dotnet/runtime");

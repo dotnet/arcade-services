@@ -265,13 +265,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
             option.DefaultValueFactory = _ => defaultValue();
         }
 
-        switch (option)
-        {
-            case Option<string> text:
-                text.CustomParser = CliOptions.SingleValue;
-                break;
-        }
-
         return option;
     }
 
