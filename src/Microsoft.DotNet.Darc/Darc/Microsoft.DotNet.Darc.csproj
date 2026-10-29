@@ -1,12 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <RollForward>Major</RollForward>
     <Nullable>disable</Nullable>
     <OutputType>Exe</OutputType>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <PublishAot>true</PublishAot>
+    <!--
+      PackTool packages whatever lands in the publish directory. For a native binary that would mean
+      shipping a ~240 MB native PDB (plus the managed PDBs of assemblies that no longer exist as
+      separate files) inside the tool package. The symbols are still produced next to the native
+      binary for symbol publishing, they just don't get packed.
+    -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
+
+    <!--
+      Newtonsoft.Json and YamlDotNet discover members purely through reflection, so the AOT analyzers
+      flag every call into them (IL2026 "requires unreferenced code", IL3050 "requires dynamic code").
+      The types they reflect over are rooted explicitly in ILLink.Descriptors.xml, which is what makes
+      those calls work in the published native binary. IL2104/IL3053 are the per-assembly rollups ILC
+      reports for dependencies we do not control (Octokit, NuGet.Packaging, the Azure DevOps client,
+      ...). Only these codes are silenced; the trim-flow warnings (IL2070/IL2072/IL2091/...) remain
+      build errors so genuinely unsafe patterns in our own code still fail the build.
+    -->
+    <NoWarn>$(NoWarn);IL2026;IL3050;IL2104;IL3053</NoWarn>
 
     <ToolCommandName>darc</ToolCommandName>
     <Description>Darc CLI</Description>
@@ -28,6 +47,10 @@
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.DotNet.Darc.Tests" />
     <InternalsVisibleTo Include="Microsoft.DotNet.DarcLib.Codeflow.Tests" />

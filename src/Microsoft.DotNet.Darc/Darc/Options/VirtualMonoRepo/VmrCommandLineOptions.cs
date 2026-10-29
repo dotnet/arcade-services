@@ -1,12 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-internal abstract class VmrCommandLineOptions<T> : VmrCommandLineOptionsBase<T> where T : Operation
+internal abstract class VmrCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : VmrCommandLineOptionsBase<T> where T : Operation
 {
     public string TmpPath { get; set; }
 

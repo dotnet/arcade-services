@@ -215,6 +215,84 @@ public class GetSubscriptionsOperationTests
     }
 
     [Test]
+    public async Task GetSubscriptionsOperationTests_ExecuteAsync_writes_every_enum_in_the_graph_as_a_name()
+    {
+        // The enums nested under lastAppliedBuild are only reachable once a build is attached, so
+        // they are not covered by the snapshot tests above.
+        Subscription subscription = new(Guid.Empty, false, true, false, false, "source", "target", "test", [], null, null, string.Empty, [])
+        {
+            Channel = new(id: 1, name: "name", classification: "classification"),
+            Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay),
+            LastAppliedBuild = new(
+                id: 1,
+                dateProduced: DateTimeOffset.UnixEpoch,
+                staleness: 0,
+                released: false,
+                stable: true,
+                commit: "abc123",
+                channels: [],
+                assets:
+                [
+                    new Asset(id: 1, buildId: 1, nonShipping: false, name: "Foo.Bar", version: "1.0.0", locations:
+                    [
+                        new AssetLocation(id: 1, type: LocationType.NugetFeed, location: "https://feed.test/index.json")
+                    ])
+                ],
+                dependencies: [],
+                incoherencies: [])
+        };
+
+        _barMock
+            .Setup(client => client.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync([subscription]);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json },
+            _barMock.Object,
+            _loggerMock.Object);
+
+        int result = await operation.ExecuteAsync();
+
+        result.Should().Be(Constants.SuccessCode);
+        using JsonDocument output = JsonDocument.Parse(_consoleOutput.GetOutput());
+        JsonElement outputSubscription = output.RootElement.EnumerateArray().Single();
+
+        outputSubscription.GetProperty("policy").GetProperty("updateFrequency").GetString().Should().Be("everyDay");
+        outputSubscription
+            .GetProperty("lastAppliedBuild").GetProperty("assets").EnumerateArray().Single()
+            .GetProperty("locations").EnumerateArray().Single()
+            .GetProperty("type").GetString().Should().Be("nugetFeed");
+    }
+
+    [Test]
+    public async Task GetSubscriptionsOperationTests_ExecuteAsync_omits_properties_ignored_by_newtonsoft()
+    {
+        Subscription subscription = new(Guid.Empty, false, true, false, false, "source", "target", "test", [], null, null, string.Empty, [])
+        {
+            Channel = new(id: 1, name: "name", classification: "classification"),
+            Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
+        };
+
+        _barMock
+            .Setup(client => client.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync([subscription]);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json },
+            _barMock.Object,
+            _loggerMock.Object);
+
+        int result = await operation.ExecuteAsync();
+
+        result.Should().Be(Constants.SuccessCode);
+        using JsonDocument output = JsonDocument.Parse(_consoleOutput.GetOutput());
+        JsonElement outputSubscription = output.RootElement.EnumerateArray().Single();
+
+        // Channel.IsValid and Policy.IsValid carry Newtonsoft's [JsonIgnore], which has to keep
+        // working through the source-generated contracts.
+        outputSubscription.GetProperty("channel").TryGetProperty("isValid", out _).Should().BeFalse();
+        outputSubscription.GetProperty("policy").TryGetProperty("isValid", out _).Should().BeFalse();
+    }
+
+    [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_sorted_text()
     {
         Subscription subscription1 = new(Guid.Empty, false, true, true, false, "source2", "target2", "test", [], "repo-name", null, null, [])

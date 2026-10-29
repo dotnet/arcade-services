@@ -3,7 +3,7 @@
 
 using System;
 using System.CommandLine;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -28,9 +28,12 @@ internal static class Program
         if (args.Contains("--debug"))
         {
             // Print header (version, sha, arguments)
-            var version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
+            var productVersion = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "unknown";
+            var fileName = Path.GetFileName(Environment.ProcessPath) ?? "darc";
             Console.WriteLine(
-                $"[{version.ProductVersion} / {version.OriginalFilename}] " +
+                $"[{productVersion} / {fileName}] " +
                 "darc command issued: " + string.Join(' ', args));
         }
 

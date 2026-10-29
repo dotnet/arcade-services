@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -13,7 +14,7 @@ using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionsCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
+internal abstract class SubscriptionsCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
     public string TargetRepository { get; set; }
 
