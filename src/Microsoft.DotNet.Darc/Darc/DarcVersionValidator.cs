@@ -62,7 +62,7 @@ internal static class DarcVersionValidator
         if (darcVersion < minVersion)
         {
             logger.LogError(
-                "Your darc version {DarcVersion} is below the minimum required version {MinVersion}. Run `{DarcInitCommand}` (or `dotnet tool update -g microsoft.dotnet.darc`) to upgrade.",
+                "Your darc version {DarcVersion} is below the minimum required version {MinVersion}. Run `{DarcInitCommand}` (or `dotnet tool update -g microsoft.dotnet.darc --prerelease`) to upgrade.",
                 darcVersion.ToNormalizedString(),
                 minVersion.ToNormalizedString(),
                 GetDarcInitCommand());
