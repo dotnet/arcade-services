@@ -170,22 +170,41 @@ public class CommandLineParsingTests
     }
 
     [Test]
-    public void NullableBooleanOptionsRequireAnExplicitValue()
+    public void NullableBooleanOptionsActAsFlags()
     {
-        // A bare '--enabled' does not say whether the subscription should be enabled or disabled, so
-        // it must not be read as 'true' and silently flip the subscription on.
-        ParseResultOf(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc", "--enabled")
-            .Errors.Should().ContainSingle()
-            .Which.Message.Should().Contain("--enabled");
+        // The old parser left a bare '--enabled' unset and silently dropped what the user asked for.
+        // Treating it as 'true' is what both the help text and docs/Darc.md have always described.
+        Parse(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc", "--enabled")
+            .Enabled.Should().BeTrue();
 
         Parse(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc", "--enabled", "false")
             .Enabled.Should().BeFalse();
+
+        // Leaving the option off has to stay distinguishable from passing it, because
+        // update-subscription only touches the fields that were actually specified.
+        Parse(new UpdateSubscriptionCommandLineOptions(), "update-subscription", "--id", "abc")
+            .Enabled.Should().BeNull();
+    }
+
+    [Test]
+    public void NullableBooleanFlagsDoNotConsumeTheFollowingOption()
+    {
+        // 'darc set-repository-policies --repo r --branch main --merge-prs --ignore-checks WIP -q'
+        // is the documented sample, so the bare flag must not swallow '--ignore-checks'.
+        SetRepositoryMergePoliciesCommandLineOptions options = Parse(
+            new SetRepositoryMergePoliciesCommandLineOptions(),
+            "set-repository-policies", "--repo", "r", "--branch", "main",
+            "--merge-prs", "--ignore-checks", "WIP,license/cla", "-q");
+
+        options.MergePrs.Should().BeTrue();
+        options.IgnoredChecks.Should().BeEquivalentTo(["WIP", "license/cla"]);
+        options.Quiet.Should().BeTrue();
     }
 
     [Test]
     public void PlainBooleanOptionsStayFlags()
     {
-        // Only the tri-state options became stricter; '--verbose' has always worked without a value.
+        // Non-nullable switches carry no 'unspecified' state, so they only ever need to be present.
         Parse(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--verbose").Verbose.Should().BeTrue();
     }
 
