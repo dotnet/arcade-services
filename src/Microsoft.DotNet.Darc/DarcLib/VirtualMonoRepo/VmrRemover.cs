@@ -180,6 +180,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             ReadCommentHandling = JsonCommentHandling.Skip,
+            TypeInfoResolver = DarcLibJsonContext.Default,
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull,
         };

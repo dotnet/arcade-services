@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -13,7 +14,7 @@ internal interface IUpdateDefaultChannelBaseCommandLineOptions : ICommandLineOpt
     string Repository { get; set; }
 }
 
-internal abstract class UpdateDefaultChannelBaseCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T>, IUpdateDefaultChannelBaseCommandLineOptions where T : Operation
+internal abstract class UpdateDefaultChannelBaseCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : ConfigurationManagementCommandLineOptions<T>, IUpdateDefaultChannelBaseCommandLineOptions where T : Operation
 {
     public int Id { get; set; }
 

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Common;
@@ -30,7 +31,7 @@ public interface IVmrPusher
     Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubNoScopePat, CancellationToken cancellationToken);
 }
 
-public class VmrPusher : IVmrPusher
+public partial class VmrPusher : IVmrPusher
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger _logger;
@@ -142,6 +143,7 @@ public class VmrPusher : IVmrPusher
         var settings = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
+            TypeInfoResolver = GraphQlJsonContext.Default,
         };
 
         return JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
@@ -153,4 +155,7 @@ public class VmrPusher : IVmrPusher
     private record CommitsQueryResult(Dictionary<string, CommitResult>? Data);
     private record CommitObject(string Id);
     private record CommitResult(CommitObject? Object);
+
+    [JsonSerializable(typeof(CommitsQueryResult))]
+    private partial class GraphQlJsonContext : JsonSerializerContext;
 }

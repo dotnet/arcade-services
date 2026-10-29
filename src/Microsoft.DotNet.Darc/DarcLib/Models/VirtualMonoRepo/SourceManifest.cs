@@ -119,6 +119,7 @@ public class SourceManifest : ISourceManifest
         {
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = DarcLibJsonContext.Default,
             WriteIndented = true,
         };
 
@@ -161,6 +162,7 @@ public class SourceManifest : ISourceManifest
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true,
+            TypeInfoResolver = DarcLibJsonContext.Default,
         };
 
         var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(json, options)

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  darc serialises with Newtonsoft.Json and YamlDotNet, both of which discover members purely
+  through reflection. The trimmer cannot see those uses, so the model types have to be rooted
+  explicitly or deserialisation fails at runtime with "Unable to find a constructor to use".
+-->
+<linker>
+  <assembly fullname="Microsoft.DotNet.ProductConstructionService.Client" preserve="all" />
+  <assembly fullname="Microsoft.DotNet.DarcLib" preserve="all" />
+  <assembly fullname="Microsoft.DotNet.Darc" preserve="all" />
+  <assembly fullname="Maestro.MergePolicyEvaluation" preserve="all" />
+  <assembly fullname="Maestro.Common" preserve="all" />
+  <!-- Newtonsoft.Json instantiates converters reflectively from [JsonConverter] attributes, and
+       YamlDotNet activates collection/node types the same way, so neither survives trimming
+       on its own. -->
+  <assembly fullname="Newtonsoft.Json" preserve="all" />
+  <assembly fullname="YamlDotNet" preserve="all" />
+</linker>
