@@ -1,0 +1,995 @@
+darc add-channel
+  help: Creates a new channel.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --classification short=-c required=False separator=- default=dev type=String prop=Classification help=Classification of channel. Defaults to 'dev'.
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --internal short=-i required=False separator=- default=False type=Boolean prop=Internal help=Channel is internal only. This option is currently non-functional
+  option --name short=-n required=True separator=- default=- type=String prop=Name help=Name of channel to create.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc add-dependency
+  help: Add a new dependency to version files.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --coherent-parent short=- required=False separator=- default=- type=String prop=CoherentParentDependencyName help=Restrict updates to this dependency based on version of a dependency from another repo. See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.
+  option --commit short=-c required=False separator=- default=- type=String prop=Commit help=SHA at which the dependency was produced.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --name short=-n required=True separator=- default=- type=String prop=Name help=Name of dependency to add.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --pinned short=- required=False separator=- default=False type=Boolean prop=Pinned help=Whether the dependency is pinned or not.
+  option --relative-base-path short=- required=False separator=- default=- type=String prop=RelativeBasePath help=Used for VMR repos. Relative base path of the repo the dependency is being added to (e.g. src/sdk)
+  option --repo short=-r required=True separator=- default=- type=String prop=RepoUri help=Repository where the dependency was built.
+  option --skip-property short=- required=False separator=- default=False type=Boolean prop=SkipProperty help=Whether to skip generating properties for this dependency in Version.Details.props. Useful for dependencies that aren't referenced as NuGet packages (e.g., MSBuild SDK packages).
+  option --type short=-t required=True separator=- default=- type=String prop=Type help='toolset' or 'product'.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --version short=-v required=False separator=- default=- type=String prop=Version help=Dependency version.
+
+darc add-default-channel
+  help: Add a channel that a build of a branch+repository is automatically applied to.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=True separator=- default=- type=String prop=Branch help=Builds of 'repo' on this branch will be automatically applied to 'channel'.  Use with '--regex' to match on multiple branch names
+  option --channel short=- required=True separator=- default=- type=String prop=Channel help=Name of channel that a build of 'branch' and 'repo' should be applied to.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=NoConfirmation help=Do not prompt if the target repository/branch does not exist.
+  option --regex short=- required=False separator=- default=False type=Boolean prop=UseBranchAsRegex help=If specified, the value of the 'branch' option will be treated as a regular expression for matching branch names.
+  option --repo short=- required=True separator=- default=- type=String prop=Repository help=Builds of this repo on 'branch' will be automatically applied to 'channel'
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc add-subscription
+  help: Add a new subscription.
+  option --auto-approve short=- required=False separator=- default=False type=Boolean prop=AutoApprove help=Whether passing pull requests should be automatically approved. Only allowed on forward flow subscriptions.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=False type=Boolean prop=Batchable help=Whether this subscription's content can be updated in batches. Not supported with --merge-prs or for codeflow subscriptions (source-enabled).
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Name of channel to pull from.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --enabled short=- required=False separator=- default=True type=Boolean prop=Enabled help=Whether subscription is enabled (active) or not
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded. When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories e.g. - src/sdk/System.Text.json, or use globbing e.g. - src/*/System.Text.*
+  option --failure-notification-tags short=- required=False separator=- default=- type=String prop=FailureNotificationTags help=Semicolon-delineated list of GitHub tags to notify for dependency flow failures from this subscription
+  option --force short=-f required=False separator=- default=False type=Boolean prop=ForceCreation help=Force subscription creation even when some checks fail.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --ignore-checks short=- required=False separator=, default=[] type=list<String> prop=IgnoredChecks help=A comma-separated list of checks ignored when evaluating pull requests.
+  option --merge-prs short=- required=False separator=- default=False type=Boolean prop=MergePrs help=Whether Maestro should merge pull requests after all Maestro checks pass.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=Quiet help=Non-interactive mode (requires all elements to be passed on the command line).
+  option --read-stdin short=- required=False separator=- default=False type=Boolean prop=ReadStandardIn help=Interactive mode style (YAML), but read input from stdin. Implies -q
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Name of the VMR source directory which are the repository sources synchronized from. Only supported for source enabled subscriptions
+  option --source-enabled short=- required=False separator=- default=False type=Boolean prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Source repository for the subscription.
+  option --subscription short=- required=False separator=- default=- type=String prop=CopyFromSubscription help=GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags are copied when no Merge PRs settings are specified via command line.
+  option --target-branch short=- required=False separator=- default=- type=String prop=TargetBranch help=Target branch for the subscription.
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to. In dependency flow subscriptions: Comma separated list of paths ('.' or '/' for repo root) where the dependency updates are applied. These paths support globbing, but only at the end of the path, e.g src/*
+  option --target-repo short=- required=False separator=- default=- type=String prop=TargetRepository help=Target repository for the subscription.
+  option --update-frequency short=- required=False separator=- default=- type=String prop=UpdateFrequency help=Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc add-build-to-channel
+  help: Add a build to a channel.
+  option --artifact-publishing-parameters short=- required=False separator=- default='' type=String prop=ArtifactPublishingAdditionalParameters help=Additional (MSBuild) properties to be passed to asset publishing.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Channel to assign build to. Required if --default-channels is not specified.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --default-channels short=- required=False separator=- default=False type=Boolean prop=AddToDefaultChannels help=Assign build to all default channels. Required if --channel is not specified.
+  option --default-channels-required short=- required=False separator=- default=False type=Boolean prop=DefaultChannelsRequired help=Requires existence of enabled default channel association for a build branch. Applies only if --default-channels specified.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=True separator=- default=- type=Int32 prop=Id help=BAR id of build to assign to channel.
+  option --no-wait short=- required=False separator=- default=False type=Boolean prop=NoWait help=If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --publish-installers-and-checksums short=- required=False separator=- default=False type=Boolean prop=PublishInstallersAndChecksums help=Whether installers and checksums should be published. This option is ignored
+  option --publishing-infra-version short=- required=False separator=- default=3 type=Int32 prop=PublishingInfraVersion help=Which version of the publishing infrastructure should be used.
+  option --sdl-validation-continue-on-error short=- required=False separator=- default=- type=String prop=SDLValidationContinueOnError help=Ignore SDL validation errors.
+  option --sdl-validation-parameters short=- required=False separator=- default='' type=String prop=SDLValidationParams help=Custom parameters for SDL validation.
+  option --signing-validation-parameters short=- required=False separator=- default='' type=String prop=SigningValidationAdditionalParameters help=Additional (MSBuild) properties to be passed to signing validation.
+  option --skip-assets-publishing short=- required=False separator=- default=False type=Boolean prop=SkipAssetsPublishing help=Add the build to the channel without publishing assets to the channel's feeds.
+  option --source-branch short=- required=False separator=- default=main type=String prop=SourceBranch help=Branch that should be used as base for the promotion build. Required if source-sha is specified.
+  option --source-sha short=- required=False separator=- default=- type=String prop=SourceSHA help=SHA that should be used as base for the promotion build.
+  option --symbol-publishing-parameters short=- required=False separator=- default='' type=String prop=SymbolPublishingAdditionalParameters help=Additional (MSBuild) properties to be passed to symbol publishing
+  option --validate-SDL short=- required=False separator=- default=False type=Boolean prop=DoSDLValidation help=Perform SDL validation.
+  option --validate-nuget short=- required=False separator=- default=False type=Boolean prop=DoNuGetValidation help=Perform NuGet metadata validation.
+  option --validate-signing short=- required=False separator=- default=False type=Boolean prop=DoSigningValidation help=Perform signing validation.
+  option --validate-sourcelink short=- required=False separator=- default=False type=Boolean prop=DoSourcelinkValidation help=Perform SourceLink validation.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc authenticate
+  help: Stores the VSTS and GitHub tokens required for remote operations.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --clear short=- required=False separator=- default=False type=Boolean prop=Clear help=Clear any settings to defaults.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc login
+  help: Authenticate with Maestro (credentials are persisted for a time)
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BarUri help=URI of the Build Asset Registry service to authenticate with. Defaults to production Maestro
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc default-channel-status
+  help: Enables or disables a default channel association
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=False separator=- default=- type=String prop=Branch help=Existing default channel association source branch name.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Existing default channel association target channel name.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --disable short=-d required=False separator=- default=False type=Boolean prop=Disable help=Disable default channel.
+  option --enable short=-e required=False separator=- default=False type=Boolean prop=Enable help=Enable default channel.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=-1 type=Int32 prop=Id help=Existing default channel id
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=False separator=- default=- type=String prop=Repository help=Existing default channel association source repository name.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc delete-build-from-channel
+  help: Removes a build from a channel.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=True separator=- default=- type=String prop=Channel help=Channel to remove the build from.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=True separator=- default=- type=Int32 prop=Id help=BAR id of build to assign to channel.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc delete-channel
+  help: Deletes an existing channel.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --name short=-n required=True separator=- default=- type=String prop=Name help=Name of channel to delete.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc delete-default-channel
+  help: Remove a default channel association.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=False separator=- default=- type=String prop=Branch help=Existing default channel association source branch name.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Existing default channel association target channel name.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=-1 type=Int32 prop=Id help=Existing default channel id
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=False separator=- default=- type=String prop=Repository help=Existing default channel association source repository name.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc delete-subscriptions
+  help: Delete a subscription or set of subscriptions matching criteria.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=False type=Boolean prop=Batchable help=Get only batchable subscriptions.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Filter by source channel (matches substring unless --exact or --regex is passed).
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --default-channel short=- required=False separator=- default=- type=String prop=DefaultChannelTarget help=Filter to subscriptions that target repo+branches that apply by default to the specified channel.
+  option --disabled short=- required=False separator=- default=False type=Boolean prop=Disabled help=Get only disabled subscriptions.
+  option --enabled short=- required=False separator=- default=False type=Boolean prop=Enabled help=Get only enabled subscriptions.
+  option --exact short=- required=False separator=- default=False type=Boolean prop=ExactMatch help=Match subscription parameters exactly (cannot be used with --regex).
+  option --frequencies short=- required=False separator=, default=[] type=list<String> prop=Frequencies help=Filter by subscription update frequency. Typical values: "everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none"
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=String prop=Id help=Delete a specific subscription by id.
+  option --ids short=- required=False separator=, default=[] type=list<String> prop=SubscriptionIds help=Get only subscriptions with these ids.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --not-batchable short=- required=False separator=- default=False type=Boolean prop=NotBatchable help=Get only non-batchable subscriptions.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=NoConfirmation help=Do not confirm which subscriptions are about to be triggered.
+  option --regex short=- required=False separator=- default=False type=Boolean prop=RegexMatch help=Match subscription parameters using regex (cannot be used with --exact).
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.
+  option --source-enabled short=- required=False separator=- default=- type=Boolean? prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Filter by source repo (matches substring unless --exact or --regex is passed).
+  option --target-branch short=- required=False separator=- default=- type=String prop=TargetBranch help=Filter by target branch (matches substring unless --exact or --regex is passed).
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.
+  option --target-repo short=- required=False separator=- default=- type=String prop=TargetRepository help=Filter by target repo (matches substring unless --exact or --regex is passed).
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc gather-drop
+  help: Gather a drop of the outputs for a build
+  option --always-download-asset-filters short=- required=False separator=- default=- type=String prop=AlwaysDownloadAssetPatterns help=Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.
+  option --asset-filter short=- required=False separator=- default=- type=String prop=AssetFilter help=Only download assets matching the given regex filter
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Download the latest from this channel. Matched on substring.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --commit short=-c required=False separator=- default=- type=String prop=Commit help=Commit to gather a drop for.
+  option --continue-on-error short=- required=False separator=- default=False type=Boolean prop=ContinueOnError help=Continue on error rather than halting.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --download-timeout short=- required=False separator=- default=400 type=Int32 prop=AssetDownloadTimeoutInSeconds help=Timeout in seconds for downloading each asset.
+  option --dry-run short=- required=False separator=- default=False type=Boolean prop=DryRun help=Do not actually download files, but print what we would do.
+  option --full short=-f required=False separator=- default=False type=Boolean prop=Transitive help=Gather the full drop (build and all input builds).
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=-i required=False separator=, default=[] type=list<Int32> prop=RootBuildIds help=BAR ID(s) of the root build(s) that we want to gather. comma separated.
+  option --include-released short=- required=False separator=- default=False type=Boolean prop=IncludeReleased help=Include builds that are marked as released
+  option --include-toolset short=- required=False separator=- default=False type=Boolean prop=IncludeToolset help=Include toolset dependencies.
+  option --latest-location short=- required=False separator=- default=False type=Boolean prop=LatestLocation help=Download assets from their latest known location.
+  option --max-downloads short=- required=False separator=- default=4 type=Int32 prop=MaxConcurrentDownloads help=Maximum concurrent downloads.
+  option --no-workarounds short=- required=False separator=- default=False type=Boolean prop=NoWorkarounds help=Do not allow workarounds when gathering the drop.
+  option --non-shipping short=- required=False separator=- default=False type=Boolean prop=IncludeNonShipping help=Include non-shipping assets.
+  option --output-dir short=-o required=True separator=- default=- type=String prop=OutputDirectory help=Output directory to place build drop.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --overwrite short=- required=False separator=- default=False type=Boolean prop=Overwrite help=Overwrite existing files at the destination.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --release-name short=- required=False separator=- default=3.0.0-previewN type=String prop=ReleaseName help=Name of release to use when generating release json.
+  option --repo short=-r required=False separator=- default=- type=String prop=RepoUri help=Gather a build drop for a build of this repo. Requires --commit or --channel.
+  option --sas-suffixes short=- required=False separator=, default=[] type=list<String> prop=SASSuffixes help=List of potential uri suffixes that can be used if anonymous access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.
+  option --separated short=- required=False separator=- default=False type=Boolean prop=Separated help=Also download files to their repo separated locations
+  option --skip-existing short=- required=False separator=- default=False type=Boolean prop=SkipExisting help=Skip files that already exist at the destination.
+  option --use-azure-credential-for-blobs short=- required=False separator=- default=False type=Boolean prop=UseAzureCredentialForBlobs help=Use AzCliCredential to acquire token for downloading assets from Blob storages
+  option --use-relative-paths short=- required=False separator=- default=False type=Boolean prop=UseRelativePathsInManifest help=If true, make all paths in the resultant manifest relative to the value of output-dir
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-asset
+  help: Get information about an asset.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --build short=- required=False separator=- default=- type=Int32? prop=Build help=If specified, scopes the search to a specific BAR build ID
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Look up the asset produced from builds applied to this channel.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --latest short=- required=False separator=- default=False type=Boolean prop=Latest help=Look up the latest version of an asset.
+  option --max-age short=- required=False separator=- default=30 type=Int32 prop=MaxAgeInDays help=Show builds with a max age of this many days.
+  option --name short=- required=False separator=- default=- type=String prop=Name help=Name of asset to look up
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --version short=- required=False separator=- default=- type=String prop=Version help=Look up specific version of an asset.
+
+darc get-build
+  help: Retrieves a specific build of a repository
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --commit short=- required=False separator=- default=- type=String prop=Commit help=Full commit sha that was built
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --extended short=- required=False separator=- default=False type=Boolean prop=ExtendedDetails help=Show all available fields (applies to JSON output-format only)
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=Int32 prop=Id help=Build id.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=False separator=- default=- type=String prop=Repo help=Full url of the repository that was built, or match on substring
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-channel
+  help: Get a specific channel.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=True separator=- default=- type=Int32 prop=Id help=ID of the channel to show.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-channels
+  help: Get a list of channels.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-default-channels
+  help: Gets a list of repo+branch combinations and their associated default channels for builds.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=False separator=- default=- type=String prop=Branch help=Filter by a branch. Matches on substring.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Filter by a channel name. Matches on substring.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --ids short=- required=False separator=, default=[] type=list<String> prop=Ids help=Get only default channels with these comma-separated IDs.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Filter by a specific source repository. Matches on substring.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-dependencies
+  help: Get local dependencies.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --name short=-n required=False separator=- default=- type=String prop=Name help=Name of dependency to query for.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --relative-base-path short=- required=False separator=- default=- type=String prop=RelativeBasePath help=Relative base path where dependencies will be read from (e.g. src/sdk would read it from src/sdk/eng/Version.Details.xml). Commonly used with the VMR
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-dependency-graph
+  help: Get local dependencies.
+  option --asset-name short=- required=False separator=- default=- type=String prop=AssetName help=Get the graph based on a single asset and not the whole Version.Details.xml contents.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --coherency short=- required=False separator=- default=False type=Boolean prop=IncludeCoherency help=Report coherency information.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --delta-from short=- required=False separator=- default=newest-in-graph type=String prop=DeltaFrom help=Determine the delta of each node in the graph from a target. Valid values: [none, newest-in-channel, newest-in-graph]
+  option --flat short=-f required=False separator=- default=False type=Boolean prop=Flat help=Returns a unique set of repository+sha combination.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --graphviz short=- required=False separator=- default=- type=String prop=GraphVizOutputFile help=Writes the repository graph in GraphViz (dot) form, into the specified file.
+  option --include-toolset short=- required=False separator=- default=False type=Boolean prop=IncludeToolset help=Include toolset dependencies.
+  option --local short=-l required=False separator=- default=False type=Boolean prop=Local help=Get the graph using only local information.  Requires that repos-folder be passed.
+  option --output-file short=- required=False separator=- default=- type=String prop=OutputFile help=Writes the non-GraphViz (dot) output to the specified file into the specified file.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --remotes-map short=- required=False separator=; default=[] type=list<String> prop=RemotesMap help=';' separated key value pair defining the remote to local path mapping. i.e 'https://github.com/dotnet/arcade,C:\repos\arcade;'https://github.com/dotnet/corefx,C:\repos\corefx.
+  option --repo short=- required=False separator=- default=- type=String prop=RepoUri help=If set, gather dependency information from the remote repository. Requires --version.
+  option --repos-folder short=- required=False separator=- default=- type=String prop=ReposFolder help=Full path to folder where all the repos are locally stored. i.e. C:\repos
+  option --skip-builds short=- required=False separator=- default=False type=Boolean prop=SkipBuildLookup help=Do not look up build information.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --version short=-v required=False separator=- default=- type=String prop=Version help=Branch, commit or tag to look up if looking up version information remotely.
+
+darc get-flow-graph
+  help: Get dependency flow graph
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Only include nodes/edges with flow on this channel.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --days short=- required=False separator=- default=7 type=Int32 prop=Days help=Number of Days to summarize build times over
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --frequencies short=- required=False separator=, default=[everyMonth,everyTwoWeeks,everyWeek,twiceDaily,everyDay,everyBuild,none] type=list<String> prop=IncludedFrequencies help=Include only subscriptions with the specific update frequencies in the graph.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --graphviz short=- required=False separator=- default=- type=String prop=GraphVizOutputFile help=Writes the flow graph in GraphViz (dot) form, into the specified file.
+  option --include-build-times short=- required=False separator=- default=False type=Boolean prop=IncludeBuildTimes help=Include build times for nodes and edges
+  option --include-disabled-subscriptions short=- required=False separator=- default=False type=Boolean prop=IncludeDisabledSubscriptions help=Include edges that have disabled subscriptions
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-health
+  help: Evaluate health
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Narrow health checkups by this channel.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=False separator=- default=- type=String prop=Repo help=Narrow health checkups by this repository.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-latest-build
+  help: Retrieves the latest builds matching the specified criteria. If more than one build matches then multiple builds are returned.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Name of channel to query for the latest build on. Match on substring
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=True separator=- default=- type=String prop=Repo help=Name of repository to determine the latest build for. Match on substring
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-repository-policies
+  help: Retrieves information about repository merge policies.
+  option --all short=- required=False separator=- default=False type=Boolean prop=All help=List all repositories. Otherwise, branches not targeted by a batchable subscription are not listed.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=False separator=- default=- type=String prop=Branch help=Name of repository to get repository merge policies for. Match on substring
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --repo short=- required=False separator=- default=- type=String prop=Repo help=Name of repository to get repository merge policies for. Match on substring
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-subscriptions
+  help: Get information about subscriptions.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=False type=Boolean prop=Batchable help=Get only batchable subscriptions.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Filter by source channel (matches substring unless --exact or --regex is passed).
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --default-channel short=- required=False separator=- default=- type=String prop=DefaultChannelTarget help=Filter to subscriptions that target repo+branches that apply by default to the specified channel.
+  option --disabled short=- required=False separator=- default=False type=Boolean prop=Disabled help=Get only disabled subscriptions.
+  option --enabled short=- required=False separator=- default=False type=Boolean prop=Enabled help=Get only enabled subscriptions.
+  option --exact short=- required=False separator=- default=False type=Boolean prop=ExactMatch help=Match subscription parameters exactly (cannot be used with --regex).
+  option --frequencies short=- required=False separator=, default=[] type=list<String> prop=Frequencies help=Filter by subscription update frequency. Typical values: "everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none"
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --ids short=- required=False separator=, default=[] type=list<String> prop=SubscriptionIds help=Get only subscriptions with these ids.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --not-batchable short=- required=False separator=- default=False type=Boolean prop=NotBatchable help=Get only non-batchable subscriptions.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --regex short=- required=False separator=- default=False type=Boolean prop=RegexMatch help=Match subscription parameters using regex (cannot be used with --exact).
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.
+  option --source-enabled short=- required=False separator=- default=- type=Boolean? prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Filter by source repo (matches substring unless --exact or --regex is passed).
+  option --target-branch short=- required=False separator=- default=- type=String prop=TargetBranch help=Filter by target branch (matches substring unless --exact or --regex is passed).
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.
+  option --target-repo short=- required=False separator=- default=- type=String prop=TargetRepository help=Filter by target repo (matches substring unless --exact or --regex is passed).
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-subscription-history
+  help: Get the history of subscription trigger outcomes matching the given filters.
+  option --after short=- required=False separator=- default=- type=String prop=After help=Return only outcomes on or after this date (e.g. "2025-01-15T12:00:00Z").
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --before short=- required=False separator=- default=- type=String prop=Before help=Return only outcomes on or before this date (e.g. "2025-01-15T12:00:00Z").
+  option --build short=- required=False separator=- default=- type=Int32? prop=BuildId help=Filter by build id.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=String prop=SubscriptionId help=Filter by subscription id (GUID).
+  option --limit short=- required=False separator=- default=10 type=Int32 prop=Limit help=Maximum number of outcomes to return (1-1000).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --search short=- required=False separator=- default=- type=String prop=Search help=Free-text filter matched against the subscription's source repo, target repo and target branch.
+  option --type short=- required=False separator=- default=- type=String prop=OutcomeType help=Filter by outcome type. Valid values: Updated, NoUpdate, NotUpdatable, Failure, UserError, HasConflict, Rescheduled.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc set-repository-policies
+  help: Set Merge PRs options for the specific repository and branch
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=False separator=- default=- type=String prop=Branch help=Name of repository to get repository merge policies for.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --ignore-checks short=- required=False separator=, default=[] type=list<String> prop=IgnoredChecks help=A comma-separated list of checks ignored when evaluating pull requests.
+  option --merge-prs short=- required=False separator=- default=- type=Boolean? prop=MergePrs help=Whether Maestro should merge pull requests after all Maestro checks pass.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=Quiet help=Non-interactive mode (requires all elements to be passed on the command line).
+  option --repo short=- required=False separator=- default=- type=String prop=Repository help=Name of repository to set repository merge policies for.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc subscription-status
+  help: Enables or disables subscriptions matching a specified criteria.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=False type=Boolean prop=Batchable help=Get only batchable subscriptions.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Filter by source channel (matches substring unless --exact or --regex is passed).
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --default-channel short=- required=False separator=- default=- type=String prop=DefaultChannelTarget help=Filter to subscriptions that target repo+branches that apply by default to the specified channel.
+  option --disable short=-d required=False separator=- default=False type=Boolean prop=Disable help=Disable subscription(s).
+  option --disabled short=- required=False separator=- default=False type=Boolean prop=Disabled help=Get only disabled subscriptions.
+  option --enable short=-e required=False separator=- default=False type=Boolean prop=Enable help=Enable subscription(s).
+  option --enabled short=- required=False separator=- default=False type=Boolean prop=Enabled help=Get only enabled subscriptions.
+  option --exact short=- required=False separator=- default=False type=Boolean prop=ExactMatch help=Match subscription parameters exactly (cannot be used with --regex).
+  option --frequencies short=- required=False separator=, default=[] type=list<String> prop=Frequencies help=Filter by subscription update frequency. Typical values: "everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none"
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=String prop=Id help=Specific subscription's id.
+  option --ids short=- required=False separator=, default=[] type=list<String> prop=SubscriptionIds help=Get only subscriptions with these ids.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --not-batchable short=- required=False separator=- default=False type=Boolean prop=NotBatchable help=Get only non-batchable subscriptions.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=NoConfirmation help=Do not confirm which subscriptions are about to be enabled/disabled.
+  option --regex short=- required=False separator=- default=False type=Boolean prop=RegexMatch help=Match subscription parameters using regex (cannot be used with --exact).
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.
+  option --source-enabled short=- required=False separator=- default=- type=Boolean? prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Filter by source repo (matches substring unless --exact or --regex is passed).
+  option --target-branch short=- required=False separator=- default=- type=String prop=TargetBranch help=Filter by target branch (matches substring unless --exact or --regex is passed).
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.
+  option --target-repo short=- required=False separator=- default=- type=String prop=TargetRepository help=Filter by target repo (matches substring unless --exact or --regex is passed).
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc trigger-subscriptions
+  help: Trigger a subscription or set of subscriptions matching criteria.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=False type=Boolean prop=Batchable help=Get only batchable subscriptions.
+  option --build short=- required=False separator=- default=- type=Int32 prop=Build help=If specified, selects a specific BAR build id to use; otherwise will use the latest available from the supplied '--source-repo'
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Filter by source channel (matches substring unless --exact or --regex is passed).
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --default-channel short=- required=False separator=- default=- type=String prop=DefaultChannelTarget help=Filter to subscriptions that target repo+branches that apply by default to the specified channel.
+  option --disabled short=- required=False separator=- default=False type=Boolean prop=Disabled help=Get only disabled subscriptions.
+  option --enabled short=- required=False separator=- default=False type=Boolean prop=Enabled help=Get only enabled subscriptions.
+  option --exact short=- required=False separator=- default=False type=Boolean prop=ExactMatch help=Match subscription parameters exactly (cannot be used with --regex).
+  option --force short=-f required=False separator=- default=False type=Boolean prop=Force help=Force update of existing pull requests even if they have pending or successful checks.
+  option --frequencies short=- required=False separator=, default=[] type=list<String> prop=Frequencies help=Filter by subscription update frequency. Typical values: "everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none"
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=String prop=Id help=Trigger a specific subscription by id.
+  option --ids short=- required=False separator=, default=[] type=list<String> prop=SubscriptionIds help=Get only subscriptions with these ids.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --no-wait short=- required=False separator=- default=False type=Boolean prop=NoWait help=Do not wait for the latest trigger outcome after triggering.
+  option --not-batchable short=- required=False separator=- default=False type=Boolean prop=NotBatchable help=Get only non-batchable subscriptions.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --quiet short=-q required=False separator=- default=False type=Boolean prop=NoConfirmation help=Do not confirm which subscriptions are about to be triggered.
+  option --regex short=- required=False separator=- default=False type=Boolean prop=RegexMatch help=Match subscription parameters using regex (cannot be used with --exact).
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.
+  option --source-enabled short=- required=False separator=- default=- type=Boolean? prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Filter by source repo (matches substring unless --exact or --regex is passed).
+  option --target-branch short=- required=False separator=- default=- type=String prop=TargetBranch help=Filter by target branch (matches substring unless --exact or --regex is passed).
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.
+  option --target-repo short=- required=False separator=- default=- type=String prop=TargetRepository help=Filter by target repo (matches substring unless --exact or --regex is passed).
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc update-build
+  help: Update a build with new information.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=True separator=- default=- type=Int32 prop=Id help=Build id.
+  option --not-released short=- required=False separator=- default=False type=Boolean prop=NotReleased help=Set the build to 'not released'.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --released short=- required=False separator=- default=False type=Boolean prop=Released help=Set the build to being 'released'.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc update-channel
+  help: Update an existing channel's metadata.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --classification short=-c required=False separator=- default=- type=String prop=Classification help=New classification of channel.
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=-i required=True separator=- default=- type=Int32 prop=Id help=Channel ID.
+  option --name short=-n required=False separator=- default=- type=String prop=Name help=New name of channel.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc update-dependencies
+  help: Update local dependencies from a channel, build or local list of packages.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=-c required=False separator=- default=- type=String prop=Channel help=Channel to pull dependencies from.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --coherency-only short=- required=False separator=- default=False type=Boolean prop=CoherencyOnly help=Only do coherency updates.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --dry-run short=- required=False separator=- default=False type=Boolean prop=DryRun help=Show what will be updated, but make no changes.
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded. When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories e.g. src/sdk/System.Text.json or src/*/System.Text.*
+  option --excluded-repo-origins short=- required=False separator=- default=- type=String prop=ExcludedRepoOrigins help=Semicolon-delineated list of repo origins to exclude assets from. Only applies when using a BAR build (--id or --channel). Repo origins are specified in the MergedManifest.xml of VMR builds.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=False separator=- default=- type=Int32 prop=BARBuildId help=Optional BAR id of build to be used instead of the latest build in the channel.
+  option --name short=-n required=False separator=- default=- type=String prop=Name help=Optional name of dependency to update. Otherwise all dependencies existing on 'channel' are updated.
+  option --no-coherency-updates short=- required=False separator=- default=False type=Boolean prop=NoCoherencyUpdates help=Skip coherency updates and only update dependencies from the given build.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --packages-folder short=- required=False separator=- default=- type=String prop=PackagesFolder help=An optional path to a folder which contains the NuGet packages whose versions will be used to update existing dependencies.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepository help=Only update dependencies whose source uri contains this string.
+  option --subscription short=- required=False separator=- default=- type=String prop=SubscriptionId help=Subscription ID to simulate. When provided, updates dependencies as the specified subscription would.
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to. In dependency flow subscriptions: Comma separated list of paths ('.' or '/' for repo root) where the dependency updates are applied. These paths support globbing, but only at the end of the path, e.g src/*
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --version short=-v required=False separator=- default=- type=String prop=Version help=The new version of dependency --name.
+
+darc update-subscription
+  help: Update an existing subscription. If no arguments beyond '--id' are specified, a text editor is opened with the current values.
+  option --auto-approve short=- required=False separator=- default=- type=Boolean? prop=AutoApprove help=Whether pull requests should be automatically approved. Only allowed on forward flow subscriptions.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --batchable short=- required=False separator=- default=- type=Boolean? prop=Batchable help=Whether this subscription's content can be updated in batches. Not supported with --merge-prs or for codeflow subscriptions (source-enabled).
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Target channel of the the subscription to be updated
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --configuration-base-branch short=- required=False separator=- default=production type=String prop=ConfigurationBaseBranch help=Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production
+  option --configuration-branch short=- required=False separator=- default=- type=String prop=ConfigurationBranch help=Branch of the configuration repository to make the change on. Leave null to create a new one.
+  option --configuration-file short=- required=False separator=- default=- type=String prop=ConfigurationFilePath help=Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml
+  option --configuration-repository short=- required=False separator=- default=https://dev.azure.com/dnceng/internal/_git/maestro-configuration type=String prop=ConfigurationRepository help=URI of the repository where configuration is stored in. Defaults to https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --enabled short=- required=False separator=- default=- type=Boolean? prop=Enabled help=Whether subscription is enabled (active) or not
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded. When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories e.g. - src/sdk/System.Text.json, or use globbing e.g. - src/*/System.Text.*
+  option --failure-notification-tags short=- required=False separator=- default=- type=String prop=FailureNotificationTags help=Semicolon-delineated list of GitHub tags to notify for dependency flow failures from this subscription
+  option --force short=-f required=False separator=- default=False type=Boolean prop=ForceCreation help=Force subscription creation even when some checks fail.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --id short=- required=True separator=- default=- type=String prop=Id help=Subscription's id.
+  option --ignore-checks short=- required=False separator=, default=[] type=list<String> prop=IgnoredChecks help=A comma-separated list of checks ignored when evaluating pull requests.
+  option --merge-prs short=- required=False separator=- default=- type=Boolean? prop=MergePrs help=Whether Maestro should merge pull requests after all Maestro checks pass.
+  option --no-pr short=- required=False separator=- default=False type=Boolean prop=NoPr help=Do not open a PR against the configuration repository (push the configuration branch only).
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --source-directory short=- required=False separator=- default=- type=String prop=SourceDirectory help=Name of the VMR source directory which are the repository sources synchronized from. Only supported for source enabled subscriptions
+  option --source-enabled short=- required=False separator=- default=- type=Boolean? prop=SourceEnabled help=Get only source-enabled (VMR code flow) subscriptions.
+  option --source-repository-url short=- required=False separator=- default=- type=String prop=SourceRepoUrl help=Source repository's URL of the subscription to be updated
+  option --target-directory short=- required=False separator=- default=- type=String prop=TargetDirectory help=In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to. In dependency flow subscriptions: Comma separated list of paths ('.' or '/' for repo root) where the dependency updates are applied. These paths support globbing, but only at the end of the path, e.g src/*
+  option --update-frequency short=- required=False separator=- default=- type=String prop=UpdateFrequency help=Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc verify
+  help: Verify that the dependency information in the repository is correct.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc set-goal
+  help: Creates/Updates Goal in minutes for a Definition in a Channel
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=-c required=True separator=- default=- type=String prop=Channel help=Name of channel Eg : .Net Core 5 Dev
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --definition-id short=-d required=True separator=- default=- type=Int32 prop=DefinitionId help=Azure DevOps Definition Id.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --minutes short=-m required=True separator=- default=- type=Int32 prop=Minutes help=Goal time in minutes.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc get-goal
+  help: Gets Goal in minutes for a Definition in a Channel
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --channel short=-c required=True separator=- default=- type=String prop=Channel help=Name of channel Eg : .Net Core 5 Dev
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --definition-id short=-d required=True separator=- default=- type=Int32 prop=DefinitionId help=Azure DevOps Definition Id.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+
+darc vmr add-repo
+  help: Adds new repo(s) to the VMR that haven't been synchronized yet.
+  value[0] meta=Repository URIs required=True type=list<String> prop=Repositories help=Repository URIs in the form of URI:REVISION where URI is the git repository URL (e.g., https://github.com/dotnet/runtime) and REVISION is a commit SHA or other git reference (branch, tag).
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr remove-repo
+  help: Removes repo(s) from the VMR.
+  value[0] meta=Repository names required=True type=list<String> prop=Repositories help=Repository names to remove from the VMR.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr backflow
+  help: Flows source code from the current commit of a locally checked out VMR into a target local repository. Must be called from the VMR directory.
+  value[0] meta=Target repo path required=True type=String prop=Repository help=Path to the local repository on disk to flow the current VMR commit to
+  option --additional-remote short=- required=False separator=- default=[] type=list<String> prop=AdditionalRemotes help=List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. Can be used multiple times. Example: --additional-remote runtime:https://github.com/myfork/runtime
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --build short=- required=False separator=- default=- type=Int32 prop=Build help=ID of the build to flow. Cannot be used together with --ref.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --ref short=- required=False separator=- default=- type=String prop=Ref help=Git reference (commit, branch, tag) to flow. Defaults to HEAD of the repository in the current working directory. Cannot be used together with --build.
+  option --subscription short=- required=False separator=- default=- type=String prop=SubscriptionId help=Subscription ID to simulate. When provided, flows code as the specified subscription would.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --unsafe short=- required=False separator=- default=False type=Boolean prop=UnsafeFlow help=Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr forwardflow
+  help: Flows source code from the current commit of a local repository into a local VMR. Must be called from the local repository folder or with the `subscription` parameter
+  value[0] meta=VMR path required=False type=String prop=Vmr help=Path to the VMR on disk to flow the current commit to. Can be used instead of the --vmr option.
+  option --additional-remote short=- required=False separator=- default=[] type=list<String> prop=AdditionalRemotes help=List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. Can be used multiple times. Example: --additional-remote runtime:https://github.com/myfork/runtime
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --build short=- required=False separator=- default=- type=Int32 prop=Build help=ID of the build to flow. Cannot be used together with --ref.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --ref short=- required=False separator=- default=- type=String prop=Ref help=Git reference (commit, branch, tag) to flow. Defaults to HEAD of the repository in the current working directory. Cannot be used together with --build.
+  option --subscription short=- required=False separator=- default=- type=String prop=SubscriptionId help=Subscription ID to simulate. When provided, flows code as the specified subscription would.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --unsafe short=- required=False separator=- default=False type=Boolean prop=UnsafeFlow help=Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr resolve-conflict
+  help: Resolves a pending codeflow PR conflict locally.
+  option --additional-remote short=- required=False separator=- default=[] type=list<String> prop=AdditionalRemotes help=List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. Can be used multiple times. Example: --additional-remote runtime:https://github.com/myfork/runtime
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --build short=- required=False separator=- default=- type=Int32 prop=Build help=ID of the build to flow. Cannot be used together with --ref.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --excluded-assets short=- required=False separator=- default=- type=String prop=ExcludedAssets help=Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --ref short=- required=False separator=- default=- type=String prop=Ref help=Git reference (commit, branch, tag) to flow. Defaults to HEAD of the repository in the current working directory. Cannot be used together with --build.
+  option --source-repo short=- required=False separator=- default=- type=String prop=SourceRepoPath help=Optional path to a local clone of the repo the change is flowing from. If not provided, source repo will be cloned into $DARC_TMP_DIR or $TEMP/$TMPDIR
+  option --subscription short=-s required=True separator=- default=- type=String prop=SubscriptionId help=Subscription for which to resolve the pending conflict
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --unsafe short=- required=False separator=- default=False type=Boolean prop=UnsafeFlow help=Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr cherry-pick
+  help: Cherry-picks a single commit from a repository to/from the VMR. Must be called from the VMR directory or from the repository folder.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --commit short=- required=True separator=- default=- type=String prop=Commit help=Commit SHA to cherry-pick
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --source short=- required=True separator=- default=- type=String prop=Source help=Path to the source repository folder
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr reset
+  help: Resets the contents of a VMR mapping to match a specific commit SHA from the source repository (stages the changes only).
+  value[0] meta=Target required=False type=String prop=Target help=Repository mapping and optionally target SHA. When --build or --channel is provided, format is [mapping]. Otherwise, format is [mapping]:[sha]. The mapping can always be omitted to infer it from the current repository's Source tag (like forward flow). When the whole target is omitted (and --build/--channel are not provided), the current repository's Source tag mapping and HEAD commit are used. This is a positional argument and, when provided, must always come last. Example: darc vmr reset --vmr /path/to/vmr runtime:abc123def456 will reset the runtime mapping to commit abc123def456.
+  option --additional-remotes short=- required=False separator=- default=[] type=list<String> prop=AdditionalRemotes help=List of additional remote URIs to consider during resetting [mapping name]:[remote URI]. Example: installer:https://github.com/myfork/runtime sdk:/local/path/to/sdk
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --build short=- required=False separator=- default=- type=Int32? prop=Build help=BAR build ID to reset to. The mapping will be reset to the commit associated with this build. The mapping is taken from the target argument, or inferred from the current repository's Source tag when omitted. Cannot be used together with --channel or with [mapping]:[sha] format.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Channel name to reset to. The mapping will be reset to the latest build from this channel. The mapping is taken from the target argument, or inferred from the current repository's Source tag when omitted. Cannot be used together with --build or with [mapping]:[sha] format.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr reset-submodule
+  help: Resets the contents of a VMR submodule to match the current HEAD of the submodule repository you run this command from, and updates its record in source-manifest.json (stages the changes only).
+  value[0] meta=Submodule path required=True type=String prop=Path help=Path of the submodule to reset as it appears in source-manifest.json (in the form [mapping]/[path within the mapping], e.g. runtime/src/external/foo). The command must be run from a local clone of that submodule's repository; its current HEAD is used as the target content and commit.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr generate-tpn
+  help: Generates a new THIRD-PARTY-NOTICES.txt.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --tpn-template short=- required=True separator=- default=- type=String prop=TpnTemplate help=Path to a header template for generating THIRD-PARTY-NOTICES file.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr scan-cloaked-files
+  help: Scans the VMR, checking if it contains any cloaked files
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --baseline-file short=- required=False separator=- default=- type=String prop=BaselineFilePath help=Path to the scan baseline file (list of files ignored by the scan)
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr get-version
+  help: Gets the current version (a SHA) of a repository in the VMR.
+  value[0] meta=Repository names required=False type=list<String> prop=Repositories help=Repository names (e.g. runtime) to get the versions for.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr push
+  help: Pushes given VMR branch to a given remote. Verifies public availability of pushed commits.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --branch short=- required=True separator=- default=- type=String prop=Branch help=Branch to push
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --commit-verification-pat short=- required=False separator=- default=- type=String prop=CommitVerificationPat help=Token for authenticating to GitHub GraphQL API. Needs to have only basic scope as it will be used to look for commits in public GitHub repos.
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --remote-url short=- required=True separator=- default=- type=String prop=RemoteUrl help=URL to push to
+  option --skip-commit-verification short=- required=False separator=- default=False type=Boolean prop=SkipCommitVerification help=Don't verify that each commit in the VMR can be found in the corresponding public repository on GitHub before pushing.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr diff
+  help: Diffs the VMR and the product repositories. Outputs the diff to stdout, or saves it to a patch file (or multiple if patch > 1 GB), if --output-path is provided
+  value[0] meta=Repo specs required=False type=String prop=Repositories help=Optional repository specification for diff calculation. Usage patterns: 1. No argument: Auto-detects based on current directory    - When called from a VMR dir, diffs against all repositories in source-manifest.json.    - When called from a product repo dir, diffs against VMR commit stored in the <Source> element. 2. Repository name: e.g. 'sdk' - When called from a VMR dir, diffs against the lastly synced commit of 'sdk' from source-manifest.json. 3. Single repository: 'remote:branch' - Diffs current directory against specified target. Remote can be local path or URI. 4. Two repositories: 'remote1:branch1..remote2:branch2' - Diffs the two specified repositories against each other. Remote can be local path or URI.
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --name-only short=- required=False separator=- default=False type=Boolean prop=NameOnly help=Only list names of differing files and directories. Listed differences are prefixed with +, - or * for addition, removal or differing content.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --output-path short=- required=False separator=- default=- type=String prop=OutputPath help=Path where git patch(es) will be created (patches are split to be under 1GB)
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --path short=- required=False separator=- default=[] type=list<String> prop=Paths help=Paths to include in the diff. When specified, only differences in these paths will be shown. Can be specified multiple times to include multiple paths.
+  option --tmp short=- required=False separator=- default=- type=String prop=TmpPath help=Temporary path where intermediate files are stored (e.g. cloned repos); defaults to usual TEMP. Can be also set via the DARC_TMP_DIR env variable.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+
+darc vmr merge-bands
+  help: Merges a band branch into the current branch in the VMR, excluding specific files.
+  value[0] meta=Source branch required=True type=String prop=SourceBranch help=The branch name to merge from (e.g., release/10.0.1xx)
+  option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
+  option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
+  option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
+  option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
+  option --git-location short=- required=False separator=- default=git type=String prop=GitLocation help=Location of git executable used for internal commands.
+  option --github-pat short=- required=False separator=- default=- type=String prop=GitHubPat help=Token used to authenticate GitHub.
+  option --output-format short=- required=False separator=- default=text type=DarcOutputType prop=OutputFormat help=Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.
+  option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
+  option --verbose short=- required=False separator=- default=False type=Boolean prop=Verbose help=Turn on verbose output.
+  option --vmr short=- required=False separator=- default=- type=String prop=VmrPath help=Path to the VMR; defaults to nearest git root above the current working directory.
+

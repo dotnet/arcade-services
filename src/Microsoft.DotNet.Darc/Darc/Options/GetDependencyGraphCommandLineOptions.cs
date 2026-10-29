@@ -2,57 +2,71 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-[Verb("get-dependency-graph", HelpText = "Get local dependencies.")]
 internal class GetDependencyGraphCommandLineOptions : CommandLineOptions<GetDependencyGraphOperation>
 {
-    [Option('l', "local", HelpText = "Get the graph using only local information.  Requires that repos-folder be passed.")]
+    public override string Verb => "get-dependency-graph";
+
+    public override string VerbDescription => "Get local dependencies.";
+
     public bool Local { get; set; }
 
-    [Option("repo", HelpText = "If set, gather dependency information from the remote repository. Requires --version.")]
     public string RepoUri { get; set; }
 
-    [Option('v', "version", HelpText = "Branch, commit or tag to look up if looking up version information remotely.")]
     [RedactFromLogging]
     public string Version { get; set; }
 
-    [Option("asset-name", HelpText = "Get the graph based on a single asset and not the whole Version.Details.xml contents.")]
     public string AssetName { get; set; }
 
-    [Option("repos-folder", HelpText = @"Full path to folder where all the repos are locally stored. i.e. C:\repos")]
     [RedactFromLogging]
     public string ReposFolder { get; set; }
 
-    [Option("remotes-map", Separator = ';', HelpText = @"';' separated key value pair defining the remote to local path mapping. i.e 'https://github.com/dotnet/arcade,C:\repos\arcade;'"
-                                                       + @"https://github.com/dotnet/corefx,C:\repos\corefx.")]
     public IEnumerable<string> RemotesMap { get; set; }
 
-    [Option('f', "flat", HelpText = @"Returns a unique set of repository+sha combination.")]
     public bool Flat { get; set; }
 
-    [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz (dot) form, into the specified file.")]
     [RedactFromLogging]
     public string GraphVizOutputFile { get; set; }
 
-    [Option("output-file", HelpText = @"Writes the non-GraphViz (dot) output to the specified file into the specified file.")]
     [RedactFromLogging]
     public string OutputFile { get; set; }
 
-    [Option("include-toolset", HelpText = "Include toolset dependencies.")]
     public bool IncludeToolset { get; set; }
 
-    [Option("skip-builds", HelpText = "Do not look up build information.")]
     public bool SkipBuildLookup { get; set; }
 
-    [Option("delta-from", Default = "newest-in-graph", HelpText = "Determine the delta of each node in the graph from a target. " +
-                                                                  "Valid values: [none, newest-in-channel, newest-in-graph]")]
     public string DeltaFrom { get; set; }
 
-    [Option("coherency", HelpText = "Report coherency information.")]
     public bool IncludeCoherency { get; set; }
 
+    protected override void Configure()
+    {
+        Add<bool>("--local", "-l", "Get the graph using only local information.  Requires that repos-folder be passed.", value => Local = value);
+        Add<string>("--repo", "If set, gather dependency information from the remote repository. Requires --version.", value => RepoUri = value);
+        Add<string>("--version", "-v", "Branch, commit or tag to look up if looking up version information remotely.", value => Version = value);
+        Add<string>("--asset-name", "Get the graph based on a single asset and not the whole Version.Details.xml contents.", value => AssetName = value);
+        Add<string>("--repos-folder", @"Full path to folder where all the repos are locally stored. i.e. C:\repos", value => ReposFolder = value);
+        AddSeparatedList(
+            ';',
+            "--remotes-map",
+            @"';' separated key value pair defining the remote to local path mapping. i.e 'https://github.com/dotnet/arcade,C:\repos\arcade;'"
+                + @"https://github.com/dotnet/corefx,C:\repos\corefx.",
+            value => RemotesMap = value);
+        Add<bool>("--flat", "-f", @"Returns a unique set of repository+sha combination.", value => Flat = value);
+        Add<string>("--graphviz", @"Writes the repository graph in GraphViz (dot) form, into the specified file.", value => GraphVizOutputFile = value);
+        Add<string>("--output-file", @"Writes the non-GraphViz (dot) output to the specified file into the specified file.", value => OutputFile = value);
+        Add<bool>("--include-toolset", "Include toolset dependencies.", value => IncludeToolset = value);
+        Add<bool>("--skip-builds", "Do not look up build information.", value => SkipBuildLookup = value);
+        Add<string>(
+            "--delta-from",
+            "Determine the delta of each node in the graph from a target. " +
+                "Valid values: [none, newest-in-channel, newest-in-graph]",
+            value => DeltaFrom = value,
+            defaultValue: () => "newest-in-graph");
+        Add<bool>("--coherency", "Report coherency information.", value => IncludeCoherency = value);
+        base.Configure();
+    }
 }

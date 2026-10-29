@@ -2,8 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.IO;
-using CommandLine;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using Maestro.Common;
 using Microsoft.DotNet.Internal.Credentials;
 using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
@@ -31,34 +35,28 @@ public abstract class CommandLineOptions<T> : CommandLineOptions where T : Opera
 
 public abstract class CommandLineOptions : ICommandLineOptions
 {
-    [Option('p', "password",
-        HelpText = "Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.")]
+    private readonly List<CliSymbol> _symbols = [];
+    private readonly List<Action<CommandResult>> _validators = [];
+    private bool _configured;
+
     [RedactFromLogging]
     public string BuildAssetRegistryToken { get; set; } = null;
 
-    [Option("github-pat", HelpText = "Token used to authenticate GitHub.")]
     [RedactFromLogging]
     public string GitHubPat { get; set; }
 
-    [Option("azdev-pat", HelpText = "Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.")]
     [RedactFromLogging]
     public string AzureDevOpsPat { get; set; }
 
-    [Option("bar-uri", HelpText = "URI of the build asset registry service to use.")]
     public string BuildAssetRegistryBaseUri { get; set; }
 
-    [Option("verbose", HelpText = "Turn on verbose output.")]
     public bool Verbose { get; set; }
 
-    [Option("debug", HelpText = "Turn on debug output.")]
     public bool Debug { get; set; }
 
-    [Option("git-location", Default = "git", HelpText = "Location of git executable used for internal commands.")]
     [RedactFromLogging]
     public string GitLocation { get; set; }
 
-    [Option("output-format", Default = DarcOutputType.text,
-        HelpText = "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.")]
     public DarcOutputType OutputFormat
     {
         get;
@@ -76,8 +74,299 @@ public abstract class CommandLineOptions : ICommandLineOptions
     /// Designates that darc is run from a CI environment.
     /// Some behaviours are disabled in CI such as the interactive browser sign-in to Maestro (and AzureCLI/federated token is used).
     /// </summary>
-    [Option("ci", HelpText = "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)")]
     public bool IsCi { get; set; }
+
+    /// <summary>
+    /// Name of the command as typed on the command line, e.g. "add-channel".
+    /// </summary>
+    public abstract string Verb { get; }
+
+    /// <summary>
+    /// Help text shown for the command in the command list and in its own help output.
+    /// </summary>
+    public abstract string VerbDescription { get; }
+
+    /// <summary>
+    /// Options and positional arguments the command accepts, in declaration order.
+    /// </summary>
+    internal IReadOnlyList<CliSymbol> Symbols
+    {
+        get
+        {
+            EnsureConfigured();
+            return _symbols;
+        }
+    }
+
+    /// <summary>
+    /// Checks run against the parsed command before the operation is created.
+    /// </summary>
+    internal IReadOnlyList<Action<CommandResult>> Validators
+    {
+        get
+        {
+            EnsureConfigured();
+            return _validators;
+        }
+    }
+
+    /// <summary>
+    /// Copies every parsed value onto this instance.
+    /// </summary>
+    internal void Bind(ParseResult parseResult)
+    {
+        EnsureConfigured();
+        foreach (var symbol in _symbols)
+        {
+            symbol.Bind(parseResult);
+        }
+    }
+
+    /// <summary>
+    /// Declares the options of this command. Overrides must call the base implementation last so that
+    /// the command's own options are listed before the ones shared by every darc command, the same
+    /// order darc has always printed them in.
+    /// </summary>
+    protected virtual void Configure()
+    {
+        Add<string>("--password", "-p", "Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.", value => BuildAssetRegistryToken = value);
+        Add<string>("--github-pat", "Token used to authenticate GitHub.", value => GitHubPat = value);
+        Add<string>("--azdev-pat", "Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.", value => AzureDevOpsPat = value);
+        Add<string>("--bar-uri", "URI of the build asset registry service to use.", value => BuildAssetRegistryBaseUri = value);
+        Add<bool>("--verbose", "Turn on verbose output.", value => Verbose = value);
+        Add<bool>("--debug", "Turn on debug output.", value => Debug = value);
+        Add<string>("--git-location", "Location of git executable used for internal commands.", value => GitLocation = value, defaultValue: () => "git");
+        AddEnum("--output-format", "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.", DarcOutputType.text, value => OutputFormat = value);
+        Add<bool>("--ci", "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)", value => IsCi = value);
+    }
+
+    /// <summary>
+    /// Declares an option of this command and how its parsed value reaches the options instance.
+    /// </summary>
+    /// <remarks>
+    /// <typeparamref name="TValue"/> has to be given explicitly because it cannot be inferred from
+    /// the setter lambda alone.
+    /// </remarks>
+    protected Option<TValue> Add<TValue>(
+        string name,
+        string description,
+        Action<TValue> setter,
+        bool required = false,
+        Func<TValue> defaultValue = null,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CreateOption(name, alias: null, description, required, defaultValue), setter, separator: null, bindingExpression);
+
+    /// <param name="alias">Short form of the option, e.g. <c>-n</c>.</param>
+    /// <inheritdoc cref="Add{TValue}(string, string, Action{TValue}, bool, Func{TValue}, string)"/>
+    protected Option<TValue> Add<TValue>(
+        string name,
+        string alias,
+        string description,
+        Action<TValue> setter,
+        bool required = false,
+        Func<TValue> defaultValue = null,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CreateOption(name, alias, description, required, defaultValue), setter, separator: null, bindingExpression);
+
+    /// <summary>
+    /// Declares an option that may be repeated or given several space-separated values.
+    /// </summary>
+    /// <inheritdoc cref="CliOptions.List(string, string, string[])" path="/remarks"/>
+    protected Option<string[]> AddList(
+        string name,
+        string description,
+        Action<string[]> setter,
+        string alias = null,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CliOptions.List(name, description, Aliases(alias)), setter, separator: null, bindingExpression);
+
+    /// <summary>
+    /// Declares an option whose values may additionally be packed into a single separated token,
+    /// e.g. <c>--ids 1,2,3</c>.
+    /// </summary>
+    /// <inheritdoc cref="CliOptions.List(string, string, string[])" path="/remarks"/>
+    protected Option<string[]> AddSeparatedList(
+        char separator,
+        string name,
+        string description,
+        Action<string[]> setter,
+        Func<string[]> defaultValue = null,
+        string alias = null,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+    {
+        Option<string[]> option = CliOptions.SeparatedList(separator, name, description, Aliases(alias));
+        if (defaultValue is not null)
+        {
+            option.DefaultValueFactory = _ => defaultValue();
+        }
+
+        return Register(option, setter, separator, bindingExpression);
+    }
+
+    /// <inheritdoc cref="AddSeparatedList(char, string, string, Action{string[]}, Func{string[]}, string)"/>
+    protected Option<int[]> AddSeparatedIntList(
+        char separator,
+        string name,
+        string description,
+        Action<int[]> setter,
+        string alias = null,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CliOptions.SeparatedIntList(separator, name, description, Aliases(alias)), setter, separator, bindingExpression);
+
+    /// <summary>
+    /// Declares an option that only accepts the exact casing of the enum members.
+    /// </summary>
+    protected Option<TEnum> AddEnum<TEnum>(
+        string name,
+        string description,
+        TEnum defaultValue,
+        Action<TEnum> setter,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        where TEnum : struct, Enum
+        => Register(CliOptions.CaseSensitiveEnum(name, description, defaultValue), setter, separator: null, bindingExpression);
+
+    /// <summary>
+    /// Declares a positional argument taking a single value.
+    /// </summary>
+    protected Argument<string> AddValue(
+        string name,
+        string description,
+        bool required,
+        Action<string> setter,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CliOptions.Value(name, description, required), setter, bindingExpression);
+
+    /// <summary>
+    /// Declares a positional argument taking any number of values.
+    /// </summary>
+    /// <inheritdoc cref="CliOptions.List(string, string, string[])" path="/remarks"/>
+    protected Argument<string[]> AddValueList(
+        string name,
+        string description,
+        bool required,
+        Action<string[]> setter,
+        [CallerArgumentExpression(nameof(setter))] string bindingExpression = null)
+        => Register(CliOptions.ValueList(name, description, required), setter, bindingExpression);
+
+    private static string[] Aliases(string alias) => alias is null ? [] : [alias];
+
+    private static Option<TValue> CreateOption<TValue>(
+        string name,
+        string alias,
+        string description,
+        bool required,
+        Func<TValue> defaultValue)
+    {
+        Option<TValue> option = alias is null ? new(name) : new(name, alias);
+        option.Description = description;
+        option.Required = required;
+        if (defaultValue is not null)
+        {
+            option.DefaultValueFactory = _ => defaultValue();
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Records an option and how its parsed value reaches the options instance.
+    /// </summary>
+    private Option<TValue> Register<TValue>(
+        Option<TValue> option,
+        Action<TValue> setter,
+        char? separator,
+        string bindingExpression)
+    {
+        // A derived options class may redeclare an option of its base class (e.g. 'login' narrows
+        // --bar-uri). Since a command declares its own options before calling base.Configure(),
+        // keeping the first declaration reproduces C# member hiding.
+        if (_symbols.Any(symbol => symbol.Symbol is Option declared && Collides(declared, option)))
+        {
+            return option;
+        }
+
+        _symbols.Add(new CliSymbol(
+            option,
+            separator,
+            option.Required,
+            bindingExpression,
+            parseResult =>
+            {
+                // Only options the user supplied (or that declare a default) are written back, so
+                // that properties keeping their field initializer are left alone.
+                if (parseResult.GetResult(option) is not null)
+                {
+                    setter(parseResult.GetValue(option));
+                }
+            }));
+
+        return option;
+    }
+
+    /// <summary>
+    /// Records a positional argument and how its parsed value reaches the options instance.
+    /// </summary>
+    private Argument<TValue> Register<TValue>(
+        Argument<TValue> argument,
+        Action<TValue> setter,
+        string bindingExpression)
+    {
+        _symbols.Add(new CliSymbol(
+            argument,
+            null,
+            argument.Arity.MinimumNumberOfValues > 0,
+            bindingExpression,
+            parseResult =>
+            {
+                var result = parseResult.GetResult(argument);
+                if (result is not null && (result.Tokens.Count > 0 || argument.HasDefaultValue))
+                {
+                    setter(parseResult.GetValue(argument));
+                }
+            }));
+
+        return argument;
+    }
+
+    /// <summary>
+    /// Declares that two options cannot be supplied together.
+    /// </summary>
+    protected void AddMutuallyExclusive(Option first, Option second)
+        => _validators.Add(result =>
+        {
+            if (result.GetResult(first) is not null && result.GetResult(second) is not null)
+            {
+                result.AddError($"Options '{first.Name}' and '{second.Name}' cannot be used together.");
+            }
+        });
+
+    private static bool Collides(Option first, Option second)
+    {
+        if (first.Name == second.Name)
+        {
+            return true;
+        }
+
+        if (first.Aliases.Contains(second.Name)
+            || second.Aliases.Contains(first.Name)
+            || first.Aliases.Any(second.Aliases.Contains))
+        {
+            throw new InvalidOperationException(
+                $"Options '{first.Name}' and '{second.Name}' share an alias. Only an option redeclared "
+                + "under the same name may hide the one it inherits.");
+        }
+
+        return false;
+    }
+
+    private void EnsureConfigured()
+    {
+        if (!_configured)
+        {
+            Configure();
+            _configured = true;
+        }
+    }
 
     /// <summary>
     /// Default log verbosity
