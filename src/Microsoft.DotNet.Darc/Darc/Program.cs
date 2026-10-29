@@ -39,6 +39,7 @@ internal static class Program
         {
             Output = Console.Error,
             Error = Console.Error,
+            ProcessTerminationTimeout = null,
         };
 
         return await BuildCommandLine().Parse(args).InvokeAsync(configuration);
