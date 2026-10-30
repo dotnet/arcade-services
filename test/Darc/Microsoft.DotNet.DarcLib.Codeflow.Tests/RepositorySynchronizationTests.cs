@@ -32,35 +32,7 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
     }
 
     [Test]
-    public async Task FileChangesAreSyncedTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        File.WriteAllText(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
-        await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo");
-
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        var expectedFilesFromRepos = new List<NativePath>
-        {
-            _productRepoFilePath,
-            _dependencyRepoFilePath
-        };
-
-        var expectedFiles = GetExpectedFilesInVmr(
-            VmrPath,
-            [Constants.ProductRepoName, Constants.DependencyRepoName],
-            expectedFilesFromRepos
-        );
-
-        CheckDirectoryContents(VmrPath, expectedFiles);
-        CheckFileContents(_productRepoFilePath, "Test changes in repo file");
-        CheckFileContents(_dependencyRepoFilePath, "File in dependency");
-        await GitOperations.CheckAllIsCommitted(VmrPath);
-    }
-
-    [Test]
-    public async Task FileIsIncludedTest()
+    public async Task FileChangesAndIncludedFilesAreSyncedTest()
     {
         var excludedDir = ProductRepoPath / "excluded";
         var excludedFileName = "excluded.txt";
@@ -73,7 +45,8 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         await EnsureTestRepoIsInitialized();
 
         File.Move(excludedFile, ProductRepoPath / excludedFileName);
-        await GitOperations.CommitAll(ProductRepoPath, "Move a file from excluded to included folder");
+        File.WriteAllText(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
+        await GitOperations.CommitAll(ProductRepoPath, "Update a file and move an excluded file into an included folder");
 
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
@@ -91,7 +64,9 @@ internal class RepositorySynchronizationTests : CodeFlowTestsBase
         );
 
         CheckDirectoryContents(VmrPath, expectedFiles);
+        CheckFileContents(_productRepoFilePath, "Test changes in repo file");
         CheckFileContents(_productRepoPath / excludedFileName, "File to be excluded");
+        CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
