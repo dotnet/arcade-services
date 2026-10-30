@@ -52,17 +52,25 @@ public class WorkItemProcessorStateStoreTests
         observedState.Should().BeNull();
     }
 
-    [Test]
-    public async Task UnrecognizedStateIsReportedAsNull()
+    [TestCase("Stopping")]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("2")]
+    [TestCase("0")]
+    [TestCase("Working, Stopped")]
+    public async Task InvalidStateIsNotReportedAsMissingAsync(string value)
     {
         // Arrange
-        _cacheFactory.Store[$"queue-processing-state:{ReplicaName}:desired"] = "Stopping";
+        _cacheFactory.Store[$"queue-processing-state:{ReplicaName}:desired"] = value;
+        _cacheFactory.Store[$"queue-processing-state:{ReplicaName}:observed"] = value;
 
         // Act
-        WorkItemProcessorState? desiredState = await _store.GetDesiredStateAsync(ReplicaName, CancellationToken.None);
+        Func<Task> readDesired = () => _store.GetDesiredStateAsync(ReplicaName, CancellationToken.None);
+        Func<Task> readObserved = () => _store.GetObservedStateAsync(ReplicaName, CancellationToken.None);
 
         // Assert
-        desiredState.Should().BeNull();
+        await readDesired.Should().ThrowAsync<InvalidDataException>();
+        await readObserved.Should().ThrowAsync<InvalidDataException>();
     }
 
     [Test]
