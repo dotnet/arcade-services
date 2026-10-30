@@ -13,9 +13,7 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 internal class RepositoryCloningTests : CodeFlowTestsBase
 {
     [Test]
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task RepositoryBranchShouldResetToRemote(bool resetToRemote)
+    public async Task RepositoryBranchResetBehaviorTest()
     {
         var branchName = "main";
 
@@ -35,11 +33,15 @@ internal class RepositoryCloningTests : CodeFlowTestsBase
         localCommit.Should().NotBe(remoteCommit);
         localFileContent.Should().NotBe(remoteFileContent);
 
-        var newClone = await CloneProductRepoAsync(branchName, resetToRemote: resetToRemote);
+        var cloneWithoutReset = await CloneProductRepoAsync(branchName, resetToRemote: false);
+        cloneWithoutReset.Path.Should().Be(oldClone.Path);
+        (await cloneWithoutReset.GetShaForRefAsync(branchName)).Should().Be(localCommit);
+        File.ReadAllText(filePath).Should().Be(localFileContent);
 
-        newClone.Path.Should().Be(oldClone.Path);
-        (await newClone.GetShaForRefAsync(branchName)).Should().Be(resetToRemote ? remoteCommit : localCommit);
-        File.ReadAllText(filePath).Should().Be(resetToRemote ? remoteFileContent : localFileContent);
+        var cloneWithReset = await CloneProductRepoAsync(branchName, resetToRemote: true);
+        cloneWithReset.Path.Should().Be(oldClone.Path);
+        (await cloneWithReset.GetShaForRefAsync(branchName)).Should().Be(remoteCommit);
+        File.ReadAllText(filePath).Should().Be(remoteFileContent);
     }
 
     private async Task<ILocalGitRepo> CloneProductRepoAsync(string branchName, bool resetToRemote)

@@ -391,11 +391,11 @@ internal class ForwardFlowTests : CodeFlowTests
     // The commit we'd try to flow from the repo then would not be a descendant of the previously flown commit and this must not be allowed.
     // https://github.com/dotnet/arcade-services/issues/4973
     [Test]
-    public async Task NonLinearForwardflowIsDetectedTest()
+    public async Task ForwardflowRejectsOldAndDivergentCommitsTest()
     {
         await EnsureTestRepoIsInitialized();
 
-        const string branchName = nameof(NonLinearForwardflowIsDetectedTest);
+        const string branchName = nameof(ForwardflowRejectsOldAndDivergentCommitsTest);
 
         var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
@@ -405,6 +405,7 @@ internal class ForwardFlowTests : CodeFlowTests
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldNotHaveUpdates();
 
+        var oldBuild = await CreateNewRepoBuild([]);
         await GitOperations.Checkout(ProductRepoPath, "main");
 
         // Commit #1 in the release branch
@@ -423,6 +424,14 @@ internal class ForwardFlowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
+        Func<Task> oldBuildAct = async () => await CallForwardflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-old",
+            buildToFlow: oldBuild);
+        var oldBuildException = await oldBuildAct.Should().ThrowAsync<NonLinearCodeflowException>();
+        oldBuildException.Which.FlowingOldBuild.Should().BeTrue();
+
         // Now we fork the VMR
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.CreateBranch(VmrPath, "release/10.0");
@@ -430,7 +439,8 @@ internal class ForwardFlowTests : CodeFlowTests
         // Now we try to flow the release/10.0 commit from the repo into the VMR release/10.0 branch
         await GitOperations.Checkout(ProductRepoPath, "release/10.0");
         Func<Task> act = async () => await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
-        await act.Should().ThrowAsync<NonLinearCodeflowException>();
+        var divergentException = await act.Should().ThrowAsync<NonLinearCodeflowException>();
+        divergentException.Which.FlowingOldBuild.Should().BeFalse();
     }
 
     // Test that the bug https://github.com/dotnet/arcade-services/issues/5331 doesn't happen
@@ -777,26 +787,6 @@ internal class ForwardFlowTests : CodeFlowTests
         // However, the conflict happens, which is important
         (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
             "This file has been changed in target");
-    }
-
-    [Test]
-    public async Task ForwardflowDoesntFlowOlderBuilds()
-    {
-        const string branch = nameof(ForwardflowDoesntFlowOlderBuilds);
-
-        await EnsureTestRepoIsInitialized();
-
-        await File.WriteAllTextAsync(ProductRepoPath / "file.txt", "first change");
-        await GitOperations.CommitAll(ProductRepoPath, "first change");
-        var oldBuild = await CreateNewRepoBuild([]);
-
-        var codeFlowChange = await ChangeRepoFileAndFlowIt("second change", branch);
-        codeFlowChange.ShouldHaveUpdates();
-        await FinalizeForwardFlow(branch);
-
-        var act = () => CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch, oldBuild);
-        var exception = await act.Should().ThrowAsync<NonLinearCodeflowException>();
-        exception.Which.FlowingOldBuild.Should().BeTrue();
     }
 
     [Test]
