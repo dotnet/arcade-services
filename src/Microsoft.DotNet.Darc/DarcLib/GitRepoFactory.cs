@@ -7,6 +7,7 @@ using Microsoft.DotNet.Internal.AzureDevOps.Authentication;
 using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Maestro.Common;
 using GitRepoUrlUtils = Maestro.Common.GitRepoUrlUtils;
 using GitRepoType = Maestro.Common.GitRepoType;
 
@@ -27,6 +28,7 @@ public class GitRepoFactory : IGitRepoFactory
     private readonly IFileSystem _fileSystem;
     private readonly ILoggerFactory _loggerFactory;
     private readonly string? _temporaryPath = null;
+    private readonly ICache _redisCacheClient;
 
     public GitRepoFactory(
         IRemoteTokenProvider remoteTokenProvider,
@@ -35,7 +37,8 @@ public class GitRepoFactory : IGitRepoFactory
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILoggerFactory loggerFactory,
-        string temporaryPath)
+        string temporaryPath,
+        ICache redisCacheClient)
     {
         _remoteTokenProvider = remoteTokenProvider;
         _azdoTokenProvider = azdoTokenProvider;
@@ -44,6 +47,7 @@ public class GitRepoFactory : IGitRepoFactory
         _fileSystem = fileSystem;
         _loggerFactory = loggerFactory;
         _temporaryPath = temporaryPath;
+        _redisCacheClient = redisCacheClient;
     }
 
     public IGitRepo CreateClient(string repoUri) => GitRepoUrlUtils.ParseTypeFromUri(repoUri) switch
@@ -57,10 +61,11 @@ public class GitRepoFactory : IGitRepoFactory
         GitRepoType.GitHub => new GitHubClient(
             _remoteTokenProvider,
             _processManager,
-            _loggerFactory.CreateLogger<GitHubClient>(),
             _temporaryPath,
             // Caching not in use for Darc local client.
-            null),
+            null,
+            _redisCacheClient,
+            _loggerFactory.CreateLogger<GitHubClient>()),
 
         GitRepoType.Local => new LocalLibGit2Client(
             _remoteTokenProvider,
