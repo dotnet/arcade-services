@@ -168,8 +168,10 @@ internal static class CliOptions
         {
             if (!result.Implicit && result.Tokens.Count == 0)
             {
-                // Matches the wording System.CommandLine uses when arity alone reports the value.
-                result.AddError($"Required argument missing for option: '{option.Name}'.");
+                // Matches the wording and the name System.CommandLine uses when arity reports the
+                // missing value itself, which is the alias the user typed rather than the option name.
+                var name = result.IdentifierToken?.Value ?? option.Name;
+                result.AddError($"Required argument missing for option: '{name}'.");
             }
         });
 
@@ -253,6 +255,14 @@ internal static class CliOptions
                 if (arg[value] is ':' or '=')
                 {
                     value++;
+                }
+
+                if (value == arg.Length)
+                {
+                    // An assignment with nothing behind it, e.g. '-fv='. Rewriting it would drop the
+                    // empty value, because an explicit assignment with an empty remainder produces no
+                    // argument token at all, while the bundle tokenizer does emit one.
+                    break;
                 }
 
                 return [.. arg[1..i].Select(flag => $"-{flag}"), $"-{arg[i]}={arg[value..]}"];

@@ -264,6 +264,23 @@ public class CommandLineParsingTests
         // The same holds when the value is attached to the trailing alias of the preceding bundle.
         Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv", "-npackage")
             .Version.Should().Be("-npackage");
+
+        // An assignment with nothing behind it is an empty value, not a missing one.
+        var empty = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=");
+        empty.Flat.Should().BeTrue();
+        empty.Version.Should().BeEmpty();
+    }
+
+    [Test]
+    public void MissingValuesAreReportedUnderTheAliasThatWasUsed()
+    {
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-v")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '-v'.");
+
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "--version")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '--version'.");
     }
 
     [Test]
