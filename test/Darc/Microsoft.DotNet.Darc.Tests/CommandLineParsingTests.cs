@@ -272,6 +272,24 @@ public class CommandLineParsingTests
     }
 
     [Test]
+    public void OptionsLeftWaitingByAnEmptyAssignmentStillClaimTheNextToken()
+    {
+        // '--name=' drops its empty remainder, so --name is still waiting for a value and takes the
+        // token behind it literally, exactly as the parser did before the arity was relaxed.
+        foreach (var dangling in new[] { "--name=", "--name:", "-n=", "-n:" })
+        {
+            Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", dangling, "-ppackage")
+                .Name.Should().Be("-ppackage", because: $"'{dangling}' assigns no value");
+        }
+
+        // Only an exact name or alias may be completed this way; a bundle keeps its explicit empty value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=", "-psecret");
+        bundled.Flat.Should().BeTrue();
+        bundled.Version.Should().BeEmpty();
+        bundled.BuildAssetRegistryToken.Should().Be("secret");
+    }
+
+    [Test]
     public void MissingValuesAreReportedUnderTheAliasThatWasUsed()
     {
         ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-v")

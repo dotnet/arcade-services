@@ -219,6 +219,11 @@ internal static class CliOptions
             {
                 normalized[^1] = $"{normalized[^1]}={arg}";
             }
+            else if (normalized.Count > 0 && AssignsNothing(path, normalized[^1]))
+            {
+                // The dangling separator carries no value, so replace it rather than adding a second one.
+                normalized[^1] = $"{normalized[^1][..^1]}={arg}";
+            }
             else
             {
                 normalized.AddRange(Unbundle(path, arg));
@@ -308,8 +313,28 @@ internal static class CliOptions
         return last is not null && TakesAValue(last);
     }
 
-    private static Option FindOption(List<Command> path, string alias)
+    /// <summary>
+    /// Tells whether the given argument assigns nothing to an option, as in <c>--name=</c> or <c>-n:</c>.
+    /// System.CommandLine discards such an empty remainder, so the option is left waiting for a value and
+    /// claims the token that follows. Only an exact option name or alias qualifies: a bundle such as
+    /// <c>-fv=</c> is tokenized with an explicit empty value and must keep it.
+    /// </summary>
+    private static bool AssignsNothing(List<Command> path, string arg)
     {
+        if (arg.Length < 3 || arg[0] != '-' || (arg[^1] != '=' && arg[^1] != ':'))
+        {
+            return false;
+        }
+
+        var name = arg[..^1];
+
+        return !name.Contains('=')
+            && !name.Contains(':')
+            && FindOption(path, name) is Option option
+            && TakesAValue(option);
+    }
+
+    private static Option FindOption(List<Command> path, string alias)    {
         for (var i = path.Count - 1; i >= 0; i--)
         {
             var option = path[i].Options.FirstOrDefault(
