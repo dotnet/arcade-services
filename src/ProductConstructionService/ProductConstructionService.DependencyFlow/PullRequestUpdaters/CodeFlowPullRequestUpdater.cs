@@ -106,7 +106,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
+            await AddOppositeCodeflowMergedCommentAsync(pr);
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
@@ -852,9 +852,36 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
     {
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
-        _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
+        await AddOppositeCodeflowMergedCommentAsync(pr);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
+    }
+
+    private async Task AddOppositeCodeflowMergedCommentAsync(InProgressPullRequest pr)
+    {
+        var comment = new Comment(
+            PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(),
+            CommentType.Warning);
+        try
+        {
+            var targetRepository = (await _target.GetTargetAsync()).Repository;
+            var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+
+            if (await PullRequestCommenter.LastCommentContainsAsync(
+                remote,
+                pr.Url,
+                PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro))
+            {
+                _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
+                return;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Unable to check for a duplicate blocked-flow comment on PR {prUrl}", pr.Url);
+        }
+
+        _commentCollector.AddComment(comment.Text, comment.Type);
     }
 
     private async Task NotifyAboutMissingOppositeDirectionSubscriptionIfNeeded(SubscriptionDTO subscription, string sourceBranch)
