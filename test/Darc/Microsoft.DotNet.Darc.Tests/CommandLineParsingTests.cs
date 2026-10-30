@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -208,6 +209,115 @@ public class CommandLineParsingTests
 
         Parse(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "dotnet/runtime")
             .TargetRepository.Should().Be("dotnet/runtime");
+    }
+
+    [Test]
+    public void RecognisedOptionsAreNotSwallowedAsValues()
+    {
+        // 'darc get-subscriptions --target-repo --disabled' used to bind '--disabled' as the
+        // repository name, so the user silently got an unfiltered query instead of an error.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--disabled")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--target-repo");
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--quiet")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--ids");
+    }
+
+    [Test]
+    public void HelpStillWorksAfterAnOptionThatExpectsAValue()
+    {
+        // Binding '--help' as a value also leaves the parse error-free, so the action is what has to
+        // be asserted here.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+    }
+
+    [Test]
+    public void ShortOptionsKeepTheirAttachedValues()
+    {
+        // '-n' is followed by '-p', the alias of --password, so without normalisation the token would
+        // unbundle into '-n -p ackage' and leave --name without a value.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "-npackage")
+            .Name.Should().Be("package");
+
+        // A token that could unbundle is still taken literally when the option in front of it is
+        // waiting for its value, which is what the parser did before the arity was relaxed.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "--name", "-npackage")
+            .Name.Should().Be("-npackage");
+
+        // Flags must keep bundling rather than swallowing the rest of the token as a value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fl");
+        bundled.Flat.Should().BeTrue();
+        bundled.Local.Should().BeTrue();
+
+        // A bundle may mix flags and a value-taking option, in which case the value belongs to the
+        // first alias that takes one. '-p' of --password follows '-v' here.
+        var mixed = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fvpreview");
+        mixed.Flat.Should().BeTrue();
+        mixed.Version.Should().Be("preview");
+
+        // The same holds when the value is attached to the trailing alias of the preceding bundle.
+        Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv", "-npackage")
+            .Version.Should().Be("-npackage");
+
+        // An assignment with nothing behind it is an empty value, not a missing one.
+        var empty = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=");
+        empty.Flat.Should().BeTrue();
+        empty.Version.Should().BeEmpty();
+    }
+
+    [Test]
+    public void OptionsLeftWaitingByAnEmptyAssignmentStillClaimTheNextToken()
+    {
+        // '--name=' drops its empty remainder, so --name is still waiting for a value and takes the
+        // token behind it literally, exactly as the parser did before the arity was relaxed.
+        foreach (var dangling in new[] { "--name=", "--name:", "-n=", "-n:" })
+        {
+            Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", dangling, "-ppackage")
+                .Name.Should().Be("-ppackage", because: $"'{dangling}' assigns no value");
+        }
+
+        // Only an exact name or alias may be completed this way; a bundle keeps its explicit empty value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=", "-psecret");
+        bundled.Flat.Should().BeTrue();
+        bundled.Version.Should().BeEmpty();
+        bundled.BuildAssetRegistryToken.Should().Be("secret");
+    }
+
+    [Test]
+    public void MissingValuesAreReportedUnderTheAliasThatWasUsed()
+    {
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-v")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '-v'.");
+
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "--version")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '--version'.");
+    }
+
+    [Test]
+    public void OptionsWithDefaultsStayValidWhenOmitted()
+    {
+        // Options carrying a default produce an implicit result with no tokens, which must not be
+        // mistaken for the user passing the option without a value.
+        var options = Parse(new GetAssetCommandLineOptions(), "get-asset", "--name", "some.package");
+
+        options.MaxAgeInDays.Should().Be(30);
+        options.GitLocation.Should().Be("git");
+    }
+
+    [Test]
+    public void EnumOptionsReportAMissingValueInsteadOfThrowing()
+    {
+        ParseResultOf(new GetChannelsCommandLineOptions(), "get-channels", "--output-format")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--output-format");
     }
 
     [Test]

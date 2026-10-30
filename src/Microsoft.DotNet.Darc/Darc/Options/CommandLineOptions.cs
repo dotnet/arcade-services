@@ -265,6 +265,12 @@ public abstract class CommandLineOptions : ICommandLineOptions
             option.DefaultValueFactory = _ => defaultValue();
         }
 
+        // Boolean options are flags and legitimately take no value, so they keep their zero arity.
+        if (option.Arity.MinimumNumberOfValues > 0)
+        {
+            CliOptions.RequireValue(option);
+        }
+
         return option;
     }
 
