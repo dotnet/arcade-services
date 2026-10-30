@@ -168,7 +168,17 @@ If you need to update the client library, follow these steps:
 
 # General deployment notes
 
-The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [ProductConstructionService.Deployment](https://github.com/dotnet/arcade-services/tree/main/src/ProductConstructionService/ProductConstructionService.Deployment) script. The script does the following:
+The [deployment pipeline](../eng/pipelines/templates/stages/deploy.yaml) runs a single `Release` stage after `Build`. This stage applies database migrations first, then runs the `DeployPCS` deployment job using the `runOnce` strategy. The `E2ETests` stage runs after the release succeeds.
+
+The deployment job targets the Azure DevOps `Production` environment for `refs/heads/production`, and `Staging` otherwise. Azure DevOps evaluates environment approvals and checks before the entire `Release` stage starts, so they protect both database migrations and application deployment without a separate approval-only stage. Configure approvals, checks, and pipeline permissions on those environments in Azure DevOps; they are not defined by this YAML.
+
+The [1ES deployment-job requirements](https://eng.ms/docs/coreai/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/features/releasepipelines/releaseworkflows/deploymentjob.html) require `DeployPCS` to declare `templateContext.type: releaseJob`. Its `isProduction` value is true for `refs/heads/production` and false otherwise. Artifacts from the current build are declared through `templateContext.inputs`: the PCS CLI for every deployment, and `AssetManifests` only for production. 1ES does not automatically download artifacts in the deployment lifecycle hook.
+
+Release jobs cannot check out source or download package dependencies directly. The build job includes `global.json` and the GitHub App token helper script in the PCS CLI pipeline artifact. Deployment installs the pinned .NET SDK using that artifact's `global.json` and runs the packaged token helper, without a repository checkout. Database migrations remain in the preceding regular job, which builds from source.
+
+The Azure DevOps environments must use resource type `None` (no attached resources), as required by 1ES deployment jobs. They provide deployment history and checks, while deployment still uses the existing Azure service connections and PCS CLI; the `runOnce` strategy does not replace the CLI's blue-green rollout or recovery logic.
+
+The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [PCS deployment CLI](../tools/Tools.Cli.Common/Operations/DeploymentOperation.cs). The CLI does the following:
  - Figures out the label that should be assigned to the new revision and removes it from the old, inactive revision.
  - Tells the currently active revision to stop processing new jobs and waits for the new one to finish.
  - Deploys the new revision.

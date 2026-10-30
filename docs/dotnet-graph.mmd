@@ -1,0 +1,27 @@
+flowchart LR
+    runtime --> efcore
+    runtime --> aspnetcore
+    runtime --> winforms
+
+    efcore --> aspnetcore
+
+    winforms --> wpf
+    wpf --> windowsdesktop
+
+    runtime --> sdk1["1xx SDK"]
+
+    aspnetcore --> sdk1
+    windowsdesktop --> sdk1
+
+    sdk1 --> installer1["1xx Installer (.NET 8)"]
+
+    subgraph additionalBands["For each additional available band Bxx (0..*)"]
+        sdkB["Bxx SDK"]
+        installerB["Bxx Installer (.NET 8)"]
+
+        sdkB --> installerB
+    end
+
+    runtime --> sdkB
+    aspnetcore --> sdkB
+    windowsdesktop --> sdkB

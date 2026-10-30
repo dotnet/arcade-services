@@ -44,6 +44,10 @@ parameters:
 - name: outputVariableName
   type: string
 
+- name: scriptPath
+  type: string
+  default: $(Build.SourcesDirectory)/eng/Get-GitHubAppToken.ps1
+
 - name: stepName
   type: string
   default: getGitHubAppInstallationToken
@@ -67,8 +71,7 @@ steps:
     scriptType: pscore
     scriptLocation: inlineScript
     inlineScript: |
-      $repoRoot = "$(Build.SourcesDirectory)"
-      & "$repoRoot/eng/Get-GitHubAppToken.ps1" `
+      & "${{ parameters.scriptPath }}" `
           -KeyVaultName '${{ parameters.keyVaultName }}' `
           -KeyName '${{ parameters.keyName }}' `
           -AppClientId '${{ parameters.appClientId }}' `
