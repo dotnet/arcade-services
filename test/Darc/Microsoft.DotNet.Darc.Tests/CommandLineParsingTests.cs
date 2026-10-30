@@ -254,6 +254,16 @@ public class CommandLineParsingTests
         var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fl");
         bundled.Flat.Should().BeTrue();
         bundled.Local.Should().BeTrue();
+
+        // A bundle may mix flags and a value-taking option, in which case the value belongs to the
+        // first alias that takes one. '-p' of --password follows '-v' here.
+        var mixed = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fvpreview");
+        mixed.Flat.Should().BeTrue();
+        mixed.Version.Should().Be("preview");
+
+        // The same holds when the value is attached to the trailing alias of the preceding bundle.
+        Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv", "-npackage")
+            .Version.Should().Be("-npackage");
     }
 
     [Test]

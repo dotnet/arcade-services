@@ -174,21 +174,22 @@ internal static class CliOptions
         });
 
     /// <summary>
-    /// Rewrites a short option carrying an attached value, e.g. <c>-npackage</c>, into its explicit
-    /// form <c>-n=package</c>, and keeps such a token attached to the option in front of it when that
-    /// option is still waiting for its value, e.g. <c>--name -npackage</c>.
+    /// Rewrites a short option bundle carrying an attached value, e.g. <c>-npackage</c> or
+    /// <c>-fvpreview</c>, into its explicit form (<c>-n=package</c>, <c>-f -v=preview</c>), and keeps
+    /// such a token attached to the option in front of it when that option is still waiting for its
+    /// value, e.g. <c>--name -npackage</c>.
     /// </summary>
     /// <remarks>
     /// System.CommandLine only keeps an attached value together with its option while the option
     /// demands a value, which the zero minimum arity <see cref="RequireValue{TValue}"/> relies on
     /// takes away. Without this, <c>-npackage</c> would unbundle into <c>-n -p ackage</c> whenever
-    /// the value happens to start with another alias the command knows. Values attached to flags are
-    /// left alone so that bundles such as <c>-fq</c> keep working.
+    /// the value happens to start with another alias the command knows. Bundles made up purely of
+    /// flags, such as <c>-fl</c>, are left alone so that they keep unbundling.
     /// </remarks>
     internal static string[] AttachShortOptionValues(Command command, string[] args)
     {
         List<string> normalized = new(args.Length);
-        var current = command;
+        List<Command> path = [command];
         var literal = false;
 
         foreach (var arg in args)
@@ -202,37 +203,117 @@ internal static class CliOptions
                 literal = true;
                 normalized.Add(arg);
             }
-            else if (!LooksLikeAShortOptionWithAnAttachedValue(arg))
+            else if (!CouldBundleAValue(arg))
             {
                 normalized.Add(arg);
-                current = current.Subcommands.FirstOrDefault(subcommand => subcommand.Name == arg) ?? current;
+
+                var subcommand = path[^1].Subcommands.FirstOrDefault(candidate => candidate.Name == arg);
+                if (subcommand is not null)
+                {
+                    path.Add(subcommand);
+                }
             }
-            else if (normalized.Count > 0 && NamesAnOptionTakingAValue(current, normalized[^1]))
+            else if (normalized.Count > 0 && ExpectsAValue(path, normalized[^1]))
             {
                 normalized[^1] = $"{normalized[^1]}={arg}";
             }
-            else if (NamesAnOptionTakingAValue(current, arg[..2]))
-            {
-                normalized.Add($"{arg[..2]}={arg[2..]}");
-            }
             else
             {
-                normalized.Add(arg);
+                normalized.AddRange(Unbundle(path, arg));
             }
         }
 
         return [.. normalized];
     }
 
-    private static bool LooksLikeAShortOptionWithAnAttachedValue(string arg)
+    /// <summary>
+    /// Splits a short option bundle at the first alias that takes a value, so that the rest of the
+    /// token stays that option's value. Mirrors how System.CommandLine unbundles a greedy option.
+    /// </summary>
+    private static IEnumerable<string> Unbundle(List<Command> path, string arg)
+    {
+        for (var i = 1; i < arg.Length; i++)
+        {
+            if (arg[i] is ':' or '=')
+            {
+                // System.CommandLine attaches the remainder itself once an assignment appears.
+                break;
+            }
+
+            var option = FindOption(path, $"-{arg[i]}");
+            if (option is null)
+            {
+                // An unrecognised character makes System.CommandLine treat the rest as a value already.
+                break;
+            }
+
+            if (TakesAValue(option) && i != arg.Length - 1)
+            {
+                var value = i + 1;
+                if (arg[value] is ':' or '=')
+                {
+                    value++;
+                }
+
+                return [.. arg[1..i].Select(flag => $"-{flag}"), $"-{arg[i]}={arg[value..]}"];
+            }
+        }
+
+        return [arg];
+    }
+
+    private static bool CouldBundleAValue(string arg)
         => arg.Length > 2
             && arg[0] == '-'
             && arg[1] != '-'
             && arg[2] != '='
             && arg[2] != ':';
 
-    private static bool NamesAnOptionTakingAValue(Command command, string alias)
-        => command.Options.Any(option => TakesAValue(option) && (option.Name == alias || option.Aliases.Contains(alias)));
+    /// <summary>
+    /// Tells whether the given argument ends in an option that still needs a value, which is true for
+    /// a long option, a short option and a flag bundle whose last alias takes a value.
+    /// </summary>
+    private static bool ExpectsAValue(List<Command> path, string arg)
+    {
+        if (arg.Length < 2 || arg[0] != '-' || arg.Contains('=') || arg.Contains(':'))
+        {
+            return false;
+        }
+
+        if (arg[1] == '-')
+        {
+            return FindOption(path, arg) is Option option && TakesAValue(option);
+        }
+
+        Option last = null;
+        for (var i = 1; i < arg.Length; i++)
+        {
+            last = FindOption(path, $"-{arg[i]}");
+            if (last is null)
+            {
+                return false;
+            }
+        }
+
+        return last is not null && TakesAValue(last);
+    }
+
+    private static Option FindOption(List<Command> path, string alias)
+    {
+        for (var i = path.Count - 1; i >= 0; i--)
+        {
+            var option = path[i].Options.FirstOrDefault(
+                candidate => (i == path.Count - 1 || candidate.Recursive)
+                    && (candidate.Name == alias || candidate.Aliases.Contains(alias)));
+
+            if (option is not null)
+            {
+                return option;
+            }
+        }
+
+        return null;
+    }
 
     private static bool TakesAValue(Option option)
         => option.Arity.MaximumNumberOfValues > 0
