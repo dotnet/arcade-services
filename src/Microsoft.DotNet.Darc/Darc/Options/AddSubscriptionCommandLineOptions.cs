@@ -1,47 +1,54 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-[Verb("add-subscription", HelpText = "Add a new subscription.")]
 internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions<AddSubscriptionOperation>
 {
-    [Option("enabled", HelpText = "Whether subscription is enabled (active) or not", Default = true)]
+    public override string Verb => "add-subscription";
+
+    public override string VerbDescription => "Add a new subscription.";
+
     public bool Enabled { get; set; }
 
-    [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }
 
-    [Option("source-repo", HelpText = "Source repository for the subscription.")]
     public string SourceRepository { get; set; }
 
-    [Option("target-repo", HelpText = "Target repository for the subscription.")]
     public string TargetRepository { get; set; }
 
-    [Option("target-branch", HelpText = "Target branch for the subscription.")]
     public string TargetBranch { get; set; }
 
-    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported with --merge-prs or for codeflow subscriptions (source-enabled).")]
     public bool Batchable { get; set; }
 
-    [Option("merge-prs", HelpText = "Whether Maestro should merge pull requests after all Maestro checks pass.")]
     public bool MergePrs { get; set; }
 
-    [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }
 
-    [Option("read-stdin", HelpText = "Interactive mode style (YAML), but read input from stdin. Implies -q")]
     public bool ReadStandardIn { get; set; }
 
-    [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 
-    [Option("auto-approve", HelpText = "Whether passing pull requests should be automatically approved. Only allowed on forward flow subscriptions.", Default = false)]
     public bool AutoApprove { get; set; }
 
-    [Option("subscription", HelpText = "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags are copied when no Merge PRs settings are specified via command line.")]
     public string CopyFromSubscription { get; set; }
+
+    protected override void Configure()
+    {
+        Add<bool>("--enabled", "Whether subscription is enabled (active) or not", value => Enabled = value, defaultValue: () => true);
+        Add<string>("--channel", "Name of channel to pull from.", value => Channel = value);
+        Add<string>("--source-repo", "Source repository for the subscription.", value => SourceRepository = value);
+        Add<string>("--target-repo", "Target repository for the subscription.", value => TargetRepository = value);
+        Add<string>("--target-branch", "Target branch for the subscription.", value => TargetBranch = value);
+        Add<bool>("--batchable", "Whether this subscription's content can be updated in batches. Not supported with --merge-prs or for codeflow subscriptions (source-enabled).", value => Batchable = value);
+        Add<bool>("--merge-prs", "Whether Maestro should merge pull requests after all Maestro checks pass.", value => MergePrs = value);
+        Add<bool>("--quiet", "-q", "Non-interactive mode (requires all elements to be passed on the command line).", value => Quiet = value);
+        Add<bool>("--read-stdin", "Interactive mode style (YAML), but read input from stdin. Implies -q", value => ReadStandardIn = value);
+        Add<bool>("--source-enabled", "Get only source-enabled (VMR code flow) subscriptions.", value => SourceEnabled = value, defaultValue: () => false);
+        Add<bool>("--auto-approve", "Whether passing pull requests should be automatically approved. Only allowed on forward flow subscriptions.", value => AutoApprove = value, defaultValue: () => false);
+        Add<string>("--subscription", "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags are copied when no Merge PRs settings are specified via command line.", value => CopyFromSubscription = value);
+        base.Configure();
+    }
 }

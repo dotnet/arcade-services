@@ -20,14 +20,15 @@ public class DependencyRegistrationTests
     [Test]
     public void AreDarcOperationsRegistered()
     {
-        foreach (Type optionType in Program.GetOptions().Concat(Program.GetVmrOptions()))
+        foreach (CommandLineOptions operationOption in Program.GetOptions().Concat(Program.GetVmrOptions()))
         {
+            Type optionType = operationOption.GetType();
+
             DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
             {
                 // Register the option type
                 services.AddTransient(optionType);
 
-                var operationOption = (CommandLineOptions)Activator.CreateInstance(optionType);
                 // Set IsCi to true to avoid login pop up
                 operationOption.IsCi = true;
                 operationOption.RegisterServices(services);

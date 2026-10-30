@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -16,54 +15,67 @@ namespace Microsoft.DotNet.Darc.Options;
 
 internal abstract class SubscriptionsCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
-    [Option("target-repo", HelpText = "Filter by target repo (matches substring unless --exact or --regex is passed).")]
     public string TargetRepository { get; set; }
 
-    [Option("source-repo", HelpText = "Filter by source repo (matches substring unless --exact or --regex is passed).")]
     public string SourceRepository { get; set; }
 
-    [Option("channel", HelpText = "Filter by source channel (matches substring unless --exact or --regex is passed).")]
     public string Channel { get; set; }
 
-    [Option("target-branch", HelpText = "Filter by target branch (matches substring unless --exact or --regex is passed).")]
     public string TargetBranch { get; set; }
 
-    [Option("frequencies", Separator = ',',
-        HelpText = @"Filter by subscription update frequency. Typical values: ""everyMonth"", ""everyTwoWeeks"", ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
     public IEnumerable<string> Frequencies { get; set; }
 
-    [Option("default-channel", HelpText = "Filter to subscriptions that target repo+branches that apply by default to the specified channel.")]
     public string DefaultChannelTarget { get; set; }
 
-    [Option("exact", SetName = "exact", HelpText = "Match subscription parameters exactly (cannot be used with --regex).")]
     public bool ExactMatch { get; set; }
 
-    [Option("regex", SetName = "regex", HelpText = "Match subscription parameters using regex (cannot be used with --exact).")]
     public bool RegexMatch { get; set; }
 
-    [Option("disabled", HelpText = "Get only disabled subscriptions.")]
     public bool Disabled { get; set; }
 
-    [Option("enabled", HelpText = "Get only enabled subscriptions.")]
     public bool Enabled { get; set; }
 
-    [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.")]
     public string SourceDirectory { get; set; }
 
-    [Option("target-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
     public string TargetDirectory { get; set; }
 
-    [Option("batchable", HelpText = "Get only batchable subscriptions.")]
     public bool Batchable { get; set; }
 
-    [Option("not-batchable", HelpText = "Get only non-batchable subscriptions.")]
     public bool NotBatchable { get; set; }
 
-    [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
     public IEnumerable<string> SubscriptionIds { get; set; }
+
+    protected override void Configure()
+    {
+        Add<string>("--target-repo", "Filter by target repo (matches substring unless --exact or --regex is passed).", value => TargetRepository = value);
+        Add<string>("--source-repo", "Filter by source repo (matches substring unless --exact or --regex is passed).", value => SourceRepository = value);
+        Add<string>("--channel", "Filter by source channel (matches substring unless --exact or --regex is passed).", value => Channel = value);
+        Add<string>("--target-branch", "Filter by target branch (matches substring unless --exact or --regex is passed).", value => TargetBranch = value);
+        AddSeparatedList(
+            ',',
+            "--frequencies",
+            @"Filter by subscription update frequency. Typical values: ""everyMonth"", ""everyTwoWeeks"", ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""",
+            value => Frequencies = value);
+        Add<string>("--default-channel", "Filter to subscriptions that target repo+branches that apply by default to the specified channel.", value => DefaultChannelTarget = value);
+        var exactMatch = Add<bool>("--exact", "Match subscription parameters exactly (cannot be used with --regex).", value => ExactMatch = value);
+        var regexMatch = Add<bool>("--regex", "Match subscription parameters using regex (cannot be used with --exact).", value => RegexMatch = value);
+        Add<bool>("--disabled", "Get only disabled subscriptions.", value => Disabled = value);
+        Add<bool>("--enabled", "Get only enabled subscriptions.", value => Enabled = value);
+        Add<bool?>("--source-enabled", "Get only source-enabled (VMR code flow) subscriptions.", value => SourceEnabled = value);
+        Add<string>("--source-directory", "Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.", value => SourceDirectory = value);
+        Add<string>("--target-directory", "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.", value => TargetDirectory = value);
+        Add<bool>("--batchable", "Get only batchable subscriptions.", value => Batchable = value);
+        Add<bool>("--not-batchable", "Get only non-batchable subscriptions.", value => NotBatchable = value);
+        AddSeparatedList(
+            ',',
+            "--ids",
+            "Get only subscriptions with these ids.",
+            value => SubscriptionIds = value);
+        AddMutuallyExclusive(exactMatch, regexMatch);
+        base.Configure();
+    }
 
     public async Task<IEnumerable<Subscription>> FilterSubscriptions(IBarApiClient barClient)
     {
