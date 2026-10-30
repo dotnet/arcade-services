@@ -211,6 +211,49 @@ public class CommandLineParsingTests
     }
 
     [Test]
+    public void RecognisedOptionsAreNotSwallowedAsValues()
+    {
+        // 'darc get-subscriptions --target-repo --disabled' used to bind '--disabled' as the
+        // repository name, so the user silently got an unfiltered query instead of an error.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--disabled")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--target-repo");
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--quiet")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--ids");
+    }
+
+    [Test]
+    public void HelpStillWorksAfterAnOptionThatExpectsAValue()
+    {
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
+            .Errors.Should().BeEmpty();
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--help")
+            .Errors.Should().BeEmpty();
+    }
+
+    [Test]
+    public void OptionsWithDefaultsStayValidWhenOmitted()
+    {
+        // Options carrying a default produce an implicit result with no tokens, which must not be
+        // mistaken for the user passing the option without a value.
+        var options = Parse(new GetAssetCommandLineOptions(), "get-asset", "--name", "some.package");
+
+        options.MaxAgeInDays.Should().Be(30);
+        options.GitLocation.Should().Be("git");
+    }
+
+    [Test]
+    public void EnumOptionsReportAMissingValueInsteadOfThrowing()
+    {
+        ParseResultOf(new GetChannelsCommandLineOptions(), "get-channels", "--output-format")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--output-format");
+    }
+
+    [Test]
     public void ExactAndRegexCannotBeCombined()
     {
         ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--exact", "--regex")
