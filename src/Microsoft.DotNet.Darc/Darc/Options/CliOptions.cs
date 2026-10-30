@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
@@ -171,6 +172,72 @@ internal static class CliOptions
                 result.AddError($"Required argument missing for option: '{option.Name}'.");
             }
         });
+
+    /// <summary>
+    /// Rewrites a short option carrying an attached value, e.g. <c>-npackage</c>, into its explicit
+    /// form <c>-n=package</c>, and keeps such a token attached to the option in front of it when that
+    /// option is still waiting for its value, e.g. <c>--name -npackage</c>.
+    /// </summary>
+    /// <remarks>
+    /// System.CommandLine only keeps an attached value together with its option while the option
+    /// demands a value, which the zero minimum arity <see cref="RequireValue{TValue}"/> relies on
+    /// takes away. Without this, <c>-npackage</c> would unbundle into <c>-n -p ackage</c> whenever
+    /// the value happens to start with another alias the command knows. Values attached to flags are
+    /// left alone so that bundles such as <c>-fq</c> keep working.
+    /// </remarks>
+    internal static string[] AttachShortOptionValues(Command command, string[] args)
+    {
+        List<string> normalized = new(args.Length);
+        var current = command;
+        var literal = false;
+
+        foreach (var arg in args)
+        {
+            if (literal)
+            {
+                normalized.Add(arg);
+            }
+            else if (arg == "--")
+            {
+                literal = true;
+                normalized.Add(arg);
+            }
+            else if (!LooksLikeAShortOptionWithAnAttachedValue(arg))
+            {
+                normalized.Add(arg);
+                current = current.Subcommands.FirstOrDefault(subcommand => subcommand.Name == arg) ?? current;
+            }
+            else if (normalized.Count > 0 && NamesAnOptionTakingAValue(current, normalized[^1]))
+            {
+                normalized[^1] = $"{normalized[^1]}={arg}";
+            }
+            else if (NamesAnOptionTakingAValue(current, arg[..2]))
+            {
+                normalized.Add($"{arg[..2]}={arg[2..]}");
+            }
+            else
+            {
+                normalized.Add(arg);
+            }
+        }
+
+        return [.. normalized];
+    }
+
+    private static bool LooksLikeAShortOptionWithAnAttachedValue(string arg)
+        => arg.Length > 2
+            && arg[0] == '-'
+            && arg[1] != '-'
+            && arg[2] != '='
+            && arg[2] != ':';
+
+    private static bool NamesAnOptionTakingAValue(Command command, string alias)
+        => command.Options.Any(option => TakesAValue(option) && (option.Name == alias || option.Aliases.Contains(alias)));
+
+    private static bool TakesAValue(Option option)
+        => option.Arity.MaximumNumberOfValues > 0
+            && option.ValueType != typeof(bool)
+            && option.ValueType != typeof(bool?);
 
     private static string[] Split(ArgumentResult result, char separator)
         => [.. result.Tokens.SelectMany(token => token.Value.Split(separator))];

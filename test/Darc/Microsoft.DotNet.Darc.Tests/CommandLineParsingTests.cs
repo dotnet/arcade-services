@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -227,11 +228,32 @@ public class CommandLineParsingTests
     [Test]
     public void HelpStillWorksAfterAnOptionThatExpectsAValue()
     {
+        // Binding '--help' as a value also leaves the parse error-free, so the action is what has to
+        // be asserted here.
         ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
-            .Errors.Should().BeEmpty();
+            .Action.Should().BeOfType<HelpAction>();
 
         ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--help")
-            .Errors.Should().BeEmpty();
+            .Action.Should().BeOfType<HelpAction>();
+    }
+
+    [Test]
+    public void ShortOptionsKeepTheirAttachedValues()
+    {
+        // '-n' is followed by '-p', the alias of --password, so without normalisation the token would
+        // unbundle into '-n -p ackage' and leave --name without a value.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "-npackage")
+            .Name.Should().Be("package");
+
+        // A token that could unbundle is still taken literally when the option in front of it is
+        // waiting for its value, which is what the parser did before the arity was relaxed.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "--name", "-npackage")
+            .Name.Should().Be("-npackage");
+
+        // Flags must keep bundling rather than swallowing the rest of the token as a value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fl");
+        bundled.Flat.Should().BeTrue();
+        bundled.Local.Should().BeTrue();
     }
 
     [Test]
