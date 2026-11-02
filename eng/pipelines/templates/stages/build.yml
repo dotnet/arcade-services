@@ -159,10 +159,13 @@ stages:
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
             displayName: Push docker image
 
-      # One job per runtime identifier, each producing exactly one RID-specific darc package.
+      # One job per darc runtime identifier. Each builds the whole repository - which makes these
+      # jobs a build check for their platform on top of producing the package - and publishes only
+      # the darc package for its own RID (see eng/Publishing.props). Tests keep running in the
+      # Windows_NT job alone.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ platform.jobName }}
-          displayName: Build darc (${{ platform.rid }})
+          displayName: Build repository and darc (${{ platform.rid }})
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
           # The default artifact names are keyed off Agent.Os, which these jobs share with each
@@ -176,10 +179,10 @@ stages:
           steps:
           - checkout: self
             clean: true
-          - template: /eng/pipelines/templates/steps/build-darc-rid-package.yml@self
+          - template: /eng/pipelines/templates/steps/build.yml@self
             parameters:
               configuration: $(_BuildConfig)
-              rid: ${{ platform.rid }}
+              darcRid: ${{ platform.rid }}
               windows: ${{ platform.windows }}
               buildArgs: $(_InternalBuildArgs)
               # The MicroBuild signing plugin only supports real signing on Mac and Linux, so

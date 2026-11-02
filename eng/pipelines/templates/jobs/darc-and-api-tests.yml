@@ -41,9 +41,18 @@ jobs:
       patterns: PackageArtifacts/Microsoft.DotNet.Darc.*
 
     - powershell: |
-        $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
-        $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
-        $darcVersion = $Matches[1]
+        # darc ships as a RID-agnostic wrapper package next to one package per runtime identifier
+        # (Microsoft.DotNet.Darc.<rid>.<version>.nupkg). Only the wrapper is installable as a tool
+        # - it resolves to the RID package matching the machine - and it is the only one whose
+        # version follows the package ID directly.
+        $darcVersions = @(Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc.*.nupkg |
+          ForEach-Object { if ($_.Name -match '^Microsoft\.DotNet\.Darc\.(\d.*)\.nupkg$') { $Matches[1] } })
+
+        if ($darcVersions.Count -ne 1) {
+          throw "Expected exactly one Microsoft.DotNet.Darc wrapper package, found $($darcVersions.Count)"
+        }
+
+        $darcVersion = $darcVersions[0]
         mkdir darc
         .\eng\common\dotnet.ps1 tool install Microsoft.DotNet.Darc --tool-path .\darc --source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
       displayName: Install Darc

@@ -131,10 +131,13 @@ stages:
           parameters:
             dockerImageName: test
 
-      # One job per runtime identifier, each producing exactly one RID-specific darc package.
+      # One job per darc runtime identifier. Each builds the whole repository - which makes these
+      # jobs a build check for their platform on top of producing the package - and publishes only
+      # the darc package for its own RID (see eng/Publishing.props). Tests keep running in the
+      # Build job alone.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ platform.jobName }}
-          displayName: Build darc (${{ platform.rid }})
+          displayName: Build repository and darc (${{ platform.rid }})
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
           # The default artifact names are keyed off Agent.Os, which these jobs share with each
@@ -146,13 +149,12 @@ stages:
               ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
                 artifacts:
                   name: Artifacts_${{ platform.jobName }}_$(_BuildConfig)
-                manifests: true
           steps:
           - checkout: self
             clean: true
 
-          - template: /eng/pipelines/templates/steps/build-darc-rid-package.yml
+          - template: /eng/pipelines/templates/steps/build.yml
             parameters:
               configuration: $(configuration)
-              rid: ${{ platform.rid }}
+              darcRid: ${{ platform.rid }}
               windows: ${{ platform.windows }}

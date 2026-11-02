@@ -7,14 +7,38 @@ parameters:
 - name: sign
   type: boolean
   default: false
+# ILCompiler cannot compile across operating systems, so the RID-specific darc tool packages are
+# built on an agent per target OS and this step has to pick the matching build script.
+- name: windows
+  type: boolean
+  default: true
+# When set, darc is built as the Native AOT tool package for this runtime identifier, and that
+# package becomes the only artifact the job publishes (see eng/Publishing.props). The rest of the
+# repository is still built so that these jobs double as a build check for their platform.
+- name: darcRid
+  type: string
+  default: ''
 
 steps:
-- script: >
-    .\eng\common\cibuild.cmd
-    -configuration ${{ parameters.configuration }}
-    -prepareMachine
-    /p:Test=false
-    /p:VersionPrefix=$(_VersionPrefix)
-    /p:Sign=${{ parameters.sign }}
-    ${{ parameters.buildArgs }}
-  displayName: Build
+- ${{ if parameters.windows }}:
+  - script: >
+      .\eng\common\cibuild.cmd
+      -configuration ${{ parameters.configuration }}
+      -prepareMachine
+      /p:Test=false
+      /p:VersionPrefix=$(_VersionPrefix)
+      /p:Sign=${{ parameters.sign }}
+      /p:DarcToolRuntimeIdentifier=${{ parameters.darcRid }}
+      ${{ parameters.buildArgs }}
+    displayName: Build
+- ${{ else }}:
+  - script: >
+      ./eng/common/cibuild.sh
+      --configuration ${{ parameters.configuration }}
+      --prepareMachine
+      /p:Test=false
+      /p:VersionPrefix=$(_VersionPrefix)
+      /p:Sign=${{ parameters.sign }}
+      /p:DarcToolRuntimeIdentifier=${{ parameters.darcRid }}
+      ${{ parameters.buildArgs }}
+    displayName: Build

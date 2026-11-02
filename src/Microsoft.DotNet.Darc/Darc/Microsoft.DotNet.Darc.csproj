@@ -17,6 +17,18 @@
     <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
 
     <!--
+      The SDK refuses to build the RID-specific tool packages in-proc for an AOT'd tool, because
+      ILCompiler cannot compile across operating systems. CI therefore builds one of them per job,
+      on an agent of the matching OS, by setting this property - which is scoped to darc so that a
+      RID leg still builds the rest of the repository the way every other job does.
+
+      SelfContained has to be set alongside it: unlike `dotnet pack -r <rid>`, RuntimeIdentifier on
+      its own does not imply it, and the Native AOT publish then fails with NETSDK1102.
+    -->
+    <RuntimeIdentifier Condition="'$(DarcToolRuntimeIdentifier)' != ''">$(DarcToolRuntimeIdentifier)</RuntimeIdentifier>
+    <SelfContained Condition="'$(DarcToolRuntimeIdentifier)' != ''">true</SelfContained>
+
+    <!--
       Newtonsoft.Json and YamlDotNet discover members purely through reflection, so the AOT analyzers
       flag every call into them (IL2026 "requires unreferenced code", IL3050 "requires dynamic code").
       The types they reflect over are rooted explicitly in ILLink.Descriptors.xml, which is what makes
