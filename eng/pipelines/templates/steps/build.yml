@@ -13,8 +13,9 @@ parameters:
   type: boolean
   default: true
 # When set, darc is built as the Native AOT tool package for this runtime identifier, and that
-# package becomes the only artifact the job publishes (see eng/Publishing.props). The rest of the
-# repository is still built so that these jobs double as a build check for their platform.
+# package becomes the only artifact the job signs and publishes - Arcade narrows both to packages
+# carrying TargetRid in their name. The rest of the repository is still built so that these jobs
+# double as a build check for their platform.
 - name: darcRid
   type: string
   default: ''
@@ -28,7 +29,8 @@ steps:
       /p:Test=false
       /p:VersionPrefix=$(_VersionPrefix)
       /p:Sign=${{ parameters.sign }}
-      /p:DarcToolRuntimeIdentifier=${{ parameters.darcRid }}
+      /p:TargetRid=${{ parameters.darcRid }}
+      /p:EnableDefaultRidSpecificArtifacts=${{ ne(parameters.darcRid, '') }}
       ${{ parameters.buildArgs }}
     displayName: Build
 - ${{ else }}:
@@ -39,6 +41,7 @@ steps:
       /p:Test=false
       /p:VersionPrefix=$(_VersionPrefix)
       /p:Sign=${{ parameters.sign }}
-      /p:DarcToolRuntimeIdentifier=${{ parameters.darcRid }}
+      /p:TargetRid=${{ parameters.darcRid }}
+      /p:EnableDefaultRidSpecificArtifacts=${{ ne(parameters.darcRid, '') }}
       ${{ parameters.buildArgs }}
     displayName: Build

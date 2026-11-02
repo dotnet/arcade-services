@@ -17,16 +17,21 @@
     <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
 
     <!--
-      The SDK refuses to build the RID-specific tool packages in-proc for an AOT'd tool, because
-      ILCompiler cannot compile across operating systems. CI therefore builds one of them per job,
-      on an agent of the matching OS, by setting this property - which is scoped to darc so that a
-      RID leg still builds the rest of the repository the way every other job does.
-
-      SelfContained has to be set alongside it: unlike `dotnet pack -r <rid>`, RuntimeIdentifier on
-      its own does not imply it, and the Native AOT publish then fails with NETSDK1102.
+      The SDK refuses to build the RID-specific tool packages as inner builds for an AOT'd tool,
+      because ILCompiler cannot compile across operating systems. CI therefore builds one of them
+      per job on an agent of the matching OS, by passing Arcade's TargetRid - which also narrows
+      what that job signs and publishes - while the rest of the repository stays RID-agnostic.
     -->
-    <RuntimeIdentifier Condition="'$(DarcToolRuntimeIdentifier)' != ''">$(DarcToolRuntimeIdentifier)</RuntimeIdentifier>
-    <SelfContained Condition="'$(DarcToolRuntimeIdentifier)' != ''">true</SelfContained>
+    <RuntimeIdentifier Condition="'$(TargetRid)' != ''">$(TargetRid)</RuntimeIdentifier>
+
+    <!--
+      Unlike `dotnet pack -r <rid>`, a RuntimeIdentifier on its own does not imply SelfContained,
+      and the Native AOT publish then fails with NETSDK1102. This cannot be turned on
+      unconditionally: SelfContained without a RuntimeIdentifier makes the SDK infer the host RID,
+      which would turn every RID-agnostic build into a host-RID one and pack a RID-specific package
+      in place of the wrapper.
+    -->
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
 
     <!--
       Newtonsoft.Json and YamlDotNet discover members purely through reflection, so the AOT analyzers

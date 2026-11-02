@@ -133,7 +133,7 @@ stages:
 
       # One job per darc runtime identifier. Each builds the whole repository - which makes these
       # jobs a build check for their platform on top of producing the package - and publishes only
-      # the darc package for its own RID (see eng/Publishing.props). Tests keep running in the
+      # the darc package for its own RID - Arcade narrows that by TargetRid. Tests keep running in the
       # Build job alone.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ platform.jobName }}
