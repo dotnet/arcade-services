@@ -1,4 +1,5 @@
 variables:
+- template: /eng/pipelines/templates/variables/version-variables.yml
 # Cannot use key:value syntax in root defined variables
 - name: _PublishUsingPipelines
   value: true
@@ -8,6 +9,54 @@ variables:
   value: internal
 - name: configuration
   value: Release
+
+parameters:
+# darc ships as a Native AOT RID-specific .NET tool. ILCompiler cannot compile across operating
+# systems, so every target OS needs a build agent of its own; cross-architecture compilation within
+# one OS does work, which is why Windows and macOS each build both of their architectures while
+# linux-arm64 uses a native arm64 agent.
+#
+# Keep in sync with ToolPackageRuntimeIdentifiers in
+# src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
+- name: darcRidPlatforms
+  type: object
+  default:
+  - rid: win-x64
+    jobName: Darc_win_x64
+    windows: true
+    pool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2022-open
+  - rid: win-arm64
+    jobName: Darc_win_arm64
+    windows: true
+    pool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2022-open
+  - rid: osx-x64
+    jobName: Darc_osx_x64
+    windows: false
+    pool:
+      name: AcesShared
+      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
+  - rid: osx-arm64
+    jobName: Darc_osx_arm64
+    windows: false
+    pool:
+      name: AcesShared
+      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
+  - rid: linux-x64
+    jobName: Darc_linux_x64
+    windows: false
+    pool:
+      name: NetCore-Public
+      demands: ImageOverride -equals build.azurelinux.3.amd64.open
+  - rid: linux-arm64
+    jobName: Darc_linux_arm64
+    windows: false
+    pool:
+      name: Docker-Linux-Arm-Public
+      demands: ImageOverride -equals build.azurelinux.3.arm64.open
 
 pr:
   branches:
@@ -81,3 +130,29 @@ stages:
         - template: /eng/pipelines/templates/steps/docker-build.yml
           parameters:
             dockerImageName: test
+
+      # One job per runtime identifier, each producing exactly one RID-specific darc package.
+      - ${{ each platform in parameters.darcRidPlatforms }}:
+        - job: ${{ platform.jobName }}
+          displayName: Build darc (${{ platform.rid }})
+          timeoutInMinutes: 90
+          pool: ${{ platform.pool }}
+          # The default artifact names are keyed off Agent.Os, which these jobs share with each
+          # other and with the jobs above.
+          artifacts:
+            publish:
+              logs:
+                name: Logs_${{ platform.jobName }}_$(_BuildConfig)
+              ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+                artifacts:
+                  name: Artifacts_${{ platform.jobName }}_$(_BuildConfig)
+                manifests: true
+          steps:
+          - checkout: self
+            clean: true
+
+          - template: /eng/pipelines/templates/steps/build-darc-rid-package.yml
+            parameters:
+              configuration: $(configuration)
+              rid: ${{ platform.rid }}
+              windows: ${{ platform.windows }}

@@ -1,0 +1,62 @@
+# Builds, packs and publishes the Native AOT `darc` tool package for a single runtime identifier.
+#
+# Only the darc project is built here. Everything that is not RID-specific - including the
+# `Microsoft.DotNet.Darc` wrapper package that resolves to the packages produced by these jobs -
+# keeps coming from the main repository build job.
+
+parameters:
+- name: configuration
+  type: string
+- name: rid
+  type: string
+# ILCompiler cannot compile across operating systems, so each target OS builds on an agent of its
+# own and the invocation has to switch between the Windows and the Unix build script.
+- name: windows
+  type: boolean
+- name: buildArgs
+  type: string
+  default: ''
+- name: sign
+  type: boolean
+  default: false
+
+steps:
+# SelfContained has to be passed explicitly: unlike `dotnet pack -r <rid>`, setting
+# RuntimeIdentifier as a global property does not imply it, and the Native AOT publish then fails
+# with NETSDK1102 (optimizing assemblies for size is not supported for this publish configuration).
+- ${{ if parameters.windows }}:
+  - script: >
+      .\eng\common\build.cmd
+      -ci
+      -prepareMachine
+      -restore
+      -build
+      -pack
+      -publish
+      -sign
+      -configuration ${{ parameters.configuration }}
+      -projects $(Build.SourcesDirectory)\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj
+      /p:VersionPrefix=$(_VersionPrefix)
+      /p:RuntimeIdentifier=${{ parameters.rid }}
+      /p:SelfContained=true
+      /p:Sign=${{ parameters.sign }}
+      ${{ parameters.buildArgs }}
+    displayName: Build darc (${{ parameters.rid }})
+- ${{ else }}:
+  - script: >
+      ./eng/common/build.sh
+      --ci
+      --prepareMachine
+      --restore
+      --build
+      --pack
+      --publish
+      --sign
+      --configuration ${{ parameters.configuration }}
+      --projects $(Build.SourcesDirectory)/src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj
+      /p:VersionPrefix=$(_VersionPrefix)
+      /p:RuntimeIdentifier=${{ parameters.rid }}
+      /p:SelfContained=true
+      /p:Sign=${{ parameters.sign }}
+      ${{ parameters.buildArgs }}
+    displayName: Build darc (${{ parameters.rid }})

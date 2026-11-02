@@ -19,6 +19,7 @@ parameters:
   default: true
 
 variables:
+- template: ./templates/variables/version-variables.yml
   # Force CodeQL enabled so it may be run on any branch
 - name: Codeql.Enabled
   value: true

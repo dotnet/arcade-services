@@ -9,15 +9,12 @@ parameters:
   default: false
 
 steps:
-- powershell: |
-    Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
-  displayName: Set Package Version
-
 - script: >
     .\eng\common\cibuild.cmd
     -configuration ${{ parameters.configuration }}
     -prepareMachine
     /p:Test=false
+    /p:VersionPrefix=$(_VersionPrefix)
     /p:Sign=${{ parameters.sign }}
     ${{ parameters.buildArgs }}
   displayName: Build
