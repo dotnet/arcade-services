@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -211,6 +212,115 @@ public class CommandLineParsingTests
     }
 
     [Test]
+    public void RecognisedOptionsAreNotSwallowedAsValues()
+    {
+        // 'darc get-subscriptions --target-repo --disabled' used to bind '--disabled' as the
+        // repository name, so the user silently got an unfiltered query instead of an error.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--disabled")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--target-repo");
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--quiet")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--ids");
+    }
+
+    [Test]
+    public void HelpStillWorksAfterAnOptionThatExpectsAValue()
+    {
+        // Binding '--help' as a value also leaves the parse error-free, so the action is what has to
+        // be asserted here.
+        ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--target-repo", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+
+        ParseResultOf(new DeleteSubscriptionsCommandLineOptions(), "delete-subscriptions", "--ids", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+    }
+
+    [Test]
+    public void ShortOptionsKeepTheirAttachedValues()
+    {
+        // '-n' is followed by '-p', the alias of --password, so without normalisation the token would
+        // unbundle into '-n -p ackage' and leave --name without a value.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "-npackage")
+            .Name.Should().Be("package");
+
+        // A token that could unbundle is still taken literally when the option in front of it is
+        // waiting for its value, which is what the parser did before the arity was relaxed.
+        Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", "--name", "-npackage")
+            .Name.Should().Be("-npackage");
+
+        // Flags must keep bundling rather than swallowing the rest of the token as a value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fl");
+        bundled.Flat.Should().BeTrue();
+        bundled.Local.Should().BeTrue();
+
+        // A bundle may mix flags and a value-taking option, in which case the value belongs to the
+        // first alias that takes one. '-p' of --password follows '-v' here.
+        var mixed = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fvpreview");
+        mixed.Flat.Should().BeTrue();
+        mixed.Version.Should().Be("preview");
+
+        // The same holds when the value is attached to the trailing alias of the preceding bundle.
+        Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv", "-npackage")
+            .Version.Should().Be("-npackage");
+
+        // An assignment with nothing behind it is an empty value, not a missing one.
+        var empty = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=");
+        empty.Flat.Should().BeTrue();
+        empty.Version.Should().BeEmpty();
+    }
+
+    [Test]
+    public void OptionsLeftWaitingByAnEmptyAssignmentStillClaimTheNextToken()
+    {
+        // '--name=' drops its empty remainder, so --name is still waiting for a value and takes the
+        // token behind it literally, exactly as the parser did before the arity was relaxed.
+        foreach (var dangling in new[] { "--name=", "--name:", "-n=", "-n:" })
+        {
+            Parse(new GetDependenciesCommandLineOptions(), "get-dependencies", dangling, "-ppackage")
+                .Name.Should().Be("-ppackage", because: $"'{dangling}' assigns no value");
+        }
+
+        // Only an exact name or alias may be completed this way; a bundle keeps its explicit empty value.
+        var bundled = Parse(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-fv=", "-psecret");
+        bundled.Flat.Should().BeTrue();
+        bundled.Version.Should().BeEmpty();
+        bundled.BuildAssetRegistryToken.Should().Be("secret");
+    }
+
+    [Test]
+    public void MissingValuesAreReportedUnderTheAliasThatWasUsed()
+    {
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "-v")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '-v'.");
+
+        ParseResultOf(new GetDependencyGraphCommandLineOptions(), "get-dependency-graph", "--version")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '--version'.");
+    }
+
+    [Test]
+    public void OptionsWithDefaultsStayValidWhenOmitted()
+    {
+        // Options carrying a default produce an implicit result with no tokens, which must not be
+        // mistaken for the user passing the option without a value.
+        var options = Parse(new GetAssetCommandLineOptions(), "get-asset", "--name", "some.package");
+
+        options.MaxAgeInDays.Should().Be(30);
+        options.GitLocation.Should().Be("git");
+    }
+
+    [Test]
+    public void EnumOptionsReportAMissingValueInsteadOfThrowing()
+    {
+        ParseResultOf(new GetChannelsCommandLineOptions(), "get-channels", "--output-format")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Contain("--output-format");
+    }
+
+    [Test]
     public void ExactAndRegexCannotBeCombined()
     {
         ParseResultOf(new GetSubscriptionsCommandLineOptions(), "get-subscriptions", "--exact", "--regex")
@@ -235,6 +345,40 @@ public class CommandLineParsingTests
         options.Repositories.Should().Equal("https://github.com/dotnet/runtime:abc123");
     }
 
+    [Test]
+    public void AliasesInNestedCommandsResolveAgainstTheCommandThatOwnsThem()
+    {
+        // 'darc vmr backflow' resolves '-p' two levels down, and the value starts with 'p', which is
+        // itself the alias. Resolving against the root instead would bundle this as '-p -p assword'.
+        var options = new BackflowCommandLineOptions();
+        var result = ParseNestedResultOf(options, "vmr", "backflow", "-ppassword", ".");
+        result.Errors.Should().BeEmpty();
+        options.Bind(result);
+
+        options.BuildAssetRegistryToken.Should().Be("password");
+    }
+
+    [Test]
+    public void ListOptionsTakeSeveralValuesButStillRejectARecognizedToken()
+    {
+        var options = new BackflowCommandLineOptions();
+        var result = ParseNestedResultOf(
+            options, "vmr", "backflow", ".", "--additional-remote", "one:https://a", "two:https://b");
+        result.Errors.Should().BeEmpty();
+        options.Bind(result);
+
+        options.AdditionalRemotes.Should().Equal("one:https://a", "two:https://b");
+
+        // Relaxing the arity to zero must not let the list silently end up empty.
+        ParseNestedResultOf(new BackflowCommandLineOptions(), "vmr", "backflow", ".", "--additional-remote")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '--additional-remote'.");
+
+        // A list is as greedy as a scalar, so it must not swallow an option the command recognises.
+        ParseNestedResultOf(new BackflowCommandLineOptions(), "vmr", "backflow", ".", "--additional-remote", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+    }
+
     private static T Parse<T>(T options, params string[] args) where T : CommandLineOptions
     {
         var result = ParseResultOf(options, args);
@@ -247,6 +391,19 @@ public class CommandLineParsingTests
     {
         RootCommand root = new();
         root.Add(Program.CreateCommand(options));
+        return Program.Parse(root, args);
+    }
+
+    /// <summary>
+    /// Mirrors how <c>darc vmr &lt;verb&gt;</c> is built, so that aliases are resolved against the
+    /// nested command rather than the root.
+    /// </summary>
+    private static ParseResult ParseNestedResultOf(CommandLineOptions options, params string[] args)
+    {
+        RootCommand root = new();
+        Command vmr = new("vmr");
+        vmr.Add(Program.CreateCommand(options));
+        root.Add(vmr);
         return Program.Parse(root, args);
     }
 }

@@ -53,7 +53,7 @@ internal static class Program
     /// (e.g. --failure-notification-tags @dotnet/some-team) and have never been read from a file.
     /// </remarks>
     internal static ParseResult Parse(Command command, params string[] args)
-        => command.Parse(args, new ParserConfiguration { ResponseFileTokenReplacer = null });
+        => command.Parse(CliOptions.AttachShortOptionValues(command, args), new ParserConfiguration { ResponseFileTokenReplacer = null });
 
     private static RootCommand BuildCommandLine()
     {
