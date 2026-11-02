@@ -591,6 +591,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         if (blockedFromFutureUpdates && !willFlowNewBuild)
         {
             remote
+                .Setup(x => x.GetPullRequestCommentsAsync(prUrl))
+                .ReturnsAsync([]);
+            remote
                 .Setup(x => x.CommentPullRequestAsync(
                     prUrl,
                     It.Is<string>(content => content.Contains("opposite codeflow merged"))))
