@@ -22,37 +22,31 @@ parameters:
   type: object
   default:
   - rid: win-x64
-    jobName: Darc_win_x64
     windows: true
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: win-arm64
-    jobName: Darc_win_arm64
     windows: true
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: osx-x64
-    jobName: Darc_osx_x64
     windows: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: osx-arm64
-    jobName: Darc_osx_arm64
     windows: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: linux-x64
-    jobName: Darc_linux_x64
     windows: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals build.azurelinux.3.amd64.open
   - rid: linux-arm64
-    jobName: Darc_linux_arm64
     windows: false
     pool:
       name: Docker-Linux-Arm-Public
@@ -136,8 +130,8 @@ stages:
       # the darc package for its own RID - Arcade narrows that by TargetRid. Tests keep running in the
       # Build job alone.
       - ${{ each platform in parameters.darcRidPlatforms }}:
-        - job: ${{ platform.jobName }}
-          displayName: Build repository and darc (${{ platform.rid }})
+        - job: ${{ replace(platform.rid, '-', '_') }}
+          displayName: ${{ platform.rid }}
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
           # The default artifact names are keyed off Agent.Os, which these jobs share with each
@@ -145,10 +139,10 @@ stages:
           artifacts:
             publish:
               logs:
-                name: Logs_${{ platform.jobName }}_$(_BuildConfig)
+                name: Logs_${{ replace(platform.rid, '-', '_') }}_$(_BuildConfig)
               ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
                 artifacts:
-                  name: Artifacts_${{ platform.jobName }}_$(_BuildConfig)
+                  name: Artifacts_${{ replace(platform.rid, '-', '_') }}_$(_BuildConfig)
           steps:
           - checkout: self
             clean: true

@@ -18,42 +18,36 @@ parameters:
   type: object
   default:
   - rid: win-x64
-    jobName: Darc_win_x64
     windows: true
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: win-arm64
-    jobName: Darc_win_arm64
     windows: true
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: osx-x64
-    jobName: Darc_osx_x64
     windows: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: osx-arm64
-    jobName: Darc_osx_arm64
     windows: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: linux-x64
-    jobName: Darc_linux_x64
     windows: false
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals build.azurelinux.3.amd64
       os: linux
   - rid: linux-arm64
-    jobName: Darc_linux_arm64
     windows: false
     pool:
       name: Docker-Linux-Arm-Internal
@@ -164,8 +158,8 @@ stages:
       # the darc package for its own RID - Arcade narrows that by TargetRid. Tests keep running in the
       # Windows_NT job alone.
       - ${{ each platform in parameters.darcRidPlatforms }}:
-        - job: ${{ platform.jobName }}
-          displayName: Build repository and darc (${{ platform.rid }})
+        - job: ${{ replace(platform.rid, '-', '_') }}
+          displayName: ${{ platform.rid }}
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
           # The default artifact names are keyed off Agent.Os, which these jobs share with each
@@ -173,7 +167,7 @@ stages:
           artifacts:
             publish:
               logs:
-                name: Logs_${{ platform.jobName }}_$(_BuildConfig)
+                name: Logs_${{ replace(platform.rid, '-', '_') }}_$(_BuildConfig)
           ${{ if not(platform.windows) }}:
             enableMicrobuildForMacAndLinux: ${{ parameters.enableSigning }}
           steps:
