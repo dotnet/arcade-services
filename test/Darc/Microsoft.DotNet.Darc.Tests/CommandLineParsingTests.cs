@@ -345,6 +345,40 @@ public class CommandLineParsingTests
         options.Repositories.Should().Equal("https://github.com/dotnet/runtime:abc123");
     }
 
+    [Test]
+    public void AliasesInNestedCommandsResolveAgainstTheCommandThatOwnsThem()
+    {
+        // 'darc vmr backflow' resolves '-p' two levels down, and the value starts with 'p', which is
+        // itself the alias. Resolving against the root instead would bundle this as '-p -p assword'.
+        var options = new BackflowCommandLineOptions();
+        var result = ParseNestedResultOf(options, "vmr", "backflow", "-ppassword", ".");
+        result.Errors.Should().BeEmpty();
+        options.Bind(result);
+
+        options.BuildAssetRegistryToken.Should().Be("password");
+    }
+
+    [Test]
+    public void ListOptionsTakeSeveralValuesButStillRejectARecognizedToken()
+    {
+        var options = new BackflowCommandLineOptions();
+        var result = ParseNestedResultOf(
+            options, "vmr", "backflow", ".", "--additional-remote", "one:https://a", "two:https://b");
+        result.Errors.Should().BeEmpty();
+        options.Bind(result);
+
+        options.AdditionalRemotes.Should().Equal("one:https://a", "two:https://b");
+
+        // Relaxing the arity to zero must not let the list silently end up empty.
+        ParseNestedResultOf(new BackflowCommandLineOptions(), "vmr", "backflow", ".", "--additional-remote")
+            .Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Required argument missing for option: '--additional-remote'.");
+
+        // A list is as greedy as a scalar, so it must not swallow an option the command recognises.
+        ParseNestedResultOf(new BackflowCommandLineOptions(), "vmr", "backflow", ".", "--additional-remote", "--help")
+            .Action.Should().BeOfType<HelpAction>();
+    }
+
     private static T Parse<T>(T options, params string[] args) where T : CommandLineOptions
     {
         var result = ParseResultOf(options, args);
@@ -357,6 +391,19 @@ public class CommandLineParsingTests
     {
         RootCommand root = new();
         root.Add(Program.CreateCommand(options));
+        return Program.Parse(root, args);
+    }
+
+    /// <summary>
+    /// Mirrors how <c>darc vmr &lt;verb&gt;</c> is built, so that aliases are resolved against the
+    /// nested command rather than the root.
+    /// </summary>
+    private static ParseResult ParseNestedResultOf(CommandLineOptions options, params string[] args)
+    {
+        RootCommand root = new();
+        Command vmr = new("vmr");
+        vmr.Add(Program.CreateCommand(options));
+        root.Add(vmr);
         return Program.Parse(root, args);
     }
 }
