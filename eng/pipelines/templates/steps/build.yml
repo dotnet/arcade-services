@@ -20,34 +20,14 @@ parameters:
   type: string
   default: ''
 # Set by the single job that ships the rest of the repository. It keeps Arcade's RID narrowing off
-# so that everything the job built gets signed and published, and it packs the RID-agnostic darc
-# meta package in a pass of its own. That extra pass is unavoidable: a RuntimeIdentifier makes the
-# SDK emit the RID-specific tool package *instead of* the meta package, so no single build can
-# produce both, and the meta package is the one `dotnet tool install Microsoft.DotNet.Darc` resolves
-# before redirecting to the package matching the user's RID.
+# so that everything the job built gets signed and published, rather than just the darc package for
+# its own runtime identifier. That job is win-x64, which is also where the RID-agnostic darc package
+# is packed - see Microsoft.DotNet.Darc.csproj.
 - name: publishAllPackages
   type: boolean
   default: false
 
 steps:
-# Only ever runs on the repository build job, which is Windows, hence no non-Windows counterpart.
-# It has to come before the main build: Arcade signs and publishes from Sign.proj and Publish.proj,
-# which cover everything under artifacts/packages no matter what -projects was scoped to, so the
-# meta package only makes it into the build's outputs if it is already on disk by then.
-- ${{ if parameters.publishAllPackages }}:
-  - script: >
-      .\eng\common\build.cmd
-      -configuration ${{ parameters.configuration }}
-      -ci
-      -prepareMachine
-      -restore
-      -build
-      -pack
-      -projects $(Build.SourcesDirectory)\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj
-      /p:VersionPrefix=$(_VersionPrefix)
-      ${{ parameters.buildArgs }}
-    displayName: Pack RID-agnostic darc package
-
 - ${{ if parameters.windows }}:
   - script: >
       .\eng\common\cibuild.cmd

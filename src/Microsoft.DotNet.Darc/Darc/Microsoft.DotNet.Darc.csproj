@@ -68,6 +68,47 @@
     <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
   </ItemGroup>
 
+  <!--
+    A build emits either the RID-agnostic tool package or a RID-specific one, because the
+    RuntimeIdentifier above makes the SDK produce the latter in place of the former. Shipping darc
+    needs both: `dotnet tool install Microsoft.DotNet.Darc` resolves the RID-agnostic package, and
+    that package is what redirects to the one matching the user's runtime identifier. The win-x64
+    build therefore packs this project once more with TargetRid removed, which is also what ends
+    the recursion - the inner build sees no TargetRid and so adds no reference of its own. The SDK
+    does the mirror image of this in _CreateRIDSpecificToolPackages, where a RID-agnostic pack
+    fans out to one pack per RID; it opts out for AOT tools, since AOT cannot cross-compile.
+
+    The metadata is all load-bearing:
+      - Targets/GlobalPropertiesToRemove are what make the reference pack rather than build, and
+        with TargetRid gone.
+      - NoBuild keeps it from compiling darc a second time. The RID-agnostic package carries no
+        implementation, only tools/any/any/DotnetToolSettings.xml naming the per-RID package ids,
+        so the SDK already drops Publish from the pack (see _PackToolPublishDependency), and this
+        drops the Build that NuGet's Pack would otherwise force.
+      - Private stops consumers of darc from collecting publish output through this reference;
+        without it, ProductConstructionService.ScenarioTests sees darc's files under both its
+        RID-specific and RID-agnostic paths and fails with NETSDK1152.
+
+    Only the win-x64 build packs it, because every RID build otherwise would and only one copy
+    ships. That build is the one job that publishes the whole repository rather than just its own
+    RID package, so it is where the rest of darc's packages come from too.
+
+    NuGet builds its restore graph out of @(ProjectReference) with no regard for
+    ReferenceOutputAssembly, and walks it by recursively invoking a target on each reference with a
+    fixed set of global properties, so a self-reference is a genuine cycle there and restore fails
+    with MSB4006. ExcludeRestorePackageImports is the property NuGet puts on every evaluation in
+    that walk and on nothing else, so hiding the reference from it keeps restore to the real graph.
+  -->
+  <ItemGroup Condition="'$(TargetRid)' == 'win-x64' and '$(ExcludeRestorePackageImports)' != 'true'">
+    <ProjectReference Include="$(MSBuildProjectFullPath)"
+                      Targets="Pack"
+                      GlobalPropertiesToRemove="TargetRid"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      AdditionalProperties="NoBuild=true" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.DotNet.Darc.Tests" />
     <InternalsVisibleTo Include="Microsoft.DotNet.DarcLib.Codeflow.Tests" />
