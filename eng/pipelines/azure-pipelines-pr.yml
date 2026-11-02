@@ -14,36 +14,49 @@ parameters:
 # darc ships as a Native AOT RID-specific .NET tool. ILCompiler cannot compile across operating
 # systems, so every target OS needs a build agent of its own; cross-architecture compilation within
 # one OS does work, which is why macOS builds both of its architectures while linux-arm64 uses a
-# native arm64 agent. win-x64 is deliberately absent here - the win_x64 job below builds it as part
-# of building the whole repository.
+# native arm64 agent.
+#
+# publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
+# package, and that therefore also runs the tests and packs the RID-agnostic darc package.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
 - name: darcRidPlatforms
   type: object
   default:
+  - rid: win-x64
+    windows: true
+    publishAllPackages: true
+    pool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2022-open
   - rid: win-arm64
     windows: true
+    publishAllPackages: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: osx-x64
     windows: false
+    publishAllPackages: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: osx-arm64
     windows: false
+    publishAllPackages: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: linux-x64
     windows: false
+    publishAllPackages: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals build.azurelinux.3.amd64.open
   - rid: linux-arm64
     windows: false
+    publishAllPackages: false
     pool:
       name: Docker-Linux-Arm-Public
       demands: ImageOverride -equals build.azurelinux.3.arm64.open
@@ -92,48 +105,11 @@ stages:
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
 
       jobs:
-      # Builds and tests the whole repository and produces every package it ships - the RID-agnostic
-      # ones, the darc meta package and, because it runs on a win-x64 agent, the Native AOT darc
-      # package for win-x64. The jobs below cover the remaining darc runtime identifiers.
-      - job: win_x64
-        displayName: win-x64
-        timeoutInMinutes: 90
-        pool:
-          name: NetCore-Public
-          demands: ImageOverride -equals 1es-windows-2022-open
-
-        steps:
-        - checkout: self
-          clean: true
-
-        - template: /eng/pipelines/templates/steps/build.yml
-          parameters:
-            configuration: $(configuration)
-            darcRid: win-x64
-            publishAllPackages: true
-
-        - template: /eng/pipelines/templates/steps/test.yml
-          parameters:
-            configuration: $(configuration)
-
-      - job: Builder_Docker
-        displayName: Build Docker Image
-        pool:
-          name: NetCore-Public
-          demands: ImageOverride -equals build.azurelinux.3.amd64.open
-
-        steps:
-        - checkout: self
-          clean: true
-
-        - template: /eng/pipelines/templates/steps/docker-build.yml
-          parameters:
-            dockerImageName: test
-
-      # One job per remaining darc runtime identifier. Each builds the whole repository - which makes
-      # these jobs a build check for their platform on top of producing the package - and publishes
-      # only the darc package for its own RID; Arcade narrows that by TargetRid. Tests keep running
-      # in the win_x64 job alone.
+      # One job per darc runtime identifier. Each builds the whole repository - which makes these
+      # jobs a build check for their platform on top of producing the package - and publishes only
+      # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
+      # publishAllPackages instead ships everything the repository produces, and is the only one
+      # that runs the tests.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ replace(platform.rid, '-', '_') }}
           displayName: ${{ platform.rid }}
@@ -148,3 +124,23 @@ stages:
               configuration: $(configuration)
               darcRid: ${{ platform.rid }}
               windows: ${{ platform.windows }}
+              publishAllPackages: ${{ platform.publishAllPackages }}
+
+          - ${{ if platform.publishAllPackages }}:
+            - template: /eng/pipelines/templates/steps/test.yml
+              parameters:
+                configuration: $(configuration)
+
+      - job: Builder_Docker
+        displayName: Build Docker Image
+        pool:
+          name: NetCore-Public
+          demands: ImageOverride -equals build.azurelinux.3.amd64.open
+
+        steps:
+        - checkout: self
+          clean: true
+
+        - template: /eng/pipelines/templates/steps/docker-build.yml
+          parameters:
+            dockerImageName: test

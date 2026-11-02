@@ -10,40 +10,55 @@ parameters:
 # darc ships as a Native AOT RID-specific .NET tool. ILCompiler cannot compile across operating
 # systems, so every target OS needs a build agent of its own; cross-architecture compilation within
 # one OS does work, which is why macOS builds both of its architectures while linux-arm64 uses a
-# native arm64 agent. win-x64 is deliberately absent here - the win_x64 job below builds it as part
-# of building the whole repository.
+# native arm64 agent.
+#
+# publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
+# package, and that therefore also runs the tests, packs the RID-agnostic darc package and stages
+# the PCS deployment artifacts.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
 - name: darcRidPlatforms
   type: object
   default:
+  - rid: win-x64
+    windows: true
+    publishAllPackages: true
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
   - rid: win-arm64
     windows: true
+    publishAllPackages: false
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: osx-x64
     windows: false
+    publishAllPackages: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: osx-arm64
     windows: false
+    publishAllPackages: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: linux-x64
     windows: false
+    publishAllPackages: false
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals build.azurelinux.3.amd64
       os: linux
   - rid: linux-arm64
     windows: false
+    publishAllPackages: false
     pool:
       name: Docker-Linux-Arm-Internal
       demands: ImageOverride -equals build.azurelinux.3.arm64
@@ -54,7 +69,7 @@ stages:
 - stage: Build
   dependsOn: []
   displayName: Build
-  # Shared by the repository build job and the per-RID darc jobs below.
+  # Shared by the per-RID darc jobs below.
   variables:
   - name: _InternalBuildArgs
     value: >
@@ -88,51 +103,67 @@ stages:
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       jobs:
-      # Builds and tests the whole repository and produces every package it ships - the RID-agnostic
-      # ones, the darc meta package and, because it runs on a win-x64 agent, the Native AOT darc
-      # package for win-x64. The jobs below cover the remaining darc runtime identifiers.
-      - job: win_x64
-        timeoutInMinutes: 90
-        displayName: win-x64
-        pool:
-          name: $(DncEngInternalBuildPool)
-          image: 1es-windows-2022
-          os: windows
-        steps:
-        - checkout: self
-          clean: true
-        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
-          - template: /eng/common/templates-official/steps/retain-build.yml@self
+      # One job per darc runtime identifier. Each builds the whole repository - which makes these
+      # jobs a build check for their platform on top of producing the package - and publishes only
+      # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
+      # publishAllPackages instead ships everything the repository produces, and is the only one
+      # that runs the tests and stages the PCS deployment artifacts.
+      - ${{ each platform in parameters.darcRidPlatforms }}:
+        - job: ${{ replace(platform.rid, '-', '_') }}
+          displayName: ${{ platform.rid }}
+          timeoutInMinutes: 90
+          pool: ${{ platform.pool }}
+          ${{ if not(platform.windows) }}:
+            enableMicrobuildForMacAndLinux: ${{ parameters.enableSigning }}
+          ${{ if platform.publishAllPackages }}:
+            templateContext:
+              outputs:
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net10.0\publish
+                artifact: ProductConstructionService.ScenarioTests
+                displayName: Publish E2E Tests
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
+                artifact: ProductConstructionService.Cli
+                displayName: Publish PCS CLI
+          steps:
+          - checkout: self
+            clean: true
+
+          - ${{ if and(platform.publishAllPackages, eq(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
+            - template: /eng/common/templates-official/steps/retain-build.yml@self
+              parameters:
+                AzdoOrgUri: $(AzdoOrgUri)
+                AzdoProject: $(AzdoProject)
+                BuildId: $(Build.BuildId)
+
+          - template: /eng/pipelines/templates/steps/build.yml@self
             parameters:
-              AzdoOrgUri: $(AzdoOrgUri)
-              AzdoProject: $(AzdoProject)
-              BuildId: $(Build.BuildId)
-        - template: /eng/pipelines/templates/steps/build.yml@self
-          parameters:
-            configuration: $(_BuildConfig)
-            buildArgs: $(_InternalBuildArgs)
-            sign: ${{ parameters.enableSigning }}
-            darcRid: win-x64
-            publishAllPackages: true
-        - task: CopyFiles@2
-          displayName: Stage PCS deployment dependencies
-          inputs:
-            SourceFolder: $(Build.SourcesDirectory)
-            Contents: |
-              global.json
-              eng\Get-GitHubAppToken.ps1
-            TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
-            flattenFolders: true
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net10.0\publish
-            artifact: ProductConstructionService.ScenarioTests
-            displayName: Publish E2E Tests
-          - output: pipelineArtifact
-            path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
-            artifact: ProductConstructionService.Cli
-            displayName: Publish PCS CLI
+              configuration: $(_BuildConfig)
+              darcRid: ${{ platform.rid }}
+              windows: ${{ platform.windows }}
+              publishAllPackages: ${{ platform.publishAllPackages }}
+              buildArgs: $(_InternalBuildArgs)
+              # The MicroBuild signing plugin only supports real signing on Mac and Linux, so
+              # those legs sign in the production pipeline only. The native binary itself is
+              # signed on Windows only - Arcade maps .exe/.dll to a certificate out of the box,
+              # while the extensionless Linux and macOS binaries have no mapping and are skipped.
+              ${{ if platform.windows }}:
+                sign: ${{ parameters.enableSigning }}
+              ${{ else }}:
+                sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
+
+          - ${{ if platform.publishAllPackages }}:
+            - task: CopyFiles@2
+              displayName: Stage PCS deployment dependencies
+              inputs:
+                SourceFolder: $(Build.SourcesDirectory)
+                Contents: |
+                  global.json
+                  eng\Get-GitHubAppToken.ps1
+                TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
+                flattenFolders: true
+
       - job: BuildAndPublishDocker
         displayName: Build/publish docker image
         pool:
@@ -155,34 +186,5 @@ stages:
                 az acr login --name $(containerRegistryName)
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
             displayName: Push docker image
-
-      # One job per remaining darc runtime identifier. Each builds the whole repository - which makes
-      # these jobs a build check for their platform on top of producing the package - and publishes
-      # only the darc package for its own RID; Arcade narrows that by TargetRid. Tests keep running
-      # in the win_x64 job alone.
-      - ${{ each platform in parameters.darcRidPlatforms }}:
-        - job: ${{ replace(platform.rid, '-', '_') }}
-          displayName: ${{ platform.rid }}
-          timeoutInMinutes: 90
-          pool: ${{ platform.pool }}
-          ${{ if not(platform.windows) }}:
-            enableMicrobuildForMacAndLinux: ${{ parameters.enableSigning }}
-          steps:
-          - checkout: self
-            clean: true
-          - template: /eng/pipelines/templates/steps/build.yml@self
-            parameters:
-              configuration: $(_BuildConfig)
-              darcRid: ${{ platform.rid }}
-              windows: ${{ platform.windows }}
-              buildArgs: $(_InternalBuildArgs)
-              # The MicroBuild signing plugin only supports real signing on Mac and Linux, so
-              # those legs sign in the production pipeline only. The native binary itself is
-              # signed on Windows only - Arcade maps .exe/.dll to a certificate out of the box,
-              # while the extensionless Linux and macOS binaries have no mapping and are skipped.
-              ${{ if platform.windows }}:
-                sign: ${{ parameters.enableSigning }}
-              ${{ else }}:
-                sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
