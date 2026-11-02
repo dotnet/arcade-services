@@ -82,9 +82,13 @@ stages:
     parameters:
       artifacts:
         publish:
-          logs: true
+          # Named per job: the default only disambiguates by Agent.Os, which all of the Windows
+          # jobs - and both Linux ones - share. System.PhaseName is the job id.
+          logs:
+            name: Logs_$(System.PhaseName)_$(_BuildConfig)
           ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-            artifacts: true
+            artifacts:
+              name: Artifacts_$(System.PhaseName)_$(_BuildConfig)
             manifests: true
       enableTelemetry: true
       enableMicrobuild: false
@@ -134,15 +138,6 @@ stages:
           displayName: ${{ platform.rid }}
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
-          # The default artifact names are keyed off Agent.Os, which these jobs share with each
-          # other and with the jobs above.
-          artifacts:
-            publish:
-              logs:
-                name: Logs_${{ replace(platform.rid, '-', '_') }}_$(_BuildConfig)
-              ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-                artifacts:
-                  name: Artifacts_${{ replace(platform.rid, '-', '_') }}_$(_BuildConfig)
           steps:
           - checkout: self
             clean: true
