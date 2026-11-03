@@ -68,6 +68,11 @@ stages:
               eng\Get-GitHubAppToken.ps1
             TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
             flattenFolders: true
+        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+          - powershell: |
+              Copy-Item -LiteralPath "$(Build.SourcesDirectory)\artifacts\log\$(_BuildConfig)\AssetManifest\$(System.PhaseName).xml" `
+                -Destination "$(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0\AssetManifest.xml"
+            displayName: Stage PCS release metadata
         templateContext:
           outputs:
           - output: pipelineArtifact
