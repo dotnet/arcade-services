@@ -53,6 +53,9 @@ stages:
     - template: ./templates/steps/build.yml
       parameters:
         configuration: Release
+        # Scans what the win-x64 CI leg builds, Native AOT darc package included. This job runs on a
+        # Windows agent, so win-x64 is the only runtime identifier it can target.
+        targetRid: win-x64
 
     - task: CodeQL3000Finalize@0
       displayName: CodeQL Finalize

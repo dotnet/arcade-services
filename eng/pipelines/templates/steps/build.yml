@@ -7,17 +7,12 @@ parameters:
 - name: sign
   type: boolean
   default: false
-# When set, darc is built as the Native AOT tool package for this runtime identifier. Unless the job
-# also sets publishAllPackages, that package becomes the only artifact the job signs and publishes -
-# Arcade narrows both to packages carrying TargetRid in their name. The rest of the repository is
-# still built so that these jobs double as a build check for their platform.
-#
-# ILCompiler cannot compile across operating systems, so the agent has to run the target OS, and the
-# runtime identifier is therefore also what decides which of the two build scripts to invoke. Jobs
-# that build no RID-specific package at all are hosted on Windows.
+# darc is built as the Native AOT tool package for this runtime identifier. Unless the job also sets
+# publishAllPackages, that package becomes the only artifact the job signs and publishes - Arcade
+# narrows both to packages carrying TargetRid in their name. The rest of the repository is still
+# built so that every job doubles as a build check for its platform.
 - name: targetRid
   type: string
-  default: ''
 # Set by the single job that ships the rest of the repository. It keeps Arcade's RID narrowing off,
 # so that everything the job built gets signed and published rather than just the darc package for
 # its own runtime identifier, and it makes that job the one to pack the RID-agnostic darc package -
@@ -26,31 +21,28 @@ parameters:
 - name: publishAllPackages
   type: boolean
   default: false
+# ILCompiler cannot compile across operating systems, so the agent always runs the OS it targets,
+# which leaves the runtime identifier as the only thing deciding which of Arcade's two build scripts
+# to invoke. Nothing else about the invocation differs: build.sh rewrites a leading -- to a -, so a
+# single set of switches drives both. Keyed by the OS half of the runtime identifier, which means a
+# new one cannot be added to the pipelines without saying how it is built.
+- name: buildScripts
+  type: object
+  default:
+    win: .\eng\common\cibuild.cmd
+    osx: ./eng/common/cibuild.sh
+    linux: ./eng/common/cibuild.sh
 
 steps:
-- ${{ if or(eq(parameters.targetRid, ''), startsWith(parameters.targetRid, 'win-')) }}:
-  - script: >
-      .\eng\common\cibuild.cmd
-      -configuration ${{ parameters.configuration }}
-      -prepareMachine
-      /p:Test=false
-      /p:VersionPrefix=$(_VersionPrefix)
-      /p:Sign=${{ parameters.sign }}
-      /p:TargetRid=${{ parameters.targetRid }}
-      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.targetRid, ''), not(parameters.publishAllPackages)) }}
-      /p:PackRidAgnosticToolPackage=${{ parameters.publishAllPackages }}
-      ${{ parameters.buildArgs }}
-    displayName: Build
-- ${{ else }}:
-  - script: >
-      ./eng/common/cibuild.sh
-      --configuration ${{ parameters.configuration }}
-      --prepareMachine
-      /p:Test=false
-      /p:VersionPrefix=$(_VersionPrefix)
-      /p:Sign=${{ parameters.sign }}
-      /p:TargetRid=${{ parameters.targetRid }}
-      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.targetRid, ''), not(parameters.publishAllPackages)) }}
-      /p:PackRidAgnosticToolPackage=${{ parameters.publishAllPackages }}
-      ${{ parameters.buildArgs }}
-    displayName: Build
+- script: >
+    ${{ parameters.buildScripts[split(parameters.targetRid, '-')[0]] }}
+    -configuration ${{ parameters.configuration }}
+    -prepareMachine
+    /p:Test=false
+    /p:VersionPrefix=$(_VersionPrefix)
+    /p:Sign=${{ parameters.sign }}
+    /p:TargetRid=${{ parameters.targetRid }}
+    /p:EnableDefaultRidSpecificArtifacts=${{ not(parameters.publishAllPackages) }}
+    /p:PackRidAgnosticToolPackage=${{ parameters.publishAllPackages }}
+    ${{ parameters.buildArgs }}
+  displayName: Build
