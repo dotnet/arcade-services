@@ -1,58 +1,8 @@
 variables:
-- template: /eng/pipelines/templates/variables/version-variables.yml
+- template: /eng/pipelines/templates/variables/version-variables.yml@self
 # Cannot use key:value syntax in root defined variables
 - name: _PublishUsingPipelines
   value: true
-- name: AzdoOrgUri
-  value: https://dev.azure.com/dnceng
-- name: AzdoProject
-  value: internal
-- name: configuration
-  value: Release
-
-parameters:
-# darc ships as a Native AOT RID-specific .NET tool. ILCompiler cannot compile across operating
-# systems, so every target OS needs a build agent of its own; cross-architecture compilation within
-# one OS does work, which is why macOS builds both of its architectures while linux-arm64 uses a
-# native arm64 agent.
-#
-# publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
-# package. test marks the job that runs the test suite. Both default to off and are only ever
-# spelled out where they are on. Keep publishAllPackages on win-x64: that is the runtime identifier
-# Microsoft.DotNet.Darc.csproj packs the RID-agnostic darc package under, and only a job with RID
-# narrowing off publishes it.
-#
-# Keep in sync with ToolPackageRuntimeIdentifiers in
-# src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
-- name: darcRidPlatforms
-  type: object
-  default:
-  - rid: win-x64
-    publishAllPackages: true
-    test: true
-    pool:
-      name: NetCore-Public
-      demands: ImageOverride -equals 1es-windows-2022-open
-  - rid: win-arm64
-    pool:
-      name: NetCore-Public
-      demands: ImageOverride -equals 1es-windows-2022-open
-  - rid: osx-x64
-    pool:
-      name: AcesShared
-      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
-  - rid: osx-arm64
-    pool:
-      name: AcesShared
-      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
-  - rid: linux-x64
-    pool:
-      name: NetCore-Public
-      demands: ImageOverride -equals build.azurelinux.3.amd64.open
-  - rid: linux-arm64
-    pool:
-      name: Docker-Linux-Arm-Public
-      demands: ImageOverride -equals build.azurelinux.3.arm64.open
 
 pr:
   branches:
@@ -73,66 +23,7 @@ pr:
     - THIRD-PARTY-NOTICES.TXT
 
 stages:
-- stage: build
-  dependsOn: []
-  displayName: Build
-  variables:
-  - name: _BuildConfig
-    value: Release
-  jobs:
-  - template: /eng/common/templates/jobs/jobs.yml
-    parameters:
-      artifacts:
-        publish:
-          # Named per job: the default only disambiguates by Agent.Os, which all of the Windows
-          # jobs - and both Linux ones - share. System.PhaseName is the job id.
-          logs:
-            name: Logs_$(System.PhaseName)_$(_BuildConfig)
-          ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-            artifacts:
-              name: Artifacts_$(System.PhaseName)_$(_BuildConfig)
-            manifests: true
-      enableTelemetry: true
-      enableMicrobuild: false
-      enablePublishTestResults: false
-      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-
-      jobs:
-      # One job per darc runtime identifier. Each builds the whole repository - which makes these
-      # jobs a build check for their platform on top of producing the package - and publishes only
-      # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
-      # publishAllPackages instead ships everything the repository produces.
-      - ${{ each platform in parameters.darcRidPlatforms }}:
-        - job: ${{ replace(platform.rid, '-', '_') }}
-          displayName: ${{ platform.rid }}
-          timeoutInMinutes: 90
-          pool: ${{ platform.pool }}
-          steps:
-          - checkout: self
-            clean: true
-
-          - template: /eng/pipelines/templates/steps/build.yml
-            parameters:
-              configuration: $(configuration)
-              targetRid: ${{ platform.rid }}
-              ${{ if platform.publishAllPackages }}:
-                publishAllPackages: true
-
-          - ${{ if platform.test }}:
-            - template: /eng/pipelines/templates/steps/test.yml
-              parameters:
-                configuration: $(configuration)
-
-      - job: Builder_Docker
-        displayName: Build Docker Image
-        pool:
-          name: NetCore-Public
-          demands: ImageOverride -equals build.azurelinux.3.amd64.open
-
-        steps:
-        - checkout: self
-          clean: true
-
-        - template: /eng/pipelines/templates/steps/docker-build.yml
-          parameters:
-            dockerImageName: test
+# Same stage the official and dev pipelines run, minus the 1ES pipeline template they extend.
+- template: /eng/pipelines/templates/stages/build.yml@self
+  parameters:
+    is1ESPipeline: false
