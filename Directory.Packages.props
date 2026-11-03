@@ -74,8 +74,8 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.4" />
-    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.4" />
+    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="5.0.1" />
+    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.5" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.16.1" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
