@@ -1,13 +1,8 @@
 variables:
+- template: /eng/pipelines/templates/variables/version-variables.yml@self
 # Cannot use key:value syntax in root defined variables
 - name: _PublishUsingPipelines
   value: true
-- name: AzdoOrgUri
-  value: https://dev.azure.com/dnceng
-- name: AzdoProject
-  value: internal
-- name: configuration
-  value: Release
 
 pr:
   branches:
@@ -28,56 +23,7 @@ pr:
     - THIRD-PARTY-NOTICES.TXT
 
 stages:
-- stage: build
-  dependsOn: []
-  displayName: Build
-  variables:
-  - name: _BuildConfig
-    value: Release
-  jobs:
-  - template: /eng/common/templates/jobs/jobs.yml
-    parameters:
-      artifacts:
-        publish:
-          logs: true
-          ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-            artifacts: true
-            manifests: true
-      enableTelemetry: true
-      enableMicrobuild: false
-      enablePublishTestResults: false
-      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-
-      jobs:
-      - job: Build
-        displayName: Build Repo
-        timeoutInMinutes: 90
-        pool:
-          name: NetCore-Public
-          demands: ImageOverride -equals 1es-windows-2022-open
-
-        steps:
-        - checkout: self
-          clean: true
-
-        - template: /eng/pipelines/templates/steps/build.yml
-          parameters:
-            configuration: $(configuration)
-
-        - template: /eng/pipelines/templates/steps/test.yml
-          parameters:
-            configuration: $(configuration)
-
-      - job: Builder_Docker
-        displayName: Build Docker Image
-        pool:
-          name: NetCore-Public
-          demands: ImageOverride -equals build.azurelinux.3.amd64.open
-
-        steps:
-        - checkout: self
-          clean: true
-
-        - template: /eng/pipelines/templates/steps/docker-build.yml
-          parameters:
-            dockerImageName: test
+# Same stage the official and dev pipelines run, minus the 1ES pipeline template they extend.
+- template: /eng/pipelines/templates/stages/build.yml@self
+  parameters:
+    is1ESPipeline: false

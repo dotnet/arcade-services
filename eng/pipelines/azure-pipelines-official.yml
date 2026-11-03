@@ -31,5 +31,6 @@ extends:
     stages:
     - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
+        is1ESPipeline: true
         isProdPipeline: true
         enableSigning: true

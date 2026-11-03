@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +22,7 @@ internal interface IConfigurationManagementCommandLineOptions
 /// <summary>
 /// Options tied to commands managing the configuration repository.
 /// </summary>
-internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLineOptions<T>, IConfigurationManagementCommandLineOptions where T : Operation
+internal abstract class ConfigurationManagementCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : CommandLineOptions<T>, IConfigurationManagementCommandLineOptions where T : Operation
 {
     private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
     private const string DefaultConfigurationBaseBranch = "production";

@@ -94,7 +94,7 @@ stages:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2022
     variables:
-      newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
+      newDockerImageTag: $[stageDependencies.Build.Docker.outputs['DockerTag.newDockerImageTag']]
 
     strategy:
       runOnce:

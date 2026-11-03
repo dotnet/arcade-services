@@ -7,14 +7,15 @@ parameters:
 
 steps:
 - bash: |
-    . ./eng/common/tools.sh
-    InitializeDotNetCli true
+    # Acquire the SDK in its own invocation: dotnet.sh writes the installation log to stdout, so
+    # capturing one of its runs would capture that too.
+    ./eng/common/dotnet.sh
     version=$(./.dotnet/dotnet msbuild \
       ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
       /p:OfficialBuild=true \
       /p:ContinuousIntegrationBuild=true \
       /p:OfficialBuildId=$(BUILD.BUILDNUMBER) \
-      /p:VersionPrefix=1.1.0 \
+      /p:VersionPrefix=$(_VersionPrefix) \
       -getProperty:Version)
     echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
     echo "set PackageVersion to $version"

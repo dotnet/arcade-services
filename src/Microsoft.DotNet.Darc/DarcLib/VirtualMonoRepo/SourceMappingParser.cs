@@ -47,6 +47,7 @@ public class SourceMappingParser : ISourceMappingParser
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             ReadCommentHandling = JsonCommentHandling.Skip,
+            TypeInfoResolver = DarcLibJsonContext.Default,
         };
 
         var settings = JsonSerializer.Deserialize<SourceMappingFile>(json, options)

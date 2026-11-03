@@ -1,5 +1,6 @@
 variables:
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
+- template: /eng/pipelines/templates/variables/version-variables.yml@self
 - group: SDL_Settings
 - name: _TeamName
   value: DotNetCore

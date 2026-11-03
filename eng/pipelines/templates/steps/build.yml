@@ -7,17 +7,86 @@ parameters:
 - name: sign
   type: boolean
   default: false
+# darc is built as the Native AOT tool package for this runtime identifier. Unless the job also sets
+# publishAllPackages, that package becomes the only artifact the job signs and publishes - Arcade
+# narrows both to packages carrying TargetRid in their name. The rest of the repository is still
+# built so that every job doubles as a build check for its platform.
+- name: targetRid
+  type: string
+# Set by the single job that ships the rest of the repository. It keeps Arcade's RID narrowing off,
+# so that everything the job built gets signed and published rather than just the darc package for
+# its own runtime identifier. That job is win-x64, which is also where Microsoft.DotNet.Darc.csproj
+# packs the RID-agnostic darc package - the one `dotnet tool install Microsoft.DotNet.Darc` resolves
+# before redirecting to the package for the user's runtime identifier.
+- name: publishAllPackages
+  type: boolean
+  default: false
+# Runs the repository's unit tests once the build is done. The build itself always passes
+# /p:Test=false so that the suite runs as its own step and reports its own results, and so that the
+# jobs that only build a darc package for their runtime identifier do not pay for it. The steps are
+# Windows-only: they install SQL Express, which Maestro.Data's tests need.
+- name: test
+  type: boolean
+  default: false
+# ILCompiler cannot compile across operating systems, so the agent always runs the OS it targets,
+# which leaves the runtime identifier as the only thing deciding which of Arcade's two build scripts
+# to invoke. Nothing else about the invocation differs: build.sh rewrites a leading -- to a -, so a
+# single set of switches drives both. Keyed by the OS half of the runtime identifier, which means a
+# new one cannot be added to the pipelines without saying how it is built.
+- name: buildScripts
+  type: object
+  default:
+    win: .\eng\common\cibuild.cmd
+    osx: ./eng/common/cibuild.sh
+    linux: ./eng/common/cibuild.sh
 
 steps:
-- powershell: |
-    Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
-  displayName: Set Package Version
-
 - script: >
-    .\eng\common\cibuild.cmd
+    ${{ parameters.buildScripts[split(parameters.targetRid, '-')[0]] }}
     -configuration ${{ parameters.configuration }}
     -prepareMachine
     /p:Test=false
+    /p:VersionPrefix=$(_VersionPrefix)
     /p:Sign=${{ parameters.sign }}
+    /p:TargetRid=${{ parameters.targetRid }}
+    /p:EnableDefaultRidSpecificArtifacts=${{ not(parameters.publishAllPackages) }}
     ${{ parameters.buildArgs }}
   displayName: Build
+
+- ${{ if parameters.test }}:
+  - task: Powershell@2
+    displayName: Install SQL Express
+    inputs:
+      targetType: filePath
+      filePath: eng\Install-SqlExpress.ps1
+
+  - task: DotNetCoreCLI@2
+    displayName: Run unit tests
+    inputs:
+      command: custom
+      projects: |
+        $(Build.SourcesDirectory)\arcade-services.slnx
+      custom: test
+      arguments: >
+        --configuration ${{ parameters.configuration }}
+        --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
+        --no-build
+        --logger "trx;LogFilePrefix=TestResults-"
+        -v normal
+        /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/UnitTest.binlog
+        --
+        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+        RunConfiguration.MapCpuCount=4
+    env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
+
+  - task: PublishTestResults@2
+    displayName: Publish test results
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: VSTest
+      testResultsFiles: '**/TestResults-*'
+      searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+      testRunTitle: Basic Tests
+      mergeTestResults: true
+      configuration: ${{ parameters.configuration }}

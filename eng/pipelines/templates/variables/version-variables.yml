@@ -1,0 +1,9 @@
+variables:
+# Version prefix of every package produced by this repository.
+#
+# The RID-specific `darc` packages are built in jobs of their own, separately from the
+# RID-agnostic `Microsoft.DotNet.Darc` wrapper package that points at them. The wrapper only
+# resolves to a RID package of the exact same version, so all of those jobs have to agree on this
+# value - which is why it lives here instead of being spelled out per pipeline.
+- name: _VersionPrefix
+  value: 1.1.0

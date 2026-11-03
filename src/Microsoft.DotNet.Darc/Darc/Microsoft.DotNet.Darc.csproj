@@ -1,12 +1,48 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
     <RollForward>Major</RollForward>
     <Nullable>disable</Nullable>
     <OutputType>Exe</OutputType>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
+    <PublishAot>true</PublishAot>
+    <!--
+      PackTool packages whatever lands in the publish directory. For a native binary that would mean
+      shipping a ~240 MB native PDB (plus the managed PDBs of assemblies that no longer exist as
+      separate files) inside the tool package. The symbols are still produced next to the native
+      binary for symbol publishing, they just don't get packed.
+    -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <ToolPackageRuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</ToolPackageRuntimeIdentifiers>
+
+    <!--
+      The SDK refuses to build the RID-specific tool packages as inner builds for an AOT'd tool,
+      because ILCompiler cannot compile across operating systems. CI therefore builds one of them
+      per job on an agent of the matching OS, by passing Arcade's TargetRid - which also narrows
+      what that job signs and publishes - while the rest of the repository stays RID-agnostic.
+    -->
+    <RuntimeIdentifier Condition="'$(TargetRid)' != ''">$(TargetRid)</RuntimeIdentifier>
+
+    <!--
+      Unlike `dotnet pack -r <rid>`, a RuntimeIdentifier on its own does not imply SelfContained,
+      and the Native AOT publish then fails with NETSDK1102. This cannot be turned on
+      unconditionally: SelfContained without a RuntimeIdentifier makes the SDK infer the host RID,
+      which would turn every RID-agnostic build into a host-RID one and pack a RID-specific package
+      in place of the wrapper.
+    -->
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+
+    <!--
+      Newtonsoft.Json and YamlDotNet discover members purely through reflection, so the AOT analyzers
+      flag every call into them (IL2026 "requires unreferenced code", IL3050 "requires dynamic code").
+      The types they reflect over are rooted explicitly in ILLink.Descriptors.xml, which is what makes
+      those calls work in the published native binary. IL2104/IL3053 are the per-assembly rollups ILC
+      reports for dependencies we do not control (Octokit, NuGet.Packaging, the Azure DevOps client,
+      ...). Only these codes are silenced; the trim-flow warnings (IL2070/IL2072/IL2091/...) remain
+      build errors so genuinely unsafe patterns in our own code still fail the build.
+    -->
+    <NoWarn>$(NoWarn);IL2026;IL3050;IL2104;IL3053</NoWarn>
 
     <ToolCommandName>darc</ToolCommandName>
     <Description>Darc CLI</Description>
@@ -28,6 +64,52 @@
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+
+  <!--
+    A build emits either the RID-agnostic tool package or a RID-specific one, because the
+    RuntimeIdentifier above makes the SDK produce the latter in place of the former. Shipping darc
+    needs both: `dotnet tool install Microsoft.DotNet.Darc` resolves the RID-agnostic package, and
+    that package is what redirects to the one matching the user's runtime identifier. A RID build
+    therefore packs this project once more with TargetRid removed, which is also what ends the
+    recursion - the inner build sees no TargetRid and so adds no reference of its own. The SDK
+    does the mirror image of this in _CreateRIDSpecificToolPackages, where a RID-agnostic pack
+    fans out to one pack per RID; it opts out for AOT tools, since AOT cannot cross-compile.
+
+    The metadata is all load-bearing:
+      - Targets/GlobalPropertiesToRemove are what make the reference pack rather than build, and
+        with TargetRid gone.
+      - NoBuild keeps it from compiling darc a second time. The RID-agnostic package carries no
+        implementation, only tools/any/any/DotnetToolSettings.xml naming the per-RID package ids,
+        so the SDK already drops Publish from the pack (see _PackToolPublishDependency), and this
+        drops the Build that NuGet's Pack would otherwise force.
+      - Private stops consumers of darc from collecting publish output through this reference;
+        without it, ProductConstructionService.ScenarioTests sees darc's files under both its
+        RID-specific and RID-agnostic paths and fails with NETSDK1152.
+
+    Only one build should pack it, since every RID build otherwise would and only one copy ships.
+    win-x64 is the one that does, because that is the leg which already builds and publishes the
+    rest of the repository.
+
+    NuGet builds its restore graph out of @(ProjectReference) with no regard for
+    ReferenceOutputAssembly, and walks it by recursively invoking a target on each reference with a
+    fixed set of global properties, so a self-reference is a genuine cycle there and restore fails
+    with MSB4006. ExcludeRestorePackageImports is the property NuGet puts on every evaluation in
+    that walk and on nothing else, so hiding the reference from it keeps restore to the real graph.
+  -->
+  <ItemGroup Condition="'$(TargetRid)' == 'win-x64'
+                        and '$(ExcludeRestorePackageImports)' != 'true'">
+    <ProjectReference Include="$(MSBuildProjectFullPath)"
+                      Targets="Pack"
+                      GlobalPropertiesToRemove="TargetRid"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      AdditionalProperties="NoBuild=true" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.DotNet.Darc.Tests" />
     <InternalsVisibleTo Include="Microsoft.DotNet.DarcLib.Codeflow.Tests" />

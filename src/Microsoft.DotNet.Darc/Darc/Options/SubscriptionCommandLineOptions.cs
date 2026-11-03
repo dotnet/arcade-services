@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
+internal abstract class SubscriptionCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
     public string UpdateFrequency { get; set; }
 

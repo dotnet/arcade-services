@@ -38,6 +38,7 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
     {
         AllowTrailingCommas = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
+        TypeInfoResolver = DarcLibJsonContext.Default,
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
@@ -185,7 +186,7 @@ class SingleStringOrArrayConverter : JsonConverter<List<string>>
                 {
                     if (reader.TokenType == JsonTokenType.EndArray)
                         break;
-                    var arrayItem = JsonSerializer.Deserialize<string>(ref reader, options);
+                    var arrayItem = reader.GetString();
                     if (arrayItem != null)
                     {
                         list.Add(arrayItem);
@@ -193,13 +194,18 @@ class SingleStringOrArrayConverter : JsonConverter<List<string>>
                 }
                 return list;
             default:
-                var item = JsonSerializer.Deserialize<string>(ref reader, options);
+                var item = reader.GetString();
                 return item != null ? [item] : null;
         }
     }
 
     public override void Write(Utf8JsonWriter writer, List<string> objectToWrite, JsonSerializerOptions options)
     {
-        JsonSerializer.Serialize(writer, objectToWrite, objectToWrite.GetType(), options);
+        writer.WriteStartArray();
+        foreach (var item in objectToWrite)
+        {
+            writer.WriteStringValue(item);
+        }
+        writer.WriteEndArray();
     }
 }

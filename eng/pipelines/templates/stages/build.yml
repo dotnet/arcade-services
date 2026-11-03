@@ -1,96 +1,239 @@
 parameters:
+# The official and dev pipelines extend a 1ES pipeline template, which brings managed pools,
+# declarative artifact outputs and the MicroBuild signing plugin with it. The public PR pipeline has
+# none of those, so the handful of places where the two shapes genuinely differ branch on this.
+- name: is1ESPipeline
+  displayName: Indicates whether the pipeline consuming this template extends a 1ES pipeline template.
+  type: boolean
 - name: isProdPipeline
   displayName: Indicates whether this template should be configured for a production or non-production pipeline.
   type: boolean
+  default: false
 - name: enableSigning
   displayName: Enables signing and installs the MicroBuild signing plugin.
   type: boolean
   default: false
 
+# darc ships as a Native AOT RID-specific .NET tool. ILCompiler cannot compile across operating
+# systems, so every target OS needs a build agent of its own; cross-architecture compilation within
+# one OS does work, which is why macOS builds both of its architectures while linux-arm64 uses a
+# native arm64 agent.
+#
+# Only the pools differ between the public and internal runs, so each entry carries both and the
+# stage picks one. publishAllPackages marks the one job that ships the rest of the repository
+# alongside its own darc package, and that therefore also stages the PCS deployment artifacts. test
+# marks the job that runs the test suite, which only the PR pipeline does. Both default to off and
+# are only ever spelled out where they are on. Keep publishAllPackages on win-x64: that is the
+# runtime identifier Microsoft.DotNet.Darc.csproj packs the RID-agnostic darc package under, and
+# only a job with RID narrowing off publishes it.
+#
+# Keep in sync with ToolPackageRuntimeIdentifiers in
+# src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
+- name: darcRidPlatforms
+  type: object
+  default:
+  - rid: win-x64
+    publishAllPackages: true
+    test: true
+    publicPool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2022-open
+    internalPool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+  - rid: win-arm64
+    publicPool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2022-open
+    internalPool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+  - rid: osx-x64
+    publicPool:
+      name: AcesShared
+      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
+    internalPool:
+      name: Azure Pipelines
+      vmImage: macos-latest-internal
+      os: macOS
+  - rid: osx-arm64
+    publicPool:
+      name: AcesShared
+      demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
+    internalPool:
+      name: Azure Pipelines
+      vmImage: macos-latest-internal
+      os: macOS
+  - rid: linux-x64
+    publicPool:
+      name: NetCore-Public
+      demands: ImageOverride -equals build.azurelinux.3.amd64.open
+    internalPool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals build.azurelinux.3.amd64
+      os: linux
+  - rid: linux-arm64
+    publicPool:
+      name: Docker-Linux-Arm-Public
+      demands: ImageOverride -equals build.azurelinux.3.arm64.open
+    internalPool:
+      name: Docker-Linux-Arm-Internal
+      demands: ImageOverride -equals build.azurelinux.3.arm64
+      hostArchitecture: Arm64
+      os: linux
+
+# The Linux pools for the docker job, which is the one job not tied to a darc RID.
+- name: dockerPublicPool
+  type: object
+  default:
+    name: NetCore-Public
+    demands: ImageOverride -equals build.azurelinux.3.amd64.open
+- name: dockerInternalPool
+  type: object
+  default:
+    name: NetCore1ESPool-Internal
+    demands: ImageOverride -equals build.azurelinux.3.amd64
+    os: linux
+
 stages:
 - stage: Build
   dependsOn: []
   displayName: Build
+  # Shared by the per-RID darc jobs below.
+  variables:
+  - name: _BuildConfig
+    value: Release
+  - ${{ if parameters.is1ESPipeline }}:
+    - name: _InternalBuildArgs
+      value: >
+        /p:DotNetSignType=$(_SignType)
+        /p:TeamName=$(_TeamName)
+        /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+        /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+    - name: _PublishType
+      value: blob
+    - name: _SignType
+      ${{ if parameters.isProdPipeline }}:
+        value: real
+      ${{ else }}:
+        value: test
   jobs:
-  - template: /eng/common/templates-official/jobs/jobs.yml@self
+  - template: /eng/common/core-templates/jobs/jobs.yml@self
     parameters:
+      is1ESPipeline: ${{ parameters.is1ESPipeline }}
       artifacts:
         publish:
-          logs: true
+          # Named per job: the default only disambiguates by Agent.Os, which all of the Windows
+          # jobs - and both Linux ones - share. System.PhaseName is the job id.
+          logs:
+            ${{ if parameters.is1ESPipeline }}:
+              name: Logs_$(System.PhaseName)_$(_BuildConfig)_Attempt$(System.JobAttempt)
+            ${{ else }}:
+              name: Logs_$(System.PhaseName)_$(_BuildConfig)
           ${{ if parameters.isProdPipeline }}:
+            manifests: true
+          ${{ if and(not(parameters.is1ESPipeline), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
+            artifacts:
+              name: Artifacts_$(System.PhaseName)_$(_BuildConfig)
             manifests: true
       enableTelemetry: true
       enableMicrobuild: ${{ parameters.enableSigning }}
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       jobs:
-      - job: Windows_NT
-        timeoutInMinutes: 90
-        displayName: Build repository
-        pool:
-          name: $(DncEngInternalBuildPool)
-          image: 1es-windows-2022
-          os: windows
-        variables:
-        - _InternalBuildArgs: >
-            /p:DotNetSignType=$(_SignType)
-            /p:TeamName=$(_TeamName)
-            /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
-            /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-        - _BuildConfig: Release
-        - _PublishType: blob
-        - name: _SignType
-          ${{ if parameters.isProdPipeline }}:
-            value: real
+      # One job per darc runtime identifier. Each builds the whole repository - which makes these
+      # jobs a build check for their platform on top of producing the package - and publishes only
+      # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
+      # publishAllPackages instead ships everything the repository produces, and is the only one
+      # that stages the PCS deployment artifacts.
+      - ${{ each platform in parameters.darcRidPlatforms }}:
+        - job: ${{ replace(platform.rid, '-', '_') }}
+          displayName: ${{ platform.rid }}
+          timeoutInMinutes: 90
+          ${{ if parameters.is1ESPipeline }}:
+            pool: ${{ platform.internalPool }}
           ${{ else }}:
-            value: test
+            pool: ${{ platform.publicPool }}
+          ${{ if not(startsWith(platform.rid, 'win-')) }}:
+            enableMicrobuildForMacAndLinux: ${{ parameters.enableSigning }}
+          ${{ if and(parameters.is1ESPipeline, platform.publishAllPackages) }}:
+            templateContext:
+              outputs:
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net10.0\publish
+                artifact: ProductConstructionService.ScenarioTests
+                displayName: Publish E2E Tests
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
+                artifact: ProductConstructionService.Cli
+                displayName: Publish PCS CLI
+          steps:
+          - checkout: self
+            clean: true
+
+          - ${{ if and(parameters.is1ESPipeline, platform.publishAllPackages, eq(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
+            - template: /eng/common/templates-official/steps/retain-build.yml@self
+              parameters:
+                AzdoOrgUri: $(AzdoOrgUri)
+                AzdoProject: $(AzdoProject)
+                BuildId: $(Build.BuildId)
+
+          - template: /eng/pipelines/templates/steps/build.yml@self
+            parameters:
+              configuration: $(_BuildConfig)
+              targetRid: ${{ platform.rid }}
+              ${{ if platform.publishAllPackages }}:
+                publishAllPackages: true
+              # Only the public pipeline runs the suite; the internal pipelines build commits that
+              # have already been through it.
+              ${{ if and(not(parameters.is1ESPipeline), platform.test) }}:
+                test: true
+              ${{ if parameters.is1ESPipeline }}:
+                buildArgs: $(_InternalBuildArgs)
+              # The MicroBuild signing plugin only supports real signing on Mac and Linux, so
+              # those legs sign in the production pipeline only. The native binary itself is
+              # signed on Windows only - Arcade maps .exe/.dll to a certificate out of the box,
+              # while the extensionless Linux and macOS binaries have no mapping and are skipped.
+              ${{ if startsWith(platform.rid, 'win-') }}:
+                sign: ${{ parameters.enableSigning }}
+              ${{ else }}:
+                sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
+
+          # Only the 1ES pipelines publish the PCS CLI, which is what these files travel with.
+          - ${{ if and(parameters.is1ESPipeline, platform.publishAllPackages) }}:
+            - task: CopyFiles@2
+              displayName: Stage PCS deployment dependencies
+              inputs:
+                SourceFolder: $(Build.SourcesDirectory)
+                Contents: |
+                  global.json
+                  eng\Get-GitHubAppToken.ps1
+                TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
+                flattenFolders: true
+
+      - job: Docker
+        ${{ if parameters.is1ESPipeline }}:
+          displayName: Build/publish docker image
+          pool: ${{ parameters.dockerInternalPool }}
+        ${{ else }}:
+          displayName: Build docker image
+          pool: ${{ parameters.dockerPublicPool }}
         steps:
         - checkout: self
           clean: true
-        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
-          - template: /eng/common/templates-official/steps/retain-build.yml@self
-            parameters:
-              AzdoOrgUri: $(AzdoOrgUri)
-              AzdoProject: $(AzdoProject)
-              BuildId: $(Build.BuildId)
-        - template: /eng/pipelines/templates/steps/build.yml@self
-          parameters:
-            configuration: $(_BuildConfig)
-            buildArgs: $(_InternalBuildArgs)
-            sign: ${{ parameters.enableSigning }}
-        - task: CopyFiles@2
-          displayName: Stage PCS deployment dependencies
-          inputs:
-            SourceFolder: $(Build.SourcesDirectory)
-            Contents: |
-              global.json
-              eng\Get-GitHubAppToken.ps1
-            TargetFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
-            flattenFolders: true
-        templateContext:
-          outputs:
-          - output: pipelineArtifact
-            path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net10.0\publish
-            artifact: ProductConstructionService.ScenarioTests
-            displayName: Publish E2E Tests
-          - output: pipelineArtifact
-            path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
-            artifact: ProductConstructionService.Cli
-            displayName: Publish PCS CLI
-      - job: BuildAndPublishDocker
-        displayName: Build/publish docker image
-        pool:
-          name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals build.azurelinux.3.amd64
-          os: linux
-        steps:
-        - checkout: self
+
         - template: /eng/pipelines/templates/steps/docker-build.yml@self
           parameters:
-            devBranchSuffix: $(devBranchSuffix)
-            dockerImageName: $(dockerRegistryUrl)/$(containerName)
-        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+            ${{ if parameters.is1ESPipeline }}:
+              devBranchSuffix: $(devBranchSuffix)
+              dockerImageName: $(dockerRegistryUrl)/$(containerName)
+            ${{ else }}:
+              dockerImageName: test
+
+        - ${{ if and(parameters.is1ESPipeline, notin(variables['Build.Reason'], 'PullRequest')) }}:
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(pcsDeploymentServiceConnection)
@@ -101,4 +244,5 @@ stages:
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
             displayName: Push docker image
 
-- template: /eng/pipelines/templates/stages/deploy.yaml@self
+- ${{ if parameters.is1ESPipeline }}:
+  - template: /eng/pipelines/templates/stages/deploy.yaml@self

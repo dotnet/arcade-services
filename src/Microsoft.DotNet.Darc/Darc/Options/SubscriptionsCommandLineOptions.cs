@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionsCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
+internal abstract class SubscriptionsCommandLineOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
     public string TargetRepository { get; set; }
 
