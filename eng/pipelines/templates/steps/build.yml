@@ -7,16 +7,15 @@ parameters:
 - name: sign
   type: boolean
   default: false
-# ILCompiler cannot compile across operating systems, so the RID-specific darc tool packages are
-# built on an agent per target OS and this step has to pick the matching build script.
-- name: windows
-  type: boolean
-  default: true
 # When set, darc is built as the Native AOT tool package for this runtime identifier. Unless the job
 # also sets publishAllPackages, that package becomes the only artifact the job signs and publishes -
 # Arcade narrows both to packages carrying TargetRid in their name. The rest of the repository is
 # still built so that these jobs double as a build check for their platform.
-- name: darcRid
+#
+# ILCompiler cannot compile across operating systems, so the agent has to run the target OS, and the
+# runtime identifier is therefore also what decides which of the two build scripts to invoke. Jobs
+# that build no RID-specific package at all are hosted on Windows.
+- name: targetRid
   type: string
   default: ''
 # Set by the single job that ships the rest of the repository. It keeps Arcade's RID narrowing off,
@@ -29,7 +28,7 @@ parameters:
   default: false
 
 steps:
-- ${{ if parameters.windows }}:
+- ${{ if or(eq(parameters.targetRid, ''), startsWith(parameters.targetRid, 'win-')) }}:
   - script: >
       .\eng\common\cibuild.cmd
       -configuration ${{ parameters.configuration }}
@@ -37,8 +36,8 @@ steps:
       /p:Test=false
       /p:VersionPrefix=$(_VersionPrefix)
       /p:Sign=${{ parameters.sign }}
-      /p:TargetRid=${{ parameters.darcRid }}
-      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.darcRid, ''), not(parameters.publishAllPackages)) }}
+      /p:TargetRid=${{ parameters.targetRid }}
+      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.targetRid, ''), not(parameters.publishAllPackages)) }}
       /p:PackRidAgnosticToolPackage=${{ parameters.publishAllPackages }}
       ${{ parameters.buildArgs }}
     displayName: Build
@@ -50,8 +49,8 @@ steps:
       /p:Test=false
       /p:VersionPrefix=$(_VersionPrefix)
       /p:Sign=${{ parameters.sign }}
-      /p:TargetRid=${{ parameters.darcRid }}
-      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.darcRid, ''), not(parameters.publishAllPackages)) }}
+      /p:TargetRid=${{ parameters.targetRid }}
+      /p:EnableDefaultRidSpecificArtifacts=${{ and(ne(parameters.targetRid, ''), not(parameters.publishAllPackages)) }}
       /p:PackRidAgnosticToolPackage=${{ parameters.publishAllPackages }}
       ${{ parameters.buildArgs }}
     displayName: Build

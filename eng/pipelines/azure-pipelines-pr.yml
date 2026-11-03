@@ -26,34 +26,28 @@ parameters:
   type: object
   default:
   - rid: win-x64
-    windows: true
     publishAllPackages: true
     test: true
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: win-arm64
-    windows: true
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: osx-x64
-    windows: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: osx-arm64
-    windows: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: linux-x64
-    windows: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals build.azurelinux.3.amd64.open
   - rid: linux-arm64
-    windows: false
     pool:
       name: Docker-Linux-Arm-Public
       demands: ImageOverride -equals build.azurelinux.3.arm64.open
@@ -118,8 +112,7 @@ stages:
           - template: /eng/pipelines/templates/steps/build.yml
             parameters:
               configuration: $(configuration)
-              darcRid: ${{ platform.rid }}
-              windows: ${{ platform.windows }}
+              targetRid: ${{ platform.rid }}
               ${{ if platform.publishAllPackages }}:
                 publishAllPackages: true
 

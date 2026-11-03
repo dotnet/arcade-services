@@ -23,38 +23,32 @@ parameters:
   type: object
   default:
   - rid: win-x64
-    windows: true
     publishAllPackages: true
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: win-arm64
-    windows: true
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: osx-x64
-    windows: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: osx-arm64
-    windows: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: linux-x64
-    windows: false
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals build.azurelinux.3.amd64
       os: linux
   - rid: linux-arm64
-    windows: false
     pool:
       name: Docker-Linux-Arm-Internal
       demands: ImageOverride -equals build.azurelinux.3.arm64
@@ -109,7 +103,7 @@ stages:
           displayName: ${{ platform.rid }}
           timeoutInMinutes: 90
           pool: ${{ platform.pool }}
-          ${{ if not(platform.windows) }}:
+          ${{ if not(startsWith(platform.rid, 'win-')) }}:
             enableMicrobuildForMacAndLinux: ${{ parameters.enableSigning }}
           ${{ if platform.publishAllPackages }}:
             templateContext:
@@ -136,8 +130,7 @@ stages:
           - template: /eng/pipelines/templates/steps/build.yml@self
             parameters:
               configuration: $(_BuildConfig)
-              darcRid: ${{ platform.rid }}
-              windows: ${{ platform.windows }}
+              targetRid: ${{ platform.rid }}
               ${{ if platform.publishAllPackages }}:
                 publishAllPackages: true
               buildArgs: $(_InternalBuildArgs)
@@ -145,7 +138,7 @@ stages:
               # those legs sign in the production pipeline only. The native binary itself is
               # signed on Windows only - Arcade maps .exe/.dll to a certificate out of the box,
               # while the extensionless Linux and macOS binaries have no mapping and are skipped.
-              ${{ if platform.windows }}:
+              ${{ if startsWith(platform.rid, 'win-') }}:
                 sign: ${{ parameters.enableSigning }}
               ${{ else }}:
                 sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
