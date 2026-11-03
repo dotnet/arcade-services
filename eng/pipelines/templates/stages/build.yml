@@ -13,9 +13,11 @@ parameters:
 # native arm64 agent.
 #
 # publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
-# package, and that therefore also packs the RID-agnostic darc package and stages the PCS deployment
-# artifacts. It defaults to off and is only ever spelled out where it is on. This pipeline runs no
-# tests, so it has no use for the test key the PR pipeline's list carries.
+# package, and that therefore also stages the PCS deployment artifacts. It defaults to off and is
+# only ever spelled out where it is on. Keep it on win-x64: that is the runtime identifier
+# Microsoft.DotNet.Darc.csproj packs the RID-agnostic darc package under, and only a job with RID
+# narrowing off publishes it. This pipeline runs no tests, so it has no use for the test key the PR
+# pipeline's list carries.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.

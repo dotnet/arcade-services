@@ -25,12 +25,6 @@
     <RuntimeIdentifier Condition="'$(TargetRid)' != ''">$(TargetRid)</RuntimeIdentifier>
 
     <!--
-      Which of those jobs also packs the RID-agnostic package, see below. Defaults on so that a
-      local RID build produces the same set of packages CI does; the pipeline passes it per job.
-    -->
-    <PackRidAgnosticToolPackage Condition="'$(PackRidAgnosticToolPackage)' == ''">true</PackRidAgnosticToolPackage>
-
-    <!--
       Unlike `dotnet pack -r <rid>`, a RuntimeIdentifier on its own does not imply SelfContained,
       and the Native AOT publish then fails with NETSDK1102. This cannot be turned on
       unconditionally: SelfContained without a RuntimeIdentifier makes the SDK infer the host RID,
@@ -96,8 +90,8 @@
         RID-specific and RID-agnostic paths and fails with NETSDK1152.
 
     Only one build should pack it, since every RID build otherwise would and only one copy ships.
-    The pipeline picks that job through PackRidAgnosticToolPackage rather than this project naming
-    a runtime identifier, so the job list stays the one place the platforms are described.
+    win-x64 is the one that does, because that is the leg which already builds and publishes the
+    rest of the repository.
 
     NuGet builds its restore graph out of @(ProjectReference) with no regard for
     ReferenceOutputAssembly, and walks it by recursively invoking a target on each reference with a
@@ -105,8 +99,7 @@
     with MSB4006. ExcludeRestorePackageImports is the property NuGet puts on every evaluation in
     that walk and on nothing else, so hiding the reference from it keeps restore to the real graph.
   -->
-  <ItemGroup Condition="'$(TargetRid)' != ''
-                        and '$(PackRidAgnosticToolPackage)' == 'true'
+  <ItemGroup Condition="'$(TargetRid)' == 'win-x64'
                         and '$(ExcludeRestorePackageImports)' != 'true'">
     <ProjectReference Include="$(MSBuildProjectFullPath)"
                       Targets="Pack"

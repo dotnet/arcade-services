@@ -17,8 +17,10 @@ parameters:
 # native arm64 agent.
 #
 # publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
-# package, and that therefore also packs the RID-agnostic darc package. test marks the job that runs
-# the test suite. Both default to off and are only ever spelled out where they are on.
+# package. test marks the job that runs the test suite. Both default to off and are only ever
+# spelled out where they are on. Keep publishAllPackages on win-x64: that is the runtime identifier
+# Microsoft.DotNet.Darc.csproj packs the RID-agnostic darc package under, and only a job with RID
+# narrowing off publishes it.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
