@@ -198,7 +198,9 @@ stages:
               ${{ else }}:
                 sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
 
-          - ${{ if platform.test }}:
+          # Only the public pipeline runs the suite; the internal pipelines build commits that
+          # have already been through it.
+          - ${{ if and(not(parameters.is1ESPipeline), platform.test) }}:
             - template: /eng/pipelines/templates/steps/test.yml@self
               parameters:
                 configuration: $(_BuildConfig)
