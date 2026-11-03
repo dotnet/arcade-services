@@ -7,9 +7,7 @@ parameters:
 
 steps:
 - bash: |
-    . ./eng/common/tools.sh
-    InitializeDotNetCli true
-    version=$(./.dotnet/dotnet msbuild \
+    version=$(./eng/common/dotnet.sh msbuild \
       ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
       /p:OfficialBuild=true \
       /p:ContinuousIntegrationBuild=true \
