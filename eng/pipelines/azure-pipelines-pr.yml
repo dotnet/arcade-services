@@ -17,7 +17,8 @@ parameters:
 # native arm64 agent.
 #
 # publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
-# package, and that therefore also runs the tests and packs the RID-agnostic darc package.
+# package, and that therefore also packs the RID-agnostic darc package. test marks the job that runs
+# the test suite. Both default to off and are only ever spelled out where they are on.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
@@ -27,36 +28,32 @@ parameters:
   - rid: win-x64
     windows: true
     publishAllPackages: true
+    test: true
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: win-arm64
     windows: true
-    publishAllPackages: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals 1es-windows-2022-open
   - rid: osx-x64
     windows: false
-    publishAllPackages: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: osx-arm64
     windows: false
-    publishAllPackages: false
     pool:
       name: AcesShared
       demands: ImageOverride -equals ACES_VM_SharedPool_Tahoe
   - rid: linux-x64
     windows: false
-    publishAllPackages: false
     pool:
       name: NetCore-Public
       demands: ImageOverride -equals build.azurelinux.3.amd64.open
   - rid: linux-arm64
     windows: false
-    publishAllPackages: false
     pool:
       name: Docker-Linux-Arm-Public
       demands: ImageOverride -equals build.azurelinux.3.arm64.open
@@ -108,8 +105,7 @@ stages:
       # One job per darc runtime identifier. Each builds the whole repository - which makes these
       # jobs a build check for their platform on top of producing the package - and publishes only
       # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
-      # publishAllPackages instead ships everything the repository produces, and is the only one
-      # that runs the tests.
+      # publishAllPackages instead ships everything the repository produces.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ replace(platform.rid, '-', '_') }}
           displayName: ${{ platform.rid }}
@@ -124,9 +120,10 @@ stages:
               configuration: $(configuration)
               darcRid: ${{ platform.rid }}
               windows: ${{ platform.windows }}
-              publishAllPackages: ${{ platform.publishAllPackages }}
+              ${{ if platform.publishAllPackages }}:
+                publishAllPackages: true
 
-          - ${{ if platform.publishAllPackages }}:
+          - ${{ if platform.test }}:
             - template: /eng/pipelines/templates/steps/test.yml
               parameters:
                 configuration: $(configuration)

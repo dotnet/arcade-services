@@ -13,8 +13,9 @@ parameters:
 # native arm64 agent.
 #
 # publishAllPackages marks the one job that ships the rest of the repository alongside its own darc
-# package, and that therefore also runs the tests, packs the RID-agnostic darc package and stages
-# the PCS deployment artifacts.
+# package, and that therefore also packs the RID-agnostic darc package and stages the PCS deployment
+# artifacts. It defaults to off and is only ever spelled out where it is on. This pipeline runs no
+# tests, so it has no use for the test key the PR pipeline's list carries.
 #
 # Keep in sync with ToolPackageRuntimeIdentifiers in
 # src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj.
@@ -30,35 +31,30 @@ parameters:
       os: windows
   - rid: win-arm64
     windows: true
-    publishAllPackages: false
     pool:
       name: $(DncEngInternalBuildPool)
       image: 1es-windows-2022
       os: windows
   - rid: osx-x64
     windows: false
-    publishAllPackages: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: osx-arm64
     windows: false
-    publishAllPackages: false
     pool:
       name: Azure Pipelines
       vmImage: macos-latest-internal
       os: macOS
   - rid: linux-x64
     windows: false
-    publishAllPackages: false
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals build.azurelinux.3.amd64
       os: linux
   - rid: linux-arm64
     windows: false
-    publishAllPackages: false
     pool:
       name: Docker-Linux-Arm-Internal
       demands: ImageOverride -equals build.azurelinux.3.arm64
@@ -107,7 +103,7 @@ stages:
       # jobs a build check for their platform on top of producing the package - and publishes only
       # the darc package for its own RID, which Arcade narrows by TargetRid. The job marked
       # publishAllPackages instead ships everything the repository produces, and is the only one
-      # that runs the tests and stages the PCS deployment artifacts.
+      # that stages the PCS deployment artifacts.
       - ${{ each platform in parameters.darcRidPlatforms }}:
         - job: ${{ replace(platform.rid, '-', '_') }}
           displayName: ${{ platform.rid }}
@@ -142,7 +138,8 @@ stages:
               configuration: $(_BuildConfig)
               darcRid: ${{ platform.rid }}
               windows: ${{ platform.windows }}
-              publishAllPackages: ${{ platform.publishAllPackages }}
+              ${{ if platform.publishAllPackages }}:
+                publishAllPackages: true
               buildArgs: $(_InternalBuildArgs)
               # The MicroBuild signing plugin only supports real signing on Mac and Linux, so
               # those legs sign in the production pipeline only. The native binary itself is
