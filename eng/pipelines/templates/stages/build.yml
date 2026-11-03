@@ -187,6 +187,10 @@ stages:
               targetRid: ${{ platform.rid }}
               ${{ if platform.publishAllPackages }}:
                 publishAllPackages: true
+              # Only the public pipeline runs the suite; the internal pipelines build commits that
+              # have already been through it.
+              ${{ if and(not(parameters.is1ESPipeline), platform.test) }}:
+                test: true
               ${{ if parameters.is1ESPipeline }}:
                 buildArgs: $(_InternalBuildArgs)
               # The MicroBuild signing plugin only supports real signing on Mac and Linux, so
@@ -197,13 +201,6 @@ stages:
                 sign: ${{ parameters.enableSigning }}
               ${{ else }}:
                 sign: ${{ and(parameters.enableSigning, parameters.isProdPipeline) }}
-
-          # Only the public pipeline runs the suite; the internal pipelines build commits that
-          # have already been through it.
-          - ${{ if and(not(parameters.is1ESPipeline), platform.test) }}:
-            - template: /eng/pipelines/templates/steps/test.yml@self
-              parameters:
-                configuration: $(_BuildConfig)
 
           # Only the 1ES pipelines publish the PCS CLI, which is what these files travel with.
           - ${{ if and(parameters.is1ESPipeline, platform.publishAllPackages) }}:

@@ -21,6 +21,13 @@ parameters:
 - name: publishAllPackages
   type: boolean
   default: false
+# Runs the repository's unit tests once the build is done. The build itself always passes
+# /p:Test=false so that the suite runs as its own step and reports its own results, and so that the
+# jobs that only build a darc package for their runtime identifier do not pay for it. The steps are
+# Windows-only: they install SQL Express, which Maestro.Data's tests need.
+- name: test
+  type: boolean
+  default: false
 # ILCompiler cannot compile across operating systems, so the agent always runs the OS it targets,
 # which leaves the runtime identifier as the only thing deciding which of Arcade's two build scripts
 # to invoke. Nothing else about the invocation differs: build.sh rewrites a leading -- to a -, so a
@@ -45,3 +52,41 @@ steps:
     /p:EnableDefaultRidSpecificArtifacts=${{ not(parameters.publishAllPackages) }}
     ${{ parameters.buildArgs }}
   displayName: Build
+
+- ${{ if parameters.test }}:
+  - task: Powershell@2
+    displayName: Install SQL Express
+    inputs:
+      targetType: filePath
+      filePath: eng\Install-SqlExpress.ps1
+
+  - task: DotNetCoreCLI@2
+    displayName: Run unit tests
+    inputs:
+      command: custom
+      projects: |
+        $(Build.SourcesDirectory)\arcade-services.slnx
+      custom: test
+      arguments: >
+        --configuration ${{ parameters.configuration }}
+        --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
+        --no-build
+        --logger "trx;LogFilePrefix=TestResults-"
+        -v normal
+        /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/UnitTest.binlog
+        --
+        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+        RunConfiguration.MapCpuCount=4
+    env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
+
+  - task: PublishTestResults@2
+    displayName: Publish test results
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: VSTest
+      testResultsFiles: '**/TestResults-*'
+      searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+      testRunTitle: Basic Tests
+      mergeTestResults: true
+      configuration: ${{ parameters.configuration }}
