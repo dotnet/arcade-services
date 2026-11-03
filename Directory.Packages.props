@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project>
+
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageVersion Include="Aspire.Azure.Storage.Queues" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
@@ -111,4 +112,5 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
   </ItemGroup>
+
 </Project>
