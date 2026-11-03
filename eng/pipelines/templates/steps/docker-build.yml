@@ -7,7 +7,10 @@ parameters:
 
 steps:
 - bash: |
-    version=$(./eng/common/dotnet.sh msbuild \
+    # Acquire the SDK in its own invocation: dotnet.sh writes the installation log to stdout, so
+    # capturing one of its runs would capture that too.
+    ./eng/common/dotnet.sh
+    version=$(./.dotnet/dotnet msbuild \
       ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
       /p:OfficialBuild=true \
       /p:ContinuousIntegrationBuild=true \
