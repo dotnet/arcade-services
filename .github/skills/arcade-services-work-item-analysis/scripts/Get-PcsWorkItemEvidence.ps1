@@ -51,6 +51,8 @@ param(
     [int]$MaxExceptionGroups = 20,
     [ValidateRange(0, 500)]
     [int]$MaxTraces = 60,
+    [ValidateRange(1, 200)]
+    [int]$MaxContextEntries = 40,
     [ValidateRange(1, 100)]
     [int]$MaxStackFrames = 12,
     [ValidateRange(1, 300)]
@@ -271,6 +273,8 @@ events
             Attempts = $attempts
             MappedIds = @()
             Outcome = 'Unknown'
+            SubscriptionIds = @()
+            ContextEvidence = @()
             ExceptionGroups = @()
             Traces = @()
             Gaps = @()
@@ -313,6 +317,30 @@ let groups = materialize(failures
 let logs = materialize(traces
 | where timestamp between (datetime($evidenceStart)..datetime($evidenceEnd))
 $correlation);
+let contextRows = materialize(union
+(customEvents | where timestamp between (datetime($evidenceStart)..datetime($evidenceEnd))
+$correlation
+| project timestamp, operation_Id, customDimensions, EvidenceType = 'Event'),
+(failures | project timestamp, operation_Id, customDimensions, EvidenceType = 'Exception'),
+(logs | project timestamp, operation_Id, customDimensions, EvidenceType = 'Trace')
+| mv-apply Key = bag_keys(customDimensions) to typeof(string) on (
+    where Key matches regex @'(?i)^(subscription(id|ids)?|source(repository|repo|branch|directory)|target(repository|repo|branch|directory)|repository|repo|branch|branchname|headbranch|mainbranch|updaterid|buildid|channelid)$'
+    | extend Value = tostring(customDimensions[Key])
+    | where isnotempty(Value)
+    | summarize Dimensions = make_list(bag_pack('Name', Key, 'Value', Value)))
+| where array_length(Dimensions) > 0);
+let contexts = materialize(contextRows
+| summarize Occurrences = count(), FirstSeen = min(timestamp), LastSeen = max(timestamp)
+    by EvidenceType, TelemetryOperationId = operation_Id, DimensionsJson = tostring(Dimensions));
+let subscriptions = materialize(contextRows
+| mv-expand Dimension = Dimensions
+| where tostring(Dimension.Name) in~ ('SubscriptionId', 'Subscription', 'SubscriptionIds')
+| extend Values = parse_json(tostring(Dimension.Value))
+| mv-expand Value = iff(gettype(Values) == 'array', Values, pack_array(Values))
+| where tostring(Value) matches regex @'(?i)^([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'
+| extend SubscriptionId = toguid(tostring(Value))
+| where isnotnull(SubscriptionId)
+| distinct SubscriptionId);
 union
 (groups | order by Occurrences desc, FirstSeen asc | take $MaxExceptionGroups
 | project Kind = 'ExceptionGroup', Payload = bag_pack('Type', type, 'OuterMessage', outerMessage, 'InnermostMessage', innermostMessage,
@@ -321,7 +349,12 @@ union
     'StackTruncated', array_length(details[0].parsedStack) > $MaxStackFrames)),
 (logs | order by severityLevel desc, timestamp asc | take $MaxTraces
 | project Kind = 'Trace', Payload = bag_pack('Timestamp', timestamp, 'TelemetryOperationId', operation_Id, 'Message', message, 'SeverityLevel', severityLevel)),
-(print Kind = 'Counts', Payload = bag_pack('ExceptionRows', toscalar(failures | count), 'ExceptionGroups', toscalar(groups | count), 'TraceRows', toscalar(logs | count)))
+(contexts | order by FirstSeen asc, EvidenceType asc, TelemetryOperationId asc, DimensionsJson asc | take $MaxContextEntries
+| project Kind = 'Context', Payload = bag_pack('EvidenceType', EvidenceType, 'TelemetryOperationId', TelemetryOperationId,
+    'FirstSeen', FirstSeen, 'LastSeen', LastSeen, 'Occurrences', Occurrences, 'Dimensions', parse_json(DimensionsJson))),
+(subscriptions | order by SubscriptionId asc | take 100 | project Kind = 'Subscription', Payload = bag_pack('Id', tostring(SubscriptionId))),
+(print Kind = 'Counts', Payload = bag_pack('ExceptionRows', toscalar(failures | count), 'ExceptionGroups', toscalar(groups | count),
+    'TraceRows', toscalar(logs | count), 'ContextEntries', toscalar(contexts | count), 'SubscriptionIds', toscalar(subscriptions | count)))
 "@
             $evidence = @(Invoke-TelemetryQuery $evidenceQuery $evidenceStart $evidenceEnd @('Kind', 'Payload'))
             foreach ($record in $evidence) {
@@ -332,9 +365,13 @@ union
             $result.Counts = $counts[0].Payload
             $result.ExceptionGroups = @($evidence | Where-Object Kind -eq 'ExceptionGroup' | ForEach-Object Payload)
             $result.Traces = @($evidence | Where-Object Kind -eq 'Trace' | ForEach-Object Payload | Sort-Object Timestamp)
+            $result.SubscriptionIds = @($evidence | Where-Object Kind -eq 'Subscription' | ForEach-Object { $_.Payload.Id } | Sort-Object -Unique)
+            $result.ContextEvidence = @($evidence | Where-Object Kind -eq 'Context' | ForEach-Object Payload | Sort-Object FirstSeen, EvidenceType, TelemetryOperationId)
             if ($result.Counts.ExceptionRows -eq 0) { $result.Gaps += 'No correlated exceptions were found; missing correlation is not proof of no exception.' }
             if ($result.Counts.ExceptionGroups -gt $result.ExceptionGroups.Count) { $result.Gaps += 'Exception groups truncated; increase MaxExceptionGroups if necessary.' }
             if ($result.Counts.TraceRows -gt $result.Traces.Count) { $result.Gaps += 'Traces truncated (higher severity first); increase MaxTraces if necessary.' }
+            if ($result.Counts.ContextEntries -gt $result.ContextEvidence.Count) { $result.Gaps += 'Structured context truncated; increase MaxContextEntries if necessary. SubscriptionIds are collected independently of this sample.' }
+            if ($result.Counts.SubscriptionIds -gt $result.SubscriptionIds.Count) { $result.Gaps += 'Subscription IDs truncated at 100; use a focused correlated query before claiming complete subscription coverage.' }
             if (@($result.ExceptionGroups | Where-Object StackTruncated).Count -gt 0) { $result.Gaps += 'Representative stacks truncated; increase MaxStackFrames if necessary.' }
         }
         $result.ElapsedSeconds = [math]::Round($timer.Elapsed.TotalSeconds, 2)
