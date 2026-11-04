@@ -22,6 +22,12 @@ internal static class Program
     private const string RootCommandDescription = "Darc is the tool for managing the .NET dependency flow.";
     private const string VmrCommandName = "vmr";
     private const string VmrCommandDescription = "Commands for managing the Virtual Monolithic Repository (VMR).";
+    private const string HelpCommandName = "help";
+    private const string HelpCommandDescription = "Display more information on darc or on a specific command.";
+    private const string HelpOptionName = "--help";
+    private const string VersionCommandName = "version";
+    private const string VersionCommandDescription = "Display the darc version.";
+    private const string VersionOptionName = "--version";
 
     private static async Task<int> Main(string[] args)
     {
@@ -55,7 +61,7 @@ internal static class Program
     internal static ParseResult Parse(Command command, params string[] args)
         => command.Parse(CliOptions.AttachShortOptionValues(command, args), new ParserConfiguration { ResponseFileTokenReplacer = null });
 
-    private static RootCommand BuildCommandLine()
+    internal static RootCommand BuildCommandLine()
     {
         // The assembly is named Microsoft.DotNet.Darc but the tool is invoked as `darc`
         RootCommand root = new(RootCommandDescription)
@@ -75,8 +81,48 @@ internal static class Program
         }
 
         root.Add(vmr);
+        root.Add(CreateHelpCommand(root));
+        root.Add(CreateVersionCommand(root));
 
         return root;
+    }
+
+    /// <summary>
+    /// Recreates the <c>darc help [command...]</c> verb, which CommandLineParser used to generate and
+    /// which System.CommandLine only offers as the <c>--help</c> option.
+    /// </summary>
+    private static Command CreateHelpCommand(RootCommand root)
+    {
+        Argument<string[]> commandPath = CliOptions.ValueList(
+            "command",
+            "Command to display help for, e.g. 'darc help vmr backflow'. Omit it to list all commands.",
+            required: false);
+
+        Command help = new(HelpCommandName, HelpCommandDescription)
+        {
+            commandPath,
+        };
+
+        // Re-parsing is what keeps 'darc help <command>' identical to 'darc <command> --help', including
+        // the error reporting when the named command does not exist.
+        help.SetAction(parseResult => Parse(root, [.. parseResult.GetValue(commandPath), HelpOptionName])
+            .Invoke(parseResult.InvocationConfiguration));
+
+        return help;
+    }
+
+    /// <summary>
+    /// Recreates the <c>darc version</c> verb, which CommandLineParser used to generate and which
+    /// System.CommandLine only offers as the <c>--version</c> option.
+    /// </summary>
+    private static Command CreateVersionCommand(RootCommand root)
+    {
+        Command version = new(VersionCommandName, VersionCommandDescription);
+
+        version.SetAction(parseResult => Parse(root, VersionOptionName)
+            .Invoke(parseResult.InvocationConfiguration));
+
+        return version;
     }
 
     internal static Command CreateCommand(CommandLineOptions options)

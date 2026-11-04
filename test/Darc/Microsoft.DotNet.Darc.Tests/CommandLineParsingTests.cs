@@ -379,6 +379,48 @@ public class CommandLineParsingTests
             .Action.Should().BeOfType<HelpAction>();
     }
 
+    [Test]
+    public void TheVersionVerbPrintsWhatTheVersionOptionPrints()
+    {
+        // CommandLineParser generated a 'version' verb; System.CommandLine only offers '--version'.
+        var verb = Invoke("version");
+
+        verb.Should().NotBeEmpty();
+        verb.Should().Be(Invoke("--version"));
+    }
+
+    [Test]
+    public void TheHelpVerbPrintsWhatTheHelpOptionPrints()
+    {
+        // CommandLineParser generated a 'help [command]' verb; System.CommandLine only offers '--help'.
+        var root = Invoke("help");
+
+        root.Should().Contain("darc [command] [options]");
+        root.Should().Be(Invoke("--help"));
+
+        Invoke("help", "get-asset").Should().Be(Invoke("get-asset", "--help"));
+        Invoke("help", "vmr", "backflow").Should().Be(Invoke("vmr", "backflow", "--help"));
+    }
+
+    [Test]
+    public void TheHelpVerbFallsBackToTheRootHelpForAnUnknownCommand()
+    {
+        Invoke("help", "not-a-darc-command").Should().Be(Invoke("--help"));
+    }
+
+    private static string Invoke(params string[] args)
+    {
+        StringWriter output = new();
+
+        Program.Parse(Program.BuildCommandLine(), args).Invoke(new InvocationConfiguration
+        {
+            Output = output,
+            Error = output,
+        });
+
+        return output.ToString();
+    }
+
     private static T Parse<T>(T options, params string[] args) where T : CommandLineOptions
     {
         var result = ParseResultOf(options, args);
