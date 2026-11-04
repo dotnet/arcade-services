@@ -18,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="DarcCliSurface.baseline.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="inputs\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

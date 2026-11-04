@@ -47,6 +47,8 @@ public class OperationTests
 
     public class FakeCommandLineOptions : CommandLineOptions
     {
+        public override string Verb => "fake";
+        public override string VerbDescription => "Fake options used for testing";
         public override Operation GetOperation(ServiceProvider sp) => throw new NotImplementedException();
         public override bool IsOutputFormatSupported()
             => OutputFormat switch

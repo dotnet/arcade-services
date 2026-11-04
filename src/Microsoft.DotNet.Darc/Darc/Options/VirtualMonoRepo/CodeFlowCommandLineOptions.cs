@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.Logging;
 
@@ -24,32 +23,45 @@ internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 internal abstract class CodeFlowCommandLineOptions<T>
     : VmrCommandLineOptions<T>, ICodeFlowCommandLineOptions where T : Operation
 {
-    [Option("additional-remote", Required = false, HelpText =
-        "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
-        "Can be used multiple times. " +
-        "Example: --additional-remote runtime:https://github.com/myfork/runtime")]
     [RedactFromLogging]
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
-    [Option("ref", Required = false, HelpText = "Git reference (commit, branch, tag) to flow. " +
-        "Defaults to HEAD of the repository in the current working directory. " +
-        "Cannot be used together with --build.")]
     public string Ref { get; set; }
 
-    [Option("build", Required = false, HelpText = "ID of the build to flow. " +
-        "Cannot be used together with --ref.")]
     public int Build { get; set; }
 
-    [Option("subscription", HelpText = "Subscription ID to simulate. When provided, flows code as the specified subscription would.")]
     public string SubscriptionId { get; set; }
 
-    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.")]
     public string ExcludedAssets { get; set; }
 
-    [Option("unsafe", HelpText = "Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!")]
     public bool UnsafeFlow { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
+
+    protected override void Configure()
+    {
+        AddList(
+            "--additional-remote",
+            "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
+            "Can be used multiple times. " +
+            "Example: --additional-remote runtime:https://github.com/myfork/runtime",
+            value => AdditionalRemotes = value);
+        Add<string>(
+            "--ref",
+            "Git reference (commit, branch, tag) to flow. " +
+                "Defaults to HEAD of the repository in the current working directory. " +
+                "Cannot be used together with --build.",
+            value => Ref = value);
+        Add<int>(
+            "--build",
+            "ID of the build to flow. " +
+                "Cannot be used together with --ref.",
+            value => Build = value);
+        Add<string>("--subscription", "Subscription ID to simulate. When provided, flows code as the specified subscription would.", value => SubscriptionId = value);
+        Add<string>("--excluded-assets", "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.", value => ExcludedAssets = value);
+        Add<bool>("--unsafe", "Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!", value => UnsafeFlow = value);
+        base.Configure();
+    }
 
     protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

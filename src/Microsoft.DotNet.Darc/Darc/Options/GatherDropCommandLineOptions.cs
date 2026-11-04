@@ -2,88 +2,104 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-[Verb("gather-drop", HelpText = "Gather a drop of the outputs for a build")]
 internal class GatherDropCommandLineOptions : CommandLineOptions<GatherDropOperation>
 {
-    [Option('i', "id", Separator = ',', HelpText = "BAR ID(s) of the root build(s) that we want to gather. comma separated.")]
+    public override string Verb => "gather-drop";
+
+    public override string VerbDescription => "Gather a drop of the outputs for a build";
+
     [RedactFromLogging]
     public IEnumerable<int> RootBuildIds { get; set; }
 
-    [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
     public string RepoUri { get; set; }
 
-    [Option('c', "commit", HelpText = "Commit to gather a drop for.")]
     [RedactFromLogging]
     public string Commit { get; set; }
 
-    [Option('o', "output-dir", Required = true, HelpText = "Output directory to place build drop.")]
     [RedactFromLogging]
     public string OutputDirectory { get; set; }
 
-    [Option("use-relative-paths", Default = false, HelpText = "If true, make all paths in the resultant manifest relative to the value of output-dir")]
     public bool UseRelativePathsInManifest { get; set; }
 
-    [Option("max-downloads", Default = 4, HelpText = "Maximum concurrent downloads.")]
     public int MaxConcurrentDownloads { get; set; }
 
-    [Option("download-timeout", Default = 400, HelpText = "Timeout in seconds for downloading each asset.")]
     public int AssetDownloadTimeoutInSeconds { get; set; }
 
-    [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]
     public bool Transitive { get; set; }
 
-    [Option("release-name", Default = "3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
     public string ReleaseName { get; set; }
 
-    [Option("continue-on-error", HelpText = "Continue on error rather than halting.")]
     public bool ContinueOnError { get; set; }
 
-    [Option("non-shipping", HelpText = "Include non-shipping assets.")]
     public bool IncludeNonShipping { get; set; }
 
-    [Option("overwrite", HelpText = "Overwrite existing files at the destination.")]
     public bool Overwrite { get; set; }
 
-    [Option("dry-run", HelpText = "Do not actually download files, but print what we would do.")]
     public bool DryRun { get; set; }
 
-    [Option("include-toolset", HelpText = "Include toolset dependencies.")]
     public bool IncludeToolset { get; set; }
 
-    [Option("channel", HelpText = "Download the latest from this channel. Matched on substring.")]
     public string Channel { get; set; }
 
-    [Option("no-workarounds", HelpText = "Do not allow workarounds when gathering the drop.")]
     public bool NoWorkarounds { get; set; }
 
-    [Option("skip-existing", HelpText = "Skip files that already exist at the destination.")]
     public bool SkipExisting { get; set; }
 
-    [Option("include-released", HelpText = "Include builds that are marked as released")]
     public bool IncludeReleased { get; set; }
 
-    [Option("separated", HelpText = "Also download files to their repo separated locations")]
     public bool Separated { get; set; }
 
-    [Option("latest-location", HelpText = "Download assets from their latest known location.")]
     public bool LatestLocation { get; set; }
 
-    [Option("sas-suffixes", Separator = ',', HelpText = "List of potential uri suffixes that can be used if anonymous " +
-                                                        "access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.")]
     [RedactFromLogging]
     public IEnumerable<string> SASSuffixes { get; set; }
 
-    [Option("use-azure-credential-for-blobs", HelpText = "Use AzCliCredential to acquire token for downloading assets from Blob storages")]
     public bool UseAzureCredentialForBlobs { get; set; }
 
-    [Option("always-download-asset-filters", HelpText = "Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.")]
     public string AlwaysDownloadAssetPatterns { get; set; } = "";
 
-    [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
     public string AssetFilter { get; set; }
+
+    protected override void Configure()
+    {
+        AddSeparatedIntList(
+            ',',
+            "--id",
+            "BAR ID(s) of the root build(s) that we want to gather. comma separated.",
+            value => RootBuildIds = value,
+            alias: "-i");
+        Add<string>("--repo", "-r", "Gather a build drop for a build of this repo. Requires --commit or --channel.", value => RepoUri = value);
+        Add<string>("--commit", "-c", "Commit to gather a drop for.", value => Commit = value);
+        Add<string>("--output-dir", "-o", "Output directory to place build drop.", value => OutputDirectory = value, required: true);
+        Add<bool>("--use-relative-paths", "If true, make all paths in the resultant manifest relative to the value of output-dir", value => UseRelativePathsInManifest = value, defaultValue: () => false);
+        Add<int>("--max-downloads", "Maximum concurrent downloads.", value => MaxConcurrentDownloads = value, defaultValue: () => 4);
+        Add<int>("--download-timeout", "Timeout in seconds for downloading each asset.", value => AssetDownloadTimeoutInSeconds = value, defaultValue: () => 400);
+        Add<bool>("--full", "-f", "Gather the full drop (build and all input builds).", value => Transitive = value);
+        Add<string>("--release-name", "Name of release to use when generating release json.", value => ReleaseName = value, defaultValue: () => "3.0.0-previewN");
+        Add<bool>("--continue-on-error", "Continue on error rather than halting.", value => ContinueOnError = value);
+        Add<bool>("--non-shipping", "Include non-shipping assets.", value => IncludeNonShipping = value);
+        Add<bool>("--overwrite", "Overwrite existing files at the destination.", value => Overwrite = value);
+        Add<bool>("--dry-run", "Do not actually download files, but print what we would do.", value => DryRun = value);
+        Add<bool>("--include-toolset", "Include toolset dependencies.", value => IncludeToolset = value);
+        Add<string>("--channel", "Download the latest from this channel. Matched on substring.", value => Channel = value);
+        Add<bool>("--no-workarounds", "Do not allow workarounds when gathering the drop.", value => NoWorkarounds = value);
+        Add<bool>("--skip-existing", "Skip files that already exist at the destination.", value => SkipExisting = value);
+        Add<bool>("--include-released", "Include builds that are marked as released", value => IncludeReleased = value);
+        Add<bool>("--separated", "Also download files to their repo separated locations", value => Separated = value);
+        Add<bool>("--latest-location", "Download assets from their latest known location.", value => LatestLocation = value);
+        AddSeparatedList(
+            ',',
+            "--sas-suffixes",
+            "List of potential uri suffixes that can be used if anonymous " +
+            "access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.",
+            value => SASSuffixes = value);
+        Add<bool>("--use-azure-credential-for-blobs", "Use AzCliCredential to acquire token for downloading assets from Blob storages", value => UseAzureCredentialForBlobs = value);
+        Add<string>("--always-download-asset-filters", "Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.", value => AlwaysDownloadAssetPatterns = value);
+        Add<string>("--asset-filter", "Only download assets matching the given regex filter", value => AssetFilter = value);
+        base.Configure();
+    }
 }

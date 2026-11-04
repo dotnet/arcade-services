@@ -467,13 +467,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
             foreach (var group in newDependencyGroups)
             {
                 DependencyUpdateSummary representative = group.First();
-                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
-                string? diffLink = GetLinkForDependencyItem(
-                    repository,
-                    representative.FromCommitSha,
-                    representative.ToCommitSha);
+                string version = await FormatDependencyVersionChangeAsync(representative, builds);
                 
-                stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
+                stringBuilder.AppendLine($"- Added {version}");
                 foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
                 {
                     stringBuilder.AppendLine($"  - {dependency.DependencyName}");
@@ -505,13 +501,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
             foreach (var group in updatedDependencyGroups)
             {
                 DependencyUpdateSummary representative = group.First();
-                string repository = (await GetProducingBuildAsync(representative, builds)).GetRepository();
-                string? diffLink = GetLinkForDependencyItem(
-                    repository,
-                    representative.FromCommitSha,
-                    representative.ToCommitSha);
+                string versionChange = await FormatDependencyVersionChangeAsync(representative, builds);
                 
-                stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
+                stringBuilder.AppendLine($"- From {versionChange}");
                 foreach (DependencyUpdateSummary dependency in group.OrderBy(dep => dep.DependencyName))
                 {
                     stringBuilder.AppendLine($"  - {dependency.DependencyName}");
@@ -521,7 +513,27 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return stringBuilder.ToString();
     }
 
-    private async Task<BuildDTO> GetProducingBuildAsync(
+    private async Task<string> FormatDependencyVersionChangeAsync(
+        DependencyUpdateSummary dependency,
+        Dictionary<int, BuildDTO> builds)
+    {
+        BuildDTO? producingBuild = await TryGetProducingBuildAsync(dependency, builds);
+        string? diffLink = producingBuild is null
+            ? null
+            : GetLinkForDependencyItem(
+                producingBuild.GetRepository(),
+                dependency.FromCommitSha,
+                dependency.ToCommitSha);
+        string versions = string.IsNullOrEmpty(dependency.FromVersion)
+            ? $"{dependency.ToVersion}"
+            : $"{dependency.FromVersion} to {dependency.ToVersion}";
+
+        return diffLink is null
+            ? $"{versions} (commit link unavailable)"
+            : $"[{versions}]({diffLink})";
+    }
+
+    private async Task<BuildDTO?> TryGetProducingBuildAsync(
         DependencyUpdateSummary dependency,
         Dictionary<int, BuildDTO> builds)
     {
@@ -544,17 +556,20 @@ internal class PullRequestBuilder : IPullRequestBuilder
             BuildDTO candidateBuild = await _barClient.GetBuildAsync(buildId)
                 ?? throw new InvalidOperationException(
                     $"Could not find build '{buildId}' for asset '{dependency.DependencyName}'.");
-            builds.Add(candidateBuild.Id, candidateBuild);
-
             if (candidateBuild.Commit == dependency.ToCommitSha)
             {
+                builds.Add(candidateBuild.Id, candidateBuild);
                 return candidateBuild;
             }
         }
 
-        throw new InvalidOperationException(
-            $"Could not find the build that produced asset '{dependency.DependencyName}' " +
-            $"version '{dependency.ToVersion}' at commit '{dependency.ToCommitSha}'.");
+        _logger.LogWarning(
+            "Could not find the build that produced asset '{DependencyName}' version '{Version}' at commit '{CommitSha}'. " +
+            "Omitting the dependency commit link from the PR description.",
+            dependency.DependencyName,
+            dependency.ToVersion,
+            dependency.ToCommitSha);
+        return null;
     }
 
     private static bool BuildContainsDependency(BuildDTO build, DependencyUpdateSummary dependency) =>

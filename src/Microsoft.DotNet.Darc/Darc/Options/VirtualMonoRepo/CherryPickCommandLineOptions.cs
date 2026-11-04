@@ -1,21 +1,28 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("cherry-pick", HelpText = "Cherry-picks a single commit from a repository to/from the VMR. " +
-                                "Must be called from the VMR directory or from the repository folder.")]
 internal class CherryPickCommandLineOptions : VmrCommandLineOptions<CherryPickOperation>
 {
-    [Option("source", Required = true, HelpText = "Path to the source repository folder")]
+    public override string Verb => "cherry-pick";
+
+    public override string VerbDescription => "Cherry-picks a single commit from a repository to/from the VMR. " +
+                                              "Must be called from the VMR directory or from the repository folder.";
+
     public string Source { get; set; } = string.Empty;
 
-    [Option("commit", Required = true, HelpText = "Commit SHA to cherry-pick")]
     public string Commit { get; set; } = string.Empty;
+
+    protected override void Configure()
+    {
+        Add<string>("--source", "Path to the source repository folder", value => Source = value, required: true);
+        Add<string>("--commit", "Commit SHA to cherry-pick", value => Commit = value, required: true);
+        base.Configure();
+    }
 
     protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

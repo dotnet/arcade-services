@@ -22,6 +22,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly BuildAssetRegistryContext _context;
     private readonly DarcRemoteMemoryCache _cache;
+    private readonly ICache _responseCache;
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IServiceProvider _serviceProvider;
@@ -35,7 +36,8 @@ public class RemoteFactory : IRemoteFactory
         OperationManager operations,
         IProcessManager processManager,
         ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        ICache responseCache)
     {
         _operations = operations;
         _processManager = processManager;
@@ -45,6 +47,7 @@ public class RemoteFactory : IRemoteFactory
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
         _serviceProvider = serviceProvider;
+        _responseCache = responseCache;
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -88,7 +91,9 @@ public class RemoteFactory : IRemoteFactory
                     new GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
                     _loggerFactory.CreateLogger<GitHubClient>(),
-                    _cache.Cache),
+                    temporaryRepositoryPath: null,
+                    _cache.Cache,
+                    _responseCache),
 
             GitRepoType.AzureDevOps => new AzureDevOpsClient(
                 _azdoTokenProvider,

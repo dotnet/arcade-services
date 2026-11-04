@@ -3,20 +3,28 @@
 
 using System.Collections.Generic;
 using System.IO;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("backflow", HelpText = "Flows source code from the current commit of a locally checked out VMR " +
-                             "into a target local repository. Must be called from the VMR directory.")]
 internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>
 {
-    [Value(0,
-        Required = true,
-        MetaName = "Target repo path",
-        HelpText = "Path to the local repository on disk to flow the current VMR commit to")]
+    public override string Verb => "backflow";
+
+    public override string VerbDescription => "Flows source code from the current commit of a locally checked out VMR " +
+                                              "into a target local repository. Must be called from the VMR directory.";
+
     public string Repository { get; set; }
 
     public override IEnumerable<string> Repositories => [Path.GetFileName(Repository) + ":" + Repository];
+
+    protected override void Configure()
+    {
+        AddValue(
+            "Target repo path",
+            "Path to the local repository on disk to flow the current VMR commit to",
+            true,
+            value => Repository = value);
+        base.Configure();
+    }
 }

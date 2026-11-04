@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -15,8 +14,13 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> where T : Operation
 {
-    [Option("vmr", HelpText = "Path to the VMR; defaults to nearest git root above the current working directory.")]
     public string VmrPath { get; set; } = Environment.CurrentDirectory;
+
+    protected override void Configure()
+    {
+        Add<string>("--vmr", "Path to the VMR; defaults to nearest git root above the current working directory.", value => VmrPath = value);
+        base.Configure();
+    }
 
     protected void RegisterVmrServices(IServiceCollection services, string? tmpPath)
     {

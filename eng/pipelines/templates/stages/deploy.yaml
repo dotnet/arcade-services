@@ -82,10 +82,6 @@ stages:
       - input: pipelineArtifact
         artifactName: ProductConstructionService.Cli
         targetPath: $(Pipeline.Workspace)/ProductConstructionService.Cli
-      - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        - input: pipelineArtifact
-          artifactName: AssetManifests
-          targetPath: $(Pipeline.Workspace)/AssetManifests
     ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       environment: Production
     ${{ else }}:
@@ -146,8 +142,7 @@ stages:
                 displayName: Get GitHub App token for dotnet/arcade-services
 
             - powershell: |
-                $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
-                $xml = [xml](Get-Content $xmlPaths[0].FullName)
+                $xml = [xml](Get-Content "$(Pipeline.Workspace)/ProductConstructionService.Cli/AssetManifest.xml" -Raw)
                 $releaseVersion = $xml.Build.Package[0].Version
                 gh release create "v$(Build.BuildNumber)-$releaseVersion" `
                   --generate-notes `

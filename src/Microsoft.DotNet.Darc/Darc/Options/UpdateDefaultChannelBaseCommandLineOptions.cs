@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -16,15 +15,20 @@ internal interface IUpdateDefaultChannelBaseCommandLineOptions : ICommandLineOpt
 
 internal abstract class UpdateDefaultChannelBaseCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T>, IUpdateDefaultChannelBaseCommandLineOptions where T : Operation
 {
-    [Option("id", Default = -1, HelpText = "Existing default channel id")]
     public int Id { get; set; }
 
-    [Option("channel", HelpText = "Existing default channel association target channel name.")]
     public string Channel { get; set; }
 
-    [Option("branch", HelpText = "Existing default channel association source branch name.")]
     public string Branch { get; set; }
 
-    [Option("repo", HelpText = "Existing default channel association source repository name.")]
     public string Repository { get; set; }
+
+    protected override void Configure()
+    {
+        Add<int>("--id", "Existing default channel id", value => Id = value, defaultValue: () => -1);
+        Add<string>("--channel", "Existing default channel association target channel name.", value => Channel = value);
+        Add<string>("--branch", "Existing default channel association source branch name.", value => Branch = value);
+        Add<string>("--repo", "Existing default channel association source repository name.", value => Repository = value);
+        base.Configure();
+    }
 }

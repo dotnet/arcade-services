@@ -12,6 +12,13 @@ public class Constants
 {
     public const string SettingsFileName = "settings";
     public const int ErrorCode = 42;
+
+    /// <summary>
+    /// Exit code reported for invalid command line input. System.CommandLine returns the same code for
+    /// parse errors, so darc reports a rejected argument identically no matter where it was detected.
+    /// </summary>
+    public const int CommandLineErrorCode = 1;
+
     public const int SuccessCode = 0;
     public const int MaxPopupTries = 3;
     public const string DefaultDarcClonesDirectoryName = "darc-clones";
