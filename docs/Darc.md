@@ -1188,6 +1188,9 @@ darc set-repository-policies `
 
 All darc command have a `--help` option that lists and describes all of their parameters
 
+`darc help` lists every command, and `darc help <command>` (e.g. `darc help vmr backflow`) is equivalent to
+`darc <command> --help`. `darc version` and `darc --version` print the version of the darc client.
+
 ### **Configuration Management Commands**
 
 Several darc commands manage configuration through a dedicated configuration repository. These commands use a standardized workflow to ensure changes are tracked, reviewed, and safely applied.
