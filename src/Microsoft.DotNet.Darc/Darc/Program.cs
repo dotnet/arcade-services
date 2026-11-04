@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -69,6 +70,8 @@ internal static class Program
             HelpName = DarcCommandName,
         };
 
+        root.Options.OfType<VersionOption>().Single().Action = new DarcVersionAction();
+
         foreach (CommandLineOptions options in GetOptions())
         {
             root.Add(CreateCommand(options));
@@ -123,6 +126,23 @@ internal static class Program
             .Invoke(parseResult.InvocationConfiguration));
 
         return version;
+    }
+
+    private sealed class DarcVersionAction : SynchronousCommandLineAction
+    {
+        public override bool ClearsParseErrors => true;
+
+        public override int Invoke(ParseResult parseResult)
+        {
+            Assembly assembly = typeof(Program).Assembly;
+            AssemblyName assemblyName = assembly.GetName();
+            string title = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? assemblyName.Name;
+            string version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                ?? assemblyName.Version?.ToString();
+
+            parseResult.InvocationConfiguration.Output.WriteLine($"{title} {version}");
+            return 0;
+        }
     }
 
     internal static Command CreateCommand(CommandLineOptions options)
