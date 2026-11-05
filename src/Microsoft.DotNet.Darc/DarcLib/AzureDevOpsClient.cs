@@ -134,15 +134,15 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             try
             {
-                return await GetFileContentsAtVersionAsync(
+                JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
                     accountName,
                     projectName,
-                    repoName,
-                    filePath,
-                    branchOrCommit,
-                    versionType,
+                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
+                    _logger,
                     // Don't log failures because trying several version types is expected here.
                     logFailure: false);
+                return content["content"].ToString();
             }
             catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
@@ -152,25 +152,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
 
         throw new DependencyFileNotFoundException(filePath, $"{repoName}", branchOrCommit, lastException);
-    }
-
-    private async Task<string> GetFileContentsAtVersionAsync(
-        string accountName,
-        string projectName,
-        string repoName,
-        string filePath,
-        string version,
-        string versionType,
-        bool logFailure = true)
-    {
-        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
-            HttpMethod.Get,
-            accountName,
-            projectName,
-            $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={version}&includeContent=true",
-            _logger,
-            logFailure: logFailure);
-        return content["content"].ToString();
     }
 
     /// <summary>
@@ -723,13 +704,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 {
                     // This tree was resolved from a commit, so request content as a commit directly instead
                     // of probing branch, commit, and tag for every file.
-                    string fileContent = await GetFileContentsAtVersionAsync(
+                    JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+                        HttpMethod.Get,
                         accountName,
                         projectName,
-                        repoName,
-                        filePath,
-                        commit,
-                        CommitVersionType);
+                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={CommitVersionType}&version={commit}&includeContent=true",
+                        _logger);
+                    string fileContent = content["content"].ToString();
                     string mode = treeEntry["mode"]?.ToString()
                         ?? throw new DarcException($"Azure DevOps returned no Git mode for '{filePath}' at commit '{commit}'");
                     var gitCommit = new GitFile(filePath, fileContent, ContentEncoding.Utf8, mode);
