@@ -146,6 +146,17 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         throw new DependencyFileNotFoundException(filePath, $"{repoName}", gitRef, lastException);
     }
 
+    /// <summary>
+    ///     Retrieve the contents of a text file in a repo on a specific branch, commit, or tag.
+    /// </summary>
+    /// <param name="accountName">Azure DevOps account</param>
+    /// <param name="projectName">Azure DevOps project</param>
+    /// <param name="repoName">Azure DevOps repo</param>
+    /// <param name="filePath">Path to file</param>
+    /// <param name="gitRef">Branch, commit, or tag</param>
+    /// <param name="versionType">Azure DevOps version type</param>
+    /// <param name="logFailure">Whether to log a failed request</param>
+    /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
         string projectName,
