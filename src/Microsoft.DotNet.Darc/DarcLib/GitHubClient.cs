@@ -723,16 +723,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         // arcade update sent to each repository daily per subscription. This is inefficient, as it means we
         // request each file N times, where N is the number of subscriptions. The number of files (M),
         // is non-trivial, so reducing N*M to M is vast improvement.
-        // Use a combination of (treeItem.Path, treeItem.Sha as the key) as items with identical contents but
-        // different paths will have the same SHA. I think it is overkill to hash the repo and owner into
-        // the key.
+        // Use a combination of treeItem.Path, treeItem.Sha, and treeItem.Mode as the key. Items with identical
+        // contents but different paths or modes have the same SHA. I think it is overkill to hash the repo and
+        // owner into the key.
 
         if (Cache != null)
         {
             // We're adding the full path here because the eng/common files have the same relative path in the VMR
             // and in product repos relative to the eng/common folder, and we don't want to get bad cache hits.
             // Their full paths are different so this mitigates the problem
-            return await Cache.GetOrCreateAsync((path, treeItem.Path, treeItem.Sha), async (entry) =>
+            return await Cache.GetOrCreateAsync((path, treeItem.Path, treeItem.Sha, treeItem.Mode), async (entry) =>
             {
                 GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 

@@ -703,7 +703,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 string relativePath = treeEntry["relativePath"]?.ToString()
                     ?? throw new DarcException($"Azure DevOps returned a Git tree entry without a relative path under '{path}'");
-                string filePath = $"{normalizedPath}/{relativePath}";
+                string filePath = string.IsNullOrEmpty(normalizedPath)
+                    ? relativePath
+                    : $"{normalizedPath}/{relativePath}";
 
                 if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(filePath))
                 {

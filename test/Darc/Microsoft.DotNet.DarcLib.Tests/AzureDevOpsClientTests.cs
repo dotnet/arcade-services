@@ -110,12 +110,16 @@ public class AzureDevOpsClientTests
         checks.Should().Contain(check => check.Name == "scenario-test.batching-blocker" && check.Status == CheckState.Error);
     }
 
-    [Test]
-    public async Task GetFilesAtCommitAsync_FilesWithModes_FetchesContentsDirectlyByCommit()
+    [TestCase("eng/common", "eng/common/", TestName = "GetFilesAtCommitAsync_Subdirectory_ReturnsRepositoryRelativePaths")]
+    [TestCase("/", "", TestName = "GetFilesAtCommitAsync_RepositoryRoot_ReturnsRepositoryRelativePaths")]
+    public async Task GetFilesAtCommitAsync_FilesWithModes_ReturnsRepositoryRelativePaths(
+        string path,
+        string expectedPathPrefix)
     {
         // Arrange
         const string commit = "commit-sha";
-        const string path = "eng/common";
+        string buildFilePath = $"{expectedPathPrefix}build.sh";
+        string settingsFilePath = $"{expectedPathPrefix}settings.txt";
         var client = CreateClient(new JArray());
         SetupResponse(
             client,
@@ -144,12 +148,12 @@ public class AzureDevOpsClientTests
             null);
         SetupResponse(
             client,
-            $"_apis/git/repositories/test/items?path={path}/build.sh&versionType=commit&version={commit}&includeContent=true",
+            $"_apis/git/repositories/test/items?path={buildFilePath}&versionType=commit&version={commit}&includeContent=true",
             new JObject { ["content"] = "#!/usr/bin/env bash" },
             null);
         SetupResponse(
             client,
-            $"_apis/git/repositories/test/items?path={path}/settings.txt&versionType=commit&version={commit}&includeContent=true",
+            $"_apis/git/repositories/test/items?path={settingsFilePath}&versionType=commit&version={commit}&includeContent=true",
             new JObject { ["content"] = "settings" },
             null);
 
@@ -158,9 +162,9 @@ public class AzureDevOpsClientTests
 
         // Assert
         files.Should().HaveCount(2);
-        files.Should().ContainSingle(file => file.FilePath == $"{path}/build.sh")
+        files.Should().ContainSingle(file => file.FilePath == buildFilePath)
             .Which.Mode.Should().Be("100755");
-        files.Should().ContainSingle(file => file.FilePath == $"{path}/settings.txt")
+        files.Should().ContainSingle(file => file.FilePath == settingsFilePath)
             .Which.Mode.Should().Be("100644");
     }
 
