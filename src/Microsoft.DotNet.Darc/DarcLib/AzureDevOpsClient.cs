@@ -718,13 +718,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
                 if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(filePath))
                 {
-                    string fileContent = await GetFileContentsAsync(
-                        accountName,
-                        projectName,
-                        repoName,
-                        filePath,
-                        commit,
-                        versionType: "commit");
+                    string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, filePath, commit, versionType: "commit");
                     string mode = treeEntry["mode"]?.ToString()
                         ?? throw new DarcException($"Azure DevOps returned no Git mode for '{filePath}' at commit '{commit}'");
                     var gitCommit = new GitFile(filePath, fileContent, ContentEncoding.Utf8, mode);
