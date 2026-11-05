@@ -6,6 +6,7 @@ using System.CommandLine;
 using System.CommandLine.Help;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Options;
@@ -377,6 +378,71 @@ public class CommandLineParsingTests
         // A list is as greedy as a scalar, so it must not swallow an option the command recognises.
         ParseNestedResultOf(new BackflowCommandLineOptions(), "vmr", "backflow", ".", "--additional-remote", "--help")
             .Action.Should().BeOfType<HelpAction>();
+    }
+
+    [TestCase("--version")]
+    [TestCase("version")]
+    public void VersionOutputIncludesTheDarcTitleAndInformationalVersion(string argument)
+    {
+        string version = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        var result = Program.Parse(Program.BuildCommandLine(), argument);
+        StringWriter output = new();
+        StringWriter error = new();
+
+        int exitCode = result.Invoke(new InvocationConfiguration { Output = output, Error = error });
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Be($"Microsoft.DotNet.Darc {version}{Environment.NewLine}");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Test]
+    public void TheVersionOptionClearsUnrelatedParseErrors()
+    {
+        var root = Program.BuildCommandLine();
+        var result = Program.Parse(root, "--version", "--unknown-option");
+        StringWriter output = new();
+        StringWriter error = new();
+
+        int exitCode = result.Invoke(new InvocationConfiguration { Output = output, Error = error });
+
+        result.Errors.Should().BeEmpty();
+        exitCode.Should().Be(0);
+        output.ToString().Should().Be(Invoke("--version"));
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Test]
+    public void TheHelpVerbPrintsWhatTheHelpOptionPrints()
+    {
+        // CommandLineParser generated a 'help [command]' verb; System.CommandLine only offers '--help'.
+        var root = Invoke("help");
+
+        root.Should().Contain("darc [command] [options]");
+        root.Should().Be(Invoke("--help"));
+
+        Invoke("help", "get-asset").Should().Be(Invoke("get-asset", "--help"));
+        Invoke("help", "vmr", "backflow").Should().Be(Invoke("vmr", "backflow", "--help"));
+    }
+
+    [Test]
+    public void TheHelpVerbFallsBackToTheRootHelpForAnUnknownCommand()
+    {
+        Invoke("help", "not-a-darc-command").Should().Be(Invoke("--help"));
+    }
+
+    private static string Invoke(params string[] args)
+    {
+        StringWriter output = new();
+
+        Program.Parse(Program.BuildCommandLine(), args).Invoke(new InvocationConfiguration
+        {
+            Output = output,
+            Error = output,
+        });
+
+        return output.ToString();
     }
 
     private static T Parse<T>(T options, params string[] args) where T : CommandLineOptions

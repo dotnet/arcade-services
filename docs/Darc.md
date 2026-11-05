@@ -122,7 +122,6 @@ need to first restart your command window.
 ```
 darc --version
 Microsoft.DotNet.Darc 1.1.0-beta.24306.2
-© Microsoft Corporation. All rights reserved.
 ```
 
 If you get an error saying 'darc' is not recognized as an internal or external command, the tool may not be in your PATH. You can verify the installation by checking the global tools list:
@@ -1187,6 +1186,9 @@ darc set-repository-policies `
 ### **`Parameters`**
 
 All darc command have a `--help` option that lists and describes all of their parameters
+
+`darc help` lists every command, and `darc help <command>` (e.g. `darc help vmr backflow`) is equivalent to
+`darc <command> --help`. `darc version` and `darc --version` print the version of the darc client.
 
 ### **Configuration Management Commands**
 
