@@ -140,7 +140,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     projectName,
                     $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
                     _logger,
-                    // Don't log failures because trying several version types is expected here.
+                    // Suppress failures while probing because the request is expected to fail until the matching
+                    // version type is tried. Log failures when the caller supplied a specific version type.
                     logFailure: versionType != null);
                 return content["content"].ToString();
             }
