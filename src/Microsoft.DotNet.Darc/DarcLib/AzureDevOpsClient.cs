@@ -131,7 +131,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         HttpRequestException lastException = null;
         foreach (var candidateVersionType in VersionTypes)
         {
-            if (candidateVersionType != (versionType ?? candidateVersionType))
+            if (versionType != null && candidateVersionType != versionType)
             {
                 continue;
             }
