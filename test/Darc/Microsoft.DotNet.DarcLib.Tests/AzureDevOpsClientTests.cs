@@ -246,8 +246,8 @@ public class AzureDevOpsClientTests
         return client;
     }
 
-    private static void SetupResponse(Mock<AzureDevOpsClient> client, string path, JObject response, string version, bool logFailure = true)
+    private static void SetupResponse(Mock<AzureDevOpsClient> client, string path, JObject response, string version)
         => client.Setup(c => c.ExecuteAzureDevOpsAPIRequestAsync(
-            HttpMethod.Get, "dnceng", It.IsAny<string>(), path, It.IsAny<ILogger>(), null, version, logFailure, null, 15))
+            HttpMethod.Get, "dnceng", It.IsAny<string>(), path, It.IsAny<ILogger>(), null, version, true, null, 15))
             .ReturnsAsync(response);
 }
