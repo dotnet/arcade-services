@@ -669,22 +669,37 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             path = path.Substring(2);
         }
 
-        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+        JObject rootItem = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
-            $"_apis/git/repositories/{repoName}/items?scopePath={path}&version={commit}&includeContent=true&versionType=commit&recursionLevel=full",
+            $"_apis/git/repositories/{repoName}/items?path={path}&version={commit}&versionType=commit",
             _logger);
-        List<AzureDevOpsItem> items = JsonConvert.DeserializeObject<List<AzureDevOpsItem>>(Convert.ToString(content["value"]));
 
-        foreach (AzureDevOpsItem item in items)
+        string treeObjectId = rootItem["objectId"]?.ToString()
+            ?? throw new DarcException($"Azure DevOps did not return a Git object ID for '{path}' at commit '{commit}'");
+        JObject tree = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/trees/{treeObjectId}?recursive=true",
+            _logger);
+
+        string normalizedPath = path.Trim('/');
+        foreach (JToken treeEntry in tree["treeEntries"] ?? new JArray())
         {
-            if (!item.IsFolder)
+            if (string.Equals(treeEntry["gitObjectType"]?.ToString(), "blob", StringComparison.OrdinalIgnoreCase))
             {
-                if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(item.Path))
+                string relativePath = treeEntry["relativePath"]?.ToString()
+                    ?? throw new DarcException($"Azure DevOps returned a Git tree entry without a relative path under '{path}'");
+                string filePath = $"{normalizedPath}/{relativePath}";
+
+                if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(filePath))
                 {
-                    string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, item.Path, commit);
-                    var gitCommit = new GitFile(item.Path.TrimStart('/'), fileContent);
+                    string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, filePath, commit);
+                    string mode = treeEntry["mode"]?.ToString()
+                        ?? throw new DarcException($"Azure DevOps returned no Git mode for '{filePath}' at commit '{commit}'");
+                    var gitCommit = new GitFile(filePath, fileContent, ContentEncoding.Utf8, mode);
                     files.Add(gitCommit);
                 }
             }
