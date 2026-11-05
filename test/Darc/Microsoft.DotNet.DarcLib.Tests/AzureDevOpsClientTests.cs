@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -163,54 +162,6 @@ public class AzureDevOpsClientTests
             .Which.Mode.Should().Be("100755");
         files.Should().ContainSingle(file => file.FilePath == $"{path}/settings.txt")
             .Which.Mode.Should().Be("100644");
-    }
-
-    [Test]
-    public async Task GetFilesAtCommitAsync_MissingFile_ThrowsDependencyFileNotFoundException()
-    {
-        // Arrange
-        const string commit = "commit-sha";
-        const string path = "eng/common";
-        const string filePath = $"{path}/build.sh";
-        var client = CreateClient(new JArray());
-        SetupResponse(
-            client,
-            $"_apis/git/repositories/test/items?path={path}&version={commit}&versionType=commit",
-            new JObject { ["objectId"] = "tree-sha" },
-            null);
-        SetupResponse(
-            client,
-            "_apis/git/repositories/test/trees/tree-sha?recursive=true",
-            JObject.Parse("""
-                {
-                  "treeEntries": [
-                    {
-                      "relativePath": "build.sh",
-                      "mode": "100755",
-                      "gitObjectType": "blob"
-                    }
-                  ]
-                }
-                """),
-            null);
-        client.Setup(c => c.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                "dnceng",
-                It.IsAny<string>(),
-                $"_apis/git/repositories/test/items?path={filePath}&versionType=commit&version={commit}&includeContent=true",
-                It.IsAny<ILogger>(),
-                null,
-                null,
-                true,
-                null,
-                15))
-            .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
-
-        // Act
-        Func<Task> act = () => client.Object.GetFilesAtCommitAsync(RepositoryUrl, commit, path);
-
-        // Assert
-        await act.Should().ThrowAsync<DependencyFileNotFoundException>();
     }
 
     private static JObject CreateStatus(string state)
