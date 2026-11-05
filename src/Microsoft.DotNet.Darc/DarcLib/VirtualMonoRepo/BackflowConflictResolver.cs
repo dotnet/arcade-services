@@ -419,6 +419,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     true);
 
                 await targetRepo.StageAsync([Constants.CommonScriptFilesPath], cancellationToken);
+                // CopyDirectory may lose executable bits, so restore modes for this copied subtree.
                 await ApplyEngCommonFileModesAsync(targetRepo, cancellationToken);
             }
         }
