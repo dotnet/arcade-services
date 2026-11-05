@@ -678,6 +678,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         string treeObjectId = rootItem["objectId"]?.ToString()
             ?? throw new DarcException($"Azure DevOps did not return a Git object ID for '{path}' at commit '{commit}'");
+
+        // The Items API does not expose Git modes, so use the tree to preserve executable bits.
         JObject tree = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
@@ -1190,6 +1192,10 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     ///     Commit or update a set of files to a repo using the Azure DevOps Git API without cloning.
     ///     This uses the pushes API to create commits directly.
     /// </summary>
+    /// <remarks>
+    ///     The Azure DevOps Pushes API does not expose Git file modes. Callers that need to add an
+    ///     executable file or change a file's executable state must use <see cref="CommitFilesAsync"/>.
+    /// </remarks>
     public async Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
