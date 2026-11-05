@@ -129,9 +129,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        IEnumerable<string> versionTypes = versionType == null ? VersionTypes : [versionType];
-        foreach (var candidateVersionType in versionTypes)
+        foreach (var candidateVersionType in VersionTypes)
         {
+            if (versionType != null && candidateVersionType != versionType)
+            {
+                continue;
+            }
+
             try
             {
                 JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
