@@ -111,7 +111,7 @@ public class AzureDevOpsClientTests
     }
 
     [Test]
-    public async Task GetFilesAtCommitAsync_ExecutableAndNonExecutableFiles_PreservesGitModes()
+    public async Task GetFilesAtCommitAsync_FilesWithModes_FetchesContentsDirectlyByCommit()
     {
         // Arrange
         const string commit = "commit-sha";
@@ -144,16 +144,14 @@ public class AzureDevOpsClientTests
             null);
         SetupResponse(
             client,
-            $"_apis/git/repositories/test/items?path={path}/build.sh&versionType=branch&version={commit}&includeContent=true",
+            $"_apis/git/repositories/test/items?path={path}/build.sh&versionType=commit&version={commit}&includeContent=true",
             new JObject { ["content"] = "#!/usr/bin/env bash" },
-            null,
-            logFailure: false);
+            null);
         SetupResponse(
             client,
-            $"_apis/git/repositories/test/items?path={path}/settings.txt&versionType=branch&version={commit}&includeContent=true",
+            $"_apis/git/repositories/test/items?path={path}/settings.txt&versionType=commit&version={commit}&includeContent=true",
             new JObject { ["content"] = "settings" },
-            null,
-            logFailure: false);
+            null);
 
         // Act
         var files = await client.Object.GetFilesAtCommitAsync(RepositoryUrl, commit, path);
@@ -164,6 +162,18 @@ public class AzureDevOpsClientTests
             .Which.Mode.Should().Be("100755");
         files.Should().ContainSingle(file => file.FilePath == $"{path}/settings.txt")
             .Which.Mode.Should().Be("100644");
+        client.Verify(c => c.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                "dnceng",
+                It.IsAny<string>(),
+                It.Is<string>(requestPath => requestPath.Contains($"versionType=branch&version={commit}")),
+                It.IsAny<ILogger>(),
+                null,
+                null,
+                It.IsAny<bool>(),
+                null,
+                15),
+            Times.Never);
     }
 
     private static JObject CreateStatus(string state)
