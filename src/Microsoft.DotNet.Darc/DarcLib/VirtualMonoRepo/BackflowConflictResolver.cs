@@ -448,6 +448,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Dictionary<string, string> targetModes = ParseGitFileModes(targetModesResult.StandardOutput, targetRoot);
         foreach ((string relativePath, string mode) in sourceModes)
         {
+            // The target index already has the desired mode.
             if (targetModes.TryGetValue(relativePath, out string? targetMode) && targetMode == mode)
             {
                 continue;
