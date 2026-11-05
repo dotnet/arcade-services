@@ -343,6 +343,7 @@ public class BackflowConflictResolverTests
     {
         // Arrange
         string sourceRoot = VmrInfo.ArcadeRepoDir / DarcLib.Constants.CommonScriptFilesPath;
+        string targetRoot = DarcLib.Constants.CommonScriptFilesPath;
         _localVmr
             .Setup(repo => repo.RunGitCommandAsync(
                 It.Is<string[]>(args =>
@@ -353,6 +354,17 @@ public class BackflowConflictResolverTests
                 StandardOutput =
                     $"100755 executable-sha 0\t{sourceRoot}/executable.sh\0"
                     + $"100644 regular-sha 0\t{sourceRoot}/regular.sh\0",
+            });
+        _localRepo
+            .Setup(repo => repo.RunGitCommandAsync(
+                It.Is<string[]>(args =>
+                    args.SequenceEqual(new[] { "ls-files", "--stage", "-z", "--", targetRoot })),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                StandardOutput =
+                    $"100644 executable-sha 0\t{targetRoot}/executable.sh\0"
+                    + $"100755 regular-sha 0\t{targetRoot}/regular.sh\0",
             });
 
         // Act
@@ -379,6 +391,42 @@ public class BackflowConflictResolverTests
                 $"{DarcLib.Constants.CommonScriptFilesPath}/regular.sh",
             })),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task ApplyEngCommonFileModesAsync_MatchingModes_DoesNotUpdateTargetIndex()
+    {
+        // Arrange
+        string sourceRoot = VmrInfo.ArcadeRepoDir / DarcLib.Constants.CommonScriptFilesPath;
+        string targetRoot = DarcLib.Constants.CommonScriptFilesPath;
+        _localVmr
+            .Setup(repo => repo.RunGitCommandAsync(
+            It.Is<string[]>(args =>
+                args.SequenceEqual(new[] { "ls-files", "--stage", "-z", "--", sourceRoot })),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+            StandardOutput = $"100755 executable-sha 0\t{sourceRoot}/executable.sh\0",
+            });
+        _localRepo
+            .Setup(repo => repo.RunGitCommandAsync(
+            It.Is<string[]>(args =>
+                args.SequenceEqual(new[] { "ls-files", "--stage", "-z", "--", targetRoot })),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+            StandardOutput = $"100755 executable-sha 0\t{targetRoot}/executable.sh\0",
+            });
+
+        // Act
+        await _conflictResolver.ApplyEngCommonFileModesAsync(
+            _localRepo.Object,
+            CancellationToken.None);
+
+        // Assert
+        _localRepo.Verify(repo => repo.RunGitCommandAsync(
+            It.Is<string[]>(args => args.Length > 0 && args[0] == "update-index"),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]

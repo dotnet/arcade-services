@@ -438,27 +438,19 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             cancellationToken);
         sourceModesResult.ThrowIfFailed($"Failed to read Git modes under '{sourceRoot}' from the VMR");
 
-        string sourcePrefix = $"{sourceRoot}/";
-        foreach (string entry in sourceModesResult.StandardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+        var targetRoot = new UnixPath(Constants.CommonScriptFilesPath);
+        var targetModesResult = await targetRepo.RunGitCommandAsync(
+            ["ls-files", "--stage", "-z", "--", targetRoot],
+            cancellationToken);
+        targetModesResult.ThrowIfFailed($"Failed to read Git modes under '{targetRoot}' from the target repository");
+
+        Dictionary<string, string> sourceModes = ParseGitFileModes(sourceModesResult.StandardOutput, sourceRoot);
+        Dictionary<string, string> targetModes = ParseGitFileModes(targetModesResult.StandardOutput, targetRoot);
+        foreach ((string relativePath, string mode) in sourceModes)
         {
-            if (string.IsNullOrWhiteSpace(entry))
+            if (targetModes.TryGetValue(relativePath, out string? targetMode) && targetMode == mode)
             {
                 continue;
-            }
-
-            int pathSeparatorIndex = entry.IndexOf('\t');
-            int modeSeparatorIndex = entry.IndexOf(' ');
-            if (pathSeparatorIndex < 0 || modeSeparatorIndex < 0 || modeSeparatorIndex > pathSeparatorIndex)
-            {
-                throw new DarcException($"Unexpected git ls-files output for eng/common: '{entry}'");
-            }
-
-            string mode = entry[..modeSeparatorIndex];
-            string sourceFilePath = entry[(pathSeparatorIndex + 1)..];
-            if (!sourceFilePath.StartsWith(sourcePrefix, StringComparison.Ordinal))
-            {
-                throw new DarcException(
-                    $"Git returned '{sourceFilePath}' outside the expected eng/common path '{sourceRoot}'");
             }
 
             string? chmodArgument = mode switch
@@ -473,17 +465,47 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 _logger.LogWarning(
                     "File mode {fileMode} for {filePath} cannot be applied as a regular Git file mode",
                     mode,
-                    sourceFilePath);
+                    sourceRoot / relativePath);
                 continue;
             }
 
-            string targetFilePath = $"{Constants.CommonScriptFilesPath}/{sourceFilePath[sourcePrefix.Length..]}";
+            string targetFilePath = targetRoot / relativePath;
             var updateModeResult = await targetRepo.RunGitCommandAsync(
                 ["update-index", chmodArgument, "--", targetFilePath],
                 cancellationToken);
             updateModeResult.ThrowIfFailed(
                 $"Failed to apply file mode '{mode}' to '{targetFilePath}'");
         }
+    }
+
+    private static Dictionary<string, string> ParseGitFileModes(string output, UnixPath root)
+    {
+        string prefix = $"{root}/";
+        var modes = new Dictionary<string, string>();
+        foreach (string entry in output.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+            {
+                continue;
+            }
+
+            int pathSeparatorIndex = entry.IndexOf('\t');
+            int modeSeparatorIndex = entry.IndexOf(' ');
+            if (pathSeparatorIndex < 0 || modeSeparatorIndex < 0 || modeSeparatorIndex > pathSeparatorIndex)
+            {
+                throw new DarcException($"Unexpected git ls-files output for '{root}': '{entry}'");
+            }
+
+            string filePath = entry[(pathSeparatorIndex + 1)..];
+            if (!filePath.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                throw new DarcException($"Git returned '{filePath}' outside the expected path '{root}'");
+            }
+
+            modes[filePath[prefix.Length..]] = entry[..modeSeparatorIndex];
+        }
+
+        return modes;
     }
 
     /// <summary>
