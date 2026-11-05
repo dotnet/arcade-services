@@ -108,17 +108,17 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="projectName">Azure DevOps project</param>
     /// <param name="repoName">Azure DevOps repo</param>
     /// <param name="filePath">Path to file</param>
-    /// <param name="branchOrCommit">Branch, commit, or tag</param>
+    /// <param name="gitRef">Branch, commit, or tag</param>
     /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
         string projectName,
         string repoName,
         string filePath,
-        string branchOrCommit)
+        string gitRef)
     {
         _logger.LogInformation(
-            $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");
+            $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' at Git ref '{gitRef}'...");
 
         if (filePath.StartsWith("./"))
         {
@@ -138,7 +138,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
+                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={gitRef}&includeContent=true",
                     _logger,
                     // Don't log failures because trying several version types is expected here.
                     logFailure: false);
@@ -151,7 +151,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             }
         }
 
-        throw new DependencyFileNotFoundException(filePath, $"{repoName}", branchOrCommit, lastException);
+        throw new DependencyFileNotFoundException(filePath, $"{repoName}", gitRef, lastException);
     }
 
     /// <summary>
