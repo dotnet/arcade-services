@@ -122,7 +122,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        foreach (string versionType in VersionTypes)
+        foreach (var versionType in VersionTypes)
         {
             try
             {
