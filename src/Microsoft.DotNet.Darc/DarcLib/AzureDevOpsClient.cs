@@ -36,9 +36,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     private const int MaxPullRequestDescriptionLength = 4000;
 
     private const string RefsHeadsPrefix = "refs/heads/";
-    private const string BranchVersionType = "branch";
-    private const string CommitVersionType = "commit";
-    private const string TagVersionType = "tag";
 
     private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
 
@@ -99,7 +96,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
     }
 
-    private static readonly List<string> VersionTypes = [BranchVersionType, CommitVersionType, TagVersionType];
+    private static readonly List<string> VersionTypes = ["branch", "commit", "tag"];
 
     /// <summary>
     ///     Retrieve the contents of a text file in a repo on a specific branch, commit, or tag.
@@ -708,7 +705,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                         HttpMethod.Get,
                         accountName,
                         projectName,
-                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={CommitVersionType}&version={commit}&includeContent=true",
+                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType=commit&version={commit}&includeContent=true",
                         _logger);
                     string fileContent = content["content"].ToString();
                     string mode = treeEntry["mode"]?.ToString()
