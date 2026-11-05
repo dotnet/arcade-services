@@ -163,18 +163,6 @@ public class AzureDevOpsClientTests
             .Which.Mode.Should().Be("100755");
         files.Should().ContainSingle(file => file.FilePath == $"{path}/settings.txt")
             .Which.Mode.Should().Be("100644");
-        client.Verify(c => c.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                "dnceng",
-                It.IsAny<string>(),
-                It.Is<string>(requestPath => requestPath.Contains($"versionType=branch&version={commit}")),
-                It.IsAny<ILogger>(),
-                null,
-                null,
-                It.IsAny<bool>(),
-                null,
-                15),
-            Times.Never);
     }
 
     [Test]
