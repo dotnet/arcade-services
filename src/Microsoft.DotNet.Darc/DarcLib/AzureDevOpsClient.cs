@@ -106,43 +106,35 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="repoName">Azure DevOps repo</param>
     /// <param name="filePath">Path to file</param>
     /// <param name="gitRef">Branch, commit, or tag</param>
-    /// <param name="versionType">Known Azure DevOps version type, or null to probe branch, commit, and tag</param>
     /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
         string projectName,
         string repoName,
         string filePath,
-        string gitRef,
-        string versionType = null)
+        string gitRef)
     {
         _logger.LogInformation(
             $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' at Git ref '{gitRef}'...");
-
-        if (filePath.StartsWith("./"))
-        {
-            filePath = filePath.Substring(2);
-        }
 
         // The AzDO REST API currently does not transparently handle commits vs. branches vs. tags.
         // You really need to know whether you're talking about a commit or branch or tag
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        IEnumerable<string> versionTypes = versionType == null ? VersionTypes : [versionType];
-        foreach (string candidateVersionType in versionTypes)
+        foreach (string versionType in VersionTypes)
         {
             try
             {
-                JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
-                    HttpMethod.Get,
+                return await GetFileContentsAsync(
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
-                    _logger,
+                    repoName,
+                    filePath,
+                    gitRef,
+                    versionType,
                     // Don't log failures because trying several version types is expected here.
-                    logFailure: versionType != null);
-                return content["content"].ToString();
+                    logFailure: false);
             }
             catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
@@ -152,6 +144,30 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
 
         throw new DependencyFileNotFoundException(filePath, $"{repoName}", gitRef, lastException);
+    }
+
+    private async Task<string> GetFileContentsAsync(
+        string accountName,
+        string projectName,
+        string repoName,
+        string filePath,
+        string gitRef,
+        string versionType,
+        bool logFailure = true)
+    {
+        if (filePath.StartsWith("./"))
+        {
+            filePath = filePath.Substring(2);
+        }
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={gitRef}&includeContent=true",
+            _logger,
+            logFailure: logFailure);
+        return content["content"].ToString();
     }
 
     /// <summary>
