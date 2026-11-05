@@ -339,7 +339,7 @@ public class BackflowConflictResolverTests
     }
 
     [Test]
-    public async Task ApplyEngCommonFileModesAsync_ExecutableAndNonExecutableFiles_AppliesModesToTargetIndex()
+    public async Task EnsureEngCommonFileModesAsync_ExecutableAndNonExecutableFiles_AppliesModesToTargetIndex()
     {
         // Arrange
         string sourceRoot = VmrInfo.ArcadeRepoDir / DarcLib.Constants.CommonScriptFilesPath;
@@ -368,7 +368,7 @@ public class BackflowConflictResolverTests
             });
 
         // Act
-        await _conflictResolver.ApplyEngCommonFileModesAsync(
+        await _conflictResolver.EnsureEngCommonFileModesAsync(
             _localRepo.Object,
             CancellationToken.None);
 
@@ -394,7 +394,7 @@ public class BackflowConflictResolverTests
     }
 
     [Test]
-    public async Task ApplyEngCommonFileModesAsync_MatchingModes_DoesNotUpdateTargetIndex()
+    public async Task EnsureEngCommonFileModesAsync_MatchingModes_DoesNotUpdateTargetIndex()
     {
         // Arrange
         string sourceRoot = VmrInfo.ArcadeRepoDir / DarcLib.Constants.CommonScriptFilesPath;
@@ -419,7 +419,7 @@ public class BackflowConflictResolverTests
             });
 
         // Act
-        await _conflictResolver.ApplyEngCommonFileModesAsync(
+        await _conflictResolver.EnsureEngCommonFileModesAsync(
             _localRepo.Object,
             CancellationToken.None);
 

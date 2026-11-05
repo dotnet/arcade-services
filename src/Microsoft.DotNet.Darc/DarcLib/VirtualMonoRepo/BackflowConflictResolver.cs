@@ -420,14 +420,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
                 await targetRepo.StageAsync([Constants.CommonScriptFilesPath], cancellationToken);
                 // CopyDirectory may lose executable bits, so restore modes for this copied subtree.
-                await ApplyEngCommonFileModesAsync(targetRepo, cancellationToken);
+                await EnsureEngCommonFileModesAsync(targetRepo, cancellationToken);
             }
         }
 
         return (buildUpdates, !(NormalizedEquals(globalJsonBefore, updatedFiles.GlobalJson.Content) && NormalizedEquals(dotnetToolsBefore, updatedFiles.DotNetToolsJson?.Content)));
     }
 
-    internal async Task ApplyEngCommonFileModesAsync(
+    internal async Task EnsureEngCommonFileModesAsync(
         ILocalGitRepo targetRepo,
         CancellationToken cancellationToken)
     {
