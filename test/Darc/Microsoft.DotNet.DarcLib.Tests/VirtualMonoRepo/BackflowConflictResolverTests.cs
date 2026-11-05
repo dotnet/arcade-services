@@ -339,6 +339,49 @@ public class BackflowConflictResolverTests
     }
 
     [Test]
+    public async Task ApplyEngCommonFileModesAsync_ExecutableAndNonExecutableFiles_AppliesModesToTargetIndex()
+    {
+        // Arrange
+        string sourceRoot = VmrInfo.ArcadeRepoDir / DarcLib.Constants.CommonScriptFilesPath;
+        _localVmr
+            .Setup(repo => repo.RunGitCommandAsync(
+                It.Is<string[]>(args =>
+                    args.SequenceEqual(new[] { "ls-files", "--stage", "-z", "--", sourceRoot })),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                StandardOutput =
+                    $"100755 executable-sha 0\t{sourceRoot}/executable.sh\0"
+                    + $"100644 regular-sha 0\t{sourceRoot}/regular.sh\0",
+            });
+
+        // Act
+        await _conflictResolver.ApplyEngCommonFileModesAsync(
+            _localRepo.Object,
+            CancellationToken.None);
+
+        // Assert
+        _localRepo.Verify(repo => repo.RunGitCommandAsync(
+            It.Is<string[]>(args => args.SequenceEqual(new[]
+            {
+                "update-index",
+                "--chmod=+x",
+                "--",
+                $"{DarcLib.Constants.CommonScriptFilesPath}/executable.sh",
+            })),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _localRepo.Verify(repo => repo.RunGitCommandAsync(
+            It.Is<string[]>(args => args.SequenceEqual(new[]
+            {
+                "update-index",
+                "--chmod=-x",
+                "--",
+                $"{DarcLib.Constants.CommonScriptFilesPath}/regular.sh",
+            })),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
     public async Task UpdateToNonExistentDependencyBecomesAdditionTest()
     {
         var lastBackflow = new Backflow(LastVmrSha, LastRepoSha);

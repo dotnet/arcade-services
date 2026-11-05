@@ -419,10 +419,70 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     true);
 
                 await targetRepo.StageAsync([Constants.CommonScriptFilesPath], cancellationToken);
+                await ApplyEngCommonFileModesAsync(targetRepo, cancellationToken);
             }
         }
 
         return (buildUpdates, !(NormalizedEquals(globalJsonBefore, updatedFiles.GlobalJson.Content) && NormalizedEquals(dotnetToolsBefore, updatedFiles.DotNetToolsJson?.Content)));
+    }
+
+    internal async Task ApplyEngCommonFileModesAsync(
+        ILocalGitRepo targetRepo,
+        CancellationToken cancellationToken)
+    {
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        UnixPath sourceRoot = VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
+        var sourceModesResult = await vmr.RunGitCommandAsync(
+            ["ls-files", "--stage", "-z", "--", sourceRoot],
+            cancellationToken);
+        sourceModesResult.ThrowIfFailed($"Failed to read Git modes under '{sourceRoot}' from the VMR");
+
+        string sourcePrefix = $"{sourceRoot}/";
+        foreach (string entry in sourceModesResult.StandardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+            {
+                continue;
+            }
+
+            int pathSeparatorIndex = entry.IndexOf('\t');
+            int modeSeparatorIndex = entry.IndexOf(' ');
+            if (pathSeparatorIndex < 0 || modeSeparatorIndex < 0 || modeSeparatorIndex > pathSeparatorIndex)
+            {
+                throw new DarcException($"Unexpected git ls-files output for eng/common: '{entry}'");
+            }
+
+            string mode = entry[..modeSeparatorIndex];
+            string sourceFilePath = entry[(pathSeparatorIndex + 1)..];
+            if (!sourceFilePath.StartsWith(sourcePrefix, StringComparison.Ordinal))
+            {
+                throw new DarcException(
+                    $"Git returned '{sourceFilePath}' outside the expected eng/common path '{sourceRoot}'");
+            }
+
+            string? chmodArgument = mode switch
+            {
+                "100644" => "--chmod=-x",
+                "100755" => "--chmod=+x",
+                _ => null,
+            };
+
+            if (chmodArgument == null)
+            {
+                _logger.LogWarning(
+                    "File mode {fileMode} for {filePath} cannot be applied as a regular Git file mode",
+                    mode,
+                    sourceFilePath);
+                continue;
+            }
+
+            string targetFilePath = $"{Constants.CommonScriptFilesPath}/{sourceFilePath[sourcePrefix.Length..]}";
+            var updateModeResult = await targetRepo.RunGitCommandAsync(
+                ["update-index", chmodArgument, "--", targetFilePath],
+                cancellationToken);
+            updateModeResult.ThrowIfFailed(
+                $"Failed to apply file mode '{mode}' to '{targetFilePath}'");
+        }
     }
 
     /// <summary>
