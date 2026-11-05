@@ -129,47 +129,29 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        if (versionType != null)
+        IEnumerable<string> versionTypes = versionType == null ? VersionTypes : [versionType];
+        foreach (var candidateVersionType in versionTypes)
         {
             try
             {
-                return await GetFileContentsAtVersionAsync(versionType, logFailure: true);
+                JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
+                    _logger,
+                    // Don't log failures because trying several version types is expected here.
+                    logFailure: versionType != null);
+                return content["content"].ToString();
             }
             catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
+                // Continue
                 lastException = reqEx;
-            }
-        }
-        else
-        {
-            foreach (var candidateVersionType in VersionTypes)
-            {
-                try
-                {
-                    // Don't log failures because trying several version types is expected here.
-                    return await GetFileContentsAtVersionAsync(candidateVersionType, logFailure: false);
-                }
-                catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
-                {
-                    // Continue
-                    lastException = reqEx;
-                }
             }
         }
 
         throw new DependencyFileNotFoundException(filePath, $"{repoName}", gitRef, lastException);
-
-        async Task<string> GetFileContentsAtVersionAsync(string candidateVersionType, bool logFailure)
-        {
-            JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
-                _logger,
-                logFailure: logFailure);
-            return content["content"].ToString();
-        }
     }
 
     /// <summary>
