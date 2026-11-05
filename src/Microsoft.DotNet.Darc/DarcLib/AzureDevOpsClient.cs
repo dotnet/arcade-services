@@ -106,13 +106,15 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="repoName">Azure DevOps repo</param>
     /// <param name="filePath">Path to file</param>
     /// <param name="gitRef">Branch, commit, or tag</param>
+    /// <param name="versionType">Known Azure DevOps version type, or null to probe branch, commit, and tag</param>
     /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
         string projectName,
         string repoName,
         string filePath,
-        string gitRef)
+        string gitRef,
+        string versionType = null)
     {
         _logger.LogInformation(
             $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' at Git ref '{gitRef}'...");
@@ -127,7 +129,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        foreach (var versionType in VersionTypes)
+        IEnumerable<string> versionTypes = versionType == null ? VersionTypes : [versionType];
+        foreach (string candidateVersionType in versionTypes)
         {
             try
             {
@@ -135,10 +138,10 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={gitRef}&includeContent=true",
+                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
                     _logger,
                     // Don't log failures because trying several version types is expected here.
-                    logFailure: false);
+                    logFailure: versionType != null);
                 return content["content"].ToString();
             }
             catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
@@ -699,15 +702,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
                 if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(filePath))
                 {
-                    // This tree was resolved from a commit, so request content as a commit directly instead
-                    // of probing branch, commit, and tag for every file.
-                    JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
-                        HttpMethod.Get,
+                    string fileContent = await GetFileContentsAsync(
                         accountName,
                         projectName,
-                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType=commit&version={commit}&includeContent=true",
-                        _logger);
-                    string fileContent = content["content"].ToString();
+                        repoName,
+                        filePath,
+                        commit,
+                        versionType: "commit");
                     string mode = treeEntry["mode"]?.ToString()
                         ?? throw new DarcException($"Azure DevOps returned no Git mode for '{filePath}' at commit '{commit}'");
                     var gitCommit = new GitFile(filePath, fileContent, ContentEncoding.Utf8, mode);
