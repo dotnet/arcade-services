@@ -102,13 +102,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     private static readonly List<string> VersionTypes = [BranchVersionType, CommitVersionType, TagVersionType];
 
     /// <summary>
-    ///     Retrieve the contents of a text file when the version type is not known.
+    ///     Retrieve the contents of a text file when the supplied reference may be a branch, commit, or tag.
     /// </summary>
     /// <param name="accountName">Azure DevOps account</param>
     /// <param name="projectName">Azure DevOps project</param>
     /// <param name="repoName">Azure DevOps repo</param>
     /// <param name="filePath">Path to file</param>
-    /// <param name="branchOrCommit">Branch</param>
+    /// <param name="branchOrCommit">Branch, commit, or tag</param>
     /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
