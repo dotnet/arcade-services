@@ -122,6 +122,7 @@ need to first restart your command window.
 ```
 darc --version
 Microsoft.DotNet.Darc 1.1.0-beta.24306.2
+© Microsoft Corporation. All rights reserved.
 ```
 
 If you get an error saying 'darc' is not recognized as an internal or external command, the tool may not be in your PATH. You can verify the installation by checking the global tools list:
