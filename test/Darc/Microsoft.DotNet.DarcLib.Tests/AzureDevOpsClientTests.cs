@@ -21,6 +21,7 @@ public class AzureDevOpsClientTests
 {
     private const string PullRequestUrl = "https://dev.azure.com/dnceng/internal/_apis/git/repositories/test/pullRequests/123";
     private const string PullRequestPath = "_apis/git/repositories/test/pullRequests/123";
+    private const string RepositoryUrl = "https://dev.azure.com/dnceng/internal/_git/test";
     private const string ProjectId = "project-id";
 
     [TestCase(null, CheckState.None)]
@@ -107,6 +108,64 @@ public class AzureDevOpsClientTests
         checks.Should().HaveCount(3);
         checks.Should().Contain(check => check.Name == "Build" && check.Status == CheckState.Pending);
         checks.Should().Contain(check => check.Name == "scenario-test.batching-blocker" && check.Status == CheckState.Error);
+    }
+
+    [TestCase("eng/common", "eng/common/", TestName = "GetFilesAtCommitAsync_Subdirectory_ReturnsRepositoryRelativePaths")]
+    [TestCase("/", "", TestName = "GetFilesAtCommitAsync_RepositoryRoot_ReturnsRepositoryRelativePaths")]
+    public async Task GetFilesAtCommitAsync_FilesWithModes_ReturnsRepositoryRelativePaths(
+        string path,
+        string expectedPathPrefix)
+    {
+        // Arrange
+        const string commit = "commit-sha";
+        string buildFilePath = $"{expectedPathPrefix}build.sh";
+        string settingsFilePath = $"{expectedPathPrefix}settings.txt";
+        var client = CreateClient(new JArray());
+        SetupResponse(
+            client,
+            $"_apis/git/repositories/test/items?path={path}&version={commit}&versionType=commit",
+            new JObject { ["objectId"] = "tree-sha" },
+            null);
+        SetupResponse(
+            client,
+            "_apis/git/repositories/test/trees/tree-sha?recursive=true",
+            JObject.Parse("""
+                {
+                  "treeEntries": [
+                    {
+                      "relativePath": "build.sh",
+                      "mode": "100755",
+                      "gitObjectType": "blob"
+                    },
+                    {
+                      "relativePath": "settings.txt",
+                      "mode": "100644",
+                      "gitObjectType": "blob"
+                    }
+                  ]
+                }
+                """),
+            null);
+        SetupResponse(
+            client,
+            $"_apis/git/repositories/test/items?path={buildFilePath}&versionType=commit&version={commit}&includeContent=true",
+            new JObject { ["content"] = "#!/usr/bin/env bash" },
+            null);
+        SetupResponse(
+            client,
+            $"_apis/git/repositories/test/items?path={settingsFilePath}&versionType=commit&version={commit}&includeContent=true",
+            new JObject { ["content"] = "settings" },
+            null);
+
+        // Act
+        var files = await client.Object.GetFilesAtCommitAsync(RepositoryUrl, commit, path);
+
+        // Assert
+        files.Should().HaveCount(2);
+        files.Should().ContainSingle(file => file.FilePath == buildFilePath)
+            .Which.Mode.Should().Be("100755");
+        files.Should().ContainSingle(file => file.FilePath == settingsFilePath)
+            .Which.Mode.Should().Be("100644");
     }
 
     private static JObject CreateStatus(string state)
