@@ -21,7 +21,7 @@ param containerEnvironmentName string
 param hostName string
 param appGwCapacity int
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
+resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' existing = {
   name: kvName
 }
 
