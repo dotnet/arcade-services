@@ -93,9 +93,9 @@ internal class AddBuildToChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            if (_options.PublishingInfraVersion < 2 || _options.PublishingInfraVersion > 3)
+            if (_options.PublishingInfraVersion < 2 || _options.PublishingInfraVersion > 4)
             {
-                Console.WriteLine($"Publishing version '{_options.PublishingInfraVersion}' is not configured. The following versions are available: 2, 3");
+                Console.WriteLine($"Publishing version '{_options.PublishingInfraVersion}' is not configured. The following versions are available: 2, 3, 4");
                 return Constants.ErrorCode;
             }
 
