@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -199,5 +201,95 @@ public class ForwardFlowConflictResolverTests
                 It.IsAny<XmlDocument>(),
                 newSourceDependency),
             Times.Once);
+    }
+
+    [Test]
+    public async Task MergeDependenciesAsync_PreservesTrailingNewlinesAsync()
+    {
+        Mock<ILocalGitRepo> vmrRepo = new();
+        Mock<ILocalGitRepo> productRepo = new();
+        Mock<ILocalGitRepoFactory> localGitRepoFactoryMock = new();
+        Mock<IDependencyFileManager> dependencyFileManagerMock = new();
+        Mock<IVersionDetailsFileMerger> versionDetailsFileMergerMock = new();
+        Mock<IFileSystem> fileSystemMock = new();
+        Dictionary<string, string> writtenFiles = [];
+        fileSystemMock.Setup(f => f.WriteToFile(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback((string path, string content) => writtenFiles[path] = content);
+
+        ForwardFlow currentFlow = new("currentFlowRepoSha", "currentFlowVmrSha");
+        var mapping = "mapping";
+        var targetBranch = "targetBranch";
+        var repoPath = "repoPath";
+        var vmrPath = "vmrPath";
+        var doc = new XmlDocument { PreserveWhitespace = true };
+        const string versionDetailsXml = "<Dependencies>\n  <ProductDependencies />\n</Dependencies>\n";
+        doc.LoadXml(versionDetailsXml);
+        SourceDependency newSourceDependency = new(
+            "https://github.com/dotnet/dotnet", mapping, "newVmrSha", 2);
+        SourceDependency previousSourceDependency = new(
+            "https://github.com/dotnet/dotnet", mapping, "oldVmrSha", 1);
+
+        productRepo.Setup(r => r.Path).Returns(new NativePath(repoPath));
+        vmrRepo.Setup(r => r.HasWorkingTreeChangesAsync())
+            .ReturnsAsync(true);
+        vmrRepo.Setup(r => r.Path).Returns(new NativePath(vmrPath));
+        localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>()))
+            .Returns(vmrRepo.Object);
+
+        versionDetailsFileMergerMock.Setup(m => m.MergeVersionDetails(
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], [], []));
+
+        dependencyFileManagerMock.Setup(m => m.ParseVersionDetailsXmlAsync(
+                repoPath,
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<UnixPath>()))
+            .ReturnsAsync(new VersionDetails([], newSourceDependency));
+        dependencyFileManagerMock.Setup(m => m.ParseVersionDetailsXmlAsync(
+                vmrPath,
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<UnixPath>()))
+            .ReturnsAsync(new VersionDetails([], previousSourceDependency));
+        dependencyFileManagerMock.Setup(m => m.ReadVersionDetailsXmlAsync(
+                vmrPath, It.IsAny<string>(), It.IsAny<UnixPath>()))
+            .ReturnsAsync(doc);
+        dependencyFileManagerMock.Setup(m => m.VersionDetailsPropsExistsAsync(repoPath, null!, null))
+            .ReturnsAsync(true);
+
+        ForwardFlowConflictResolver resolver = new(
+            new Mock<IVmrInfo>().Object,
+            new Mock<ISourceManifest>().Object,
+            new Mock<IVmrPatchHandler>().Object,
+            localGitRepoFactoryMock.Object,
+            dependencyFileManagerMock.Object,
+            new Mock<IJsonFileMerger>().Object,
+            versionDetailsFileMergerMock.Object,
+            new VersionDetailsParser(),
+            fileSystemMock.Object,
+            new Mock<ICommentCollector>().Object,
+            NullLogger<ForwardFlowConflictResolver>.Instance);
+
+        await resolver.MergeDependenciesAsync(
+            new CodeflowOptions(new SourceMapping(mapping, "https://github.com/dotnet/runtime", "main", [], [], false), currentFlow, targetBranch, "main", null!, null, false, false, false, false),
+            productRepo.Object,
+            targetBranch,
+            "lastFlowRepoSha",
+            "lastFlowVmrSha",
+            CancellationToken.None);
+
+        var sourcePath = vmrRepo.Object.Path / VmrInfo.GetRelativeRepoSourcesPath(mapping);
+        writtenFiles[sourcePath / VersionFiles.VersionDetailsXml].Should().Be(versionDetailsXml);
+        writtenFiles[sourcePath / VersionFiles.VersionDetailsProps].Should()
+            .EndWith("</Project>\n").And.NotContain("\r");
     }
 }
