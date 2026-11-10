@@ -516,7 +516,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
             _fileSystem.WriteToFile(
                 vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-                GitFile.GetIndentedXmlBody(vmrVersionDetailsXml));
+                new GitFile(relativeSourceMappingPath / VersionFiles.VersionDetailsXml, vmrVersionDetailsXml).Content);
 
             await vmr.StageAsync([relativeSourceMappingPath / VersionFiles.VersionDetailsXml], cancellationToken);
         }
@@ -530,7 +530,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
             _fileSystem.WriteToFile(
                 vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
-                GitFile.GetIndentedXmlBody(versionPropsXml));
+                new GitFile(relativeSourceMappingPath / VersionFiles.VersionDetailsProps, versionPropsXml).Content);
 
             await vmr.StageAsync([relativeSourceMappingPath / VersionFiles.VersionDetailsProps], cancellationToken);
         }
