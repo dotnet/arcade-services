@@ -133,11 +133,20 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha = Constants.EmptyGitObject;
             }
 
+            // When the last flow was a forward flow, its PR could have reverted some of the toolset changes it brought.
+            // We merge the toolset files against the repo state the forward flow came from so that such reverts flow back.
+            string? toolsetMergeBaseRepoSha = !headBranchExisted
+                && lastFlows.LastBackFlow != null
+                && lastFlows.LastFlow is ForwardFlow lastForwardFlow
+                    ? lastForwardFlow.RepoSha
+                    : null;
+
             var (dependencyUpdates, hadToolsetUpdates) = await BackflowVersionFilesAsync(
                 codeflowOptions,
                 targetRepo,
                 repoComparisonSha,
                 vmrComparisonSha,
+                toolsetMergeBaseRepoSha,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, dependencyUpdates, hadToolsetUpdates);
@@ -238,6 +247,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ILocalGitRepo targetRepo,
         string repoComparisonSha,
         string vmrComparisonSha,
+        string? toolsetMergeBaseRepoSha,
         CancellationToken cancellationToken)
     {
         // Snapshot dependencies before merges or updates modify the working tree
@@ -249,7 +259,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             targetRepo,
             codeflowOptions.TargetBranch,
             repoComparisonSha,
-            vmrComparisonSha);
+            vmrComparisonSha,
+            toolsetMergeBaseRepoSha);
 
         var (buildDependencyUpdates, hadToolsetUpdates) = await ApplyBuildUpdatesAsync(
             codeflowOptions,
@@ -272,26 +283,32 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     /// <summary>
     /// Performs three-way merges of all version files: toolset files (global.json, dotnet-tools.json) and Version.Details.xml.
+    /// When <paramref name="toolsetMergeBaseRepoSha"/> is set, toolset files are merged using the repo's file at that commit
+    /// as the common base for both sides.
     /// </summary>
     private async Task<(bool hasToolsetUpdates, VersionFileChanges<DependencyUpdate> versionDetailsChanges)> MergeVersionFiles(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
         string repoComparisonSha,
-        string vmrComparisonSha)
+        string vmrComparisonSha,
+        string? toolsetMergeBaseRepoSha)
     {
         bool hasToolsetUpdates = false;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        bool useToolsetMergeBase = toolsetMergeBaseRepoSha != null;
+        string toolsetRepoComparisonSha = toolsetMergeBaseRepoSha ?? repoComparisonSha;
 
         hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
             VersionFiles.GlobalJson,
-            repoComparisonSha,
+            toolsetRepoComparisonSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.GlobalJson,
             vmrComparisonSha,
-            codeflowOptions.CurrentFlow.VmrSha);
+            codeflowOptions.CurrentFlow.VmrSha,
+            useTargetPreviousAsCommonBase: useToolsetMergeBase);
 
         UnixPath relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
@@ -301,7 +318,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             UnixPath vmrManifestPath = relativeSourceMappingPath / manifestPath;
             bool manifestExists =
-                await targetRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
+                await targetRepo.GetFileFromGitAsync(manifestPath, toolsetRepoComparisonSha) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null ||
                 await targetRepo.GetFileFromGitAsync(manifestPath, targetBranch) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null;
@@ -311,13 +328,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
                     manifestPath,
-                    repoComparisonSha,
+                    toolsetRepoComparisonSha,
                     targetBranch,
                     vmr,
                     vmrManifestPath,
                     vmrComparisonSha,
                     codeflowOptions.CurrentFlow.VmrSha,
-                    allowMissingFiles: true);
+                    allowMissingFiles: true,
+                    useTargetPreviousAsCommonBase: useToolsetMergeBase);
             }
         }
 

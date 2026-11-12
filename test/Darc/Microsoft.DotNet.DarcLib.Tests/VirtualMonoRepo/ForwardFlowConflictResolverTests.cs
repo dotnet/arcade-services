@@ -145,6 +145,7 @@ public class ForwardFlowConflictResolverTests
             targetBranch,
             lastFlow.RepoSha,
             lastFlow.VmrSha,
+            null,
             CancellationToken.None);
 
         jsonMergerMock.Verify(
@@ -157,6 +158,7 @@ public class ForwardFlowConflictResolverTests
                 VersionFiles.GlobalJson,
                 lastFlowRepoSha,
                 currentFlowRepoSha,
+                false,
                 false),
             Times.Once);
         jsonMergerMock.Verify(
@@ -169,7 +171,8 @@ public class ForwardFlowConflictResolverTests
                 VersionFiles.DotnetToolsConfigJson,
                 lastFlowRepoSha,
                 currentFlowRepoSha,
-                true),
+                true,
+                false),
             Times.Once);
         jsonMergerMock.Verify(
             m => m.MergeJsonsAsync(
@@ -181,7 +184,8 @@ public class ForwardFlowConflictResolverTests
                 VersionFiles.DotnetToolsJson,
                 lastFlowRepoSha,
                 currentFlowRepoSha,
-                true),
+                true,
+                false),
             Times.Once);
         versionDetailsFileMergerMock.Verify(
             m => m.MergeVersionDetails(
@@ -285,6 +289,7 @@ public class ForwardFlowConflictResolverTests
             targetBranch,
             "lastFlowRepoSha",
             "lastFlowVmrSha",
+            null,
             CancellationToken.None);
 
         var sourcePath = vmrRepo.Object.Path / VmrInfo.GetRelativeRepoSourcesPath(mapping);

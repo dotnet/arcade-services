@@ -55,12 +55,17 @@ public interface IForwardFlowConflictResolver
         bool headBranchExisted,
         CancellationToken cancellationToken);
 
+    /// <param name="toolsetMergeBaseVmrSha">
+    /// When set, global.json and dotnet-tools manifests are merged using the VMR's file at this commit as the common base
+    /// for both sides, so that changes reverted in the PR of the last (opposite-direction) flow are propagated.
+    /// </param>
     Task MergeDependenciesAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo sourceRepo,
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
+        string? toolsetMergeBaseVmrSha,
         CancellationToken cancellationToken);
 }
 
@@ -148,6 +153,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 lastFlows.CrossingFlow != null
                     ? lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
+                // When the last flow was a backflow, its PR could have reverted some of the toolset changes it brought.
+                // We merge the toolset files against the VMR state the backflow came from so that such reverts flow back.
+                !headBranchExisted && lastFlows.LastFlow is Backflow lastBackflow
+                    ? lastBackflow.VmrSha
+                    : null,
                 cancellationToken);
         }
         catch (Exception e)
@@ -434,20 +444,24 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
+        string? toolsetMergeBaseVmrSha,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        bool useToolsetMergeBase = toolsetMergeBaseVmrSha != null;
+        string toolsetVmrComparisonSha = toolsetMergeBaseVmrSha ?? vmrComparisonSha;
 
         await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
-            vmrComparisonSha,
+            toolsetVmrComparisonSha,
             targetBranch,
             sourceRepo,
             VersionFiles.GlobalJson,
             repoComparisonSha,
-            codeflowOptions.CurrentFlow.RepoSha);
+            codeflowOptions.CurrentFlow.RepoSha,
+            useTargetPreviousAsCommonBase: useToolsetMergeBase);
 
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsJson);
@@ -458,7 +472,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             bool manifestExists =
                 await sourceRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
                 await sourceRepo.GetFileFromGitAsync(manifestPath, codeflowOptions.CurrentFlow.RepoSha) != null ||
-                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, toolsetVmrComparisonSha) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null;
 
             if (manifestExists)
@@ -466,13 +480,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 await _jsonFileMerger.MergeJsonsAsync(
                     vmr,
                     vmrManifestPath,
-                    vmrComparisonSha,
+                    toolsetVmrComparisonSha,
                     targetBranch,
                     sourceRepo,
                     manifestPath,
                     repoComparisonSha,
                     codeflowOptions.CurrentFlow.RepoSha,
-                    allowMissingFiles: true);
+                    allowMissingFiles: true,
+                    useTargetPreviousAsCommonBase: useToolsetMergeBase);
             }
         }
 

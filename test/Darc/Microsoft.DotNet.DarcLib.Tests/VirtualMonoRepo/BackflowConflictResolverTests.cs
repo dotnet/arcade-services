@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -322,7 +322,8 @@ public class BackflowConflictResolverTests
                 VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsJson,
                 LastVmrSha,
                 CurrentVmrSha,
-                true),
+                true,
+                useTargetPreviousAsCommonBase: true),
             Times.Once);
         _jsonMergerMock.Verify(
             x => x.MergeJsonsAsync(
@@ -334,7 +335,8 @@ public class BackflowConflictResolverTests
                 VmrInfo.GetRelativeRepoSourcesPath(MappingName) / VersionFiles.DotnetToolsConfigJson,
                 LastVmrSha,
                 CurrentVmrSha,
-                true),
+                true,
+                useTargetPreviousAsCommonBase: true),
             Times.Once);
     }
 
