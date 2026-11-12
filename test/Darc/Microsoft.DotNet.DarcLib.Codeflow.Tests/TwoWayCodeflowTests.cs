@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -1376,6 +1377,105 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // file should still say 1
         File.ReadAllText(_productRepoVmrPath / problematicFilePath).Should().Be("1");
     }
+
+    // Version file changes brought by a flow and reverted in its PR should be reverted on the other side by the next opposite flow
+    [Test]
+    public async Task VersionFileChangesRevertedInCodeflowPrFlowBackTest()
+    {
+        const string ffBranchName = nameof(VersionFileChangesRevertedInCodeflowPrFlowBackTest);
+        const string bfBranchName = nameof(VersionFileChangesRevertedInCodeflowPrFlowBackTest) + "bf";
+
+        await EnsureTestRepoIsInitialized();
+
+        var productRepo = GetLocal(ProductRepoPath);
+        var vmrRepo = GetLocal(VmrPath);
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName);
+        var vmrDependency = CreateDependency("Package.Added.In.Vmr");
+        var repoDependency = CreateDependency("Package.Added.In.Repo");
+
+        // The VMR adds an sdk section to global.json and a new dependency and backflows them
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.GlobalJson, GlobalJsonWithSdk);
+        await vmrRepo.AddDependencyAsync(vmrDependency, vmrSourcesPath);
+        await GitOperations.CommitAll(VmrPath, "Add sdk section to global.json and a new dependency");
+
+        var result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+        (await ReadGlobalJsonAsync(ProductRepoPath))["sdk"].Should().NotBeNull();
+        (await productRepo.GetDependenciesAsync(vmrDependency.Name)).Should().NotBeEmpty();
+
+        // The backflow PR reverts both changes but adds an msbuild-sdks section and another dependency
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson, GlobalJsonWithMsBuildSdks);
+        await productRepo.RemoveDependencyAsync(vmrDependency.Name);
+        await productRepo.AddDependencyAsync(repoDependency);
+        await GitOperations.CommitAll(ProductRepoPath, "Revert the changes and make new ones in the backflow PR");
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // The next forward flow should revert the original changes in the VMR and bring the new ones
+        result = await ChangeRepoFileAndFlowIt("New content in the repo", ffBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        var vmrGlobalJson = await ReadGlobalJsonAsync(_productRepoVmrPath);
+        vmrGlobalJson["sdk"].Should().BeNull();
+        vmrGlobalJson["msbuild-sdks"].Should().NotBeNull();
+        (await vmrRepo.GetDependenciesAsync(vmrDependency.Name, relativeBasePath: vmrSourcesPath)).Should().BeEmpty();
+        (await vmrRepo.GetDependenciesAsync(repoDependency.Name, relativeBasePath: vmrSourcesPath)).Should().NotBeEmpty();
+
+        // The forward flow PR reverts the new changes
+        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+        await vmrRepo.RemoveDependencyAsync(repoDependency.Name, vmrSourcesPath);
+        await GitOperations.CommitAll(VmrPath, "Revert the changes in the forward flow PR");
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // The next backflow should revert them in the repo too
+        result = await ChangeVmrFileAndFlowIt("New content in the VMR", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        var repoGlobalJson = await ReadGlobalJsonAsync(ProductRepoPath);
+        repoGlobalJson["sdk"].Should().BeNull();
+        repoGlobalJson["msbuild-sdks"].Should().BeNull();
+        JsonNode.DeepEquals(repoGlobalJson, await ReadGlobalJsonAsync(_productRepoVmrPath)).Should().BeTrue();
+        (await productRepo.GetDependenciesAsync(vmrDependency.Name)).Should().BeEmpty();
+        (await productRepo.GetDependenciesAsync(repoDependency.Name)).Should().BeEmpty();
+
+        static async Task<JsonNode> ReadGlobalJsonAsync(NativePath repoPath)
+            => JsonNode.Parse(await File.ReadAllTextAsync(repoPath / VersionFiles.GlobalJson))!;
+
+        static DependencyDetail CreateDependency(string name) => new()
+        {
+            Name = name,
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "abc",
+            Type = DependencyType.Product,
+        };
+    }
+
+    private const string GlobalJsonWithSdk = """
+        {
+          "sdk": {
+            "version": "9.0.100",
+            "allowPrerelease": true
+          },
+          "tools": {
+            "dotnet": "9.0.100"
+          }
+        }
+        """;
+
+    private const string GlobalJsonWithMsBuildSdks = """
+        {
+          "tools": {
+            "dotnet": "9.0.100"
+          },
+          "msbuild-sdks": {
+            "Microsoft.Build.NoTargets": "3.7.0"
+          }
+        }
+        """;
 
     [Test]
     public async Task RevertCommitHappensBetweenLastAndCrossingFlowTest()

@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -133,11 +133,20 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha = Constants.EmptyGitObject;
             }
 
+            // When the last flow was a forward flow, its PR could have reverted some of the version file changes it brought.
+            // We merge the version files against the repo state the forward flow came from so that such reverts flow back.
+            string? commonMergeBaseSha = !headBranchExisted
+                && lastFlows.LastBackFlow != null
+                && lastFlows.LastFlow is ForwardFlow lastForwardFlow
+                    ? lastForwardFlow.RepoSha
+                    : null;
+
             var (dependencyUpdates, hadToolsetUpdates) = await BackflowVersionFilesAsync(
                 codeflowOptions,
                 targetRepo,
                 repoComparisonSha,
                 vmrComparisonSha,
+                commonMergeBaseSha,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, dependencyUpdates, hadToolsetUpdates);
@@ -238,10 +247,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ILocalGitRepo targetRepo,
         string repoComparisonSha,
         string vmrComparisonSha,
+        string? commonMergeBaseSha,
         CancellationToken cancellationToken)
     {
-        // Snapshot dependencies before merges or updates modify the working tree
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
+        // Snapshot dependencies before merges or updates modify the working tree.
+        // Pinned dependencies are included because the version file merge can update or remove them too.
+        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */, includePinned: true);
         var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
 
         var (hasToolsetMerges, versionDetailsChanges) = await MergeVersionFiles(
@@ -249,7 +260,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             targetRepo,
             codeflowOptions.TargetBranch,
             repoComparisonSha,
-            vmrComparisonSha);
+            vmrComparisonSha,
+            commonMergeBaseSha);
 
         var (buildDependencyUpdates, hadToolsetUpdates) = await ApplyBuildUpdatesAsync(
             codeflowOptions,
@@ -272,16 +284,21 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     /// <summary>
     /// Performs three-way merges of all version files: toolset files (global.json, dotnet-tools.json) and Version.Details.xml.
+    /// When <paramref name="commonMergeBaseSha"/> is set, all version files are merged using the repo's file at that commit
+    /// as the common base for both sides.
     /// </summary>
     private async Task<(bool hasToolsetUpdates, VersionFileChanges<DependencyUpdate> versionDetailsChanges)> MergeVersionFiles(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
         string repoComparisonSha,
-        string vmrComparisonSha)
+        string vmrComparisonSha,
+        string? commonMergeBaseSha)
     {
         bool hasToolsetUpdates = false;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        bool useCommonMergeBase = commonMergeBaseSha != null;
+        repoComparisonSha = commonMergeBaseSha ?? repoComparisonSha;
 
         hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
@@ -291,7 +308,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.GlobalJson,
             vmrComparisonSha,
-            codeflowOptions.CurrentFlow.VmrSha);
+            codeflowOptions.CurrentFlow.VmrSha,
+            useTargetPreviousAsCommonBase: useCommonMergeBase);
 
         UnixPath relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
@@ -317,7 +335,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     vmrManifestPath,
                     vmrComparisonSha,
                     codeflowOptions.CurrentFlow.VmrSha,
-                    allowMissingFiles: true);
+                    allowMissingFiles: true,
+                    useTargetPreviousAsCommonBase: useCommonMergeBase);
             }
         }
 
@@ -331,7 +350,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha,
             // we're applying the changes to a product repo, so no mapping
-            mappingToApplyChanges: null);
+            mappingToApplyChanges: null,
+            useTargetPreviousAsCommonBase: useCommonMergeBase);
 
         return (hasToolsetUpdates, versionDetailsChanges);
     }
@@ -572,13 +592,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
     }
 
-    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string? commit)
-        => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
+    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string? commit, bool includePinned = false)
+        => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit), includePinned);
 
-    private VersionDetails GetDependencies(string? content)
+    private VersionDetails GetDependencies(string? content, bool includePinned)
         => content == null
             ? new VersionDetails([], null)
-            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned);
 
     protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
     [
