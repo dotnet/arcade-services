@@ -264,7 +264,8 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string?>()))
+                It.IsAny<string?>(),
+                It.IsAny<bool>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
                 [],
                 additions,
@@ -377,7 +378,8 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string?>()))
+                It.IsAny<string?>(),
+                It.IsAny<bool>()))
             .Callback(() =>
             {
                 // Simulate that MergeVersionDetails applied the update to the working tree

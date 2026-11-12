@@ -77,7 +77,8 @@ public class ForwardFlowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string>()))
+                It.IsAny<string>(),
+                It.IsAny<bool>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], [], []));
 
         dependencyFileManagerMock.Setup(m => m.ParseVersionDetailsXmlAsync(
@@ -197,7 +198,8 @@ public class ForwardFlowConflictResolverTests
                 VersionFiles.VersionDetailsXml,
                 lastFlowRepoSha,
                 currentFlowRepoSha,
-                mapping),
+                mapping,
+                false),
             Times.Once);
         vmrRepo.Verify(r => r.HasWorkingTreeChangesAsync(),
             Times.Once);
@@ -249,7 +251,8 @@ public class ForwardFlowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<string>()))
+                It.IsAny<string>(),
+                It.IsAny<bool>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], [], []));
 
         dependencyFileManagerMock.Setup(m => m.ParseVersionDetailsXmlAsync(

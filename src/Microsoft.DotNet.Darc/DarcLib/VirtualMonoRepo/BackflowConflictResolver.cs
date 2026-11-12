@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -133,9 +133,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha = Constants.EmptyGitObject;
             }
 
-            // When the last flow was a forward flow, its PR could have reverted some of the toolset changes it brought.
-            // We merge the toolset files against the repo state the forward flow came from so that such reverts flow back.
-            string? toolsetMergeBaseRepoSha = !headBranchExisted
+            // When the last flow was a forward flow, its PR could have reverted some of the version file changes it brought.
+            // We merge the version files against the repo state the forward flow came from so that such reverts flow back.
+            string? commonMergeBaseSha = !headBranchExisted
                 && lastFlows.LastBackFlow != null
                 && lastFlows.LastFlow is ForwardFlow lastForwardFlow
                     ? lastForwardFlow.RepoSha
@@ -146,7 +146,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 targetRepo,
                 repoComparisonSha,
                 vmrComparisonSha,
-                toolsetMergeBaseRepoSha,
+                commonMergeBaseSha,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, dependencyUpdates, hadToolsetUpdates);
@@ -247,7 +247,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ILocalGitRepo targetRepo,
         string repoComparisonSha,
         string vmrComparisonSha,
-        string? toolsetMergeBaseRepoSha,
+        string? commonMergeBaseSha,
         CancellationToken cancellationToken)
     {
         // Snapshot dependencies before merges or updates modify the working tree
@@ -260,7 +260,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             codeflowOptions.TargetBranch,
             repoComparisonSha,
             vmrComparisonSha,
-            toolsetMergeBaseRepoSha);
+            commonMergeBaseSha);
 
         var (buildDependencyUpdates, hadToolsetUpdates) = await ApplyBuildUpdatesAsync(
             codeflowOptions,
@@ -283,7 +283,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     /// <summary>
     /// Performs three-way merges of all version files: toolset files (global.json, dotnet-tools.json) and Version.Details.xml.
-    /// When <paramref name="toolsetMergeBaseRepoSha"/> is set, toolset files are merged using the repo's file at that commit
+    /// When <paramref name="commonMergeBaseSha"/> is set, all version files are merged using the repo's file at that commit
     /// as the common base for both sides.
     /// </summary>
     private async Task<(bool hasToolsetUpdates, VersionFileChanges<DependencyUpdate> versionDetailsChanges)> MergeVersionFiles(
@@ -292,23 +292,23 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
-        string? toolsetMergeBaseRepoSha)
+        string? commonMergeBaseSha)
     {
         bool hasToolsetUpdates = false;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        bool useToolsetMergeBase = toolsetMergeBaseRepoSha != null;
-        string toolsetRepoComparisonSha = toolsetMergeBaseRepoSha ?? repoComparisonSha;
+        bool useCommonMergeBase = commonMergeBaseSha != null;
+        repoComparisonSha = commonMergeBaseSha ?? repoComparisonSha;
 
         hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
             VersionFiles.GlobalJson,
-            toolsetRepoComparisonSha,
+            repoComparisonSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.GlobalJson,
             vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha,
-            useTargetPreviousAsCommonBase: useToolsetMergeBase);
+            useTargetPreviousAsCommonBase: useCommonMergeBase);
 
         UnixPath relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
@@ -318,7 +318,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             UnixPath vmrManifestPath = relativeSourceMappingPath / manifestPath;
             bool manifestExists =
-                await targetRepo.GetFileFromGitAsync(manifestPath, toolsetRepoComparisonSha) != null ||
+                await targetRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null ||
                 await targetRepo.GetFileFromGitAsync(manifestPath, targetBranch) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null;
@@ -328,14 +328,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
                     manifestPath,
-                    toolsetRepoComparisonSha,
+                    repoComparisonSha,
                     targetBranch,
                     vmr,
                     vmrManifestPath,
                     vmrComparisonSha,
                     codeflowOptions.CurrentFlow.VmrSha,
                     allowMissingFiles: true,
-                    useTargetPreviousAsCommonBase: useToolsetMergeBase);
+                    useTargetPreviousAsCommonBase: useCommonMergeBase);
             }
         }
 
@@ -349,7 +349,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha,
             // we're applying the changes to a product repo, so no mapping
-            mappingToApplyChanges: null);
+            mappingToApplyChanges: null,
+            useTargetPreviousAsCommonBase: useCommonMergeBase);
 
         return (hasToolsetUpdates, versionDetailsChanges);
     }

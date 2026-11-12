@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -55,8 +55,8 @@ public interface IForwardFlowConflictResolver
         bool headBranchExisted,
         CancellationToken cancellationToken);
 
-    /// <param name="toolsetMergeBaseVmrSha">
-    /// When set, global.json and dotnet-tools manifests are merged using the VMR's file at this commit as the common base
+    /// <param name="commonMergeBaseSha">
+    /// When set, version files are merged using the VMR's file at this commit as the common base
     /// for both sides, so that changes reverted in the PR of the last (opposite-direction) flow are propagated.
     /// </param>
     Task MergeDependenciesAsync(
@@ -65,7 +65,7 @@ public interface IForwardFlowConflictResolver
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
-        string? toolsetMergeBaseVmrSha,
+        string? commonMergeBaseSha,
         CancellationToken cancellationToken);
 }
 
@@ -153,8 +153,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 lastFlows.CrossingFlow != null
                     ? lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
-                // When the last flow was a backflow, its PR could have reverted some of the toolset changes it brought.
-                // We merge the toolset files against the VMR state the backflow came from so that such reverts flow back.
+                // When the last flow was a backflow, its PR could have reverted some of the version file changes it brought.
+                // We merge the version files against the VMR state the backflow came from so that such reverts flow back.
                 !headBranchExisted && lastFlows.LastFlow is Backflow lastBackflow
                     ? lastBackflow.VmrSha
                     : null,
@@ -444,24 +444,24 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
-        string? toolsetMergeBaseVmrSha,
+        string? commonMergeBaseSha,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
-        bool useToolsetMergeBase = toolsetMergeBaseVmrSha != null;
-        string toolsetVmrComparisonSha = toolsetMergeBaseVmrSha ?? vmrComparisonSha;
+        bool useCommonMergeBase = commonMergeBaseSha != null;
+        vmrComparisonSha = commonMergeBaseSha ?? vmrComparisonSha;
 
         await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
-            toolsetVmrComparisonSha,
+            vmrComparisonSha,
             targetBranch,
             sourceRepo,
             VersionFiles.GlobalJson,
             repoComparisonSha,
             codeflowOptions.CurrentFlow.RepoSha,
-            useTargetPreviousAsCommonBase: useToolsetMergeBase);
+            useTargetPreviousAsCommonBase: useCommonMergeBase);
 
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsConfigJson);
         await MergeDotNetToolsManifestIfExistsAsync(VersionFiles.DotnetToolsJson);
@@ -472,7 +472,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             bool manifestExists =
                 await sourceRepo.GetFileFromGitAsync(manifestPath, repoComparisonSha) != null ||
                 await sourceRepo.GetFileFromGitAsync(manifestPath, codeflowOptions.CurrentFlow.RepoSha) != null ||
-                await vmr.GetFileFromGitAsync(vmrManifestPath, toolsetVmrComparisonSha) != null ||
+                await vmr.GetFileFromGitAsync(vmrManifestPath, vmrComparisonSha) != null ||
                 await vmr.GetFileFromGitAsync(vmrManifestPath, codeflowOptions.CurrentFlow.VmrSha) != null;
 
             if (manifestExists)
@@ -480,14 +480,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 await _jsonFileMerger.MergeJsonsAsync(
                     vmr,
                     vmrManifestPath,
-                    toolsetVmrComparisonSha,
+                    vmrComparisonSha,
                     targetBranch,
                     sourceRepo,
                     manifestPath,
                     repoComparisonSha,
                     codeflowOptions.CurrentFlow.RepoSha,
                     allowMissingFiles: true,
-                    useTargetPreviousAsCommonBase: useToolsetMergeBase);
+                    useTargetPreviousAsCommonBase: useCommonMergeBase);
             }
         }
 
@@ -510,7 +510,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             VersionFiles.VersionDetailsXml,
             repoComparisonSha,
             codeflowOptions.CurrentFlow.RepoSha,
-            codeflowOptions.Mapping.Name);
+            codeflowOptions.Mapping.Name,
+            useCommonMergeBase);
 
         // Also flow the Source tag if it changed
         var repoVersionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
