@@ -250,8 +250,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string? commonMergeBaseSha,
         CancellationToken cancellationToken)
     {
-        // Snapshot dependencies before merges or updates modify the working tree
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
+        // Snapshot dependencies before merges or updates modify the working tree.
+        // Pinned dependencies are included because the version file merge can update or remove them too.
+        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */, includePinned: true);
         var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
 
         var (hasToolsetMerges, versionDetailsChanges) = await MergeVersionFiles(
@@ -591,13 +592,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
     }
 
-    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string? commit)
-        => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
+    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string? commit, bool includePinned = false)
+        => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit), includePinned);
 
-    private VersionDetails GetDependencies(string? content)
+    private VersionDetails GetDependencies(string? content, bool includePinned)
         => content == null
             ? new VersionDetails([], null)
-            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned);
 
     protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
     [

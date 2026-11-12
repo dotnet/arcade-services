@@ -412,6 +412,63 @@ public class BackflowConflictResolverTests
             excludedAssets: []);
     }
 
+    // The version details merge can remove pinned dependencies (e.g. when a forward flow PR removed one)
+    [Test]
+    public async Task PinnedDependencyRemovedByMergeIsReportedTest()
+    {
+        var lastBackflow = new Backflow(LastVmrSha, LastRepoSha);
+        var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
+        var lastFlows = new LastFlows(lastFlow, lastBackflow, lastFlow, null);
+        var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
+
+        var pinnedDependency = CreateDependency("Package.Pinned", "1.0.0", LastVmrSha);
+        pinnedDependency.Pinned = true;
+
+        _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
+            [pinnedDependency],
+            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
+        _versionDetails["repo/"] = _versionDetails[$"repo/{TargetBranch}"];
+
+        _versionDetailsParser
+            .Setup(x => x.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns((string content, bool includePinned) => new VersionDetails(
+                [.. _versionDetails[content].Dependencies.Where(d => includePinned || !d.Pinned)],
+                _versionDetails[content].Source));
+
+        _versionDetailsFileMergerMock.Setup(x => x.MergeVersionDetails(
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>()))
+            .Callback(() =>
+            {
+                // Simulate that MergeVersionDetails removed the pinned dependency from the working tree
+                _versionDetails["repo/"] = new VersionDetails([], _versionDetails["repo/"].Source);
+            })
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
+                [pinnedDependency.Name],
+                new Dictionary<string, DependencyUpdate>(),
+                new Dictionary<string, DependencyUpdate>()));
+
+        await TestConflictResolver(
+            CreateNewBuild(CurrentVmrSha, []),
+            lastFlows,
+            currentFlow,
+            expectedDependencies: [],
+            expectedUpdates:
+            [
+                new(pinnedDependency.Name, "1.0.0", null),
+            ],
+            headBranchExisted: false,
+            excludedAssets: []);
+    }
+
     [Test]
     public void TestCodeflowDependencyUpdateCommitMessage()
     {
@@ -555,7 +612,7 @@ public class BackflowConflictResolverTests
 
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
-                update.To.Name,
+                update.To?.Name ?? update.From!.Name,
                 update.From?.Version,
                 update.To?.Version))
             .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
