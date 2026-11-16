@@ -16,6 +16,12 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVersionDetailsFileMerger
 {
+    /// <param name="useTargetPreviousAsCommonBase">
+    /// When true, source changes are computed against the target repo's file at <paramref name="targetRepoPreviousRef"/>
+    /// instead of the source repo's file at <paramref name="sourceRepoPreviousRef"/>, making it a three-way merge with a common base.
+    /// This is used after an opposite-direction flow so that changes which were reverted in that flow's PR
+    /// are propagated back and both copies of the file converge.
+    /// </param>
     Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
         ILocalGitRepo targetRepo,
         string targetRepoVersionDetailsRelativePath,
@@ -25,7 +31,8 @@ public interface IVersionDetailsFileMerger
         string sourceRepoVersionDetailsRelativePath,
         string sourceRepoPreviousRef,
         string sourceRepoCurrentRef,
-        string? mappingToApplyChanges);
+        string? mappingToApplyChanges,
+        bool useTargetPreviousAsCommonBase = false);
 }
 
 public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFileMerger
@@ -59,7 +66,8 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         string sourceRepoVersionDetailsRelativePath,
         string sourceRepoPreviousRef,
         string sourceRepoCurrentRef,
-        string? mappingToApplyChanges)
+        string? mappingToApplyChanges,
+        bool useTargetPreviousAsCommonBase = false)
     {
         _logger.LogInformation(
             "Resolving dependency updates in source {sourceSha1}..{sourceSha2} and target {targetSha1}..{targetSha2}",
@@ -74,7 +82,9 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         // Similarly to the code flow algorithm, we compare the corresponding commits
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
-        var previousSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
+        var previousSourceRepoChanges = useTargetPreviousAsCommonBase
+            ? previousTargetRepoChanges
+            : await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
         var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
         List<DependencyUpdate> targetChanges = ComputeChanges(

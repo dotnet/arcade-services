@@ -17,6 +17,12 @@ public interface IJsonFileMerger
     /// <summary>
     /// Merges the changes in a JSON file between two references in the source and target repo.
     /// </summary>
+    /// <param name="useTargetPreviousAsCommonBase">
+    /// When true, source changes are computed against the target repo's file at <paramref name="targetRepoPreviousRef"/>
+    /// instead of the source repo's file at <paramref name="sourceRepoPreviousRef"/>, making it a three-way merge with a common base.
+    /// This is used after an opposite-direction flow so that changes which were reverted in that flow's PR
+    /// are propagated back and both copies of the file converge.
+    /// </param>
     Task<bool> MergeJsonsAsync(
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
@@ -26,7 +32,8 @@ public interface IJsonFileMerger
         string sourceRepoJsonRelativePath,
         string sourceRepoPreviousRef,
         string sourceRepoCurrentRef,
-        bool allowMissingFiles = false);
+        bool allowMissingFiles = false,
+        bool useTargetPreviousAsCommonBase = false);
 }
 
 public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
@@ -56,14 +63,17 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         string sourceRepoJsonRelativePath,
         string sourceRepoPreviousRef,
         string sourceRepoCurrentRef,
-        bool allowMissingFiles = false)
+        bool allowMissingFiles = false,
+        bool useTargetPreviousAsCommonBase = false)
     {
         bool hasChanges = false;
 
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
-        var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
+        var sourcePreviousJson = useTargetPreviousAsCommonBase
+            ? targetRepoPreviousJson
+            : await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
         bool jsonDeletedInSource = sourcePreviousJson != EmptyJsonString

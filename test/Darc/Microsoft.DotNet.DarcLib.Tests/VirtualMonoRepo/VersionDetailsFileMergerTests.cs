@@ -276,6 +276,69 @@ public class VersionDetailsFileMergerTests
             Times.Once);
     }
 
+    [Test]
+    public async Task MergeVersionDetails_PropagatesSourceRevertsWhenUsingTargetPreviousAsCommonBase()
+    {
+        var sourceDependency = new SourceDependency("uri", "mapping", VmrPreviousSha, 1);
+
+        // Target state that the last opposite-direction flow was created from
+        var targetPreviousDependencies = new VersionDetails(
+            [
+                CreateDependency("Package.Reverted.In.Source", "2.0.0", "sha2"),
+                CreateDependency("Package.Removed.In.Source", "1.0.0", "sha1"),
+            ],
+            sourceDependency);
+
+        // Source reverted the update and removed the dependency (e.g. in the PR of the last flow)
+        var sourceCurrentDependencies = new VersionDetails(
+            [
+                CreateDependency("Package.Reverted.In.Source", "1.0.0", "sha1"),
+            ],
+            sourceDependency);
+
+        Dictionary<string, VersionDetails> versionDetailsDictionary = new()
+        {
+            { "targetPrevious", targetPreviousDependencies },
+            { "targetCurrent", targetPreviousDependencies },
+            { "vmrCurrent", sourceCurrentDependencies },
+        };
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync("targetPrevious");
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync("targetCurrent");
+        _vmrRepoMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync("vmrCurrent");
+
+        _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns((string key, bool _) => versionDetailsDictionary[key]);
+        _dependencyFileManagerMock.Setup(d => d.TryRemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        var result = await _versionDetailsFileMerger.MergeVersionDetails(
+            _targetRepoMock.Object,
+            "TARGET VERSION.DETAILS PATH",
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            "VMR VERSION.DETAILS PATH",
+            VmrPreviousSha,
+            VmrCurrentSha,
+            mappingToApplyChanges: null,
+            useTargetPreviousAsCommonBase: true);
+
+        _vmrRepoMock.Verify(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Never);
+        result.Additions.Should().BeEmpty();
+        result.Removals.Should().BeEquivalentTo(["Package.Removed.In.Source"]);
+        result.Updates.Values
+            .Select(u => (DependencyDetail)u.Value!)
+            .Select(d => (d.Name, d.Version))
+            .Should()
+            .BeEquivalentTo([("Package.Reverted.In.Source", "1.0.0")]);
+    }
+
     private static DependencyDetail CreateDependency(string name, string version, string commit, DependencyType type = DependencyType.Product)
         => new()
         {
