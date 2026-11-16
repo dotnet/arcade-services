@@ -10,7 +10,7 @@ param pcsIdentityPrincipalId string
 @allowed(['default', 'recover'])
 param createMode string = 'default'
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
+resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
   name: keyVaultName
   location: location
   properties: {
@@ -28,7 +28,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
 }
 
 // If we're creating the staging environment, also create a dev key vault
-resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvironment == 'Staging') {
+resource devKeyVault 'Microsoft.KeyVault/vaults@2026-02-01' = if (aspnetcoreEnvironment == 'Staging') {
   name: devKeyVaultName
   location: location
   properties: {
@@ -67,7 +67,7 @@ resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     }
 }
 
-resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2026-02-01' = {
   name: 'data-protection-encryption-key'
   parent: keyVault
   properties: {
