@@ -104,6 +104,14 @@ public class BackflowNonContinuableNonLinearCodeflowException(string currentVmrS
 public class BlockingCodeflowException(string msg) : DarcException(msg);
 
 /// <summary>
+/// Thrown when updating an existing codeflow PR would require recreating a previous opposite-direction flow.
+/// Such a recreation replaces the target with a snapshot of the source and can overwrite changes that haven't flown yet.
+/// </summary>
+public class OppositeDirectionFlowRecreationException()
+    : BlockingCodeflowException("Cannot update the codeflow PR because resolving conflicts would require recreating a previous opposite-direction flow, "
+        + "which risks overwriting changes in the target branch that haven't been flown yet.");
+
+/// <summary>
 /// Thrown when recreating previous codeflows reaches the configured attempt limit.
 /// </summary>
 public class RecreationLimitReachedException(NativePath targetRepoPath) : DarcException($"Codeflow rewind limit reached for repository '{targetRepoPath}'.")

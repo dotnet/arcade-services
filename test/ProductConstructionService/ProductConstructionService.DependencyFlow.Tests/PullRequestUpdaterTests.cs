@@ -596,7 +596,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             remote
                 .Setup(x => x.CommentPullRequestAsync(
                     prUrl,
-                    It.Is<string>(content => content.Contains("opposite codeflow merged"))))
+                    It.Is<string>(content => content.Contains(PullRequestCommentBuilder.BlockedCodeflowNotificationIntro))))
                 .Returns(Task.CompletedTask);
         }
 
@@ -664,6 +664,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<CancellationToken>()));
 
         setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
+    }
+
+    protected void WithForwardFlowThrowingBlockingException(BlockingCodeflowException exception)
+    {
+        _forwardFlower
+            .Setup(x => x.FlowForwardAsync(
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
     }
 
     protected void WithForwardFlowRecreationFallbackLimitReached(Mock<IRemote> remote, bool setUpMergeStatusUpdate = true)

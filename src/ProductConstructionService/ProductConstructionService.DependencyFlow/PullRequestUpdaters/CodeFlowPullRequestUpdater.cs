@@ -106,7 +106,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            await AddOppositeCodeflowMergedCommentAsync(pr);
+            await AddBlockedCodeflowCommentAsync(pr);
             await _stateManager.SetCheckReminderAsync(pr, prInfo!, isCodeFlow: true);
             await _stateManager.UnsetUpdateReminderAsync(isCodeFlow: true);
             return new SubscriptionUpdateResult(
@@ -852,15 +852,15 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
     {
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
-        await AddOppositeCodeflowMergedCommentAsync(pr);
+        await AddBlockedCodeflowCommentAsync(pr);
         pr.BlockedFromFutureUpdates = true;
         await _stateManager.SetInProgressPullRequestAsync(pr);
     }
 
-    private async Task AddOppositeCodeflowMergedCommentAsync(InProgressPullRequest pr)
+    private async Task AddBlockedCodeflowCommentAsync(InProgressPullRequest pr)
     {
         var comment = new Comment(
-            PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(),
+            PullRequestCommentBuilder.BuildBlockedCodeflowNotification(),
             CommentType.Warning);
         try
         {
@@ -870,7 +870,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
             if (await PullRequestCommenter.LastCommentContainsAsync(
                 remote,
                 pr.Url,
-                PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro))
+                PullRequestCommentBuilder.BlockedCodeflowNotificationIntro))
             {
                 _logger.LogInformation("Skipping duplicate blocked-flow comment on PR {prUrl}", pr.Url);
                 return;

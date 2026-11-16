@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Moq;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -101,6 +103,45 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             var res = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
             Assert.That(res.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NotUpdatable));
 
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+        }
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task BlockingCodeflowExceptionBlocksExistingPr(bool recreatingOppositeFlow)
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(new SubscriptionPolicy
+        {
+            Batchable = false,
+            UpdateFrequency = UpdateFrequency.EveryBuild
+        });
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha123456";
+        BlockingCodeflowException exception = recreatingOppositeFlow
+            ? new OppositeDirectionFlowRecreationException()
+            : new BlockingCodeflowException("An opposite direction flow has been merged.");
+        WithForwardFlowThrowingBlockingException(exception);
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
+        {
+            var remote = DarcRemotes[Subscription.TargetRepository];
+            remote.Setup(r => r.GetPullRequestCommentsAsync(VmrPullRequestUrl))
+                .ReturnsAsync([]);
+            remote.Setup(r => r.CommentPullRequestAsync(
+                    VmrPullRequestUrl,
+                    It.Is<string>(text => text.Contains(PullRequestCommentBuilder.BlockedCodeflowNotificationIntro)
+                        && text.Contains("haven't been flown yet"))))
+                .Returns(Task.CompletedTask);
+
+            var result = await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
+
+            Assert.That(result.OutcomeType, Is.EqualTo(SubscriptionOutcomeType.NotUpdatable));
+            Assert.That(result.OutcomeMessage, Is.EqualTo(exception.Message));
+            AndShouldHaveInProgressPullRequestState(oldBuild, blockedFromFutureUpdates: true);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
         }
