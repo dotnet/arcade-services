@@ -10,7 +10,7 @@
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolXUnit>false</UsingToolXUnit>
 
-    <AspireVersion>13.5.4</AspireVersion>
+    <AspireVersion>13.6.5</AspireVersion>
   </PropertyGroup>
 
 </Project>
