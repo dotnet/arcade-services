@@ -212,7 +212,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
           darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId}
           ```
         - Force a codeflow into this PR at your own risk if you want the new changes.
-          Changes in the target branch and user commits made to this PR might be reverted.
+          Changes from the target branch and user commits made to this PR might be reverted.
           ```
           darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId} --force
           ```
