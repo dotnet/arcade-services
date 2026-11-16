@@ -123,6 +123,12 @@ public abstract class VmrVersionFileMerger
 
             if (addedInTarget)
             {
+                if (updatedInSource)
+                {
+                    updates[property] = selector(targetChange!, sourceChange!);
+                    continue;
+                }
+
                 // the property is already in the targe repo, so we don't need to add it again
                 continue;
             }
