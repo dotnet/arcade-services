@@ -194,7 +194,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     }
 
     public const string BlockedCodeflowNotificationIntro =
-        "This PR cannot receive new codeflow updates because an opposite-direction codeflow has merged or would need to be recreated.";
+        "This PR cannot receive new codeflow updates because a codeflow in the opposite direction has been merged, or because the new changes conflict with a previous codeflow in the opposite direction.";
 
     public static string BuildBlockedCodeflowNotification() =>
         $"""
