@@ -19,12 +19,12 @@ public class PullRequestCommenterTests
         var remote = new Mock<IRemote>();
         remote.Setup(r => r.GetPullRequestCommentsAsync(PullRequestUrl))
             .ReturnsAsync([CreatePostedComment(
-                $"{PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro}\nTo avoid complex conflicts, the codeflow cannot continue.")]);
+                PullRequestCommentBuilder.BuildBlockedCodeflowNotification())]);
 
         var isLastComment = await PullRequestCommenter.LastCommentContainsAsync(
             remote.Object,
             PullRequestUrl,
-            PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro);
+            PullRequestCommentBuilder.BlockedCodeflowNotificationIntro);
 
         isLastComment.Should().BeTrue();
     }
@@ -35,14 +35,14 @@ public class PullRequestCommenterTests
         var remote = new Mock<IRemote>();
         remote.Setup(r => r.GetPullRequestCommentsAsync(PullRequestUrl)).ReturnsAsync(
         [
-            CreatePostedComment(PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro),
+            CreatePostedComment(PullRequestCommentBuilder.BuildBlockedCodeflowNotification()),
             "A newer comment"
         ]);
 
         var isLastComment = await PullRequestCommenter.LastCommentContainsAsync(
             remote.Object,
             PullRequestUrl,
-            PullRequestCommentBuilder.OppositeCodeflowMergedNotificationIntro);
+            PullRequestCommentBuilder.BlockedCodeflowNotificationIntro);
 
         isLastComment.Should().BeFalse();
     }
