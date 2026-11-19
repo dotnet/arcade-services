@@ -102,6 +102,32 @@ public class RemoteRepoBase : GitRepoCloner
                 }
 
                 await _processManager.ExecuteGit(clonedRepo, ["add", filePath, "-f"]);
+
+                if (file.Operation == GitFileOperation.Add)
+                {
+                    string chmodArgument = file.Mode switch
+                    {
+                        "100644" => "--chmod=-x",
+                        "100755" => "--chmod=+x",
+                        _ => null,
+                    };
+
+                    if (chmodArgument == null)
+                    {
+                        logger.LogWarning(
+                            "File mode {fileMode} for {filePath} cannot be applied as a regular Git file mode",
+                            file.Mode,
+                            file.FilePath);
+                    }
+                    else
+                    {
+                        var updateModeResult = await _processManager.ExecuteGit(
+                            clonedRepo,
+                            ["update-index", chmodArgument, "--", file.FilePath]);
+                        updateModeResult.ThrowIfFailed(
+                            $"Failed to apply file mode '{file.Mode}' to '{file.FilePath}'");
+                    }
+                }
             }
 
             var commitResult = await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "--no-gpg-sign", "-m", commitMessage]);
