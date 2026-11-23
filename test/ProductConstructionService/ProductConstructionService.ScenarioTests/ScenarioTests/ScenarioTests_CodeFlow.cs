@@ -107,12 +107,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestFilePatches,
                             cleanUp: false);
 
-                        await CheckIfPullRequestCommentExists(
-                            TestRepository.VmrTestRepoName,
-                            pr,
-                            [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
+                        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, pr))
+                        {
+                            await CheckIfPullRequestCommentExists(
+                                TestRepository.VmrTestRepoName,
+                                pr,
+                                [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
 
-                        await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
+                            await WaitForPullRequestApprovalAsync(TestRepository.VmrTestRepoName, pr);
+                        }
                     }
                 }
             }
