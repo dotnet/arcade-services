@@ -8,9 +8,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkPackageVersion>11.0.0-beta.26569.1</MicrosoftDotNetArcadeSdkPackageVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>11.0.0-beta.26569.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
-    <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet-dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26560.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26560.1</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationPackageVersion>1.1.0-beta.26566.1</MicrosoftAspNetCoreApiPaginationPackageVersion>
@@ -36,9 +34,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>$(MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion)</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetVersionToolsVersion>$(MicrosoftDotNetVersionToolsPackageVersion)</MicrosoftDotNetVersionToolsVersion>
     <!-- dotnet-dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapVersion>$(MicrosoftDncEngConfigurationBootstrapPackageVersion)</MicrosoftDncEngConfigurationBootstrapVersion>
     <MicrosoftDncEngSecretManagerVersion>$(MicrosoftDncEngSecretManagerPackageVersion)</MicrosoftDncEngSecretManagerVersion>
     <!-- dotnet-dnceng-shared dependencies -->
     <MicrosoftAspNetCoreApiPaginationVersion>$(MicrosoftAspNetCoreApiPaginationPackageVersion)</MicrosoftAspNetCoreApiPaginationVersion>
