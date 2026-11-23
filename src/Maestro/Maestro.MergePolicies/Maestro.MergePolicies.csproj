@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>disable</Nullable>
-    <!-- Suppress NU1701 warnings for Microsoft.Build compatibility with .NET 8.0 -->
+    <!-- Suppress NU1701 warnings for Microsoft.Build compatibility with .NET 11.0 -->
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
