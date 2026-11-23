@@ -1110,4 +1110,67 @@ public class JsonFileMergerTests
             It.IsAny<string>(),
             It.IsAny<string>()), Times.Once);
     }
+
+    [Test]
+    public async Task MergeJsonsAsync_PropagatesSourceRevertsWhenUsingTargetPreviousAsCommonBaseAsync()
+    {
+        // Target state that the last opposite-direction flow was created from - contains the "sdk" section
+        var targetPreviousJson = """
+            {
+              "sdk": {
+                "version": "10.0.100"
+              },
+              "tools": {
+                "dotnet": "10.0.100"
+              }
+            }
+            """;
+
+        // Source removed the "sdk" section (in the PR of the last flow) and updated the tools version
+        var sourceCurrentJson = """
+            {
+              "tools": {
+                "dotnet": "10.0.101"
+              }
+            }
+            """;
+
+        var expectedJson = """
+            {
+              "tools": {
+                "dotnet": "10.0.101"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(sourceCurrentJson);
+
+        // Act
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
+            _targetRepoMock.Object,
+            TestJsonPath,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            TestJsonPath,
+            VmrPreviousSha,
+            VmrCurrentSha,
+            useTargetPreviousAsCommonBase: true);
+
+        // Assert
+        hadChanges.Should().BeTrue();
+        _vmrRepoMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Never);
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+    }
 }

@@ -531,6 +531,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 },
                 productRepo,
                 lastFlows,
+                headBranchExisted,
                 async (_) => await applyLatestChanges(keepConflicts: false),
                 cancellationToken);
         }
@@ -545,6 +546,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CodeflowOptions codeflowOptions,
         ILocalGitRepo repo,
         LastFlows lastFlows,
+        bool headBranchExisted,
         ApplyLatestChangesDelegate reapplyChanges,
         CancellationToken cancellationToken)
     {
@@ -580,6 +582,22 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 codeflowOptions.TargetBranch,
                 codeflowOptions.UnsafeFlow,
                 cancellationToken);
+
+            // Replaying an opposite-direction flow on top of an existing PR branch replaces the target with a snapshot
+            // of the source, which can overwrite changes that haven't been flown yet. We only allow it for unsafe or forced flows.
+            if (previousFlows.LastFlow.IsBackflow != currentIsBackflow
+                && headBranchExisted
+                && !codeflowOptions.UnsafeFlow
+                && !codeflowOptions.ForceUpdate)
+            {
+                _logger.LogInformation(
+                    "Recreating {count} flow(s) would require replaying an opposite-direction {type} flow ({sourceSha} -> {targetSha}). Blocking the PR update.",
+                    flowsToRecreate,
+                    previousFlows.LastFlow.Name,
+                    previousFlows.LastFlow.SourceSha,
+                    previousFlows.LastFlow.TargetSha);
+                throw new OppositeDirectionFlowRecreationException();
+            }
 
             // We store the SHA where the head branch originates from so that later we can diff it
             var shaBeforeRecreation = currentIsBackflow

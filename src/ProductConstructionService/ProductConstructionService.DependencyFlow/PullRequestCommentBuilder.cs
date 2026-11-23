@@ -193,13 +193,14 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
-    public const string OppositeCodeflowMergedNotificationIntro =
-        "While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).";
+    public const string BlockedCodeflowNotificationIntro =
+        "This PR cannot receive new codeflow updates because a codeflow in the opposite direction has been merged, or because the new changes conflict with a previous codeflow in the opposite direction.";
 
-    public static string BuildOppositeCodeflowMergedNotification() =>
+    public static string BuildBlockedCodeflowNotification() =>
         $"""
-        {OppositeCodeflowMergedNotificationIntro}
-        To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
+        {BlockedCodeflowNotificationIntro}
+        Continuing could overwrite changes in the target branch that haven't been flown yet.
+        To avoid this, the codeflow cannot continue until this PR is closed or merged.
         
         You can continue with one of the following options:
         - Ignore this and merge this PR as usual without waiting for the new changes.
@@ -211,7 +212,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
           darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId}
           ```
         - Force a codeflow into this PR at your own risk if you want the new changes.
-          User commits made to this PR might be reverted.
+          Changes from the target branch and user commits made to this PR might be reverted.
           ```
           darc trigger-subscriptions --id {CommentPlaceholders.SubscriptionId} --force
           ```
