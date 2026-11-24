@@ -47,8 +47,6 @@ public partial class DependencyGrid
         {
             // update selected relations
             BuildGraphData.UpdateSelectedRelations(_dependenciesGridData, cell.Item!.BuildId);
-
-            StateHasChanged();
         }
     }
 }

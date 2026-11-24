@@ -20,7 +20,6 @@ builder.ConfigureApiRedirection();
 
 var app = builder.Build();
 
-app.UseWebAssemblyDebugging();
 app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseApiRedirection();

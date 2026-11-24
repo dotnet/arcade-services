@@ -40,7 +40,6 @@
     {
         _assetsData = null;
         _filteredAssetsData = null;
-        StateHasChanged();
 
         Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
         _assetsData = build.Assets.AsQueryable();

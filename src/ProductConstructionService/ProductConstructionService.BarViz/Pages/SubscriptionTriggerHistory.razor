@@ -361,14 +361,12 @@
         if (!string.IsNullOrWhiteSpace(_subscriptionIdFilter) && !Guid.TryParse(_subscriptionIdFilter.Trim(), out _))
         {
             _subscriptionIdError = "Enter a valid subscription GUID.";
-            StateHasChanged();
             return;
         }
 
         _subscriptionIdError = null;
         UpdateQueryParams();
         _reloading = true;
-        StateHasChanged();
 
         _seenOutcomes.Clear();
         _oldestDate = null;
@@ -408,7 +406,6 @@
     private async Task LoadMoreAsync()
     {
         _showLoadingMoreSpinner = true;
-        StateHasChanged();
 
         await LoadOutcomesAsync();
 

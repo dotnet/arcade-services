@@ -196,7 +196,6 @@
 
         AllSubscriptions = null;
         FilteredSubscriptions = null;
-        StateHasChanged();
 
         var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
         foreach (var pr in prs)
