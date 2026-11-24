@@ -199,11 +199,16 @@ internal class GatherDropOperation : Operation
         }
         else
         {
-            // Check that commit or channel was specified but not both
-            if (!(!string.IsNullOrEmpty(_options.Commit) ^
-                  !string.IsNullOrEmpty(_options.Channel)))
+            bool hasCommit = !string.IsNullOrEmpty(_options.Commit);
+            bool hasChannel = !string.IsNullOrEmpty(_options.Channel);
+            if (!hasCommit && !hasChannel)
             {
-                Console.WriteLine("Please specify either --channel or --commit.");
+                Console.WriteLine("Please specify --channel, --commit, or both.");
+                return false;
+            }
+            else if (hasCommit && hasChannel && string.IsNullOrEmpty(_options.RepoUri))
+            {
+                Console.WriteLine("--repo is required when specifying both --commit and --channel.");
                 return false;
             }
             return true;
@@ -214,7 +219,7 @@ internal class GatherDropOperation : Operation
     ///     Obtain the root builds to start with.
     /// </summary>
     /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
-    private async Task<IEnumerable<BarBuild>> GetRootBuildsAsync()
+    internal async Task<IEnumerable<BarBuild>> GetRootBuildsAsync()
     {
         if (!ValidateRootBuildsOptions())
         {
@@ -235,7 +240,11 @@ internal class GatherDropOperation : Operation
         }
         else if (!string.IsNullOrEmpty(repoUri))
         {
-            if (!string.IsNullOrEmpty(_options.Channel))
+            if (!string.IsNullOrEmpty(_options.Commit))
+            {
+                return await GetRootBuildOfCommitAsync(repoUri, _options.Commit, _options.Channel);
+            }
+            else if (!string.IsNullOrEmpty(_options.Channel))
             {
                 IEnumerable<Channel> channels = await _barClient.GetChannelsAsync();
                 IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
@@ -258,31 +267,65 @@ internal class GatherDropOperation : Operation
                 }
                 return [rootBuild];
             }
-            else if (!string.IsNullOrEmpty(_options.Commit))
-            {
-                Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                var builds = await _barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
-                // If more than one is available, print them with their IDs.
-                if (builds.Count() > 1)
-                {
-                    Console.WriteLine($"There were {builds.Count()} potential root builds.  Please select one and pass it with --id");
-                    foreach (var build in builds)
-                    {
-                        Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.ToLocalTime()}");
-                    }
-                    return null;
-                }
-                BarBuild rootBuild = builds.SingleOrDefault();
-                if (rootBuild == null)
-                {
-                    Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
-                    return null;
-                }
-                return [rootBuild];
-            }
         }
         // Shouldn't get here if ValidateRootBuildOptions is correct.
         throw new DarcException("Options for root builds were not validated properly. Please contact @dnceng");
+    }
+
+    /// <summary>
+    ///     Find the single root build of a repo at a commit. When a channel filter is supplied,
+    ///     only builds assigned to a channel whose name contains the filter (case-insensitive)
+    ///     are considered. This disambiguates commits that were built more than once
+    ///     (e.g. internal and public builds, or re-runs).
+    /// </summary>
+    /// <returns>The root build, or null if no unique build could be found.</returns>
+    private async Task<IEnumerable<BarBuild>> GetRootBuildOfCommitAsync(string repoUri, string commit, string channelFilter)
+    {
+        Console.WriteLine($"Looking up builds of {repoUri}@{commit}");
+        List<BarBuild> allBuilds = [.. await _barClient.GetBuildsAsync(repoUri, commit)];
+        if (allBuilds.Count == 0)
+        {
+            Console.WriteLine($"No builds were found of {repoUri}@{commit}");
+            return null;
+        }
+
+        bool hasChannelFilter = !string.IsNullOrEmpty(channelFilter);
+        List<BarBuild> candidateBuilds = hasChannelFilter
+            ? [.. allBuilds.Where(build => build.Channels?.Any(channel => channel.Name.Contains(channelFilter, StringComparison.OrdinalIgnoreCase)) == true)]
+            : allBuilds;
+
+        if (candidateBuilds.Count == 1)
+        {
+            return [candidateBuilds[0]];
+        }
+        else if (candidateBuilds.Count == 0)
+        {
+            Console.WriteLine($"None of the {allBuilds.Count} build(s) of {repoUri}@{commit} are assigned to a channel matching '{channelFilter}'. Candidate builds:");
+            PrintCandidateBuilds(allBuilds);
+            return null;
+        }
+        else
+        {
+            string channelSuffix = hasChannelFilter ? $" on a channel matching '{channelFilter}'" : string.Empty;
+            Console.WriteLine($"There were {candidateBuilds.Count} potential root builds{channelSuffix}. Please select one and pass it with --id");
+            if (!hasChannelFilter)
+            {
+                Console.WriteLine("Alternatively, pass --channel to select the build assigned to a specific channel.");
+            }
+            PrintCandidateBuilds(candidateBuilds);
+            return null;
+        }
+    }
+
+    private static void PrintCandidateBuilds(IEnumerable<BarBuild> builds)
+    {
+        foreach (var build in builds)
+        {
+            string channels = build.Channels?.Count > 0
+                ? string.Join(", ", build.Channels.Select(channel => channel.Name))
+                : "(none)";
+            Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.ToLocalTime()} - Channels: {channels}");
+        }
     }
 
     private class BuildComparer : IEqualityComparer<BarBuild>

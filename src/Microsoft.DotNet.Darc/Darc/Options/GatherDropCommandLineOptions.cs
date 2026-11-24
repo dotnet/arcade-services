@@ -72,8 +72,8 @@ internal class GatherDropCommandLineOptions : CommandLineOptions<GatherDropOpera
             "BAR ID(s) of the root build(s) that we want to gather. comma separated.",
             value => RootBuildIds = value,
             alias: "-i");
-        Add<string>("--repo", "-r", "Gather a build drop for a build of this repo. Requires --commit or --channel.", value => RepoUri = value);
-        Add<string>("--commit", "-c", "Commit to gather a drop for.", value => Commit = value);
+        Add<string>("--repo", "-r", "Gather a build drop for a build of this repo. Requires --commit, --channel, or both.", value => RepoUri = value);
+        Add<string>("--commit", "-c", "Commit to gather a drop for. If the commit was built more than once, combine with --channel to select the build assigned to that channel.", value => Commit = value);
         Add<string>("--output-dir", "-o", "Output directory to place build drop.", value => OutputDirectory = value, required: true);
         Add<bool>("--use-relative-paths", "If true, make all paths in the resultant manifest relative to the value of output-dir", value => UseRelativePathsInManifest = value, defaultValue: () => false);
         Add<int>("--max-downloads", "Maximum concurrent downloads.", value => MaxConcurrentDownloads = value, defaultValue: () => 4);
@@ -85,7 +85,7 @@ internal class GatherDropCommandLineOptions : CommandLineOptions<GatherDropOpera
         Add<bool>("--overwrite", "Overwrite existing files at the destination.", value => Overwrite = value);
         Add<bool>("--dry-run", "Do not actually download files, but print what we would do.", value => DryRun = value);
         Add<bool>("--include-toolset", "Include toolset dependencies.", value => IncludeToolset = value);
-        Add<string>("--channel", "Download the latest from this channel. Matched on substring.", value => Channel = value);
+        Add<string>("--channel", "Download the latest from this channel. Matched on substring. When combined with --commit, selects the build of that commit assigned to this channel.", value => Channel = value);
         Add<bool>("--no-workarounds", "Do not allow workarounds when gathering the drop.", value => NoWorkarounds = value);
         Add<bool>("--skip-existing", "Skip files that already exist at the destination.", value => SkipExisting = value);
         Add<bool>("--include-released", "Include builds that are marked as released", value => IncludeReleased = value);
