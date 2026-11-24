@@ -113,4 +113,26 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
   </ItemGroup>
 
+  <!-- 11.0.0 runtime packages do not support net8.0, so keep net8.0 targets on the latest supported version -->
+  <PropertyGroup>
+    <Net8CompatibleRuntimePackageVersion>10.0.14</Net8CompatibleRuntimePackageVersion>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageVersion Update="Microsoft.Extensions.Caching.Abstractions" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Configuration.UserSecrets" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Configuration" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.FileSystemGlobbing" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Hosting" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Http" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="Microsoft.Extensions.Options" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="System.IO.Hashing" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="System.Security.Cryptography.Pkcs" Version="$(Net8CompatibleRuntimePackageVersion)" />
+    <PackageVersion Update="System.Security.Cryptography.Xml" Version="$(Net8CompatibleRuntimePackageVersion)" />
+  </ItemGroup>
+
 </Project>
