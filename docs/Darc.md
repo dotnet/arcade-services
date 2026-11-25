@@ -1107,8 +1107,10 @@ backflow validation.
 
 The `All Checks Successful` policy evaluates the other checks reported on the
 pull request, such as PR builds, and succeeds only when every non-ignored check
-is green. If no non-ignored checks remain, the policy stays pending with
-`Waiting for checks.` Maestro's own policy checks are evaluated separately. When
+is green. GitHub checks that complete with a neutral conclusion are ignored. If
+no non-ignored checks remain, the policy stays pending with
+`Waiting for checks.`, so a pull request whose checks are all neutral is not
+merged. Maestro's own policy checks are evaluated separately. When
 `Merge PRs` is enabled, Maestro merges the pull request only after all policies
 pass. For non-batched subscriptions,
 `Merge PRs` and `Ignored Checks` belong to the subscription. For batched
@@ -1555,7 +1557,8 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
 **Merge settings**
 
 The `All Checks Successful` policy evaluates every other check reported on the
-pull request, such as PR builds. Use `--ignore-checks` to provide a
+pull request, such as PR builds. GitHub checks with a neutral conclusion are
+ignored, but at least one non-ignored check must succeed. Use `--ignore-checks` to provide a
 comma-separated list of checks that should not block policy evaluation. Use
 `--merge-prs` to have Maestro merge pull requests after all policies pass. In
 interactive mode these settings are shown as

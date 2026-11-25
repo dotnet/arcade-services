@@ -15,7 +15,7 @@ namespace Maestro.MergePolicies;
 
 /// <summary>
 ///     Merge the PR when it has more than one check and they are all successful, ignoring checks specified in the
-///     "IgnoredChecks" property.
+///     "IgnoredChecks" property and checks that completed with a neutral conclusion.
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
@@ -55,7 +55,8 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
         IEnumerable<Check> notIgnoredChecks = checks.Where(c =>
             !_ignoredChecks.Contains(c.Name)
             && !defaultIgnoredChecks.Contains(c.Name)
-            && !c.IsMaestroMergePolicy);
+            && !c.IsMaestroMergePolicy
+            && c.Status != CheckState.Neutral);
 
         if (!notIgnoredChecks.Any())
         {

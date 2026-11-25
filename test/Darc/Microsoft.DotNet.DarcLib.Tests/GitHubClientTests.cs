@@ -394,6 +394,43 @@ public class GitHubClientTests
         OctoKitRepositoryCommitsClient.Verify(m => m.Get(repository.Id, sha), Times.Once);
     }
 
+    [TestCase("success", CheckState.Success)]
+    [TestCase("skipped", CheckState.Success)]
+    [TestCase("neutral", CheckState.Neutral)]
+    [TestCase("failure", CheckState.Failure)]
+    [TestCase("cancelled", CheckState.Failure)]
+    [TestCase("timed_out", CheckState.Failure)]
+    [TestCase("action_required", CheckState.Failure)]
+    public async Task GetPullRequestChecksAsync_MapsCheckRunConclusionsAsync(string conclusion, CheckState expectedState)
+    {
+        // Arrange
+        const string owner = "test";
+        const string repo = "repo";
+        const string sha = "abc123";
+        var serializer = new Octokit.Internal.SimpleJsonSerializer();
+        var commits = new List<PullRequestCommit> { serializer.Deserialize<PullRequestCommit>($"{{\"sha\":\"{sha}\"}}") };
+        var combinedStatus = serializer.Deserialize<CombinedCommitStatus>("{\"statuses\":[]}");
+        var checkRuns = serializer.Deserialize<CheckRunsResponse>(
+            $"{{\"total_count\":1,\"check_runs\":[{{\"name\":\"check\",\"status\":\"completed\",\"conclusion\":\"{conclusion}\",\"external_id\":\"\"}}]}}");
+
+        var statusClient = new Mock<ICommitStatusClient>();
+        statusClient.Setup(m => m.GetCombined(owner, repo, sha)).ReturnsAsync(combinedStatus);
+        OctoKitRepositoriesClient.SetupGet(x => x.Status).Returns(statusClient.Object);
+        OctoKitPullRequestsClient.Setup(m => m.Commits(owner, repo, 1)).ReturnsAsync(commits);
+
+        var checkRunsClient = new Mock<ICheckRunsClient>();
+        checkRunsClient.Setup(m => m.GetAllForReference(owner, repo, sha)).ReturnsAsync(checkRuns);
+        var checksClient = new Mock<IChecksClient>();
+        checksClient.SetupGet(m => m.Run).Returns(checkRunsClient.Object);
+        OctoKitGithubClient.SetupGet(x => x.Check).Returns(checksClient.Object);
+
+        // Act
+        IList<Check> checks = await _gitHubClientForTest.GetPullRequestChecksAsync($"https://api.github.com/repos/{owner}/{repo}/pulls/1");
+
+        // Assert
+        checks.Should().ContainSingle().Which.Status.Should().Be(expectedState);
+    }
+
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 10, 10, false)] // Happy path: 10 approvals
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 10, 10, true)]  // Same as above but user comments 1 minute later
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 0, 0, false)]   // No reviews yet
