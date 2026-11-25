@@ -270,9 +270,9 @@ darc gather-drop
   option --asset-filter short=- required=False separator=- default=- type=String prop=AssetFilter help=Only download assets matching the given regex filter
   option --azdev-pat short=- required=False separator=- default=- type=String prop=AzureDevOpsPat help=Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.
   option --bar-uri short=- required=False separator=- default=- type=String prop=BuildAssetRegistryBaseUri help=URI of the build asset registry service to use.
-  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Download the latest from this channel. Matched on substring.
+  option --channel short=- required=False separator=- default=- type=String prop=Channel help=Download the latest from this channel. Matched on substring. When combined with --commit, selects the build of that commit assigned to this channel.
   option --ci short=- required=False separator=- default=False type=Boolean prop=IsCi help=Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)
-  option --commit short=-c required=False separator=- default=- type=String prop=Commit help=Commit to gather a drop for.
+  option --commit short=-c required=False separator=- default=- type=String prop=Commit help=Commit to gather a drop for. If the commit was built more than once, combine with --channel to select the build assigned to that channel.
   option --continue-on-error short=- required=False separator=- default=False type=Boolean prop=ContinueOnError help=Continue on error rather than halting.
   option --debug short=- required=False separator=- default=False type=Boolean prop=Debug help=Turn on debug output.
   option --download-timeout short=- required=False separator=- default=400 type=Int32 prop=AssetDownloadTimeoutInSeconds help=Timeout in seconds for downloading each asset.
@@ -292,7 +292,7 @@ darc gather-drop
   option --overwrite short=- required=False separator=- default=False type=Boolean prop=Overwrite help=Overwrite existing files at the destination.
   option --password short=-p required=False separator=- default=- type=String prop=BuildAssetRegistryToken help=Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.
   option --release-name short=- required=False separator=- default=3.0.0-previewN type=String prop=ReleaseName help=Name of release to use when generating release json.
-  option --repo short=-r required=False separator=- default=- type=String prop=RepoUri help=Gather a build drop for a build of this repo. Requires --commit or --channel.
+  option --repo short=-r required=False separator=- default=- type=String prop=RepoUri help=Gather a build drop for a build of this repo. Requires --commit, --channel, or both.
   option --sas-suffixes short=- required=False separator=, default=[] type=list<String> prop=SASSuffixes help=List of potential uri suffixes that can be used if anonymous access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.
   option --separated short=- required=False separator=- default=False type=Boolean prop=Separated help=Also download files to their repo separated locations
   option --skip-existing short=- required=False separator=- default=False type=Boolean prop=SkipExisting help=Skip files that already exist at the destination.

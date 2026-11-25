@@ -1015,6 +1015,18 @@ id. Remember to authenticate using a token from
 https://maestro.dot.net/.  Better methods of obtaining
 the root build are coming soon.
 
+If the commit was built more than once (for example, an internal and a public
+build, or a re-run), darc lists the candidate builds along with the channels
+each is assigned to. You can then pick the build assigned to a specific channel
+by combining `--commit` with `--channel` (matched on substring, case-insensitive).
+This fails if zero or more than one candidate build is assigned to a matching channel:
+
+```
+PS C:\enlistments\core-sdk> darc gather-drop --repo https://github.com/dotnet/core-sdk
+                            --commit 465a336c7a5ca3af2f6cf5172ddc0ebde620803b
+                            --channel ".NET Workload" --output-dir C:\scratch\drop
+```
+
 The root build can then be provided using --id
 
 ```
