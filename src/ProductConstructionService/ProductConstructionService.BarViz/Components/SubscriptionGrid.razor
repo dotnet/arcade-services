@@ -47,10 +47,8 @@
     protected override async Task OnParametersSetAsync()
     {
         _subscriptionsData = null;
-        StateHasChanged();
 
         _subscriptionsData = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, sourceRepository: Repository))!.AsQueryable();
-        StateHasChanged();
     }
 
     private string? GetBuildLink(Subscription subscription)

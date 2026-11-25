@@ -30,7 +30,6 @@ public partial class Dependencies
     protected override async Task OnParametersSetAsync()
     {
         _buildGraphData = null;
-        StateHasChanged();
 
         BuildGraph buildGraph = await PcsApi.Builds.GetBuildGraphAsync(BuildId);
         _buildGraphData = new BuildGraphData(buildGraph, BuildId, ChannelId);

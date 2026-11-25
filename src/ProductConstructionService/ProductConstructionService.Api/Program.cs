@@ -49,7 +49,6 @@ app.UseHttpLogging();
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
-    app.UseWebAssemblyDebugging();
     await app.Services.UseLocalWorkItemQueues(
         [
             app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.DefaultWorkItemQueueName),

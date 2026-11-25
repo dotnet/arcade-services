@@ -9,6 +9,13 @@ internal static class JSRuntimeExtensions
 {
     public static async Task OpenNewWindow(this IJSRuntime jsRuntime, string uri)
     {
-        await jsRuntime.InvokeVoidAsync("open", uri, "_blank");
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("open", uri, "_blank");
+        }
+        catch (JSException ex)
+        {
+            throw new InvalidOperationException("Failed to open a new browser window.", ex);
+        }
     }
 }

@@ -29,7 +29,14 @@
     {
         if (firstRender)
         {
-            await JSRuntime.InvokeVoidAsync("appLoading.remove");
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("appLoading.remove");
+            }
+            catch (JSException ex)
+            {
+                throw new InvalidOperationException("Failed to remove the application loading indicator.", ex);
+            }
         }
     }
 
