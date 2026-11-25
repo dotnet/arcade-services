@@ -162,7 +162,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             GetTestChannelName(),
             sourceAssets,
             expectedCoherencyDependencies,
-            mergePrs: true);
+            mergePrs: true,
+            includeNeutralCheck: true);
     }
 
     [Test]

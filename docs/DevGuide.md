@@ -68,11 +68,11 @@ After you completed the steps to run the service locally, you can run the scenar
     ```json
     {
     "PCS_BASEURI": "https://localhost:53180/",
-    "GITHUB_TOKEN": "[FILL SAME TOKEN AS YOU WOULD FOR DARC]",
     "DARC_PACKAGE_SOURCE": "[full path to your arcade-services]\\artifacts\\packages\\Debug\\NonShipping",
     "DARC_VERSION": "0.0.99-dev"
     }
     ```
+- The tests authenticate to GitHub as the Maestro CI GitHub App, the same as the E2E pipeline. When `GITHUB_TOKEN` is not set, they mint an installation token for `maestro-auth-test` by signing a JWT with the `maestro-ci-private-key` key in the `ProductConstructionInt` Key Vault. Log in with `az login` using an account that has sign permissions on that key. Some tests (e.g. ones creating check runs) only work with a GitHub App token, so setting `GITHUB_TOKEN` to a personal token is not recommended.
 - Build the Darc tool locally (it is run by the scenario tests):
     ```ps
     cd src\Microsoft.DotNet.Darc\Darc

@@ -14,7 +14,6 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using Octokit.Internal;
 using ProductConstructionService.ScenarioTests.Helpers;
@@ -66,8 +65,7 @@ public class TestParameters : IDisposable
         IsCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
         GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN")
             ?? userSecrets["GITHUB_TOKEN"]
-            ?? TryGetGitHubTokenFromCliAsync().GetAwaiter().GetResult()
-            ?? throw new Exception("Please configure the GitHub token");
+            ?? GitHubAppInstallationTokenProvider.GetInstallationTokenAsync(GitHubTestOrg).GetAwaiter().GetResult();
         _darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE") ?? userSecrets["DARC_PACKAGE_SOURCE"]
             ?? throw new Exception("Please configure the Darc package source");
         _azDoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN")
@@ -127,7 +125,7 @@ public class TestParameters : IDisposable
             "--bar-uri", PcsBaseUri,
             "--github-pat", GitHubToken,
             "--azdev-pat", AzDoToken,
-            IsCI ? "--ci" : ""
+            .. IsCI ? ["--ci"] : Array.Empty<string>(),
         ];
 
         Assembly assembly = typeof(TestParameters).Assembly;
@@ -163,31 +161,6 @@ public class TestParameters : IDisposable
         }
 
         await TestHelpers.RunExecutableAsync(dotnetExe, [.. toolInstallArgs]);
-    }
-
-    private static async Task<string?> TryGetGitHubTokenFromCliAsync()
-    {
-        var logger = NullLoggerFactory.Instance.CreateLogger(nameof(ProcessManager));
-        try
-        {
-            var processManager = new ProcessManager(logger, "git");
-            var result = await processManager.Execute("gh", ["auth", "token"], timeout: TimeSpan.FromSeconds(15));
-
-            if (result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.StandardOutput))
-            {
-                var token = result.StandardOutput.Trim();
-                logger.LogDebug("Successfully retrieved GitHub token from 'gh auth token'");
-                return token;
-            }
-
-            logger.LogDebug("GitHub CLI did not return a valid token. Exit code: {exitCode}", result.ExitCode);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "Failed to retrieve GitHub token from 'gh' CLI. This is expected if 'gh' is not installed or not authenticated.");
-            return null;
-        }
     }
 
     public void Dispose()
