@@ -97,24 +97,27 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     }
 
     private static readonly List<string> VersionTypes = ["branch", "commit", "tag"];
+
     /// <summary>
-    ///     Retrieve the contents of a text file in a repo on a specific branch
+    ///     Retrieve the contents of a text file in a repo on a specific branch, commit, or tag.
     /// </summary>
     /// <param name="accountName">Azure DevOps account</param>
     /// <param name="projectName">Azure DevOps project</param>
     /// <param name="repoName">Azure DevOps repo</param>
     /// <param name="filePath">Path to file</param>
-    /// <param name="branchOrCommit">Branch</param>
+    /// <param name="gitRef">Branch, commit, or tag</param>
+    /// <param name="versionType">Known Azure DevOps version type, or null to probe branch, commit, and tag</param>
     /// <returns>Contents of file as string</returns>
     private async Task<string> GetFileContentsAsync(
         string accountName,
         string projectName,
         string repoName,
         string filePath,
-        string branchOrCommit)
+        string gitRef,
+        string versionType = null)
     {
         _logger.LogInformation(
-            $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");
+            $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' at Git ref '{gitRef}'...");
 
         if (filePath.StartsWith("./"))
         {
@@ -126,18 +129,24 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
         // then if it 404s, check commit and then tag.
         HttpRequestException lastException = null;
-        foreach (var versionType in VersionTypes)
+        foreach (var candidateVersionType in VersionTypes)
         {
+            if (versionType != null && candidateVersionType != versionType)
+            {
+                continue;
+            }
+
             try
             {
                 JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
+                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={candidateVersionType}&version={gitRef}&includeContent=true",
                     _logger,
-                    // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                    logFailure: false);
+                    // Suppress failures while probing because the request is expected to fail until the matching
+                    // version type is tried. Log failures when the caller supplied a specific version type.
+                    logFailure: versionType != null);
                 return content["content"].ToString();
             }
             catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
@@ -147,7 +156,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             }
         }
 
-        throw new DependencyFileNotFoundException(filePath, $"{repoName}", branchOrCommit, lastException);
+        throw new DependencyFileNotFoundException(filePath, $"{repoName}", gitRef, lastException);
     }
 
     /// <summary>
@@ -669,22 +678,41 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             path = path.Substring(2);
         }
 
-        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+        JObject rootItem = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
-            $"_apis/git/repositories/{repoName}/items?scopePath={path}&version={commit}&includeContent=true&versionType=commit&recursionLevel=full",
+            $"_apis/git/repositories/{repoName}/items?path={path}&version={commit}&versionType=commit",
             _logger);
-        List<AzureDevOpsItem> items = JsonConvert.DeserializeObject<List<AzureDevOpsItem>>(Convert.ToString(content["value"]));
 
-        foreach (AzureDevOpsItem item in items)
+        string treeObjectId = rootItem["objectId"]?.ToString()
+            ?? throw new DarcException($"Azure DevOps did not return a Git object ID for '{path}' at commit '{commit}'");
+
+        // The Items API does not expose Git modes, so use the tree to preserve executable bits.
+        JObject tree = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/trees/{treeObjectId}?recursive=true",
+            _logger);
+
+        string normalizedPath = path.Trim('/');
+        foreach (JToken treeEntry in tree["treeEntries"] ?? new JArray())
         {
-            if (!item.IsFolder)
+            if (string.Equals(treeEntry["gitObjectType"]?.ToString(), "blob", StringComparison.OrdinalIgnoreCase))
             {
-                if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(item.Path))
+                string relativePath = treeEntry["relativePath"]?.ToString()
+                    ?? throw new DarcException($"Azure DevOps returned a Git tree entry without a relative path under '{path}'");
+                string filePath = string.IsNullOrEmpty(normalizedPath)
+                    ? relativePath
+                    : $"{normalizedPath}/{relativePath}";
+
+                if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(filePath))
                 {
-                    string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, item.Path, commit);
-                    var gitCommit = new GitFile(item.Path.TrimStart('/'), fileContent);
+                    string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, filePath, commit, versionType: "commit");
+                    string mode = treeEntry["mode"]?.ToString()
+                        ?? throw new DarcException($"Azure DevOps returned no Git mode for '{filePath}' at commit '{commit}'");
+                    var gitCommit = new GitFile(filePath, fileContent, ContentEncoding.Utf8, mode);
                     files.Add(gitCommit);
                 }
             }
@@ -1175,6 +1203,10 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     ///     Commit or update a set of files to a repo using the Azure DevOps Git API without cloning.
     ///     This uses the pushes API to create commits directly.
     /// </summary>
+    /// <remarks>
+    ///     The Azure DevOps Pushes API does not expose Git file modes. Callers that need to add an
+    ///     executable file or change a file's executable state must use <see cref="CommitFilesAsync"/>.
+    /// </remarks>
     public async Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);

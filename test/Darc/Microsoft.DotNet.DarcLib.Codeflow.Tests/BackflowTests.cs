@@ -162,6 +162,16 @@ internal class BackflowTests : CodeFlowTests
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
 
         await GitOperations.CommitAll(VmrPath, "Changing a VMR arcade's global.json and eng/common file");
+        string vmrEngCommonPath = $"{VmrInfo.ArcadeRepoDir}/{DarcLib.Constants.CommonScriptFilesPath}/{vmrEngCommonFile}";
+        var updateModeResult = await GitOperations.ExecuteGitCommand(
+            VmrPath,
+            "update-index",
+            "--chmod=+x",
+            "--",
+            vmrEngCommonPath);
+        updateModeResult.ThrowIfFailed($"Failed to mark {vmrEngCommonPath} as executable");
+        var amendResult = await GitOperations.ExecuteGitCommand(VmrPath, "commit", "--amend", "--no-edit");
+        amendResult.ThrowIfFailed("Failed to amend the VMR eng/common mode change");
 
         var build1 = await CreateNewVmrBuild(
         [
@@ -182,6 +192,16 @@ internal class BackflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
 
         var productRepo = GetLocal(ProductRepoPath);
+        string productEngCommonPath = $"{DarcLib.Constants.CommonScriptFilesPath}/{vmrEngCommonFile}";
+        var productModeResult = await GitOperations.ExecuteGitCommand(
+            ProductRepoPath,
+            "ls-files",
+            "--stage",
+            "--",
+            productEngCommonPath);
+        productModeResult.ThrowIfFailed($"Failed to read the mode for {productEngCommonPath}");
+        productModeResult.StandardOutput.Should().StartWith("100755 ");
+
         List<DependencyDetail> expectedDependencies =
         [
             ..GetDependencies(build1).Where(a => a.Name != "Package.C2"),

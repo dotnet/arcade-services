@@ -205,12 +205,12 @@ public class GitHubClientTests
 
         List<(string, string, TreeItem)> treeItemsToGet =
         [
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "1", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "2", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "3", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "4", "https://url")),
-            ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "11", "https://url")),
-            ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "12", "https://url")),
+            ("a", "b", new TreeItem("path", "100644", TreeType.Blob, 10, "1", "https://url")),
+            ("a", "b", new TreeItem("path", "100644", TreeType.Blob, 10, "2", "https://url")),
+            ("a", "b", new TreeItem("path", "100644", TreeType.Blob, 10, "3", "https://url")),
+            ("a", "b", new TreeItem("path", "100644", TreeType.Blob, 10, "4", "https://url")),
+            ("dotnet", "corefx", new TreeItem("path", "100644", TreeType.Blob, 10, "11", "https://url")),
+            ("dotnet", "corefx", new TreeItem("path", "100644", TreeType.Blob, 10, "12", "https://url")),
         ];
 
         // Mock up the github client
@@ -294,6 +294,25 @@ public class GitHubClientTests
             // Get it again, this time it should be in the cache
             expectedCacheHits++;
             await client.Object.GetGitTreeItem("anotherPath", renamedTreeItem.Item3, renamedTreeItem.Item1, renamedTreeItem.Item2);
+            cache.CacheHits.Should().Be(expectedCacheHits);
+        }
+
+        // A mode-only change keeps the same blob SHA but must not reuse the cached GitFile mode.
+        TreeItem originalTreeItem = treeItemsToGet[0].Item3;
+        var modeChangedTreeItem = new TreeItem(
+            originalTreeItem.Path,
+            "100755",
+            TreeType.Blob,
+            originalTreeItem.Size,
+            originalTreeItem.Sha,
+            originalTreeItem.Url);
+        GitFile modeChangedFile = await client.Object.GetGitTreeItem("path", modeChangedTreeItem, "a", "b");
+
+        modeChangedFile.Mode.Should().Be("100755");
+        if (enableCache)
+        {
+            expectedCacheMisses++;
+            cache.CacheMisses.Should().Be(expectedCacheMisses);
             cache.CacheHits.Should().Be(expectedCacheHits);
         }
     }
