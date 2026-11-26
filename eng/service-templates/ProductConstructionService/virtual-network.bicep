@@ -32,6 +32,11 @@ resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/sub
               }
           }
       ]
+      serviceEndpoints: [
+          {
+              service: 'Microsoft.Storage'
+          }
+      ]
       networkSecurityGroup: {
           id: networkSecurityGroupId
       }
