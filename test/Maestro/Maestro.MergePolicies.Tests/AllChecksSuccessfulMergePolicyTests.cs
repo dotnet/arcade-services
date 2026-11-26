@@ -148,6 +148,57 @@ public class AllChecksSuccessfulMergePolicyTests
         result.Title.Should().Be(AllChecksSuccessfulMergePolicy.WaitingForChecksMsg);
     }
 
+    [TestCase(CheckState.Success, MergePolicyEvaluationStatus.TransientSuccess)]
+    [TestCase(CheckState.Pending, MergePolicyEvaluationStatus.Pending)]
+    [TestCase(CheckState.Failure, MergePolicyEvaluationStatus.TransientFailure)]
+    public async Task EvaluateAsync_IgnoresNeutralChecks(CheckState otherCheckState, MergePolicyEvaluationStatus expectedStatus)
+    {
+        // Arrange
+        const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
+        var remote = new Mock<IRemote>(MockBehavior.Strict);
+        remote.Setup(r => r.GetPullRequestChecksAsync(pullRequestUrl))
+            .ReturnsAsync(
+            [
+                new Check(CheckState.Neutral, "Conditional pipeline", string.Empty),
+                new Check(otherCheckState, "Required check", string.Empty),
+            ]);
+
+        var policy = new AllChecksSuccessfulMergePolicy([]);
+        PullRequestUpdateSummary pullRequest = CreatePullRequestSummary(pullRequestUrl);
+
+        // Act
+        MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
+
+        // Assert
+        result.Status.Should().Be(expectedStatus);
+        result.Title.Should().StartWith("1 ");
+    }
+
+    [Test]
+    public async Task EvaluateAsync_OnlyNeutralChecks_ReturnsPending()
+    {
+        // Arrange
+        const string pullRequestUrl = "https://github.com/dotnet/runtime/pull/123";
+        var remote = new Mock<IRemote>(MockBehavior.Strict);
+        remote.Setup(r => r.GetPullRequestChecksAsync(pullRequestUrl))
+            .ReturnsAsync(
+            [
+                new Check(CheckState.Neutral, "Conditional pipeline", string.Empty),
+                new Check(CheckState.Success, "license/cla", string.Empty),
+                new Check(CheckState.Success, "Maestro policy", string.Empty, isMaestroMergePolicy: true),
+            ]);
+
+        var policy = new AllChecksSuccessfulMergePolicy([]);
+        PullRequestUpdateSummary pullRequest = CreatePullRequestSummary(pullRequestUrl);
+
+        // Act
+        MergePolicyEvaluationResult result = await policy.EvaluateAsync(pullRequest, remote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.Pending);
+        result.Title.Should().Be(AllChecksSuccessfulMergePolicy.WaitingForChecksMsg);
+    }
+
     private static PullRequestUpdateSummary CreatePullRequestSummary(string pullRequestUrl) => new(
         url: pullRequestUrl,
         coherencyCheckSuccessful: null,

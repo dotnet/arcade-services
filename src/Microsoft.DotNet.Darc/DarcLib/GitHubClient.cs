@@ -1103,7 +1103,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                         CheckStatus.Completed => (run.Conclusion?.Value) switch
                         {
                             CheckConclusion.Success or CheckConclusion.Skipped => CheckState.Success,
-                            CheckConclusion.ActionRequired or CheckConclusion.Cancelled or CheckConclusion.Failure or CheckConclusion.Neutral or CheckConclusion.TimedOut => CheckState.Failure,
+                            CheckConclusion.Neutral => CheckState.Neutral,
+                            CheckConclusion.ActionRequired or CheckConclusion.Cancelled or CheckConclusion.Failure or CheckConclusion.TimedOut => CheckState.Failure,
                             _ => CheckState.None,
                         },
                         _ => CheckState.None,

@@ -99,7 +99,7 @@ internal abstract class TestLogic : ScenarioTestBase
     }
 
     public async Task NonBatchedGitHubFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
-        List<DependencyDetail> expectedDependencies, bool mergePrs = false)
+        List<DependencyDetail> expectedDependencies, bool mergePrs = false, bool includeNeutralCheck = false)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
         var sourceRepoName = TestRepository.TestRepo1Name;
@@ -138,6 +138,12 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
+                    // Conditional pipelines that don't run report a neutral conclusion, which must not block auto-merge.
+                    // The neutral check is created before the successful status check so Maestro always evaluates it.
+                    Octokit.PullRequest neutralCheckPullRequest = includeNeutralCheck
+                        ? await CreateNeutralCheckRunAsync(targetRepoName, targetBranch)
+                        : null;
+
                     await CheckNonBatchedGitHubPullRequest(
                         sourceRepoName,
                         targetRepoName,
@@ -147,6 +153,11 @@ internal abstract class TestLogic : ScenarioTestBase
                         isCompleted: true,
                         isUpdated: false,
                         cleanUp: true);
+
+                    if (neutralCheckPullRequest != null)
+                    {
+                        await ValidateAllChecksSuccessfulPolicyPassedAsync(targetRepoName, neutralCheckPullRequest);
+                    }
                 }
             }
         }

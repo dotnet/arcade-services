@@ -974,7 +974,9 @@ internal abstract partial class ScenarioTestBase
         var gitDirFolder = Path.Join(directory, "git-dirs");
 
         // Clone repo
-        await RunDarcAsync(includeConfigurationRepoParams: false, "clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(), includeToolset ? "--include-toolset" : "");
+        await RunDarcAsync(includeConfigurationRepoParams: false, [
+            "clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(),
+            .. includeToolset ? ["--include-toolset"] : Array.Empty<string>()]);
 
         return shareable.TryTake()!;
     }
@@ -1218,6 +1220,61 @@ internal abstract partial class ScenarioTestBase
                 checkName,
                 "Scenario-test status used to keep the batched pull request updatable");
         }
+    }
+
+    /// <summary>
+    /// Creates a completed check run with a neutral conclusion on the pull request targeting the given branch.
+    /// Unlike <see cref="WaitForPullRequestAsync"/>, this doesn't add the successful status check, so Maestro sees
+    /// the neutral check before the PR has any successful checks. Requires a GitHub App token.
+    /// </summary>
+    protected static async Task<Octokit.PullRequest> CreateNeutralCheckRunAsync(string targetRepoName, string targetBranch)
+    {
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
+
+        var attempts = 20;
+        while (attempts-- > 0)
+        {
+            IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
+            {
+                Base = targetBranch,
+            });
+
+            if (prs.Count > 1)
+            {
+                throw new ScenarioTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
+            }
+
+            if (prs.Count == 1)
+            {
+                var checkRun = new Octokit.NewCheckRun("scenario-test/conditional-validation", prs[0].Head.Sha)
+                {
+                    Status = Octokit.CheckStatus.Completed,
+                    Conclusion = Octokit.CheckConclusion.Neutral,
+                    CompletedAt = DateTimeOffset.UtcNow,
+                };
+                await GitHubApi.Check.Run.Create(TestParameters.GitHubTestOrg, targetRepoName, checkRun);
+                return prs[0];
+            }
+
+            await Task.Delay(WAIT_DELAY);
+        }
+
+        throw new ScenarioTestException($"No pull request was created in {targetRepoName} targeting {targetBranch}");
+    }
+
+    /// <summary>
+    /// Verifies the pull request was merged (not just closed) and that Maestro's All Checks Successful
+    /// merge policy check run on the given commit concluded successfully.
+    /// </summary>
+    protected static async Task ValidateAllChecksSuccessfulPolicyPassedAsync(string targetRepoName, Octokit.PullRequest pullRequest)
+    {
+        Octokit.PullRequest mergedPullRequest = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+        mergedPullRequest.Merged.Should().BeTrue($"pull request {pullRequest.HtmlUrl} should have been merged by Maestro");
+
+        string expectedExternalId = $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{MergePolicyConstants.AllCheckSuccessfulMergePolicyName}-{pullRequest.Head.Sha}";
+        Octokit.CheckRunsResponse checkRuns = await GitHubApi.Check.Run.GetAllForReference(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Head.Sha);
+        Octokit.CheckRun policyCheckRun = checkRuns.CheckRuns.Should().ContainSingle(c => c.ExternalId == expectedExternalId).Which;
+        (policyCheckRun.Conclusion?.Value).Should().Be(Octokit.CheckConclusion.Success);
     }
 
     protected async Task<Octokit.PullRequest> WaitForFileContentInPullRequest(

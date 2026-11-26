@@ -9,5 +9,6 @@ public enum CheckState
     Pending,
     Error,
     Failure,
-    Success
+    Success,
+    Neutral
 }
